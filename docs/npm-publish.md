@@ -5,9 +5,17 @@ This runbook describes how to publish `@perfectpan/agent-task-loop`.
 ## Preconditions
 
 - GitHub repository: `PerfectPan/agent-task-loop`
-- npm package: `@perfectpan/agent-task-loop`
+- npm package: `@perfectpan/agent-task-loop`, unless RFC 0001 changes the scope before the first publish
 - workflow file: `.github/workflows/publish.yml`
 - public npm registry: `https://registry.npmjs.org`
+
+## Scope Check
+
+Confirm the npm package scope before the first publish.
+
+The current implementation uses `@perfectpan/agent-task-loop`, which matches the GitHub owner and is ready to bootstrap without creating a new npm organization.
+
+If the project should use a project-owned scope instead, such as `@agent-task-loop/cli`, make that decision before publishing `v0.1.0`. After the first publish, changing package scope means publishing a new package name and maintaining a migration path.
 
 Run local validation before preparing a release:
 
@@ -87,5 +95,5 @@ The tag push triggers GitHub Actions publication.
 
 - Never commit `.npmrc` with tokens.
 - Confirm `publishConfig.registry` points to `https://registry.npmjs.org`.
-- Confirm the package is scoped as `@perfectpan/agent-task-loop`.
+- Confirm the package uses the scope selected by RFC 0001.
 - Confirm generated files and local config are not included in the tarball.

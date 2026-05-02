@@ -6,7 +6,7 @@ Proposed
 
 ## Summary
 
-Publish `@perfectpan/agent-task-loop` from GitHub Actions instead of local machines. Use a temporary npm token only for the first package bootstrap, then switch to npm Trusted Publishing with GitHub Actions OIDC.
+Publish a scoped Agent Task Loop package from GitHub Actions instead of local machines. Use a temporary npm token only for the first package bootstrap, then switch to npm Trusted Publishing with GitHub Actions OIDC.
 
 ## Motivation
 
@@ -23,7 +23,8 @@ CI publishing gives the project:
 ## Goals
 
 - Publish the package from GitHub Actions.
-- Keep `@perfectpan/agent-task-loop` as the npm package identity.
+- Keep the npm package scoped.
+- Treat the exact npm scope as a pre-first-publish decision.
 - Use `v*` tags as the normal release trigger.
 - Keep npm package contents narrow.
 - Remove long-lived npm tokens after the first publish.
@@ -38,13 +39,19 @@ CI publishing gives the project:
 
 ### Package Identity
 
-- Package: `@perfectpan/agent-task-loop`
+- Current package: `@perfectpan/agent-task-loop`
 - Binary: `agent-task-loop`
 - Registry: `https://registry.npmjs.org`
 - Access: public
 - License: `GPL-3.0-only`
 
 The package should remain scoped. The scope reserves room for future monorepo packages and avoids depending on the global npm namespace.
+
+`@perfectpan/agent-task-loop` is the current implementation because it matches the GitHub owner and does not require creating an npm organization before the first release.
+
+Before the first publish, confirm whether the project should instead use a project-owned scope, such as `@agent-task-loop/cli`. A project-owned scope is cleaner if Agent Task Loop is expected to become a multi-maintainer ecosystem soon, but it requires reserving and managing an npm organization before bootstrap.
+
+Do not use the unscoped `agent-task-loop` package name for the first release. Even if available, it gives the project less room for future packages.
 
 ### CI Workflow
 
@@ -61,7 +68,7 @@ The publish workflow runs on `v*` tags:
 - checkout the tagged commit
 - install dependencies with public npm registry configured
 - run tests
-- build `@perfectpan/agent-task-loop`
+- build the publishable package
 - publish from `packages/agent-task-loop`
 
 `workflow_dispatch` can stay as a recovery mechanism, but tags should be the normal release path.
@@ -105,6 +112,16 @@ A permanent token is easy to configure but creates a long-lived secret with publ
 ### Changesets Immediately
 
 Changesets is useful for multi-package versioning. It is unnecessary until the monorepo has more than one published package.
+
+### Project-Owned npm Scope
+
+Using a scope such as `@agent-task-loop/cli` would make the npm namespace project-centered instead of maintainer-centered. This is a good future direction if the project gets an npm organization before the first publish.
+
+The tradeoff is operational overhead: the organization must exist, ownership must be managed, and all package metadata, workflows, docs, and runbooks must change before the first tag.
+
+### Unscoped Package Name
+
+Publishing as `agent-task-loop` would produce the shortest install command, but it gives up the namespace benefits of scoped packages. It is not recommended for this project.
 
 ## Release Procedure
 

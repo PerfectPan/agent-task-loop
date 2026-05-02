@@ -1,0 +1,13 @@
+{
+  "name": "agent-task-loop-monorepo",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "packageManager": "pnpm@9.15.9",
+  "dependencies": {
+    "agent-task-loop": "workspace:*"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  }
+}

@@ -27,6 +27,12 @@ After installing dependencies from the repository root, run:
 npx agent-task-loop --help
 ```
 
+From npm, run:
+
+```bash
+npx @perfectpan/agent-task-loop --help
+```
+
 Common commands:
 
 ```bash

@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      agent-task-loop:
+      '@perfectpan/agent-task-loop':
         specifier: workspace:*
         version: link:packages/agent-task-loop
 

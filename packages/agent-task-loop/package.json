@@ -1,15 +1,46 @@
 {
-  "name": "agent-task-loop",
+  "name": "@perfectpan/agent-task-loop",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "Run AI coding agents through task execution, review, rework, and pull request handoff.",
   "license": "GPL-3.0-only",
   "type": "module",
+  "author": "PerfectPan <perfectpan325@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PerfectPan/agent-task-loop",
+    "directory": "packages/agent-task-loop"
+  },
+  "bugs": {
+    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
+  },
+  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
+  "keywords": [
+    "ai-agent",
+    "coding-agent",
+    "task-runner",
+    "cli",
+    "workflow"
+  ],
   "bin": {
     "agent-task-loop": "./bin/agent-task-loop.mjs"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "skills/agent-task-loop-cli/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --clean",
     "dev": "tsx src/cli.ts",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm test",
     "test": "vitest run",
     "test:watch": "vitest"
   },

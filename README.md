@@ -19,6 +19,13 @@ The core package provides a local CLI that drives tasks from assignment through 
 
 GPL-3.0-only. See [LICENSE](./LICENSE).
 
+## Contributing
+
+- Contribution workflow: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Agent guidelines: [AGENTS.md](./AGENTS.md)
+- RFCs: [rfcs/](./rfcs/)
+- npm publishing: [docs/npm-publish.md](./docs/npm-publish.md)
+
 ## Local CLI
 
 After installing dependencies from the repository root, run:

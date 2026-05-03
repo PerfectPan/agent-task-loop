@@ -1,5 +1,5 @@
 {
-  "name": "@perfectpan/agent-task-loop",
+  "name": "@rivus/agent-task-loop",
   "version": "0.1.0",
   "private": false,
   "description": "Run AI coding agents through task execution, review, rework, and pull request handoff.",

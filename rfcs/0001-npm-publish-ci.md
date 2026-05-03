@@ -39,7 +39,7 @@ CI publishing gives the project:
 
 ### Package Identity
 
-- Current package: `@perfectpan/agent-task-loop`
+- Current package: `@rivus/agent-task-loop`
 - Binary: `agent-task-loop`
 - Registry: `https://registry.npmjs.org`
 - Access: public
@@ -47,9 +47,9 @@ CI publishing gives the project:
 
 The package should remain scoped. The scope reserves room for future monorepo packages and avoids depending on the global npm namespace.
 
-`@perfectpan/agent-task-loop` is the current implementation because it matches the GitHub owner and does not require creating an npm organization before the first release.
+`@rivus/agent-task-loop` is the current implementation because `@rivus` is the selected personal npm namespace for this project family. The GitHub repository remains `PerfectPan/agent-task-loop`.
 
-Before the first publish, confirm whether the project should instead use a project-owned scope, such as `@agent-task-loop/cli`. A project-owned scope is cleaner if Agent Task Loop is expected to become a multi-maintainer ecosystem soon, but it requires reserving and managing an npm organization before bootstrap.
+Before the first publish, create or reserve the `rivus` npm owner so the `@rivus` scope is controlled by the maintainer. If the project later needs a project-owned scope, it should publish a new package name and maintain a migration path.
 
 Do not use the unscoped `agent-task-loop` package name for the first release. Even if available, it gives the project less room for future packages.
 
@@ -77,12 +77,14 @@ The publish workflow runs on `v*` tags:
 
 The first publish uses a temporary granular npm token stored as `NPM_TOKEN`.
 
-After `@perfectpan/agent-task-loop@0.1.0` exists on npm, configure npm Trusted Publishing for:
+After `@rivus/agent-task-loop@0.1.0` exists on npm, configure npm Trusted Publishing for:
 
 - Provider: GitHub Actions
 - Owner: `PerfectPan`
 - Repository: `agent-task-loop`
 - Workflow filename: `publish.yml`
+
+The owner above is the GitHub owner, not the npm scope.
 
 After Trusted Publishing is configured, remove the `NPM_TOKEN` secret and publish through OIDC.
 
@@ -128,7 +130,7 @@ Publishing as `agent-task-loop` would produce the shortest install command, but 
 For a patch release:
 
 ```bash
-pnpm --filter @perfectpan/agent-task-loop version patch --no-git-tag-version
+pnpm --filter @rivus/agent-task-loop version patch --no-git-tag-version
 pnpm install --lockfile-only
 pnpm test
 pnpm build

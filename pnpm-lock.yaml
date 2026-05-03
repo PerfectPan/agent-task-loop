@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@perfectpan/agent-task-loop':
+      '@rivus/agent-task-loop':
         specifier: workspace:*
         version: link:packages/agent-task-loop
 

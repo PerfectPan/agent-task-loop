@@ -29,7 +29,7 @@ jobs:
 
       - run: pnpm test
 
-      - run: pnpm --filter @perfectpan/agent-task-loop build
+      - run: pnpm --filter @rivus/agent-task-loop build
 
       - name: Publish to npm
         working-directory: packages/agent-task-loop

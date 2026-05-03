@@ -1,21 +1,21 @@
 # npm Publish Runbook
 
-This runbook describes how to publish `@perfectpan/agent-task-loop`.
+This runbook describes how to publish `@rivus/agent-task-loop`.
 
 ## Preconditions
 
 - GitHub repository: `PerfectPan/agent-task-loop`
-- npm package: `@perfectpan/agent-task-loop`, unless RFC 0001 changes the scope before the first publish
+- npm package: `@rivus/agent-task-loop`
 - workflow file: `.github/workflows/publish.yml`
 - public npm registry: `https://registry.npmjs.org`
 
 ## Scope Check
 
-Confirm the npm package scope before the first publish.
+Confirm and reserve the npm package scope before the first publish.
 
-The current implementation uses `@perfectpan/agent-task-loop`, which matches the GitHub owner and is ready to bootstrap without creating a new npm organization.
+The current implementation uses `@rivus/agent-task-loop`. `@rivus` is the selected personal npm namespace, while the GitHub repository remains `PerfectPan/agent-task-loop`.
 
-If the project should use a project-owned scope instead, such as `@agent-task-loop/cli`, make that decision before publishing `v0.1.0`. After the first publish, changing package scope means publishing a new package name and maintaining a migration path.
+Create or reserve the `rivus` npm owner before publishing `v0.1.0`. After the first publish, changing package scope means publishing a new package name and maintaining a migration path.
 
 Run local validation before preparing a release:
 
@@ -65,6 +65,8 @@ After the package exists, configure npm Trusted Publishing:
 - Repository: `agent-task-loop`
 - Workflow filename: `publish.yml`
 
+The owner above is the GitHub owner, not the npm scope.
+
 Then remove token-based publishing from the steady-state workflow.
 
 ## Normal Release
@@ -72,7 +74,7 @@ Then remove token-based publishing from the steady-state workflow.
 For a patch release:
 
 ```bash
-pnpm --filter @perfectpan/agent-task-loop version patch --no-git-tag-version
+pnpm --filter @rivus/agent-task-loop version patch --no-git-tag-version
 pnpm install --lockfile-only
 pnpm test
 pnpm build

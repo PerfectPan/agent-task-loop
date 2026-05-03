@@ -37,7 +37,7 @@ npx agent-task-loop --help
 From npm, run:
 
 ```bash
-npx @perfectpan/agent-task-loop --help
+npx @rivus/agent-task-loop --help
 ```
 
 Common commands:

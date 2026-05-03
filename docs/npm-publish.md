@@ -47,13 +47,13 @@ The tarball should contain only:
 Use a temporary npm token only for the first publish. The package starts at `0.0.0` in source and uses `.changeset/initial-release.md` to create the `0.1.0` release pull request.
 
 1. Create a granular npm token with publish access.
-2. Add it to GitHub Actions secrets as `NPM_TOKEN`.
+2. Add it to the GitHub Actions environment `NPM_TOKEN` as a secret named `NPM_TOKEN`.
 3. Merge the setup pull request to `main`.
 4. Wait for GitHub Actions to open the Changesets release pull request.
 5. Review that the release pull request bumps `@rivus/agent-task-loop` to `0.1.0` and creates a changelog entry.
 6. Merge the release pull request.
 7. Confirm the package exists on npm.
-8. Delete the `NPM_TOKEN` secret after Trusted Publishing is configured.
+8. Delete the environment `NPM_TOKEN` secret after Trusted Publishing is configured.
 
 ## Trusted Publishing Setup
 
@@ -66,7 +66,7 @@ After the package exists, configure npm Trusted Publishing:
 
 The owner above is the GitHub owner, not the npm scope.
 
-Then remove the `NPM_TOKEN` secret. The workflow keeps the bootstrap-token step conditional and publishes through OIDC when no token secret is present.
+Then remove the environment `NPM_TOKEN` secret. The workflow keeps the bootstrap-token step conditional and publishes through OIDC when no token secret is present.
 
 ## Normal Release
 

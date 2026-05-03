@@ -163,7 +163,7 @@ After the change lands on `main`, the Changesets action opens or updates the rel
 ## Rollout Plan
 
 1. Merge package metadata, Changesets config, initial changeset, and publish workflow.
-2. Create a temporary `NPM_TOKEN` GitHub secret.
+2. Create a temporary `NPM_TOKEN` secret in the GitHub Actions environment named `NPM_TOKEN`.
 3. Let GitHub Actions open the initial Changesets release pull request.
 4. Merge the release pull request to publish `@rivus/agent-task-loop@0.1.0`.
 5. Confirm the npm package exists.

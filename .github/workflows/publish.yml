@@ -16,6 +16,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: NPM_TOKEN
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:

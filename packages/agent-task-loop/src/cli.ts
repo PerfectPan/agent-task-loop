@@ -10,11 +10,12 @@ import { resumeCommand } from './commands/resume';
 import { syncCommand } from './commands/sync';
 import { tuiCommand } from './commands/tui';
 import { watchCommand } from './commands/watch';
+import { getPackageVersion } from './package-info';
 
 const main = defineCommand({
   meta: {
     name: 'agent-task-loop',
-    version: '0.1.0',
+    version: getPackageVersion(),
     description: 'Agent task delivery loop CLI',
   },
   subCommands: {

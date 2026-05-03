@@ -13,7 +13,7 @@ pnpm build
 Run the local CLI from the repository root:
 
 ```bash
-npx --no-install agent-task-loop --help
+npx --no-install @rivus/agent-task-loop --help
 ```
 
 ## Contribution Flow

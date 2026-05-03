@@ -32,7 +32,7 @@ GPL-3.0-only. See [LICENSE](./LICENSE).
 After installing dependencies from the repository root, run:
 
 ```bash
-npx agent-task-loop --help
+npx --no-install @rivus/agent-task-loop --help
 ```
 
 From npm, run:

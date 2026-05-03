@@ -7,10 +7,11 @@
     "@rivus/agent-task-loop": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r build && moon build --manifest-path packages/agent-finder/moon.mod.json && moon build --manifest-path packages/agent-finder/moon.mod.json --target js",
     "changeset": "changeset",
+    "agent-finder": "node packages/agent-finder/bin/agent-finder.mjs",
     "release": "pnpm build && changeset publish",
-    "test": "pnpm -r test",
+    "test": "pnpm -r test && moon test --manifest-path packages/agent-finder/moon.mod.json",
     "version-packages": "changeset version"
   },
   "devDependencies": {

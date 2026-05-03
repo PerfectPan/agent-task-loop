@@ -1,0 +1,12 @@
+import {
+  "rivus/agent-finder/agent_discovery_core" @core,
+  "moonbitlang/core/env" @env,
+}
+
+options(
+  "is-main": true,
+  targets: {
+    "runtime_js.mbt": [ "js" ],
+    "runtime_stub.mbt": [ "wasm", "wasm-gc", "native", "llvm" ],
+  },
+)

@@ -1,6 +1,8 @@
 .superpowers/
+.omx/
 node_modules/
 dist/
+_build/
 .DS_Store
 .tmp-bin/
 log/

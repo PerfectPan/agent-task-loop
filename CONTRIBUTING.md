@@ -22,10 +22,23 @@ npx --no-install agent-task-loop --help
 2. Write an RFC for substantial changes.
 3. Create a focused branch.
 4. Add or update tests for behavior changes.
-5. Run `pnpm test` and `pnpm build`.
-6. Open a pull request with the motivation, implementation notes, and validation results.
+5. Add a changeset for user-facing package changes.
+6. Run `pnpm test` and `pnpm build`.
+7. Open a pull request with the motivation, implementation notes, and validation results.
 
 Small fixes, typo corrections, dependency metadata updates, and narrow documentation improvements do not need an RFC.
+
+## Changesets
+
+Use Changesets for package version and changelog entries:
+
+```bash
+pnpm changeset
+```
+
+Choose `patch`, `minor`, or `major` according to the public package impact. Documentation-only changes, repository metadata changes, tests, and internal maintenance that do not affect a published package can skip a changeset.
+
+Release pull requests are created by GitHub Actions after changeset files land on `main`.
 
 ## When to Write an RFC
 

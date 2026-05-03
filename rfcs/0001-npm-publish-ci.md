@@ -6,7 +6,7 @@ Proposed
 
 ## Summary
 
-Publish a scoped Agent Task Loop package from GitHub Actions instead of local machines. Use a temporary npm token only for the first package bootstrap, then switch to npm Trusted Publishing with GitHub Actions OIDC.
+Publish a scoped Agent Task Loop package from GitHub Actions instead of local machines. Use Changesets for versioning and changelog generation. Use a temporary npm token only for the first package bootstrap, then switch to npm Trusted Publishing with GitHub Actions OIDC.
 
 ## Motivation
 
@@ -17,7 +17,8 @@ CI publishing gives the project:
 - repeatable release steps
 - centralized permissions
 - short-lived credentials after Trusted Publishing is configured
-- a clear tag-based release event
+- a reviewable release pull request before publication
+- generated changelog entries from package changes
 - a smaller chance of accidentally publishing to the wrong registry
 
 ## Goals
@@ -25,14 +26,13 @@ CI publishing gives the project:
 - Publish the package from GitHub Actions.
 - Keep the npm package scoped.
 - Treat the exact npm scope as a pre-first-publish decision.
-- Use `v*` tags as the normal release trigger.
+- Use Changesets release pull requests as the normal release trigger.
 - Keep npm package contents narrow.
 - Remove long-lived npm tokens after the first publish.
 
 ## Non-Goals
 
-- Introduce a multi-package release manager before there is more than one published package.
-- Automate changelog generation in the first release.
+- Publish from feature branches.
 - Support publishing from local developer machines as a normal path.
 
 ## Proposed Design
@@ -63,19 +63,23 @@ The regular CI workflow runs on pull requests and pushes to `main`:
 
 ### Publish Workflow
 
-The publish workflow runs on `v*` tags:
+The publish workflow runs on pushes to `main`:
 
-- checkout the tagged commit
-- install dependencies with public npm registry configured
+- checkout the repository
 - run tests
-- build the publishable package
-- publish from `packages/agent-task-loop`
+- build the workspace
+- ask Changesets to open or update a release pull request when changeset files exist
+- publish unpublished package versions after the release pull request is merged
 
-`workflow_dispatch` can stay as a recovery mechanism, but tags should be the normal release path.
+`workflow_dispatch` can stay as a recovery mechanism, but the normal path is:
+
+1. Feature pull requests include changeset files when package behavior changes.
+2. After those pull requests land on `main`, GitHub Actions opens or updates the Changesets release pull request.
+3. Merging the release pull request runs `pnpm release`, which builds and publishes through Changesets.
 
 ### Authentication
 
-The first publish uses a temporary granular npm token stored as `NPM_TOKEN`.
+The first publish uses a temporary granular npm token stored as `NPM_TOKEN`. The workflow writes npm auth config only when that secret exists.
 
 After `@rivus/agent-task-loop@0.1.0` exists on npm, configure npm Trusted Publishing for:
 
@@ -86,7 +90,17 @@ After `@rivus/agent-task-loop@0.1.0` exists on npm, configure npm Trusted Publis
 
 The owner above is the GitHub owner, not the npm scope.
 
-After Trusted Publishing is configured, remove the `NPM_TOKEN` secret and publish through OIDC.
+After Trusted Publishing is configured, remove the `NPM_TOKEN` secret. The workflow keeps the bootstrap-token step conditional and publishes through OIDC when no token secret is present.
+
+### Versioning
+
+Changesets owns package versions and changelog entries.
+
+- Root command to add a changeset: `pnpm changeset`
+- Root command used by the release pull request: `pnpm version-packages`
+- Root command used by CI publication: `pnpm release`
+
+The initial source version is `0.0.0`. The committed initial changeset bumps `@rivus/agent-task-loop` to `0.1.0` in the first release pull request.
 
 ### Package Contents
 
@@ -111,15 +125,17 @@ Local publishing is simpler for the first release, but it is easier to use the w
 
 A permanent token is easy to configure but creates a long-lived secret with publish rights. Trusted Publishing is safer once the package exists.
 
-### Changesets Immediately
+### Manual Version Bumps
 
-Changesets is useful for multi-package versioning. It is unnecessary until the monorepo has more than one published package.
+Manual `pnpm version` or direct `package.json` edits are enough for one package, but they do not scale cleanly once the monorepo gains more packages. They also leave changelog discipline to humans.
+
+Changesets adds a small amount of ceremony now in exchange for a consistent release path later.
 
 ### Project-Owned npm Scope
 
 Using a scope such as `@agent-task-loop/cli` would make the npm namespace project-centered instead of maintainer-centered. This is a good future direction if the project gets an npm organization before the first publish.
 
-The tradeoff is operational overhead: the organization must exist, ownership must be managed, and all package metadata, workflows, docs, and runbooks must change before the first tag.
+The tradeoff is operational overhead: the organization must exist, ownership must be managed, and all package metadata, workflows, docs, and runbooks must change before the first release.
 
 ### Unscoped Package Name
 
@@ -130,31 +146,27 @@ Publishing as `agent-task-loop` would produce the shortest install command, but 
 For a patch release:
 
 ```bash
-pnpm --filter @rivus/agent-task-loop version patch --no-git-tag-version
-pnpm install --lockfile-only
+pnpm changeset
 pnpm test
 pnpm build
-git add package.json pnpm-lock.yaml packages/agent-task-loop/package.json
-git commit -S -m "chore: release vX.Y.Z"
-git tag -s vX.Y.Z -m "vX.Y.Z"
-git push origin main
-git push origin vX.Y.Z
 ```
 
-The tag push triggers publication.
+After the change lands on `main`, the Changesets action opens or updates the release pull request. Merging the release pull request triggers publication.
 
 ## Risks
 
 - The first publish still needs a temporary token.
 - A private GitHub repository can publish with Trusted Publishing, but npm provenance is only generated when both the package and repository are public.
 - Re-running a publish for an already accepted version fails, so failed releases after upload require a version bump.
+- Package-changing pull requests can miss changelog entries if maintainers forget to add a changeset.
 
 ## Rollout Plan
 
-1. Merge package metadata and publish workflow.
+1. Merge package metadata, Changesets config, initial changeset, and publish workflow.
 2. Create a temporary `NPM_TOKEN` GitHub secret.
-3. Push `v0.1.0`.
-4. Confirm the npm package exists.
-5. Configure npm Trusted Publishing.
-6. Remove `NPM_TOKEN`.
-7. Use OIDC for future releases.
+3. Let GitHub Actions open the initial Changesets release pull request.
+4. Merge the release pull request to publish `@rivus/agent-task-loop@0.1.0`.
+5. Confirm the npm package exists.
+6. Configure npm Trusted Publishing.
+7. Remove `NPM_TOKEN`.
+8. Use OIDC for future releases.

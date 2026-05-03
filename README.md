@@ -14,6 +14,7 @@ The core package provides a local CLI that drives tasks from assignment through 
 - `pnpm install`
 - `pnpm test`
 - `pnpm build`
+- `pnpm changeset`
 
 ## License
 

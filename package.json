@@ -4,10 +4,16 @@
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@9.15.9",
   "dependencies": {
-    "@perfectpan/agent-task-loop": "workspace:*"
+    "@rivus/agent-task-loop": "workspace:*"
   },
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish",
+    "test": "pnpm -r test",
+    "version-packages": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0"
   }
 }

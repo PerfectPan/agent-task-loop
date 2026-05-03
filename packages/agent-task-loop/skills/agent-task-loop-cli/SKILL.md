@@ -20,26 +20,26 @@ description: Use when operating the repo-local Agent Task Loop CLI from this wor
 不要在这些场景里直接拼 `pnpm dev ...`。优先使用仓库根本地入口：
 
 ```bash
-npx --no-install agent-task-loop <command> ...
+npx --no-install @rivus/agent-task-loop <command> ...
 ```
 
 ## Commands
 
 ```bash
-npx --no-install agent-task-loop sync
-npx --no-install agent-task-loop schema
-npx --no-install agent-task-loop start --task <TaskID>
-npx --no-install agent-task-loop watch --task <TaskID>
-npx --no-install agent-task-loop resume --task <TaskID>
-npx --no-install agent-task-loop complete --task <TaskID>
+npx --no-install @rivus/agent-task-loop sync
+npx --no-install @rivus/agent-task-loop schema
+npx --no-install @rivus/agent-task-loop start --task <TaskID>
+npx --no-install @rivus/agent-task-loop watch --task <TaskID>
+npx --no-install @rivus/agent-task-loop resume --task <TaskID>
+npx --no-install @rivus/agent-task-loop complete --task <TaskID>
 ```
 
 ## Command Mapping
 
-- “启动这条任务” → `npx --no-install agent-task-loop start --task <TaskID>`
-- “盯一下进度” → `npx --no-install agent-task-loop watch --task <TaskID>`
-- “我要看 claude / codex 会话” → `npx --no-install agent-task-loop resume --task <TaskID>`
-- “验收通过，发布掉” → `npx --no-install agent-task-loop complete --task <TaskID>`
+- “启动这条任务” → `npx --no-install @rivus/agent-task-loop start --task <TaskID>`
+- “盯一下进度” → `npx --no-install @rivus/agent-task-loop watch --task <TaskID>`
+- “我要看 claude / codex 会话” → `npx --no-install @rivus/agent-task-loop resume --task <TaskID>`
+- “验收通过，发布掉” → `npx --no-install @rivus/agent-task-loop complete --task <TaskID>`
 
 ## Notes
 

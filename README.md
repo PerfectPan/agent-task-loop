@@ -14,23 +14,31 @@ The core package provides a local CLI that drives tasks from assignment through 
 - `pnpm install`
 - `pnpm test`
 - `pnpm build`
+- `pnpm changeset`
 
 ## License
 
 GPL-3.0-only. See [LICENSE](./LICENSE).
+
+## Contributing
+
+- Contribution workflow: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Agent guidelines: [AGENTS.md](./AGENTS.md)
+- RFCs: [rfcs/](./rfcs/)
+- npm publishing: [docs/npm-publish.md](./docs/npm-publish.md)
 
 ## Local CLI
 
 After installing dependencies from the repository root, run:
 
 ```bash
-npx agent-task-loop --help
+npx --no-install @rivus/agent-task-loop --help
 ```
 
 From npm, run:
 
 ```bash
-npx @perfectpan/agent-task-loop --help
+npx @rivus/agent-task-loop --help
 ```
 
 Common commands:

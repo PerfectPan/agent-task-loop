@@ -2,24 +2,30 @@ name: Publish Package
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-          registry-url: https://registry.npmjs.org
 
       - run: corepack enable
 
@@ -29,10 +35,26 @@ jobs:
 
       - run: pnpm test
 
-      - run: pnpm --filter @perfectpan/agent-task-loop build
+      - run: pnpm build
+
+      - name: Create release pull request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          title: "chore: version packages"
+          commit: "chore: version packages"
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure npm token for bootstrap publish
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
 
       - name: Publish to npm
-        working-directory: packages/agent-task-loop
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm release

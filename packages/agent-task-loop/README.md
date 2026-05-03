@@ -15,19 +15,19 @@ pnpm install
 Then run the local CLI:
 
 ```bash
-npx agent-task-loop --help
+npx --no-install @rivus/agent-task-loop --help
 ```
 
 From npm, run:
 
 ```bash
-npx @perfectpan/agent-task-loop --help
+npx @rivus/agent-task-loop --help
 ```
 
 Use `--no-install` when you want to force the repo-local binary:
 
 ```bash
-npx --no-install agent-task-loop --help
+npx --no-install @rivus/agent-task-loop --help
 ```
 
 ## Commands

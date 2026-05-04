@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@rivus/agent-finder-cli':
+        specifier: workspace:*
+        version: link:packages/agent-finder-cli
       '@rivus/agent-task-loop':
         specifier: workspace:*
         version: link:packages/agent-task-loop

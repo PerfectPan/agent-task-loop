@@ -1,6 +1,6 @@
 {
   "name": "@rivus/agent-finder-cli",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": false,
   "description": "Command-line interface for local code agent discovery.",
   "license": "GPL-3.0-only",

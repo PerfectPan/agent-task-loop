@@ -14,7 +14,7 @@ const forceSource = process.env.AGENT_FINDER_FORCE_SOURCE === "1";
 const canRunFromSource = existsSync(sourceEntrypoint) && existsSync(tsxLoader);
 const args =
   forceSource || canRunFromSource
-    ? ["--import", tsxLoader, sourceEntrypoint, ...process.argv.slice(2)]
+    ? ["--conditions=development", "--import", tsxLoader, sourceEntrypoint, ...process.argv.slice(2)]
     : [distEntrypoint, ...process.argv.slice(2)];
 
 const result = spawnSync(process.execPath, args, {

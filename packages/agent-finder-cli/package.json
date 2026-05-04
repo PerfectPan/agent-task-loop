@@ -41,7 +41,7 @@
   },
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --clean",
-    "dev": "tsx src/cli.ts",
+    "dev": "tsx --conditions=development src/cli.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
     "test": "vitest run",

@@ -7,7 +7,7 @@ const loader = join(process.cwd(), "node_modules", "tsx", "dist", "loader.mjs");
 
 function runCli(args: string[]) {
   const { VITEST, VITEST_WORKER_ID, ...env } = process.env;
-  return spawnSync(process.execPath, ["--import", loader, cli, ...args], {
+  return spawnSync(process.execPath, ["--conditions=development", "--import", loader, cli, ...args], {
     cwd: process.cwd(),
     encoding: "utf8",
     env: { ...env, NO_COLOR: "1" }

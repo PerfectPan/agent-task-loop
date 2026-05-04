@@ -22,9 +22,19 @@ The implementation must stay within the RFC privacy boundary: no task execution,
 
 - `packages/agent-finder/moon.mod.json`
 - `packages/agent-finder/agent_discovery_core/`
-- `packages/agent-finder/js/`
+- `packages/agent-finder/package.json`
+- `packages/agent-finder/src/`
 - `packages/agent-finder/bin/agent-finder.mjs`
 - `packages/agent-finder/README.mbt.md`
+
+### Package Names
+
+- MoonBit module: `PerfectPan/agent-finder` or another mooncakes.io-compatible module name chosen before publish.
+- npm core wrapper package: `@rivus/agent-finder-core`.
+- npm CLI package: `@rivus/agent-finder-cli`.
+- CLI binary: `agent-finder`.
+
+The npm packages should be public, ESM-first, Node >=20, and published under the existing `@rivus` scope. The core package should be consumable without installing the CLI package.
 
 ### Public Surfaces
 
@@ -82,6 +92,33 @@ Initial provider IDs should cover the RFC support matrix:
 
 Provider support can start with conservative command, app path, config path, and MCP path candidates. If a provider's exact paths are uncertain, include the provider spec with limited evidence and warnings rather than inventing unsafe probes.
 
+## Provider Adapter Model
+
+Each provider should have an adapter spec, not custom scanner control flow. The adapter is data-first and may include small probe hooks only when a provider cannot be represented with common command/path/version metadata.
+
+Adapter fields:
+
+- `id`
+- `display_name`
+- `kind`
+- `command_candidates`
+- `app_path_candidates`
+- `config_path_candidates`
+- `mcp_config_path_candidates`
+- `version_probe`
+- `platform_overrides`
+- `evidence_rules`
+- `warnings`
+
+Adapter modes:
+
+- `metadata`: command, app path, config path, and MCP path checks only.
+- `versioned-cli`: metadata checks plus a bounded read-only version probe.
+- `app-only`: app path and config path checks for products without a stable CLI.
+- `extension`: conservative editor extension signals without reading full extension metadata.
+
+The scanner should evaluate adapter specs through shared code. Provider-specific logic should be exceptional, isolated, and covered by fixture tests.
+
 ## Implementation Phases
 
 ### Phase 1: Core Data Model
@@ -100,11 +137,35 @@ Tasks:
 - Implement deterministic scanner from `Probe` to `DiscoveryReport`.
 - Implement explicit JSON serialization for nullable fields and arrays.
 - Add fixtures for macOS, Linux, and Windows.
+- Define adapter modes and provider spec validation.
 
 Acceptance:
 
 - Core tests cover status derivation, evidence, JSON nulls, provider IDs, and doctor counts.
 - The scanner never touches the host directly.
+- Provider specs validate without duplicate IDs or unsupported adapter modes.
+
+### Phase 1.5: MoonBit Publishing Preparation
+
+Files:
+
+- `packages/agent-finder/moon.mod.json`
+- `packages/agent-finder/README.mbt.md`
+
+Tasks:
+
+- Choose the mooncakes.io module name.
+- Fill module metadata: version, license, keywords, repository, description, and homepage.
+- Keep MoonBit package names aligned with directory names because MoonBit package identity is directory-derived.
+- Document the publish path:
+  - `moon register` or `moon login` for mooncakes.io credentials.
+  - `moon publish` to publish the module.
+  - SemVer version bumps for every published module update.
+
+Acceptance:
+
+- `moon.mod.json` contains publish-ready metadata.
+- Publishing remains manual until credentials and release ownership are explicitly confirmed.
 
 ### Phase 2: Provider Specs
 
@@ -136,31 +197,40 @@ Acceptance:
 
 Files:
 
-- `packages/agent-finder/js/`
-- `packages/agent-finder/bin/agent-finder.mjs`
+- `packages/agent-finder/package.json`
+- `packages/agent-finder/src/index.ts`
+- `packages/agent-finder/src/probes/`
+- `packages/agent-finder/src/providers/`
 
 Tasks:
 
+- Create `@rivus/agent-finder-core`.
 - Add platform-aware PATH resolution.
 - Support Windows executable extensions without shelling through user-controlled strings.
 - Use read-only `fs.existsSync` and bounded `execFileSync` calls with fixed argument arrays.
 - Convert host facts into core `Probe` input.
-- Export JS functions for discovery and provider inspection.
+- Export JS functions for discovery, provider listing, provider inspection, and fixture-based tests.
+- Keep CLI-only dependencies out of the core wrapper package.
 
 Acceptance:
 
 - Wrapper tests or CLI smoke tests cover macOS, Linux, and Windows fixture paths.
 - Version probes are bounded and failure-tolerant.
+- `@rivus/agent-finder-core` can be imported without invoking CLI code.
 
 ### Phase 4: CLI
 
 Files:
 
+- `packages/agent-finder-cli/package.json`
+- `packages/agent-finder-cli/src/cli.ts`
 - `packages/agent-finder/bin/agent-finder.mjs`
 - `packages/agent-finder/README.mbt.md`
 
 Tasks:
 
+- Create `@rivus/agent-finder-cli`.
+- Use `citty` for the CLI framework unless implementation research finds a blocker.
 - Implement scan table output.
 - Implement `scan --json`.
 - Implement `provider -h`.
@@ -169,11 +239,19 @@ Tasks:
 - Implement `doctor`.
 - Document command examples and privacy boundary.
 
+CLI framework rationale:
+
+- `citty` is already used by `@rivus/agent-task-loop`, supports nested subcommands, async commands, and generated help.
+- `commander` is a strong fallback for small standalone CLIs.
+- `yargs` is a fallback if command middleware or richer validation becomes more important than keeping the dependency surface small.
+- `oclif` is not the first choice because plugin-oriented enterprise CLI scaffolding is heavier than this package needs.
+
 Acceptance:
 
 - CLI exits non-zero for unknown commands and unknown provider IDs.
 - `provider inspect <id>` shows provider metadata without reading config contents.
 - Human output is stable enough for users but JSON remains the compatibility contract.
+- `agent-finder provider -h` is the baseline help experience.
 
 ### Phase 5: Repository Wiring
 
@@ -188,12 +266,14 @@ Tasks:
 - Add `agent-finder` local script if useful.
 - Wire MoonBit tests into `pnpm test`.
 - Wire MoonBit default and JS-target builds into `pnpm build`.
+- Add npm workspace/package wiring for `@rivus/agent-finder-core` and `@rivus/agent-finder-cli`.
 - Keep package contents public-safe.
 
 Acceptance:
 
 - Root validation runs the MoonBit package.
 - Package dry-run output contains only intended files.
+- `npm pack --dry-run --registry=https://registry.npmjs.org` is run from each publishable npm package directory.
 
 ## Validation Commands
 

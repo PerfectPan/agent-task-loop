@@ -27,21 +27,33 @@ A dedicated discovery tool gives the project:
 - Publish the provider through a JavaScript wrapper package so the JS ecosystem can consume it as a utility package.
 - Implement the CLI surface in JavaScript on top of the provider wrapper.
 - Keep core models and APIs stable enough for JS bindings, wasm use, and direct Agent Task Loop integration.
-- Support macOS first while keeping Linux and Windows probing as planned follow-up implementation work.
+- Support macOS, Linux, and Windows as first-class platforms.
 - Maintain a read-only privacy boundary: do not read token contents, parse secrets, upload inventory data, start agent sessions, or submit prompts.
 - Detect common code agents:
-  - Codex
+  - OpenCode
+  - OpenHands
   - Claude Code
-  - Gemini CLI
-  - opencode
-  - aider
-  - GitHub Copilot CLI
+  - Cline
+  - CodeBuddy
+  - Codex
+  - Command Code
+  - Kiro CLI
   - Cursor
+  - Antigravity
+  - Roo Code
+  - GitHub Copilot
+  - Amp
+  - OpenClaw
+  - Neovate
+  - Pi
+  - Qoder
+  - Zencoder
+  - Kimi Code CLI
+  - Gemini CLI
   - Windsurf
   - VS Code Copilot
   - Codex Desktop
-  - Kimi
-  - OpenClaw
+  - aider
   - Hermes
   - Trae
 - Report, per agent:
@@ -86,7 +98,7 @@ Add a MoonBit provider module under `packages/agent-finder` and expose it throug
 - JavaScript wrapper package: JS-friendly provider API, host probes, version command calls, and package entry points.
 - JavaScript CLI: command-line parsing, provider help, scan output, doctor output, and human-readable formatting.
 
-This mirrors the provider-oriented arrangement used by tools such as Vercel's `npx skills`, where agent support is represented as a registry/support matrix instead of hard-coded one-off command branches. `agent-finder` should keep provider definitions data-driven so adding Kimi, OpenClaw, Hermes, Trae, or another agent is mostly a provider metadata and probe addition.
+This mirrors the provider-oriented arrangement used by tools such as Vercel's `npx skills`, where agent support is represented as a registry/support matrix instead of hard-coded one-off command branches. `agent-finder` should keep provider definitions data-driven and start from the same broad support shape: OpenCode, OpenHands, Claude Code, Cline, CodeBuddy, Codex, Command Code, Kiro CLI, Cursor, Antigravity, Roo Code, GitHub Copilot, Amp, OpenClaw, Neovate, Pi, Qoder, Zencoder, Kimi Code CLI, and related coding-agent providers.
 
 The repository root scripts should include the MoonBit package in normal validation:
 
@@ -194,9 +206,9 @@ node packages/agent-finder/bin/agent-finder.mjs doctor
 
 The JavaScript wrapper owns host interaction:
 
-- command lookup through `/usr/bin/which`
+- command lookup through a platform-aware PATH resolver, avoiding shell-specific behavior and supporting Windows executable extensions
 - filesystem existence checks through Node `fs.existsSync`
-- executable checks through Node `fs.accessSync` with `X_OK`
+- executable checks through Node `fs.accessSync` with `X_OK` where the platform exposes POSIX execute bits, with Windows falling back to extension and spawnability checks
 - version checks through bounded `execFileSync` calls with fixed argument arrays and short timeouts
 
 The scanner does not read config file contents. It only checks whether known config paths exist.
@@ -245,7 +257,7 @@ Core tests should cover:
 CLI validation should cover:
 
 - `scan --json` emits valid JSON
-- output includes all supported provider IDs
+- output includes all supported provider IDs across macOS, Linux, and Windows fixtures
 - `provider -h` runs successfully
 - `provider list` includes supported provider IDs
 - `provider inspect codex` shows provider metadata without reading config contents
@@ -264,18 +276,19 @@ npm pack --dry-run --registry=https://registry.npmjs.org
 
 1. Add the MoonBit provider module and core scanner tests.
 2. Implement core models, provider specs, scanner status derivation, JSON serialization, evidence records, and doctor summaries.
-3. Add the JS wrapper package with host probes and npm-friendly exports.
-4. Add the JS CLI with scan, provider help/list/inspect, and doctor output.
-5. Wire MoonBit test and build commands into root validation scripts.
-6. Validate JSON output and repository gates.
-7. Update Agent Task Loop assignment flow to run discovery checks before assigning a task to a provider.
+3. Add platform fixtures for macOS, Linux, and Windows before wiring assignment logic.
+4. Add the JS wrapper package with platform-aware host probes and npm-friendly exports.
+5. Add the JS CLI with scan, provider help/list/inspect, and doctor output.
+6. Wire MoonBit test and build commands into root validation scripts.
+7. Validate JSON output and repository gates.
+8. Update Agent Task Loop assignment flow to run discovery checks before assigning a task to a provider.
 
 ## Risks
 
 - Agent command names and config paths can change over time.
 - Some version commands may be slow or unavailable; the CLI must keep short timeouts and tolerate missing versions.
 - Editor extension detection is intentionally conservative in the first version.
-- Linux and Windows may require different app path and config path conventions.
+- Cross-platform parity requires separate command, app path, config path, and executable semantics for macOS, Linux, and Windows.
 - More providers increase maintenance cost because command names, app paths, and config paths drift independently.
 
 ## Decisions
@@ -288,5 +301,5 @@ npm pack --dry-run --registry=https://registry.npmjs.org
 ## Open Questions
 
 - Should path evidence be represented only in `evidence`, or should `config_paths` and `mcp_config_paths` become arrays of objects with `path` and `exists` fields?
-- What is the initial minimum support set for Linux and Windows after the macOS-first implementation lands?
+- Which provider probes need platform-specific names or install paths beyond the shared support matrix?
 - How fresh must discovery results be before task assignment: every assignment, every process start, or a short TTL cache with manual refresh?

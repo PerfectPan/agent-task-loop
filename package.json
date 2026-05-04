@@ -11,9 +11,11 @@
     "agent-finder": "pnpm --filter @rivus/agent-finder-cli dev",
     "build": "pnpm -r build && moon -C packages/agent-finder build && moon -C packages/agent-finder build --target js",
     "changeset": "changeset",
+    "check:moonbit-version": "node scripts/sync-moonbit-version.mjs --check",
     "release": "pnpm build && changeset publish",
-    "test": "pnpm -r test && moon -C packages/agent-finder test",
-    "version-packages": "changeset version"
+    "sync:moonbit-version": "node scripts/sync-moonbit-version.mjs",
+    "test": "node --test tests/**/*.test.mjs && pnpm -r test && moon -C packages/agent-finder test",
+    "version-packages": "changeset version && pnpm sync:moonbit-version"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0"

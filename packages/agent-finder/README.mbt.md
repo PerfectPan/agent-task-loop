@@ -10,13 +10,12 @@ This package is the MoonBit provider core for RFC 0002. It models supported codi
 - `agent_discovery_core/catalog/`: provider matrix, provider constructors, and stable candidate lists.
 - `agent_discovery_core/scanner/`: deterministic scan, status derivation, evidence, and path helpers.
 - `agent_discovery_core/diagnostics/`: diagnostics derived from scan output.
-- `agent_discovery_core/bridge/`: JSON bridge functions consumed by the JavaScript backend facade.
-- `agent_discovery_core/js_exports.mbt`: thin exported facade for generated JavaScript.
+- `agent_discovery_core/js_abi.mbt`: minimal JSON ABI exported by the MoonBit JavaScript backend.
 - `src/`: npm-facing TypeScript wrapper used by JavaScript consumers and the CLI.
 
 ## JavaScript Wrapper Boundary
 
-`@rivus/agent-finder-core` is the npm wrapper package. It builds the MoonBit package with `moon build --target js`, copies the generated bridge into `src/moonbit/`, and exposes JS-friendly functions from `src/index.ts`.
+`@rivus/agent-finder-core` is the npm wrapper package. It builds the MoonBit package with `moon build --target js`, copies the generated JavaScript backend output into `src/moonbit/`, and exposes JS-friendly functions from `src/index.ts`.
 
 The MoonBit package owns the domain model: provider definitions, stable statuses, evidence semantics, scan rules, diagnostics, and the versioned JSON contract. The TypeScript wrapper owns npm ergonomics and host interaction: PATH lookup, executable checks, path existence checks, bounded version probes, type mapping, and CLI-friendly exports.
 
@@ -28,7 +27,7 @@ The core does not touch the host. Callers provide a `Probe` containing command, 
 
 ## Publishing
 
-The MoonBit module metadata lives in `moon.mod.json`. The module name is `PerfectPan/agent-finder`, which must match the authenticated mooncakes.io username.
+The MoonBit module metadata lives in `moon.mod.json`. The module name is `nyx/agent-finder`, which must match the authenticated mooncakes.io username.
 
 CI always packages the module with:
 
@@ -36,7 +35,7 @@ CI always packages the module with:
 moon -C packages/agent-finder package
 ```
 
-Release CI publishes to mooncakes.io from the dedicated MoonBit publish workflow when the `MOONCAKES_PERFECTPAN_TOKEN` GitHub Actions secret is configured. See `docs/moonbit-publish.md` for the release flow.
+Release CI publishes to mooncakes.io from the dedicated MoonBit publish workflow when the `MOONCAKES_NYX_TOKEN` GitHub Actions secret is configured. See `docs/moonbit-publish.md` for the release flow.
 
 Manual publish outline:
 

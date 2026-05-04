@@ -1,4 +1,4 @@
 import {
-  "PerfectPan/agent-finder/agent_discovery_core/catalog" @catalog,
-  "PerfectPan/agent-finder/agent_discovery_core/model" @model,
+  "nyx/agent-finder/agent_discovery_core/catalog" @catalog,
+  "nyx/agent-finder/agent_discovery_core/model" @model,
 }

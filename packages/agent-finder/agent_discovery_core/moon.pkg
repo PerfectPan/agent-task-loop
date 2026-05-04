@@ -1,15 +1,18 @@
 import {
-  "PerfectPan/agent-finder/agent_discovery_core/bridge" @bridge,
+  "moonbitlang/core/json" @json,
+  "nyx/agent-finder/agent_discovery_core/catalog" @catalog,
+  "nyx/agent-finder/agent_discovery_core/model" @model,
+  "nyx/agent-finder/agent_discovery_core/scanner" @scanner,
 }
 
 options(
   link: {
     "js": {
       "exports": [
-        "provider_specs_json",
+        "providers_json",
         "command_candidates_json",
         "path_candidates_json",
-        "scan_probe_json",
+        "scan_json",
       ],
       "format": "esm",
     },

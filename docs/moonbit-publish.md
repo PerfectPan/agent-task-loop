@@ -1,10 +1,10 @@
 # MoonBit Publish Runbook
 
-This runbook describes how to publish the primary MoonBit module `PerfectPan/agent-finder`.
+This runbook describes how to publish the primary MoonBit module `nyx/agent-finder`.
 
 ## Release Shape
 
-- MoonBit module: `PerfectPan/agent-finder`
+- MoonBit module: `nyx/agent-finder`
 - Manifest: `packages/agent-finder/moon.mod.json`
 - Registry: mooncakes.io
 - npm wrappers: `@rivus/agent-finder-core` and `@rivus/agent-finder-cli`
@@ -42,7 +42,7 @@ Create the mooncakes.io credentials locally with:
 moon login
 ```
 
-Then store the contents of `$HOME/.moon/credentials.json` as a GitHub Actions secret named `MOONCAKES_PERFECTPAN_TOKEN`.
+Then store the contents of `$HOME/.moon/credentials.json` as a GitHub Actions secret named `MOONCAKES_NYX_TOKEN`.
 
 Do not commit `credentials.json`.
 

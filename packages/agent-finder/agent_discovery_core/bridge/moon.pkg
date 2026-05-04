@@ -1,6 +1,0 @@
-import {
-  "moonbitlang/core/json" @json,
-  "PerfectPan/agent-finder/agent_discovery_core/catalog" @catalog,
-  "PerfectPan/agent-finder/agent_discovery_core/model" @model,
-  "PerfectPan/agent-finder/agent_discovery_core/scanner" @scanner,
-}

@@ -1,5 +1,5 @@
-import { command_candidates_json } from "./moonbit/agent_discovery_core.js";
+import { moonbitApi } from "./moonbit-api.js";
 
 export function listCommandCandidates(): string[] {
-  return JSON.parse(command_candidates_json()) as string[];
+  return moonbitApi.listCommandCandidates();
 }

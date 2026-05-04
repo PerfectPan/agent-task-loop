@@ -1,7 +1,7 @@
 import {
-  "PerfectPan/agent-finder/agent_discovery_core/model" @model,
+  "nyx/agent-finder/agent_discovery_core/model" @model,
 }
 
 import {
-  "PerfectPan/agent-finder/agent_discovery_core/scanner" @scanner,
+  "nyx/agent-finder/agent_discovery_core/scanner" @scanner,
 } for "test"

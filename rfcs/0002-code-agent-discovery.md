@@ -6,7 +6,7 @@ Proposed
 
 ## Summary
 
-Add `agent-finder`, a local read-only code agent inventory provider for Agent Task Loop. It discovers common coding agents installed on the current machine and reports stable structured output that Agent Task Loop can consume later.
+Add `agent-finder`, a local read-only code agent inventory provider for Agent Task Loop and JavaScript consumers. It discovers common coding agents installed on the current machine and reports stable structured output that task assignment code can check before choosing an agent.
 
 The tool is not a scheduler, runner, terminal multiplexer, API proxy, or credentials reader. It only checks commands, application paths, configuration path existence, MCP configuration path existence, and safe version commands.
 
@@ -18,15 +18,17 @@ A dedicated discovery tool gives the project:
 
 - a stable local source of truth for installed code agents
 - a narrow privacy boundary for host scanning
-- predictable JSON for future JavaScript, wasm, or npm wrappers
+- predictable JSON for JavaScript, wasm, and npm consumers
 - a place to evolve agent-specific detection logic without coupling it to task execution
 
 ## Goals
 
-- Implement the discovery tool in MoonBit.
-- Split the implementation into a core package and a CLI package.
-- Keep core models and APIs stable enough for future JS bindings or wasm use.
-- Support macOS first while leaving the model portable for Linux and Windows.
+- Implement the provider core in MoonBit.
+- Publish the provider through a JavaScript wrapper package so the JS ecosystem can consume it as a utility package.
+- Implement the CLI surface in JavaScript on top of the provider wrapper.
+- Keep core models and APIs stable enough for JS bindings, wasm use, and direct Agent Task Loop integration.
+- Support macOS first while keeping Linux and Windows probing as planned follow-up implementation work.
+- Maintain a read-only privacy boundary: do not read token contents, parse secrets, upload inventory data, start agent sessions, or submit prompts.
 - Detect common code agents:
   - Codex
   - Claude Code
@@ -38,6 +40,10 @@ A dedicated discovery tool gives the project:
   - Windsurf
   - VS Code Copilot
   - Codex Desktop
+  - Kimi
+  - OpenClaw
+  - Hermes
+  - Trae
 - Report, per agent:
   - `id`
   - `name`
@@ -46,12 +52,16 @@ A dedicated discovery tool gives the project:
   - `command`
   - `app_path`
   - `version`
+  - `evidence`
   - `config_paths`
   - `mcp_config_paths`
   - `warnings`
 - Provide:
   - `agent-finder scan`
   - `agent-finder scan --json`
+  - `agent-finder provider -h`
+  - `agent-finder provider list`
+  - `agent-finder provider inspect <id>`
   - `agent-finder doctor`
 - Add core scanner tests for data modeling, path detection, JSON serialization, and diagnostics.
 
@@ -64,17 +74,19 @@ A dedicated discovery tool gives the project:
 - Proxy API requests.
 - Read token contents or parse secrets.
 - Upload local inventory data.
-- Fully implement platform-specific Linux and Windows probing in the first version.
 - Prove editor extension installation by reading full extension metadata in the first version.
 
 ## Proposed Design
 
 ### Package Layout
 
-Add a MoonBit module under `packages/agent-finder`:
+Add a MoonBit provider module under `packages/agent-finder` and expose it through a JavaScript package:
 
-- `agent_discovery_core`: scanning model, agent definitions, path expansion, status derivation, JSON serialization, and doctor summaries.
-- `agent_finder_cli`: command-line parsing, host probes, version command calls, and human-readable formatting.
+- `agent_discovery_core`: scanning model, provider definitions, path expansion, status derivation, JSON serialization, and doctor summaries.
+- JavaScript wrapper package: JS-friendly provider API, host probes, version command calls, and package entry points.
+- JavaScript CLI: command-line parsing, provider help, scan output, doctor output, and human-readable formatting.
+
+This mirrors the provider-oriented arrangement used by tools such as Vercel's `npx skills`, where agent support is represented as a registry/support matrix instead of hard-coded one-off command branches. `agent-finder` should keep provider definitions data-driven so adding Kimi, OpenClaw, Hermes, Trae, or another agent is mostly a provider metadata and probe addition.
 
 The repository root scripts should include the MoonBit package in normal validation:
 
@@ -87,18 +99,20 @@ The core package exposes plain data records:
 
 - `Probe`: all host facts supplied to the scanner.
 - `HostInfo`: `os` and `arch`.
-- `AgentRecord`: one discovered agent result.
+- `ProviderSpec`: one supported agent/provider definition.
+- `AgentRecord`: one discovered provider result.
 - `DiscoveryReport`: complete scan output.
 - `DoctorSummary`: aggregate diagnostics.
 
-The core scanner receives a `Probe` rather than touching the host directly. This keeps the core deterministic, testable, and suitable for future bindings.
+The core scanner receives a `Probe` rather than touching the host directly. This keeps the core deterministic, testable, and suitable for JS bindings.
 
 The core package also exposes candidate lists:
 
+- `known_provider_specs()`
 - `known_command_candidates()`
 - `known_path_candidates()`
 
-The CLI uses those lists to collect host facts. Future JS or wasm wrappers can do the same without duplicating agent definitions.
+The JS wrapper and CLI use those lists to collect host facts without duplicating provider definitions.
 
 ### Status Semantics
 
@@ -130,6 +144,20 @@ The JSON output is versioned with `schema_version: "0.1"`:
       "command": "/opt/homebrew/bin/codex",
       "app_path": null,
       "version": "0.x",
+      "evidence": [
+        {
+          "kind": "command",
+          "value": "codex",
+          "exists": true,
+          "reason": "resolved on PATH"
+        },
+        {
+          "kind": "version",
+          "value": "codex --version",
+          "exists": true,
+          "reason": "version probe exited successfully"
+        }
+      ],
       "config_paths": ["~/.codex"],
       "mcp_config_paths": ["~/.codex/config.toml"],
       "warnings": []
@@ -138,7 +166,7 @@ The JSON output is versioned with `schema_version: "0.1"`:
 }
 ```
 
-The core implements explicit JSON serialization for nullable string fields so consumers receive `null`, not MoonBit's derived option representation.
+The core implements explicit JSON serialization for nullable string fields so consumers receive `null`, not MoonBit's derived option representation. `evidence` explains why a status was assigned, which lets Agent Task Loop distinguish "runnable because command and version probe succeeded" from "found only because a config directory exists".
 
 ### CLI Behavior
 
@@ -146,19 +174,25 @@ The CLI provides:
 
 - `scan`: human-readable table with status, type, agent name, and command or app location.
 - `scan --json`: stable machine-readable report.
+- `provider -h`: provider-oriented help as the basic discovery experience.
+- `provider list`: list supported provider IDs and display names.
+- `provider inspect <id>`: show known commands, app paths, config paths, MCP paths, and version probe strategy for one provider without reading local config contents.
 - `doctor`: aggregate counts, missing agents, and warnings.
 
-The repository also includes a small Node wrapper at `packages/agent-finder/bin/agent-finder.mjs` so the local command shape is:
+The repository includes a JavaScript CLI entry at `packages/agent-finder/bin/agent-finder.mjs` so the local command shape is:
 
 ```bash
 node packages/agent-finder/bin/agent-finder.mjs scan
 node packages/agent-finder/bin/agent-finder.mjs scan --json
+node packages/agent-finder/bin/agent-finder.mjs provider -h
+node packages/agent-finder/bin/agent-finder.mjs provider list
+node packages/agent-finder/bin/agent-finder.mjs provider inspect codex
 node packages/agent-finder/bin/agent-finder.mjs doctor
 ```
 
 ### Host Probes
 
-The CLI owns host interaction:
+The JavaScript wrapper owns host interaction:
 
 - command lookup through `/usr/bin/which`
 - filesystem existence checks through Node `fs.existsSync`
@@ -184,7 +218,7 @@ Version checks are limited to conventional `--version` style calls or equivalent
 
 ### Implement in TypeScript
 
-TypeScript would fit the existing monorepo, but the requested direction is MoonBit and future wasm/JS binding support. MoonBit also keeps the discovery model separate from the existing task runner code.
+TypeScript would fit the existing monorepo and the CLI should be JavaScript-facing, but the provider core should stay in MoonBit. MoonBit keeps the discovery model separate from task runner code while still allowing a JS wrapper to provide npm-friendly ergonomics.
 
 ### Put Discovery in Agent Task Loop Core
 
@@ -211,7 +245,10 @@ Core tests should cover:
 CLI validation should cover:
 
 - `scan --json` emits valid JSON
-- output includes all 10 agent IDs
+- output includes all supported provider IDs
+- `provider -h` runs successfully
+- `provider list` includes supported provider IDs
+- `provider inspect codex` shows provider metadata without reading config contents
 - `scan` human output runs successfully
 - `doctor` runs successfully
 
@@ -225,13 +262,13 @@ npm pack --dry-run --registry=https://registry.npmjs.org
 
 ## Rollout Plan
 
-1. Add the MoonBit module and core scanner tests.
-2. Implement core models, agent specs, scanner status derivation, JSON serialization, and doctor summaries.
-3. Add the JS-target CLI probes and human-readable output.
-4. Add the local `agent-finder` wrapper.
+1. Add the MoonBit provider module and core scanner tests.
+2. Implement core models, provider specs, scanner status derivation, JSON serialization, evidence records, and doctor summaries.
+3. Add the JS wrapper package with host probes and npm-friendly exports.
+4. Add the JS CLI with scan, provider help/list/inspect, and doctor output.
 5. Wire MoonBit test and build commands into root validation scripts.
 6. Validate JSON output and repository gates.
-7. In a later change, decide how Agent Task Loop should consume the inventory output.
+7. Update Agent Task Loop assignment flow to run discovery checks before assigning a task to a provider.
 
 ## Risks
 
@@ -239,11 +276,17 @@ npm pack --dry-run --registry=https://registry.npmjs.org
 - Some version commands may be slow or unavailable; the CLI must keep short timeouts and tolerate missing versions.
 - Editor extension detection is intentionally conservative in the first version.
 - Linux and Windows may require different app path and config path conventions.
-- A future npm wrapper needs packaging decisions that this RFC does not settle.
+- More providers increase maintenance cost because command names, app paths, and config paths drift independently.
+
+## Decisions
+
+- `agent-finder` should provide both a MoonBit provider package and a JavaScript wrapper package for the JS ecosystem.
+- The CLI should be implemented in JavaScript on top of the wrapper package.
+- Discovery output should include an explicit `evidence` array explaining why each status was assigned.
+- Agent Task Loop should check discovery results before assigning work to a provider.
 
 ## Open Questions
 
-- Should `agent-finder` become a separately published npm package or stay internal to the monorepo first?
-- Should future versions include an explicit `evidence` field explaining why each status was assigned?
-- Should config paths include an `exists` boolean per path, or should the scanner continue reporting candidate paths only?
-- How should Agent Task Loop cache or refresh discovery results when it starts a task?
+- Should path evidence be represented only in `evidence`, or should `config_paths` and `mcp_config_paths` become arrays of objects with `path` and `exists` fields?
+- What is the initial minimum support set for Linux and Windows after the macOS-first implementation lands?
+- How fresh must discovery results be before task assignment: every assignment, every process start, or a short TTL cache with manual refresh?

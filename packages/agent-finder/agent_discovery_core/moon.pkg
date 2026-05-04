@@ -1,1 +1,17 @@
+import {
+  "moonbitlang/core/json" @json,
+}
 
+options(
+  link: {
+    "js": {
+      "exports": [
+        "provider_specs_json",
+        "command_candidates_json",
+        "path_candidates_json",
+        "scan_probe_json",
+      ],
+      "format": "esm",
+    },
+  },
+)

@@ -6,6 +6,8 @@ export type {
   HostProbeCollector,
   ProviderSpec
 } from "./types.js";
-export { discover } from "./discovery.js";
-export { collectHostProbe, resolveCommand } from "./host-probe.js";
-export { inspectProvider, listProviders } from "./providers.js";
+export { discover } from "./discover.js";
+export { collectHostProbe } from "./host-probe.js";
+export { inspectProvider } from "./inspect-provider.js";
+export { listProviders } from "./list-providers.js";
+export { resolveCommand } from "./resolve-command.js";

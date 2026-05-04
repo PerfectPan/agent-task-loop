@@ -22,7 +22,7 @@ pub(all) struct Probe {
   executable_paths : Map[String, Bool]
   existing_paths : Map[String, Bool]
   versions : Map[String, String]
-}
+} derive(FromJson)
 
 ///|
 pub(all) struct ProviderSpec {
@@ -37,6 +37,22 @@ pub(all) struct ProviderSpec {
   version_probe : String?
   warnings : Array[String]
 } derive(Debug, Eq)
+
+///|
+pub impl ToJson for ProviderSpec with to_json(self) -> Json {
+  {
+    "id": self.id,
+    "display_name": self.display_name,
+    "kind": self.kind,
+    "adapter_mode": self.adapter_mode,
+    "command_candidates": self.command_candidates,
+    "app_path_candidates": self.app_path_candidates,
+    "config_path_candidates": self.config_path_candidates,
+    "mcp_config_path_candidates": self.mcp_config_path_candidates,
+    "version_probe": option_string_to_json(self.version_probe),
+    "warnings": self.warnings,
+  }
+}
 
 ///|
 pub impl ToJson for AgentRecord with to_json(self) -> Json {

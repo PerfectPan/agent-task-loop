@@ -1,9 +1,4 @@
 ///|
-pub fn known_provider_specs() -> Array[ProviderSpec] {
-  provider_specs()
-}
-
-///|
 pub fn scan(probe : Probe) -> DiscoveryReport {
   let agents = Array::new()
   for spec in provider_specs() {
@@ -15,88 +10,6 @@ pub fn scan(probe : Probe) -> DiscoveryReport {
     host: HostInfo::{ os: probe.os, arch: probe.arch },
     agents,
   }
-}
-
-///|
-pub fn doctor(report : DiscoveryReport) -> DoctorSummary {
-  let mut runnable = 0
-  let mut found = 0
-  let mut missing = 0
-  let mut unknown = 0
-  let warnings = Array::new()
-  for agent in report.agents {
-    match agent.status {
-      "runnable" => runnable += 1
-      "found" => found += 1
-      "missing" => missing += 1
-      _ => unknown += 1
-    }
-    for warning in agent.warnings {
-      warnings.push(agent.id + ": " + warning)
-    }
-  }
-  DoctorSummary::{
-    total: report.agents.length(),
-    runnable,
-    found,
-    missing,
-    unknown,
-    warnings,
-  }
-}
-
-///|
-pub fn to_json_string(report : DiscoveryReport) -> String {
-  report.to_json().stringify(indent=2)
-}
-
-///|
-pub fn validate_provider_specs(_specs : Array[ProviderSpec]) -> Array[String] {
-  let errors = Array::new()
-  let seen = Array::new()
-  for spec in _specs {
-    if seen.contains(spec.id) {
-      errors.push("duplicate provider id: " + spec.id)
-    } else {
-      seen.push(spec.id)
-    }
-    if !is_supported_adapter_mode(spec.adapter_mode) {
-      errors.push(
-        "unsupported adapter mode for " + spec.id + ": " + spec.adapter_mode,
-      )
-    }
-  }
-  errors
-}
-
-///|
-pub fn known_command_candidates() -> Array[String] {
-  let commands = Array::new()
-  for spec in provider_specs() {
-    for command in spec.command_candidates {
-      if !commands.contains(command) {
-        commands.push(command)
-      }
-    }
-  }
-  commands
-}
-
-///|
-pub fn known_path_candidates() -> Array[String] {
-  let paths = Array::new()
-  for spec in provider_specs() {
-    for path in spec.app_path_candidates {
-      push_unique(paths, path)
-    }
-    for path in spec.config_path_candidates {
-      push_unique(paths, path)
-    }
-    for path in spec.mcp_config_path_candidates {
-      push_unique(paths, path)
-    }
-  }
-  paths
 }
 
 ///|
@@ -293,30 +206,4 @@ fn is_executable(path : String, probe : Probe) -> Bool {
 ///|
 fn version_for(path : String, version_arg : String, probe : Probe) -> String? {
   probe.versions.get(path + " " + version_arg)
-}
-
-///|
-pub fn expand_path(path : String, home : String) -> String {
-  if path == "~" {
-    home
-  } else if path.has_prefix("~/"[:]) {
-    home + path.unsafe_substring(start=1, end=path.length())
-  } else {
-    path
-  }
-}
-
-///|
-fn is_supported_adapter_mode(mode : String) -> Bool {
-  mode == "metadata" ||
-  mode == "versioned-cli" ||
-  mode == "app-only" ||
-  mode == "extension"
-}
-
-///|
-fn push_unique(items : Array[String], item : String) -> Unit {
-  if !items.contains(item) {
-    items.push(item)
-  }
 }

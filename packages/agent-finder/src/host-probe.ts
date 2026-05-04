@@ -2,43 +2,12 @@ import { accessSync, constants, existsSync } from "node:fs";
 import { delimiter } from "node:path";
 import { execFileSync } from "node:child_process";
 import { arch, homedir, platform } from "node:os";
-import { knownCommandCandidates, knownPathCandidates, providerSpecs } from "./providers.js";
+import { listCommandCandidates } from "./list-command-candidates.js";
+import { listPathCandidates } from "./list-path-candidates.js";
+import { listProviders } from "./list-providers.js";
 import type { HostProbe, HostProbeCollector } from "./types.js";
-import { expandPath, trimTrailingSeparators } from "./paths.js";
-
-export function resolveCommand(
-  command: string,
-  options: {
-    path: string;
-    pathExt?: string;
-    delimiter?: string;
-    fileExists: (candidate: string) => boolean;
-  }
-): string | null {
-  const pathDelimiter = options.delimiter ?? (process.platform === "win32" ? ";" : ":");
-  const pathExt = options.pathExt ?? (process.platform === "win32" ? process.env.PATHEXT : "");
-  const extensions = pathExt
-    ? pathExt.split(";").filter(Boolean)
-    : [""];
-  const hasKnownExtension = extensions.some((ext) =>
-    command.toLowerCase().endsWith(ext.toLowerCase())
-  );
-  const commandNames = hasKnownExtension
-    ? [command]
-    : extensions.map((ext) => `${command}${ext}`);
-
-  for (const dir of options.path.split(pathDelimiter).filter(Boolean)) {
-    const separator = dir.includes("\\") ? "\\" : "/";
-    for (const name of commandNames) {
-      const candidate = `${trimTrailingSeparators(dir)}${separator}${name}`;
-      if (options.fileExists(candidate)) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
-}
+import { expandPath } from "./expand-path.js";
+import { resolveCommand } from "./resolve-command.js";
 
 export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
   const hostOs = options.os ?? platform();
@@ -62,7 +31,7 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
   const existingPaths: Record<string, boolean> = {};
   const versions: Record<string, string> = {};
 
-  for (const command of knownCommandCandidates()) {
+  for (const command of listCommandCandidates()) {
     const resolved = commandResolver(command);
     if (resolved) {
       commands[command] = resolved;
@@ -70,12 +39,12 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
     }
   }
 
-  for (const path of knownPathCandidates()) {
+  for (const path of listPathCandidates()) {
     const expanded = expandPath(path, home);
     existingPaths[expanded] = pathChecker(expanded);
   }
 
-  for (const provider of providerSpecs) {
+  for (const provider of listProviders()) {
     if (!provider.versionProbe) {
       continue;
     }

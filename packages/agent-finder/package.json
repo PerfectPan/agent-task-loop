@@ -29,6 +29,10 @@
   },
   "files": [
     "dist/",
+    "src/**/*.ts",
+    "src/moonbit/agent_discovery_core.js",
+    "src/moonbit/agent_discovery_core.d.ts",
+    "src/moonbit/moonbit.d.ts",
     "README.mbt.md",
     "moon.mod.json",
     "agent_discovery_core/"
@@ -38,11 +42,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build": "pnpm prepare:moonbit && tsup src/index.ts --format esm --dts --clean",
     "dev": "tsx src/index.ts",
+    "prepare:moonbit": "moon build --target js && node scripts/sync-moonbit-js.mjs",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
-    "test": "vitest run",
+    "test": "pnpm prepare:moonbit && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {

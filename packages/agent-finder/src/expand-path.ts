@@ -7,7 +7,3 @@ export function expandPath(path: string, home: string): string {
   }
   return path;
 }
-
-export function trimTrailingSeparators(value: string): string {
-  return value.replace(/[\\/]+$/u, "");
-}

@@ -1,25 +1,25 @@
 ///|
-pub fn scan(probe : Probe) -> DiscoveryReport {
+pub fn scan(probe : @model.Probe) -> @model.DiscoveryReport {
   let agents = Array::new()
-  for spec in provider_specs() {
+  for spec in @catalog.known_provider_specs() {
     agents.push(scan_provider(spec, probe))
   }
-  DiscoveryReport::{
+  @model.DiscoveryReport::{
     schema_version: "0.1",
     generated_at: probe.generated_at,
-    host: HostInfo::{ os: probe.os, arch: probe.arch },
+    host: @model.HostInfo::{ os: probe.os, arch: probe.arch },
     agents,
   }
 }
 
 ///|
-fn scan_provider(spec : ProviderSpec, probe : Probe) -> AgentRecord {
+fn scan_provider(spec : @model.ProviderSpec, probe : @model.Probe) -> @model.AgentRecord {
   let evidence = Array::new()
   let command = first_command(spec.command_candidates, probe.commands)
   let app_path = first_existing_path(spec.app_path_candidates, probe)
   let version = match command {
     Some(path) => {
-      evidence.push(Evidence::{
+      evidence.push(@model.Evidence::{
         kind: "command",
         value: path,
         exists: true,
@@ -30,7 +30,7 @@ fn scan_provider(spec : ProviderSpec, probe : Probe) -> AgentRecord {
           if is_executable(path, probe) {
             match version_for(path, arg, probe) {
               Some(text) => {
-                evidence.push(Evidence::{
+                evidence.push(@model.Evidence::{
                   kind: "version",
                   value: path + " " + arg,
                   exists: true,
@@ -50,7 +50,7 @@ fn scan_provider(spec : ProviderSpec, probe : Probe) -> AgentRecord {
   }
   match app_path {
     Some(path) =>
-      evidence.push(Evidence::{
+      evidence.push(@model.Evidence::{
         kind: "app_path",
         value: path,
         exists: true,
@@ -75,7 +75,7 @@ fn scan_provider(spec : ProviderSpec, probe : Probe) -> AgentRecord {
   let status = derive_status(
     spec, command, app_path, version, has_config, has_mcp_config, probe,
   )
-  AgentRecord::{
+  @model.AgentRecord::{
     id: spec.id,
     name: spec.display_name,
     type_: spec.kind,
@@ -92,13 +92,13 @@ fn scan_provider(spec : ProviderSpec, probe : Probe) -> AgentRecord {
 
 ///|
 fn derive_status(
-  spec : ProviderSpec,
+  spec : @model.ProviderSpec,
   command : String?,
   app_path : String?,
   version : String?,
   has_config : Bool,
   has_mcp_config : Bool,
-  probe : Probe,
+  probe : @model.Probe,
 ) -> String {
   match spec.adapter_mode {
     "versioned-cli" =>
@@ -155,7 +155,7 @@ fn first_command(
 }
 
 ///|
-fn first_existing_path(paths : Array[String], probe : Probe) -> String? {
+fn first_existing_path(paths : Array[String], probe : @model.Probe) -> String? {
   for path in paths {
     if path_exists(path, probe) {
       return Some(expand_path(path, probe.home))
@@ -166,17 +166,17 @@ fn first_existing_path(paths : Array[String], probe : Probe) -> String? {
 
 ///|
 fn push_path_evidence(
-  evidence : Array[Evidence],
+  evidence : Array[@model.Evidence],
   kind : String,
   paths : Array[String],
-  probe : Probe,
+  probe : @model.Probe,
   reason : String,
 ) -> Bool {
   let mut found = false
   for path in paths {
     if path_exists(path, probe) {
       found = true
-      evidence.push(Evidence::{
+      evidence.push(@model.Evidence::{
         kind,
         value: expand_path(path, probe.home),
         exists: true,
@@ -188,7 +188,7 @@ fn push_path_evidence(
 }
 
 ///|
-fn path_exists(path : String, probe : Probe) -> Bool {
+fn path_exists(path : String, probe : @model.Probe) -> Bool {
   match probe.existing_paths.get(expand_path(path, probe.home)) {
     Some(true) => true
     _ => false
@@ -196,7 +196,7 @@ fn path_exists(path : String, probe : Probe) -> Bool {
 }
 
 ///|
-fn is_executable(path : String, probe : Probe) -> Bool {
+fn is_executable(path : String, probe : @model.Probe) -> Bool {
   match probe.executable_paths.get(path) {
     Some(true) => true
     _ => false
@@ -204,6 +204,6 @@ fn is_executable(path : String, probe : Probe) -> Bool {
 }
 
 ///|
-fn version_for(path : String, version_arg : String, probe : Probe) -> String? {
+fn version_for(path : String, version_arg : String, probe : @model.Probe) -> String? {
   probe.versions.get(path + " " + version_arg)
 }

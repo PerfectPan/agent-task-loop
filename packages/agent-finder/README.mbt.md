@@ -6,13 +6,12 @@ This package is the MoonBit provider core for RFC 0002. It models supported codi
 
 ## Structure
 
-- `agent_discovery_core/types.mbt`: public data model and JSON encoding.
-- `agent_discovery_core/providers.mbt`: provider matrix and provider constructors.
-- `agent_discovery_core/scan.mbt`: deterministic scan and status derivation.
-- `agent_discovery_core/doctor.mbt`: diagnostics derived from scan output.
-- `agent_discovery_core/known_*.mbt`: stable provider, command, and path candidate lists.
-- `agent_discovery_core/expand_path.mbt`: path expansion helper owned by the MoonBit domain package.
-- `agent_discovery_core/*_json.mbt`: JSON bridge functions exported to the MoonBit JavaScript backend.
+- `agent_discovery_core/model/`: public data model and JSON encoding.
+- `agent_discovery_core/catalog/`: provider matrix, provider constructors, and stable candidate lists.
+- `agent_discovery_core/scanner/`: deterministic scan, status derivation, evidence, and path helpers.
+- `agent_discovery_core/diagnostics/`: diagnostics derived from scan output.
+- `agent_discovery_core/bridge/`: JSON bridge functions consumed by the JavaScript backend facade.
+- `agent_discovery_core/js_exports.mbt`: thin exported facade for generated JavaScript.
 - `src/`: npm-facing TypeScript wrapper used by JavaScript consumers and the CLI.
 
 ## JavaScript Wrapper Boundary

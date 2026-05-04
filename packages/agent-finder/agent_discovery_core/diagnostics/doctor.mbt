@@ -1,5 +1,5 @@
 ///|
-pub fn doctor(report : DiscoveryReport) -> DoctorSummary {
+pub fn doctor(report : @model.DiscoveryReport) -> @model.DoctorSummary {
   let mut runnable = 0
   let mut found = 0
   let mut missing = 0
@@ -16,7 +16,7 @@ pub fn doctor(report : DiscoveryReport) -> DoctorSummary {
       warnings.push(agent.id + ": " + warning)
     }
   }
-  DoctorSummary::{
+  @model.DoctorSummary::{
     total: report.agents.length(),
     runnable,
     found,

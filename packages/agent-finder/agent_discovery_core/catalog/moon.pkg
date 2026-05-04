@@ -1,0 +1,3 @@
+import {
+  "rivus/agent-finder/agent_discovery_core/model" @model,
+}

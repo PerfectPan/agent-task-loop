@@ -2,8 +2,8 @@
 pub fn scan_probe_json(probe_json : String) -> String {
   try {
     let json = @json.parse(probe_json)
-    let probe : Probe = @json.from_json(json)
-    scan(probe).to_json().stringify(indent=2)
+    let probe : @model.Probe = @json.from_json(json)
+    @scanner.scan(probe).to_json().stringify(indent=2)
   } catch {
     error =>
       {

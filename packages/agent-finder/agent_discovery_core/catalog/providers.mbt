@@ -1,5 +1,5 @@
 ///|
-fn provider_specs() -> Array[ProviderSpec] {
+fn provider_specs() -> Array[@model.ProviderSpec] {
   [
     cli(
       "opencode",
@@ -180,8 +180,8 @@ fn cli(
   app_paths : Array[String],
   mcp_paths : Array[String],
   warnings : Array[String],
-) -> ProviderSpec {
-  ProviderSpec::{
+) -> @model.ProviderSpec {
+  @model.ProviderSpec::{
     id,
     display_name,
     kind: "cli",
@@ -204,8 +204,8 @@ fn app(
   app_paths : Array[String],
   mcp_paths : Array[String],
   warnings : Array[String],
-) -> ProviderSpec {
-  ProviderSpec::{
+) -> @model.ProviderSpec {
+  @model.ProviderSpec::{
     id,
     display_name,
     kind: "app",
@@ -228,8 +228,8 @@ fn extension(
   app_paths : Array[String],
   mcp_paths : Array[String],
   warnings : Array[String],
-) -> ProviderSpec {
-  ProviderSpec::{
+) -> @model.ProviderSpec {
+  @model.ProviderSpec::{
     id,
     display_name,
     kind: "extension",

@@ -4,13 +4,15 @@
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@9.15.9",
   "dependencies": {
+    "@rivus/agent-finder-cli": "workspace:*",
     "@rivus/agent-task-loop": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm -r build",
+    "agent-finder": "pnpm --filter @rivus/agent-finder-cli dev",
+    "build": "pnpm -r build && moon -C packages/agent-finder build && moon -C packages/agent-finder build --target js",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
-    "test": "pnpm -r test",
+    "test": "pnpm -r test && moon -C packages/agent-finder test",
     "version-packages": "changeset version"
   },
   "devDependencies": {

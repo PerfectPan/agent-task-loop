@@ -154,18 +154,19 @@ Files:
 
 Tasks:
 
-- Choose the mooncakes.io module name.
+- Use `PerfectPan/agent-finder` as the mooncakes.io module name unless ownership changes before first publish.
 - Fill module metadata: version, license, keywords, repository, description, and homepage.
 - Keep MoonBit package names aligned with directory names because MoonBit package identity is directory-derived.
-- Document the publish path:
-  - `moon register` or `moon login` for mooncakes.io credentials.
-  - `moon publish` to publish the module.
-  - SemVer version bumps for every published module update.
+- Document and wire the publish path:
+  - `moon package` as the CI packaging preflight.
+  - `moon check --target all` and `moon test --target all` in MoonBit release CI.
+  - `moon publish` from a dedicated GitHub Release workflow.
+  - SemVer version bumps in `moon.mod.json` for every published module update.
 
 Acceptance:
 
 - `moon.mod.json` contains publish-ready metadata.
-- Publishing remains manual until credentials and release ownership are explicitly confirmed.
+- Release CI publishes the MoonBit module when `MOONCAKES_PERFECTPAN_TOKEN` is configured.
 
 ### Phase 2: Provider Specs
 

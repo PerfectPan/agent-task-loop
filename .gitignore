@@ -1,5 +1,7 @@
 .superpowers/
 .omx/
+_build/
+packages/agent-finder/src/moonbit/
 node_modules/
 dist/
 .DS_Store

@@ -32,11 +32,20 @@ jobs:
 
       - run: corepack prepare pnpm@9.15.9 --activate
 
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" version --all
+
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm test
 
       - run: pnpm build
+
+      - name: Package MoonBit module
+        run: moon -C packages/agent-finder package
 
       - name: Create release pull request
         id: changesets

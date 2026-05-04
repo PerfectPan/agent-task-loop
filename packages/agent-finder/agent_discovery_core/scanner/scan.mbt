@@ -13,7 +13,10 @@ pub fn scan(probe : @model.Probe) -> @model.DiscoveryReport {
 }
 
 ///|
-fn scan_provider(spec : @model.ProviderSpec, probe : @model.Probe) -> @model.AgentRecord {
+fn scan_provider(
+  spec : @model.ProviderSpec,
+  probe : @model.Probe,
+) -> @model.AgentRecord {
   let evidence = Array::new()
   let command = first_command(spec.command_candidates, probe.commands)
   let app_path = first_existing_path(spec.app_path_candidates, probe)
@@ -204,6 +207,10 @@ fn is_executable(path : String, probe : @model.Probe) -> Bool {
 }
 
 ///|
-fn version_for(path : String, version_arg : String, probe : @model.Probe) -> String? {
+fn version_for(
+  path : String,
+  version_arg : String,
+  probe : @model.Probe,
+) -> String? {
   probe.versions.get(path + " " + version_arg)
 }

@@ -1,0 +1,50 @@
+name: Publish MoonBit Package
+
+on:
+  release:
+    types:
+      - released
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  publish-moonbit:
+    runs-on: ubuntu-latest
+    env:
+      MOONCAKES_PERFECTPAN_TOKEN: ${{ secrets.MOONCAKES_PERFECTPAN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" version --all
+
+      - name: Check MoonBit formatting
+        run: |
+          moon -C packages/agent-finder fmt
+          git diff --exit-code -- packages/agent-finder
+
+      - name: Check MoonBit module
+        run: moon -C packages/agent-finder check --target all
+
+      - name: Test MoonBit module
+        run: moon -C packages/agent-finder test --target all
+
+      - name: Package MoonBit module
+        run: moon -C packages/agent-finder package
+
+      - name: Configure mooncakes.io credentials
+        run: |
+          test -n "$MOONCAKES_PERFECTPAN_TOKEN"
+          mkdir -p "$HOME/.moon"
+          printf '%s' "$MOONCAKES_PERFECTPAN_TOKEN" > "$HOME/.moon/credentials.json"
+          chmod 600 "$HOME/.moon/credentials.json"
+
+      - name: Publish to mooncakes.io
+        run: moon -C packages/agent-finder publish

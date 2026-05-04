@@ -1,5 +1,5 @@
 import {
-  "rivus/agent-finder/agent_discovery_core/bridge" @bridge,
+  "PerfectPan/agent-finder/agent_discovery_core/bridge" @bridge,
 }
 
 options(

@@ -1,5 +1,7 @@
 ///|
-pub fn validate_provider_specs(_specs : Array[@model.ProviderSpec]) -> Array[String] {
+pub fn validate_provider_specs(
+  _specs : Array[@model.ProviderSpec],
+) -> Array[String] {
   let errors = Array::new()
   let seen = Array::new()
   for spec in _specs {

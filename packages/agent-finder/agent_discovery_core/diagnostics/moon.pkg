@@ -1,7 +1,7 @@
 import {
-  "rivus/agent-finder/agent_discovery_core/model" @model,
+  "PerfectPan/agent-finder/agent_discovery_core/model" @model,
 }
 
 import {
-  "rivus/agent-finder/agent_discovery_core/scanner" @scanner,
+  "PerfectPan/agent-finder/agent_discovery_core/scanner" @scanner,
 } for "test"

@@ -21,13 +21,13 @@ describe("MoonBit discovery core structure", () => {
   });
 
   test("keeps generated MoonBit access behind one TypeScript adapter", () => {
-    expect(existsSync(join(sourceRoot, "moonbit-api.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "infrastructure/moonbit-api.ts"))).toBe(true);
 
     for (const path of [
-      "discover.ts",
-      "list-command-candidates.ts",
-      "list-path-candidates.ts",
-      "list-providers.ts"
+      "application/discover.ts",
+      "application/list-command-candidates.ts",
+      "application/list-path-candidates.ts",
+      "application/list-providers.ts"
     ]) {
       const source = readFileSync(join(sourceRoot, path), "utf8");
 

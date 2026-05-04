@@ -3,8 +3,8 @@ import {
   path_candidates_json,
   providers_json,
   scan_json
-} from "./moonbit/agent_discovery_core.js";
-import type { DiscoveryReport, HostProbe, ProviderSpec } from "./types.js";
+} from "../moonbit/agent_discovery_core.js";
+import type { DiscoveryReport, HostProbe, ProviderSpec } from "../contracts/types.js";
 
 interface MoonBitError {
   error: string;

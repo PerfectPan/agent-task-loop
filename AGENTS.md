@@ -19,14 +19,6 @@ This repository is intended to be public. Treat every change as if it may be rea
 - Use `docs/` for operational guides and reference material.
 - Keep README focused on orientation and quick start.
 
-## Architecture
-
-- Prefer domain-oriented modules with one primary responsibility per file.
-- Prefer one public export per implementation file. Barrel files and shared type contract files are acceptable when they only assemble or describe API surface.
-- Keep MoonBit packages as the domain implementation for agent discovery rules, provider definitions, status derivation, diagnostics, and JSON contracts.
-- Expose MoonBit behavior to JavaScript through a dedicated npm wrapper package.
-- Let CLI packages depend on the npm wrapper package. Do not duplicate MoonBit discovery rules, provider matrices, or status logic in CLI code.
-
 ## Git
 
 - Branch names should be short and descriptive, such as `feat/npm-publish-plan`.

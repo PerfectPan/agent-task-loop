@@ -1,4 +1,4 @@
-import { trimTrailingSeparators } from "./trim-trailing-separators.js";
+import { trimTrailingSeparators } from "../support/trim-trailing-separators.js";
 
 export function resolveCommand(
   command: string,

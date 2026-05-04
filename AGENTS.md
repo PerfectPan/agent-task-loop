@@ -22,6 +22,7 @@ This repository is intended to be public. Treat every change as if it may be rea
 ## Architecture
 
 - Prefer domain-oriented modules with one primary responsibility per file.
+- Organize code by domain boundary, layer boundary, package boundary, and test boundary before applying one-export-per-file cleanup. Do not replace architecture with many tiny files that have no clear folder/package ownership.
 - Prefer one public export per implementation file. Barrel files and shared type contract files are acceptable when they only assemble or describe API surface.
 - Keep MoonBit packages as the domain implementation for agent discovery rules, provider definitions, status derivation, diagnostics, and JSON contracts.
 - Expose MoonBit behavior to JavaScript through a dedicated npm wrapper package.

@@ -1,0 +1,57 @@
+{
+  "name": "@rivus/agent-finder-core",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Read-only local code agent discovery core for JavaScript consumers.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PerfectPan/agent-task-loop",
+    "directory": "packages/agent-finder"
+  },
+  "bugs": {
+    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
+  },
+  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
+  "keywords": [
+    "ai-agent",
+    "coding-agent",
+    "discovery",
+    "inventory"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.mbt.md",
+    "moon.mod.json",
+    "agent_discovery_core/"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsx src/index.ts",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -27,7 +27,7 @@ The core does not touch the host. Callers provide a `Probe` containing command, 
 
 ## Publishing
 
-The MoonBit module metadata lives in `moon.mod.json`. The module name is `nyx/agent-finder`, which must match the authenticated mooncakes.io username.
+The MoonBit module metadata lives in `moon.mod.json`. The module name is `PerfectPan/agent-finder`, which must match the authenticated mooncakes.io username.
 
 CI always packages the module with:
 
@@ -35,7 +35,7 @@ CI always packages the module with:
 moon -C packages/agent-finder package
 ```
 
-Release CI publishes to mooncakes.io from the dedicated MoonBit publish workflow when the `MOONCAKES_NYX_TOKEN` GitHub Actions secret is configured. See `docs/moonbit-publish.md` for the release flow.
+Release CI publishes to mooncakes.io from the dedicated MoonBit publish workflow when the `MOONCAKES_PERFECTPAN_TOKEN` GitHub Actions secret is configured. See `docs/moonbit-publish.md` for the release flow.
 
 Manual publish outline:
 

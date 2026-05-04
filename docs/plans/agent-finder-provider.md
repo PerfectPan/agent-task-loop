@@ -29,7 +29,7 @@ The implementation must stay within the RFC privacy boundary: no task execution,
 
 ### Package Names
 
-- MoonBit module: `nyx/agent-finder` or another mooncakes.io-compatible module name chosen before publish.
+- MoonBit module: `PerfectPan/agent-finder` or another mooncakes.io-compatible module name chosen before publish.
 - npm core wrapper package: `@rivus/agent-finder-core`.
 - npm CLI package: `@rivus/agent-finder-cli`.
 - CLI binary: `agent-finder`.
@@ -154,7 +154,7 @@ Files:
 
 Tasks:
 
-- Use `nyx/agent-finder` as the mooncakes.io module name unless ownership changes before first publish.
+- Use `PerfectPan/agent-finder` as the mooncakes.io module name unless ownership changes before first publish.
 - Fill module metadata: version, license, keywords, repository, description, and homepage.
 - Keep MoonBit package names aligned with directory names because MoonBit package identity is directory-derived.
 - Document and wire the publish path:
@@ -166,7 +166,7 @@ Tasks:
 Acceptance:
 
 - `moon.mod.json` contains publish-ready metadata.
-- Release CI publishes the MoonBit module when `MOONCAKES_NYX_TOKEN` is configured.
+- Release CI publishes the MoonBit module when `MOONCAKES_PERFECTPAN_TOKEN` is configured.
 
 ### Phase 2: Provider Specs
 

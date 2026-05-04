@@ -15,7 +15,7 @@ jobs:
   publish-moonbit:
     runs-on: ubuntu-latest
     env:
-      MOONCAKES_NYX_TOKEN: ${{ secrets.MOONCAKES_NYX_TOKEN }}
+      MOONCAKES_PERFECTPAN_TOKEN: ${{ secrets.MOONCAKES_PERFECTPAN_TOKEN }}
     steps:
       - uses: actions/checkout@v6
 
@@ -41,9 +41,9 @@ jobs:
 
       - name: Configure mooncakes.io credentials
         run: |
-          test -n "$MOONCAKES_NYX_TOKEN"
+          test -n "$MOONCAKES_PERFECTPAN_TOKEN"
           mkdir -p "$HOME/.moon"
-          printf '%s' "$MOONCAKES_NYX_TOKEN" > "$HOME/.moon/credentials.json"
+          printf '%s' "$MOONCAKES_PERFECTPAN_TOKEN" > "$HOME/.moon/credentials.json"
           chmod 600 "$HOME/.moon/credentials.json"
 
       - name: Publish to mooncakes.io

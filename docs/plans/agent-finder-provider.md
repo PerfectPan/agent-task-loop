@@ -25,7 +25,7 @@ The implementation must stay within the RFC privacy boundary: no task execution,
 - `packages/agent-finder/package.json`
 - `packages/agent-finder/src/`
 - `packages/agent-finder/bin/agent-finder.mjs`
-- `packages/agent-finder/README.mbt.md`
+- `packages/agent-finder/README.md`
 
 ### Package Names
 
@@ -150,7 +150,7 @@ Acceptance:
 Files:
 
 - `packages/agent-finder/moon.mod.json`
-- `packages/agent-finder/README.mbt.md`
+- `packages/agent-finder/README.md`
 
 Tasks:
 
@@ -226,7 +226,7 @@ Files:
 - `packages/agent-finder-cli/package.json`
 - `packages/agent-finder-cli/src/cli.ts`
 - `packages/agent-finder/bin/agent-finder.mjs`
-- `packages/agent-finder/README.mbt.md`
+- `packages/agent-finder/README.md`
 
 Tasks:
 

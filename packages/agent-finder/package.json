@@ -33,7 +33,7 @@
     "src/moonbit/agent_discovery_core.js",
     "src/moonbit/agent_discovery_core.d.ts",
     "src/moonbit/moonbit.d.ts",
-    "README.mbt.md",
+    "README.md",
     "moon.mod.json",
     "agent_discovery_core/"
   ],

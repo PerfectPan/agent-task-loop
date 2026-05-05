@@ -1,6 +1,6 @@
 {
   "name": "@rivus/agent-finder-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Read-only local code agent discovery core for JavaScript consumers.",
   "license": "GPL-3.0-only",

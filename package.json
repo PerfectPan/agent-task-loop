@@ -9,7 +9,7 @@
   },
   "scripts": {
     "agent-finder": "pnpm --filter @rivus/agent-finder-cli dev",
-    "build": "pnpm -r build && moon -C packages/agent-finder build && moon -C packages/agent-finder build --target js",
+    "build": "pnpm -r build",
     "changeset": "changeset",
     "check:moonbit-version": "node scripts/sync-moonbit-version.mjs --check",
     "release": "pnpm build && changeset publish",
@@ -18,6 +18,7 @@
     "version-packages": "changeset version && pnpm sync:moonbit-version"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0"
+    "@changesets/cli": "^2.31.0",
+    "@rslib/core": "^0.21.3"
   }
 }

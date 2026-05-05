@@ -40,7 +40,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --dts --clean",
+    "build": "rslib build",
     "dev": "tsx --conditions=development src/cli.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
@@ -52,8 +52,10 @@
     "citty": "^0.1.6"
   },
   "devDependencies": {
+    "@rsbuild/core": "^2.0.3",
+    "@rslib/core": "^0.21.3",
+    "@rivus/rslib-config": "workspace:*",
     "@types/node": "^22.15.3",
-    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"

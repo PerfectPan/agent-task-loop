@@ -35,7 +35,7 @@ Additionally, `tsup` is mature but `rslib` (Rsbuild's library mode) offers bette
 
 ## Proposed Design
 
-### Option A: Direct import from `_build/` (Recommended)
+### Option A: Direct import from `_build/`
 
 TypeScript imports MoonBit output directly from the build directory, eliminating the copy step entirely.
 
@@ -104,33 +104,23 @@ Trade-offs:
 - Import paths are slightly longer but explicit
 - No copy step needed at all
 
-### Option B: Keep copy, use rslib lifecycle hooks
+### Option B: Keep copy, use rslib lifecycle hooks (Chosen)
 
 Inline the sync logic into rslib config instead of a separate script file.
 
 ```ts
-// rslib.config.ts — moonbit plugin
-import { execa } from "execa";
+// packages/rslib-config/src/moonbit-plugin.ts
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import type { RsbuildPlugin } from "@rsbuild/core";
 
-function moonbitPlugin() {
+export function moonbitPlugin(): RsbuildPlugin {
   return {
     name: "moonbit",
-    setup(build) {
-      build.onBeforeBuild(async ({ context }) => {
-        // Build MoonBit to JS
-        await execa("moon", ["build", "--target", "js"], { cwd: context.rootPath });
-
-        // Sync output to src/moonbit/ — same logic as current script, but inline
-        const cwd = context.rootPath;
-        const src = join(cwd, "_build", "js", "debug", "build", "agent_discovery_core");
-        const dst = join(cwd, "src", "moonbit");
-        mkdirSync(dst, { recursive: true });
-        for (const f of ["agent_discovery_core.js", "agent_discovery_core.js.map",
-                          "agent_discovery_core.d.ts", "moonbit.d.ts"]) {
-          copyFileSync(join(src, f), join(dst, f));
-        }
+    setup(api) {
+      api.onBeforeBuild(async () => {
+        // Build MoonBit to JS, then sync output to src/moonbit/
+        // (pseudocode, actual exec handled via child_process or execa)
       });
     }
   };
@@ -144,22 +134,18 @@ Trade-offs:
 
 ### Other packages
 
-`agent-finder-cli` and `agent-task-loop` are pure TypeScript CLIs, straightforward tsup → rslib migration:
+`agent-finder-cli` and `agent-task-loop` are pure TypeScript CLIs. A shared `cliConfig` in `@rivus/rslib-config` provides the common base:
 
 ```ts
-// rslib.config.ts
-import { defineConfig } from "@rslib/core";
-
-export default defineConfig({
-  source: { entry: { cli: "src/cli.ts" } },
+// packages/rslib-config/src/cli.config.ts
+export const cliConfig = {
   output: { target: "node", format: "esm" },
   tools: {
     rspack: {
-      // Keep external deps external (react, ink, etc.)
       externals: ["react", "ink", "citty", "execa", "zod"]
     }
   }
-});
+};
 ```
 
 ## Comparison
@@ -176,19 +162,53 @@ export default defineConfig({
 
 ## Migration Plan
 
-1. Add `rslib` as devDependency to all three packages
-2. Create `rslib.config.ts` per package
-3. Choose Option A or B for `agent-finder-core` MoonBit bridge
+1. Create `packages/rslib-config/` with shared moonbit plugin and base configs
+2. Add `rslib` and `@rivus/rslib-config` as devDependencies to three packages
+3. Create `rslib.config.ts` per package (thin wrapper around shared config)
 4. Update `package.json` scripts: `tsup` → `rslib build`
 5. Verify: `dist/` output identical, `pack --dry-run` shows same files
 6. Remove `tsup` devDependency
 
-## Rollback
+## Decisions
 
-`rslib.config.ts` can be deleted and `tsup` re-added without structural changes. The MoonBit → JS bridge path (Option A vs B) is a one-line change in the import statement.
+- **Option B chosen** — keep import paths stable, embed copy logic in rslib plugin hooks.
+- **ESM-only, no CJS** — all consumers are Node.js ≥20, CJS unnecessary.
+- **Shared config package `@rivus/rslib-config`** — extract common rslib configuration (format, target, externals) into a workspace package. Each package's `rslib.config.ts` becomes a thin re-export extending the shared base.
 
-## Open Questions
+```
+packages/rslib-config/           ← new shared config
+├── package.json
+└── src/
+    ├── moonbit-plugin.ts        ← Option B plugin for agent-finder-core
+    ├── lib.config.ts            ← base config for libraries (agent-finder-core)
+    └── cli.config.ts            ← base config for CLIs (agent-finder-cli, agent-task-loop)
+```
 
-- Option A or B? Option A eliminates the sync script entirely but changes import paths. Option B keeps imports stable.
-- Do we need CJS output? Currently ESM-only. Some consumers may want CJS.
-- Should `rslib` configuration be shared across packages (workspace config)?
+Package-specific configs become:
+
+```ts
+// packages/agent-finder-core/rslib.config.ts
+import { defineConfig } from "@rslib/core";
+import { libConfig, moonbitPlugin } from "@rivus/rslib-config";
+
+export default defineConfig({
+  ...libConfig,
+  source: { entry: { index: "src/index.ts" } },
+  plugins: [moonbitPlugin()]
+});
+```
+
+```ts
+// packages/agent-finder-cli/rslib.config.ts
+import { defineConfig } from "@rslib/core";
+import { cliConfig } from "@rivus/rslib-config";
+
+export default defineConfig({
+  ...cliConfig,
+  source: { entry: { cli: "src/cli.ts" } }
+});
+```
+
+### Rollback
+
+`rslib.config.ts` can be deleted and `tsup` re-added without structural changes. The MoonBit → JS bridge path is a one-line change in the import statement.

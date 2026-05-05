@@ -79,6 +79,9 @@ importers:
 
   packages/agent-task-loop:
     dependencies:
+      '@rivus/agent-finder-core':
+        specifier: workspace:*
+        version: link:../agent-finder
       citty:
         specifier: ^0.1.6
         version: 0.1.6

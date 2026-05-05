@@ -24,7 +24,7 @@ The result is a "project-first" experience. An `init` command and a global confi
 - Support a global config file at `~/.agent-task-loop/config.json`.
 - Resolve the global config as a fallback when no project config or env var is found.
 - Support `task.config.json` as a project config format alongside the existing TypeScript and JavaScript formats.
-- Add an `init` command that guides users through first-run setup interactively: detect whether `lark-cli` is installed, print installation instructions if it is missing, then prompt for Feishu `baseToken` and `tableId` and write `~/.agent-task-loop/config.json`.
+- Add an `init` command that guides users through first-run setup interactively: detect whether `lark-cli` is installed, print installation instructions if it is missing, use `@rivus/agent-finder-core` to discover which supported coding agents are available on the machine, prompt for Feishu `baseToken` and `tableId`, and write `~/.agent-task-loop/config.json` with the discovered agents pre-populated.
 - Improve the "no config found" error message to mention `init`.
 - Keep the config resolution order deterministic and easy to reason about.
 
@@ -77,7 +77,7 @@ agent-task-loop init
 
 Behavior:
 
-1. **Detect `lark-cli`**: resolve `lark-cli` on `PATH` using Node's `child_process` (`which lark-cli` or equivalent). If not found, print installation instructions and exit with a non-zero code:
+1. **Detect `lark-cli`**: resolve `lark-cli` on `PATH` using Node's `child_process`. If not found, print installation instructions and exit with a non-zero code:
 
    ```
    lark-cli is required but not found on PATH.
@@ -86,14 +86,31 @@ Behavior:
 
 2. **Check existing config**: compute `~/.agent-task-loop/config.json`. If it already exists, print its path and exit without modifying it.
 
-3. **Interactive prompts**: use Node's built-in `readline` to prompt the user:
+3. **Discover available agents**: call `collectHostProbe()` + `discover()` from `@rivus/agent-finder-core` (a sibling package in this monorepo). Filter the `DiscoveryReport` to agents that are both supported by `agent-task-loop` and have `status: 'runnable'`. The mapping from agent-finder provider IDs to `agent-task-loop` agent names is:
+
+   | agent-finder ID | agent-task-loop name | command |
+   |-----------------|----------------------|---------|
+   | `claude-code`   | `claude`             | `claude` |
+   | `codex`         | `codex`              | `codex`  |
+   | `coco`          | `coco`               | `coco`   |
+   | `glm`           | `glm`                | `glm`    |
+
+   > **Note:** `coco` and `glm` are not yet in the agent-finder catalog. They must be added to `packages/agent-finder/agent_discovery_core/catalog/providers.mbt` as part of this RFC's implementation before `init` can discover them.
+
+   Print which agents were found:
+
+   ```
+   Found agents: claude, codex
+   ```
+
+4. **Interactive prompts**: use Node's built-in `readline` to prompt:
 
    ```
    Feishu base token: _
    Feishu table ID: _
    ```
 
-4. **Write config**: create `~/.agent-task-loop/` if needed, then write `config.json` with the provided values and sensible defaults for the remaining fields:
+5. **Write config**: create `~/.agent-task-loop/` if needed, then write `config.json` with the provided Feishu values and the discovered agents pre-populated:
 
    ```json
    {
@@ -104,14 +121,25 @@ Behavior:
      "projects": {},
      "repositories": {},
      "agents": {
-       "claude": { "name": "claude", "command": "claude", "args": [], "env": {} }
+       "claude": { "name": "claude", "command": "claude", "args": [], "env": {} },
+       "codex":  { "name": "codex",  "command": "codex",  "args": [], "env": {} }
      }
    }
    ```
 
-5. Print the config path and confirm setup is complete.
+   If no supported agents are found, write an empty `agents` object and print a warning.
 
-Validation against `appConfigSchema` is skipped during `init` because `projects` and `repositories` are empty — they are populated as users add their first project. Live commands validate the config when they load it.
+6. Print the config path and confirm setup is complete.
+
+Validation against `appConfigSchema` is skipped during `init` because `projects` and `repositories` are intentionally empty — they are populated as users configure their first project. Live commands validate the config when they load it.
+
+### Dependency Change
+
+`packages/agent-task-loop/package.json` must add `@rivus/agent-finder-core` as a workspace dependency:
+
+```json
+"@rivus/agent-finder-core": "workspace:*"
+```
 
 ### Error Message Improvement
 
@@ -144,30 +172,34 @@ XDG-style paths are more portable on Linux, but they add platform-specific logic
 ## Testing Strategy
 
 - **`load-config.test.ts`**: add cases for `task.config.json` discovery in a temp dir, global config fallback when no project config exists, and project config taking precedence over global config.
-- **`init.test.ts`**: cover template creation in a fake home directory, idempotent behavior when config already exists.
+- **`init.test.ts`**: cover config write with discovered agents in a fake home directory, idempotent behavior when config already exists, and lark-cli-missing exit path (by stubbing the resolver).
 - All existing tests must continue to pass without changes.
 - Run `pnpm test` and `pnpm build` in `packages/agent-task-loop` before merging.
 
 ## Rollout Plan
 
-1. Update `resolveConfigPath` in `load-config.ts`: add `task.config.json` to the walk-up candidates and add the global config path as the final fallback.
-2. Update `loadConfig` in `load-config.ts`: route JSON paths to `readFileSync` + `JSON.parse` instead of dynamic `import()`.
-3. Update the "no config found" error message to mention `init`.
-4. Add tests for JSON project config and global config fallback.
-5. Implement `src/commands/init.ts` with exported `createGlobalConfig` and `initCommand`.
-6. Add tests for `init`.
-7. Register `initCommand` in `cli.ts`.
-8. Verify with `pnpm test`, `pnpm build`, and `npm pack --dry-run`.
+1. Add `coco` and `glm` provider specs to `packages/agent-finder/agent_discovery_core/catalog/providers.mbt`.
+2. Update `resolveConfigPath` in `load-config.ts`: add `task.config.json` to the walk-up candidates and add the global config path as the final fallback.
+3. Update `loadConfig` in `load-config.ts`: route JSON paths to `readFileSync` + `JSON.parse` instead of dynamic `import()`.
+4. Update the "no config found" error message to mention `init`.
+5. Add tests for JSON project config and global config fallback.
+6. Add `@rivus/agent-finder-core: workspace:*` to `packages/agent-task-loop/package.json` dependencies.
+7. Implement `src/commands/init.ts`: `lark-cli` detection, agent discovery via `@rivus/agent-finder-core`, `readline` prompts, config write.
+8. Add tests for `init` core logic (excluding interactive readline layer).
+9. Register `initCommand` in `cli.ts`.
+10. Verify with `pnpm test`, `pnpm build`, and `npm pack --dry-run` in `packages/agent-task-loop`.
 
 ## Risks
 
 - `os.homedir()` is called at resolution time, not at module load time, so tests can redirect it by mutating the `os` module export. If this assumption breaks under a future Node.js version, the global config path lookup must be extracted into a helper that tests can stub differently.
 - JSON project configs give up TypeScript's ability to compute values dynamically (e.g. constructing a command from `process.env`). Users who need dynamic values must use a TypeScript config.
 - The `init` command's `readline` prompts cannot be tested with the standard Vitest runner without piping stdin. Tests for `init` should extract `createGlobalConfig(inputs)` as a pure function that accepts pre-collected values, and test the interactive prompt layer separately or not at all.
+- `coco` and `glm` are currently absent from the agent-finder catalog. Until they are added (step 1 of the rollout), `init` cannot discover them and will silently omit them from the generated config.
 
 ## Decisions
 
 - Global config is JSON-only, loaded via `readFileSync`.
 - `task.config.json` is supported as a project config format.
 - Resolution is first-match-wins with no merging.
-- `init` detects `lark-cli`, prompts for Feishu credentials, and writes the config.
+- `init` detects `lark-cli`, uses `@rivus/agent-finder-core` to discover supported agents, prompts for Feishu credentials, and writes the config with agents pre-populated.
+- `coco` and `glm` provider specs must be added to the agent-finder catalog before they can be auto-discovered.

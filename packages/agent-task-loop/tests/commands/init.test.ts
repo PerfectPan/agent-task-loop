@@ -33,14 +33,14 @@ afterEach(async () => {
 });
 
 describe('isLarkCliAvailable', () => {
-  it('returns true when resolveCommand finds lark-cli', () => {
+  it('returns true when resolveCommand finds lark-cli', async () => {
     vi.mocked(resolveCommand).mockReturnValue('/usr/local/bin/lark-cli');
-    expect(isLarkCliAvailable()).toBe(true);
+    expect(await isLarkCliAvailable()).toBe(true);
   });
 
-  it('returns false when resolveCommand returns null', () => {
+  it('returns false when resolveCommand returns null', async () => {
     vi.mocked(resolveCommand).mockReturnValue(null);
-    expect(isLarkCliAvailable()).toBe(false);
+    expect(await isLarkCliAvailable()).toBe(false);
   });
 });
 

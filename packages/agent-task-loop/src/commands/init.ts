@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import { collectHostProbe, discover, resolveCommand } from '@rivus/agent-finder-core';
 import { defineCommand } from 'citty';
 
 const AGENT_MAP: Record<string, { name: string; command: string }> = {
@@ -11,7 +10,8 @@ const AGENT_MAP: Record<string, { name: string; command: string }> = {
   'codex': { name: 'codex', command: 'codex' },
 };
 
-export function isLarkCliAvailable(): boolean {
+export async function isLarkCliAvailable(): Promise<boolean> {
+  const { resolveCommand } = await import('@rivus/agent-finder-core');
   return (
     resolveCommand('lark-cli', {
       path: process.env.PATH ?? '',
@@ -23,6 +23,7 @@ export function isLarkCliAvailable(): boolean {
 }
 
 export async function discoverRunnableAgents(): Promise<Record<string, { name: string; command: string; args: string[]; env: Record<string, string> }>> {
+  const { collectHostProbe, discover } = await import('@rivus/agent-finder-core');
   const probe = await collectHostProbe();
   const report = discover(probe);
   const agents: Record<string, { name: string; command: string; args: string[]; env: Record<string, string> }> = {};
@@ -78,7 +79,7 @@ export const initCommand = defineCommand({
     description: 'Create a global config at ~/.agent-task-loop/config.json',
   },
   async run() {
-    if (!isLarkCliAvailable()) {
+    if (!await isLarkCliAvailable()) {
       console.log('lark-cli is not found on PATH.');
       const shouldInstall = await confirmInstall();
       if (!shouldInstall) {
@@ -88,7 +89,7 @@ export const initCommand = defineCommand({
       }
       console.log('Installing @larksuite/cli...');
       execFileSync('npm', ['install', '-g', '@larksuite/cli'], { stdio: 'inherit' });
-      if (!isLarkCliAvailable()) {
+      if (!await isLarkCliAvailable()) {
         console.error('Installation failed. Install manually: npm install -g @larksuite/cli');
         process.exit(1);
       }

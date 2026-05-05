@@ -2,48 +2,64 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Extend config resolution to support `task.config.json`, a global `~/.agent-task-loop/config.json` fallback, and an `init` command for zero-friction first-run setup.
+**Goal:** Extend config resolution to support `task.config.json` and a global `~/.agent-task-loop/config.json` fallback, and add an interactive `init` command that detects `lark-cli`, discovers available agents via `@rivus/agent-finder-core`, prompts for Feishu credentials, and writes the global config.
 
-**Architecture:** Modify `resolveConfigPath` to walk the new candidate list (env var → project TS/JSON walk-up → global JSON); add a separate JSON loader path in `loadConfig`; add an `init` command that writes the global config template.
+**Architecture:** Modify `resolveConfigPath` to walk the new candidate list and fall back to global JSON; add a JSON loader path in `loadConfig`; add `@rivus/agent-finder-core` workspace dependency; implement `init` with a pure testable core (`createGlobalConfig(inputs)`) and a thin interactive shell (`initCommand`) that collects inputs via `readline`.
 
-**Tech Stack:** Node.js 20 ESM, TypeScript, Zod, Vitest, `citty` CLI framework.
+**Tech Stack:** Node.js 20 ESM, TypeScript, Zod, Vitest, `citty`, `@rivus/agent-finder-core` (workspace).
 
 ---
 
 ## Background
 
-Issue #12 requires:
+RFC 0003 (`rfcs/0003-global-config-init.md`) specifies:
 
-1. **New config resolution order** (first match wins):
+1. **Config resolution order** (first match wins):
    1. `--config` flag
    2. `AGENT_TASK_LOOP_CONFIG` env var
-   3. Walk up from cwd: `task.config.ts` then `task.config.json` at each directory
+   3. Walk up from cwd: `task.config.ts`, `.mts`, `.js`, `.mjs`, `task.config.json`
    4. Global: `~/.agent-task-loop/config.json`
 
-2. **JSON loading** – global config is always JSON; project config can also be JSON (`task.config.json`). JSON files must be loaded via `readFileSync` + `JSON.parse`, not dynamic `import()`.
+2. **JSON loading** – JSON configs use `readFileSync` + `JSON.parse`, not dynamic `import()`.
 
-3. **`init` command** – creates `~/.agent-task-loop/config.json` from a template if it doesn't already exist.
+3. **`init` command** – interactive setup:
+   - Detects `lark-cli` on PATH via `resolveCommand` from `@rivus/agent-finder-core`; exits with instructions if missing
+   - Skips if `~/.agent-task-loop/config.json` already exists
+   - Calls `collectHostProbe()` + `discover()` from `@rivus/agent-finder-core`; maps `claude-code → claude` and `codex → codex` for `status: 'runnable'` entries
+   - Prompts for Feishu `baseToken` and `tableId` via Node's `readline`
+   - Writes the config with discovered agents pre-populated
 
 **Key files:**
 - Modify: `packages/agent-task-loop/src/config/load-config.ts`
+- Modify: `packages/agent-task-loop/package.json`
 - Create: `packages/agent-task-loop/src/commands/init.ts`
 - Modify: `packages/agent-task-loop/src/cli.ts`
 - Modify: `packages/agent-task-loop/tests/config/load-config.test.ts`
 - Create: `packages/agent-task-loop/tests/commands/init.test.ts`
 
-**Run tests with:** `cd packages/agent-task-loop && pnpm test`
+**Run tests:** `pnpm test` from `packages/agent-task-loop/`
 
 ---
 
-### Task 1: Support `task.config.json` as a project config candidate
+### Task 1: Support `task.config.json` and global config fallback in `load-config.ts`
 
 **Files:**
 - Modify: `packages/agent-task-loop/src/config/load-config.ts`
 - Modify: `packages/agent-task-loop/tests/config/load-config.test.ts`
 
-**Step 1: Write the failing test**
+**Step 1: Write failing tests**
 
-Add to `tests/config/load-config.test.ts` inside the existing `describe('loadConfig', ...)` block:
+Add to `tests/config/load-config.test.ts` inside the existing `describe('loadConfig', ...)` block. First update the import line at the top:
+
+```ts
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { loadConfig, resolveConfigPath } from '../../src/config/load-config';
+```
+
+Add this test after the existing ones:
 
 ```ts
 it('resolves task.config.json from the current working directory', async () => {
@@ -55,24 +71,10 @@ it('resolves task.config.json from the current working directory', async () => {
     JSON.stringify({
       feishu: { baseToken: 'json-base', tableId: 'json-table' },
       projects: {
-        demo: {
-          key: 'demo',
-          name: 'JsonDemo',
-          defaultRepository: 'demo_repo',
-          workspaceRoot: '/tmp/demo',
-          taskTemplatePrompt: 'hi',
-        },
+        demo: { key: 'demo', name: 'JsonDemo', defaultRepository: 'demo_repo', workspaceRoot: '/tmp/demo', taskTemplatePrompt: 'hi' },
       },
       repositories: {
-        demo_repo: {
-          key: 'demo_repo',
-          localPath: '/tmp/demo',
-          defaultBranch: 'main',
-          installCommand: 'pnpm install',
-          testCommand: 'pnpm test',
-          buildCommand: 'pnpm build',
-          workspaceStrategy: 'worktree',
-        },
+        demo_repo: { key: 'demo_repo', localPath: '/tmp/demo', defaultBranch: 'main', installCommand: 'pnpm install', testCommand: 'pnpm test', buildCommand: 'pnpm build', workspaceStrategy: 'worktree' },
       },
       agents: {
         claude: { name: 'claude', command: 'claude', args: [], env: {} },
@@ -86,27 +88,110 @@ it('resolves task.config.json from the current working directory', async () => {
 
   process.chdir(tempDir);
 
-  expect(resolveConfigPath().endsWith('/task.config.json')).toBe(true);
-
-  const config = await loadConfig();
-  expect(config.feishu.baseToken).toBe('json-base');
-  expect(config.projects.demo.name).toBe('JsonDemo');
+  try {
+    expect(resolveConfigPath().endsWith('/task.config.json')).toBe(true);
+    const config = await loadConfig();
+    expect(config.feishu.baseToken).toBe('json-base');
+    expect(config.projects.demo.name).toBe('JsonDemo');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
 });
 ```
 
-Also add cleanup for tempDir in that test (following the existing pattern – create a `tempDir` variable in `afterEach` if not already present; the existing tests use local let variables, follow the same pattern).
+Also add a `describe` block for global config fallback tests (these will fail until Task 1 is implemented):
 
-**Step 2: Run test to verify it fails**
+```ts
+describe('global config fallback', () => {
+  const originalHome = os.homedir;
+  let fakeHome: string;
 
-```bash
-cd packages/agent-task-loop && pnpm test tests/config/load-config.test.ts
+  beforeEach(async () => {
+    fakeHome = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-home-'));
+    (os as unknown as { homedir: () => string }).homedir = () => fakeHome;
+  });
+
+  afterEach(async () => {
+    (os as unknown as { homedir: () => string }).homedir = originalHome;
+    await rm(fakeHome, { recursive: true, force: true });
+  });
+
+  it('falls back to global config when no project config exists', async () => {
+    const globalDir = path.join(fakeHome, '.agent-task-loop');
+    await mkdir(globalDir, { recursive: true });
+    const globalConfigPath = path.join(globalDir, 'config.json');
+    await writeFile(
+      globalConfigPath,
+      JSON.stringify({
+        feishu: { baseToken: 'global-base', tableId: 'global-table' },
+        projects: {},
+        repositories: {},
+        agents: { claude: { name: 'claude', command: 'claude', args: [], env: {} } },
+      }),
+      'utf8',
+    );
+
+    const emptyDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-empty-'));
+    process.chdir(emptyDir);
+
+    try {
+      expect(resolveConfigPath()).toBe(globalConfigPath);
+      const config = await loadConfig();
+      expect(config.feishu.baseToken).toBe('global-base');
+    } finally {
+      await rm(emptyDir, { recursive: true, force: true });
+    }
+  });
+
+  it('project config takes precedence over global config', async () => {
+    const globalDir = path.join(fakeHome, '.agent-task-loop');
+    await mkdir(globalDir, { recursive: true });
+    await writeFile(
+      path.join(globalDir, 'config.json'),
+      JSON.stringify({
+        feishu: { baseToken: 'global-base', tableId: 'global-table' },
+        projects: {},
+        repositories: {},
+        agents: { claude: { name: 'claude', command: 'claude', args: [], env: {} } },
+      }),
+      'utf8',
+    );
+
+    const projectDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-project-'));
+    await writeFile(
+      path.join(projectDir, 'task.config.json'),
+      JSON.stringify({
+        feishu: { baseToken: 'project-base', tableId: 'project-table' },
+        projects: {},
+        repositories: {},
+        agents: { claude: { name: 'claude', command: 'claude', args: [], env: {} } },
+      }),
+      'utf8',
+    );
+
+    process.chdir(projectDir);
+
+    try {
+      const config = await loadConfig();
+      expect(config.feishu.baseToken).toBe('project-base');
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  });
+});
 ```
 
-Expected: FAIL – `task.config.json` is not found because it's not in `defaultConfigFilenames`.
+**Step 2: Run tests to verify they fail**
 
-**Step 3: Implement minimal fix in `load-config.ts`**
+```bash
+pnpm test tests/config/load-config.test.ts
+```
 
-Replace the `defaultConfigFilenames` constant and add JSON loading support:
+Expected: FAIL on `task.config.json` test and both global config tests.
+
+**Step 3: Implement the changes in `load-config.ts`**
+
+Replace the entire file with:
 
 ```ts
 import { existsSync, readFileSync } from 'node:fs';
@@ -156,13 +241,12 @@ export function resolveConfigPath(configPath?: string): string {
     }
   }
 
-  const globalConfigPath = path.join(os.homedir(), '.agent-task-loop', 'config.json');
-  candidates.push(globalConfigPath);
+  candidates.push(path.join(os.homedir(), '.agent-task-loop', 'config.json'));
 
   const resolved = candidates.find(candidate => existsSync(candidate));
   if (!resolved) {
     throw new Error(
-      `No task config found. Run \`agent-task-loop init\` to create a global config, or pass --config / set AGENT_TASK_LOOP_CONFIG.`,
+      'No task config found. Run `agent-task-loop init` to create a global config, or pass --config / set AGENT_TASK_LOOP_CONFIG.',
     );
   }
 
@@ -185,185 +269,107 @@ export async function loadConfig(configPath?: string): Promise<AppConfig> {
 }
 ```
 
-**Step 4: Run test to verify it passes**
+**Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/agent-task-loop && pnpm test tests/config/load-config.test.ts
+pnpm test tests/config/load-config.test.ts
 ```
 
-Expected: All tests PASS including the new JSON test.
+Expected: All PASS.
 
 **Step 5: Commit**
 
 ```bash
 git add packages/agent-task-loop/src/config/load-config.ts packages/agent-task-loop/tests/config/load-config.test.ts
-git commit -m "feat(config): support task.config.json and global ~/.agent-task-loop/config.json"
+git commit -m "feat(config): support task.config.json and global ~/.agent-task-loop/config.json fallback"
 ```
 
 ---
 
-### Task 2: Test global config fallback
+### Task 2: Add `@rivus/agent-finder-core` workspace dependency
 
 **Files:**
-- Modify: `packages/agent-task-loop/tests/config/load-config.test.ts`
+- Modify: `packages/agent-task-loop/package.json`
 
-The previous task already added the global config path to `resolveConfigPath`. Now add tests to verify it is used as a fallback and that project config takes precedence over it.
+**Step 1: Add the dependency**
 
-**Step 1: Write the failing tests**
+Add to the `"dependencies"` block in `packages/agent-task-loop/package.json`:
 
-Add to `tests/config/load-config.test.ts`:
-
-```ts
-describe('global config fallback', () => {
-  const originalHome = os.homedir;
-  let fakeHome: string;
-
-  beforeEach(async () => {
-    fakeHome = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-home-'));
-    // Redirect os.homedir() to our fake home
-    (os as { homedir: () => string }).homedir = () => fakeHome;
-  });
-
-  afterEach(async () => {
-    (os as { homedir: () => string }).homedir = originalHome;
-    await rm(fakeHome, { recursive: true, force: true });
-  });
-
-  it('falls back to global config when no project config exists', async () => {
-    const globalDir = path.join(fakeHome, '.agent-task-loop');
-    await mkdir(globalDir, { recursive: true });
-    const globalConfigPath = path.join(globalDir, 'config.json');
-
-    await writeFile(
-      globalConfigPath,
-      JSON.stringify({
-        feishu: { baseToken: 'global-base', tableId: 'global-table' },
-        projects: {},
-        repositories: {},
-        agents: {
-          claude: { name: 'claude', command: 'claude', args: [], env: {} },
-          codex: { name: 'codex', command: 'codex', args: [], env: {} },
-          coco: { name: 'coco', command: 'coco', args: [], env: {} },
-          glm: { name: 'glm', command: 'glm', args: [], env: {} },
-        },
-      }),
-      'utf8',
-    );
-
-    const emptyDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-empty-'));
-    process.chdir(emptyDir);
-
-    try {
-      expect(resolveConfigPath()).toBe(globalConfigPath);
-      const config = await loadConfig();
-      expect(config.feishu.baseToken).toBe('global-base');
-    } finally {
-      await rm(emptyDir, { recursive: true, force: true });
-    }
-  });
-
-  it('project config takes precedence over global config', async () => {
-    const globalDir = path.join(fakeHome, '.agent-task-loop');
-    await mkdir(globalDir, { recursive: true });
-    await writeFile(
-      path.join(globalDir, 'config.json'),
-      JSON.stringify({
-        feishu: { baseToken: 'global-base', tableId: 'global-table' },
-        projects: {},
-        repositories: {},
-        agents: {
-          claude: { name: 'claude', command: 'claude', args: [], env: {} },
-          codex: { name: 'codex', command: 'codex', args: [], env: {} },
-          coco: { name: 'coco', command: 'coco', args: [], env: {} },
-          glm: { name: 'glm', command: 'glm', args: [], env: {} },
-        },
-      }),
-      'utf8',
-    );
-
-    const projectDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-project-'));
-    await writeFile(
-      path.join(projectDir, 'task.config.json'),
-      JSON.stringify({
-        feishu: { baseToken: 'project-base', tableId: 'project-table' },
-        projects: {},
-        repositories: {},
-        agents: {
-          claude: { name: 'claude', command: 'claude', args: [], env: {} },
-          codex: { name: 'codex', command: 'codex', args: [], env: {} },
-          coco: { name: 'coco', command: 'coco', args: [], env: {} },
-          glm: { name: 'glm', command: 'glm', args: [], env: {} },
-        },
-      }),
-      'utf8',
-    );
-
-    process.chdir(projectDir);
-
-    try {
-      const config = await loadConfig();
-      expect(config.feishu.baseToken).toBe('project-base');
-    } finally {
-      await rm(projectDir, { recursive: true, force: true });
-    }
-  });
-});
+```json
+"@rivus/agent-finder-core": "workspace:*"
 ```
 
-Update the imports at the top of the test file to include `mkdir`, `rm`, and `beforeEach`:
-
-```ts
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadConfig, resolveConfigPath } from '../../src/config/load-config';
-```
-
-**Step 2: Run tests to verify they fail**
+**Step 2: Install**
 
 ```bash
-cd packages/agent-task-loop && pnpm test tests/config/load-config.test.ts
+pnpm install
 ```
 
-Expected: New tests FAIL (global config not yet reachable in test because `os.homedir()` mock may need adjustment — the module caches the path at import time).
+Expected: Lock file updated, `@rivus/agent-finder-core` resolvable from `packages/agent-task-loop`.
 
-> **Note:** If mocking `os.homedir()` doesn't work because `load-config.ts` calls `os.homedir()` at call time (not at module load time), the tests will pass without changes. If the global config path is computed eagerly at module load, you need to refactor `resolveConfigPath` to call `os.homedir()` lazily inside the function body — which is already what the implementation in Task 1 does. So tests should pass.
-
-**Step 3: Run tests to verify they pass**
+**Step 3: Verify the package resolves**
 
 ```bash
-cd packages/agent-task-loop && pnpm test tests/config/load-config.test.ts
+node -e "import('@rivus/agent-finder-core').then(m => console.log(Object.keys(m)))" --input-type=module
 ```
 
-Expected: All PASS.
+Expected: Prints the exported names including `discover`, `collectHostProbe`, `resolveCommand`.
 
 **Step 4: Commit**
 
 ```bash
-git add packages/agent-task-loop/tests/config/load-config.test.ts
-git commit -m "test(config): verify global config fallback and project config precedence"
+git add packages/agent-task-loop/package.json pnpm-lock.yaml
+git commit -m "feat(init): add @rivus/agent-finder-core workspace dependency"
 ```
 
 ---
 
-### Task 3: Create the `init` command
+### Task 3: Implement the `init` command
 
 **Files:**
 - Create: `packages/agent-task-loop/src/commands/init.ts`
 - Create: `packages/agent-task-loop/tests/commands/init.test.ts`
 
-**Step 1: Write the failing test**
+**Step 1: Write the failing tests**
 
-Create `tests/commands/init.test.ts`:
+Create `packages/agent-task-loop/tests/commands/init.test.ts`:
 
 ```ts
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createGlobalConfig } from '../../src/commands/init';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createGlobalConfig, isLarkCliAvailable } from '../../src/commands/init';
+
+// Stub agent discovery so tests don't hit the real host
+vi.mock('@rivus/agent-finder-core', () => ({
+  resolveCommand: vi.fn(),
+  collectHostProbe: vi.fn(() => ({})),
+  discover: vi.fn(() => ({
+    schema_version: '0.1',
+    generated_at: '',
+    host: { os: 'linux', arch: 'x64' },
+    agents: [
+      { id: 'claude-code', status: 'runnable', command: '/usr/bin/claude', name: 'Claude Code', type: 'cli', app_path: null, version: null, evidence: [], config_paths: [], mcp_config_paths: [], warnings: [] },
+      { id: 'codex', status: 'missing', command: null, name: 'Codex', type: 'cli', app_path: null, version: null, evidence: [], config_paths: [], mcp_config_paths: [], warnings: [] },
+    ],
+  })),
+}));
+
+describe('isLarkCliAvailable', () => {
+  it('returns true when resolveCommand finds lark-cli', async () => {
+    const { resolveCommand } = await import('@rivus/agent-finder-core');
+    vi.mocked(resolveCommand).mockReturnValue('/usr/bin/lark-cli');
+    expect(isLarkCliAvailable()).toBe(true);
+  });
+
+  it('returns false when resolveCommand returns null', async () => {
+    const { resolveCommand } = await import('@rivus/agent-finder-core');
+    vi.mocked(resolveCommand).mockReturnValue(null);
+    expect(isLarkCliAvailable()).toBe(false);
+  });
+});
 
 describe('createGlobalConfig', () => {
   const originalHome = os.homedir;
@@ -371,26 +377,29 @@ describe('createGlobalConfig', () => {
 
   beforeEach(async () => {
     fakeHome = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-init-'));
-    (os as { homedir: () => string }).homedir = () => fakeHome;
+    (os as unknown as { homedir: () => string }).homedir = () => fakeHome;
   });
 
   afterEach(async () => {
-    (os as { homedir: () => string }).homedir = originalHome;
+    (os as unknown as { homedir: () => string }).homedir = originalHome;
     await rm(fakeHome, { recursive: true, force: true });
+    vi.clearAllMocks();
   });
 
-  it('creates ~/.agent-task-loop/config.json with template content', async () => {
-    await createGlobalConfig();
+  it('writes config.json with entered credentials and discovered agents', async () => {
+    await createGlobalConfig({ baseToken: 'my-token', tableId: 'my-table' });
 
     const configPath = path.join(fakeHome, '.agent-task-loop', 'config.json');
     expect(existsSync(configPath)).toBe(true);
 
-    const raw = await readFile(configPath, 'utf8');
-    const parsed = JSON.parse(raw);
-    expect(parsed).toHaveProperty('feishu');
-    expect(parsed).toHaveProperty('projects');
-    expect(parsed).toHaveProperty('repositories');
-    expect(parsed).toHaveProperty('agents');
+    const parsed = JSON.parse(await readFile(configPath, 'utf8'));
+    expect(parsed.feishu.baseToken).toBe('my-token');
+    expect(parsed.feishu.tableId).toBe('my-table');
+    // only claude-code (status: 'runnable') should appear; codex (missing) should not
+    expect(parsed.agents).toHaveProperty('claude');
+    expect(parsed.agents).not.toHaveProperty('codex');
+    expect(parsed.projects).toEqual({});
+    expect(parsed.repositories).toEqual({});
   });
 
   it('does not overwrite an existing config', async () => {
@@ -398,23 +407,23 @@ describe('createGlobalConfig', () => {
     await mkdir(globalDir, { recursive: true });
     const configPath = path.join(globalDir, 'config.json');
     const existing = JSON.stringify({ feishu: { baseToken: 'existing', tableId: 'existing-table' } });
-    await (await import('node:fs/promises')).writeFile(configPath, existing, 'utf8');
+    await writeFile(configPath, existing, 'utf8');
 
-    await createGlobalConfig();
+    const result = await createGlobalConfig({ baseToken: 'new', tableId: 'new' });
 
-    const raw = await readFile(configPath, 'utf8');
-    expect(raw).toBe(existing);
+    expect(result).toBe('exists');
+    expect(await readFile(configPath, 'utf8')).toBe(existing);
   });
 });
 ```
 
-**Step 2: Run test to verify it fails**
+**Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/agent-task-loop && pnpm test tests/commands/init.test.ts
+pnpm test tests/commands/init.test.ts
 ```
 
-Expected: FAIL – `createGlobalConfig` does not exist.
+Expected: FAIL – `createGlobalConfig` and `isLarkCliAvailable` do not exist.
 
 **Step 3: Implement `init.ts`**
 
@@ -424,42 +433,102 @@ Create `packages/agent-task-loop/src/commands/init.ts`:
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { delimiter } from 'node:path';
+import readline from 'node:readline';
+import { collectHostProbe, discover, resolveCommand } from '@rivus/agent-finder-core';
 import { defineCommand } from 'citty';
 
-const CONFIG_TEMPLATE = {
-  feishu: {
-    baseToken: 'YOUR_FEISHU_BASE_TOKEN',
-    tableId: 'YOUR_FEISHU_TABLE_ID',
-  },
-  projects: {},
-  repositories: {},
-  agents: {
-    claude: { name: 'claude', command: 'claude', args: [], env: {} },
-  },
+const AGENT_MAP: Record<string, { name: 'claude' | 'codex' | 'coco' | 'glm'; command: string }> = {
+  'claude-code': { name: 'claude', command: 'claude' },
+  'codex': { name: 'codex', command: 'codex' },
 };
 
-export function createGlobalConfig(): void {
+export function isLarkCliAvailable(): boolean {
+  return resolveCommand('lark-cli', {
+    path: process.env.PATH ?? '',
+    pathExt: process.env.PATHEXT,
+    delimiter,
+    fileExists: existsSync,
+  }) !== null;
+}
+
+function discoverAgents(): Record<string, { name: string; command: string; args: string[]; env: Record<string, string> }> {
+  const probe = collectHostProbe();
+  const report = discover(probe);
+  const agents: Record<string, { name: string; command: string; args: string[]; env: Record<string, string> }> = {};
+
+  for (const agent of report.agents) {
+    const mapping = AGENT_MAP[agent.id];
+    if (mapping && agent.status === 'runnable') {
+      agents[mapping.name] = { name: mapping.name, command: mapping.command, args: [], env: {} };
+    }
+  }
+
+  return agents;
+}
+
+export async function createGlobalConfig(
+  inputs: { baseToken: string; tableId: string },
+): Promise<'created' | 'exists'> {
   const globalDir = path.join(os.homedir(), '.agent-task-loop');
   const configPath = path.join(globalDir, 'config.json');
 
   if (existsSync(configPath)) {
-    console.log(`Global config already exists: ${configPath}`);
-    return;
+    return 'exists';
   }
 
+  const agents = discoverAgents();
+
   mkdirSync(globalDir, { recursive: true });
-  writeFileSync(configPath, JSON.stringify(CONFIG_TEMPLATE, null, 2) + '\n', 'utf8');
-  console.log(`Created global config: ${configPath}`);
-  console.log('Edit it to add your Feishu credentials, projects, repositories, and agents.');
+  writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        feishu: { baseToken: inputs.baseToken, tableId: inputs.tableId },
+        projects: {},
+        repositories: {},
+        agents,
+      },
+      null,
+      2,
+    ) + '\n',
+    'utf8',
+  );
+
+  return 'created';
+}
+
+async function prompt(rl: readline.Interface, question: string): Promise<string> {
+  return new Promise(resolve => rl.question(question, answer => resolve(answer.trim())));
 }
 
 export const initCommand = defineCommand({
   meta: {
     name: 'init',
-    description: 'Create a global config at ~/.agent-task-loop/config.json',
+    description: 'Interactive first-run setup: detect lark-cli, discover agents, configure Feishu',
   },
   async run() {
-    createGlobalConfig();
+    if (!isLarkCliAvailable()) {
+      console.error('lark-cli is required but not found on PATH.');
+      console.error('Install it and re-run `agent-task-loop init`.');
+      process.exit(1);
+    }
+
+    const configPath = path.join(os.homedir(), '.agent-task-loop', 'config.json');
+    if (existsSync(configPath)) {
+      console.log(`Global config already exists: ${configPath}`);
+      return;
+    }
+
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const baseToken = await prompt(rl, 'Feishu base token: ');
+    const tableId = await prompt(rl, 'Feishu table ID: ');
+    rl.close();
+
+    const result = await createGlobalConfig({ baseToken, tableId });
+    if (result === 'created') {
+      console.log(`Created global config: ${configPath}`);
+    }
   },
 });
 ```
@@ -467,7 +536,7 @@ export const initCommand = defineCommand({
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/agent-task-loop && pnpm test tests/commands/init.test.ts
+pnpm test tests/commands/init.test.ts
 ```
 
 Expected: All PASS.
@@ -476,7 +545,7 @@ Expected: All PASS.
 
 ```bash
 git add packages/agent-task-loop/src/commands/init.ts packages/agent-task-loop/tests/commands/init.test.ts
-git commit -m "feat(init): add init command to create global config template"
+git commit -m "feat(init): interactive init with lark-cli detection and agent-finder discovery"
 ```
 
 ---
@@ -488,15 +557,13 @@ git commit -m "feat(init): add init command to create global config template"
 
 **Step 1: Add import and register subcommand**
 
-Edit `src/cli.ts`:
+Add the import after the existing command imports:
 
 ```ts
 import { initCommand } from './commands/init';
 ```
 
-Add `init: initCommand` to the `subCommands` object.
-
-Full updated `subCommands` block:
+Add `init: initCommand` to `subCommands` (keep alphabetical order):
 
 ```ts
 subCommands: {
@@ -504,33 +571,49 @@ subCommands: {
   complete: completeCommand,
   init: initCommand,
   reject: rejectCommand,
-  start: startCommand,
-  run: runCommand,
   resume: resumeCommand,
+  run: runCommand,
   schema: schemaCommand,
+  start: startCommand,
   sync: syncCommand,
   tui: tuiCommand,
   watch: watchCommand,
 },
 ```
 
-**Step 2: Verify the CLI lists `init` in help output**
+**Step 2: Run full test suite**
 
 ```bash
-cd packages/agent-task-loop && pnpm dev -- --help
+pnpm test
+```
+
+Expected: All PASS, no regressions.
+
+**Step 3: Verify CLI help lists `init`**
+
+```bash
+pnpm dev -- --help
 ```
 
 Expected: `init` appears in the subcommand list.
 
-**Step 3: Run full test suite to verify no regressions**
+**Step 4: Verify `pnpm build` succeeds**
 
 ```bash
-cd packages/agent-task-loop && pnpm test
+pnpm build
 ```
 
-Expected: All tests PASS.
+Expected: Clean build with no TypeScript errors.
 
-**Step 4: Commit**
+**Step 5: Run pack dry-run**
+
+```bash
+npm pack --dry-run --registry=https://registry.npmjs.org
+```
+
+Expected: File list does not include source files outside `bin/`, `dist/`, `skills/`.
+
+**Step 6: Commit**
 
 ```bash
 git add packages/agent-task-loop/src/cli.ts
@@ -539,48 +622,14 @@ git commit -m "feat(cli): register init command"
 
 ---
 
-### Task 5: Verify end-to-end behavior
-
-This is a manual smoke-test checklist — run each and confirm the output.
-
-**5a. Help shows `init`:**
-```bash
-cd packages/agent-task-loop && pnpm dev -- --help
-```
-Expected: `init` listed.
-
-**5b. `init` creates the global config:**
-```bash
-cd packages/agent-task-loop && pnpm dev -- init
-cat ~/.agent-task-loop/config.json
-```
-Expected: Template JSON printed.
-
-**5c. `init` is idempotent (second run does not overwrite):**
-```bash
-cd packages/agent-task-loop && pnpm dev -- init
-```
-Expected: "Global config already exists" message, file unchanged.
-
-**5d. `watch` (or any command) resolves global config when no project config is present:**
-
-In a temp empty directory, confirm the error message now says to run `init` instead of the old "Looked for: ..." message:
-
-```bash
-cd /tmp && mkdir empty-test && cd empty-test && pnpm dlx @rivus/agent-task-loop watch 2>&1 || true
-```
-(or use `pnpm dev` from the package root with the cwd changed)
-
-Expected: Error mentions `agent-task-loop init`.
-
-**5e. Commit if all manual checks pass (no code changes expected here).**
-
----
-
 ## Done
 
 All tasks complete when:
 - `pnpm test` passes in `packages/agent-task-loop`
-- `init` command appears in CLI help
-- Global config created on first `init`, skipped on repeat
-- Error message when no config found references `init`
+- `pnpm build` succeeds
+- `npm pack --dry-run` file list is clean
+- `agent-task-loop --help` lists `init`
+- `agent-task-loop init` exits with instructions when `lark-cli` is missing
+- `agent-task-loop init` prompts, writes config with discovered agents, and is idempotent
+- Any command run from a directory without a project config resolves `~/.agent-task-loop/config.json`
+- Error message when no config found references `agent-task-loop init`

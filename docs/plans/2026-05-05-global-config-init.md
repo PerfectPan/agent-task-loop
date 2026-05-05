@@ -509,9 +509,18 @@ export const initCommand = defineCommand({
   },
   async run() {
     if (!isLarkCliAvailable()) {
-      console.error('lark-cli is required but not found on PATH.');
-      console.error('Install it and re-run `agent-task-loop init`.');
-      process.exit(1);
+      console.log('lark-cli is required but not found on PATH.');
+      console.log('Install command: npm install -g @larksuite/cli');
+      const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await prompt(rl2, 'Install it now? [Y/n]: ');
+      rl2.close();
+      if (answer.toLowerCase() === 'n') {
+        console.log('Re-run `agent-task-loop init` after installing lark-cli.');
+        process.exit(1);
+      }
+      const { execa } = await import('execa');
+      await execa('npm', ['install', '-g', '@larksuite/cli'], { stdio: 'inherit' });
+      console.log('lark-cli installed. Note: run `lark-cli config init` and `lark-cli auth login` to authenticate.');
     }
 
     const configPath = path.join(os.homedir(), '.agent-task-loop', 'config.json');

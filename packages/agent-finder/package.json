@@ -42,17 +42,18 @@
     "access": "public"
   },
   "scripts": {
-    "build": "pnpm prepare:moonbit && tsup src/index.ts --format esm --dts --clean",
+    "build": "rslib build",
     "dev": "tsx src/index.ts",
-    "prepare:moonbit": "moon build --target js && node scripts/sync-moonbit-js.mjs",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
-    "test": "pnpm prepare:moonbit && vitest run",
+    "test": "rslib build && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@rsbuild/core": "^2.0.3",
+    "@rslib/core": "^0.21.3",
+    "@rivus/rslib-config": "workspace:*",
     "@types/node": "^22.15.3",
-    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"

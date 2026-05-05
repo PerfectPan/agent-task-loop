@@ -1,11 +1,18 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { AppConfig } from './schema';
 import { appConfigSchema } from './schema';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const defaultConfigFilenames = ['task.config.ts', 'task.config.mts', 'task.config.js', 'task.config.mjs'];
+const defaultConfigFilenames = [
+  'task.config.ts',
+  'task.config.mts',
+  'task.config.js',
+  'task.config.mjs',
+  'task.config.json',
+];
 
 function* walkUpDirectories(start: string): Generator<string> {
   let current = path.resolve(start);
@@ -28,35 +35,50 @@ export function resolveConfigPath(configPath?: string): string {
     return explicitPath;
   }
 
-  const candidates: string[] = [];
   const envConfig = process.env.AGENT_TASK_LOOP_CONFIG;
   if (envConfig) {
-    candidates.push(path.resolve(process.cwd(), envConfig));
+    const envPath = path.resolve(process.cwd(), envConfig);
+    return envPath;
   }
 
   for (const directory of walkUpDirectories(process.cwd())) {
     for (const filename of defaultConfigFilenames) {
-      candidates.push(path.join(directory, filename));
+      const candidate = path.join(directory, filename);
+      if (existsSync(candidate)) {
+        return candidate;
+      }
     }
   }
 
   for (const filename of defaultConfigFilenames) {
-    candidates.push(path.join(packageRoot, filename));
+    const candidate = path.join(packageRoot, filename);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
   }
 
-  const resolved = candidates.find(candidate => existsSync(candidate));
-  if (!resolved) {
-    throw new Error(
-      `No task config found. Looked for: ${candidates.join(', ')}. Pass --config or set AGENT_TASK_LOOP_CONFIG.`,
-    );
+  const globalConfigPath = path.join(os.homedir(), '.agent-task-loop', 'config.json');
+  if (existsSync(globalConfigPath)) {
+    return globalConfigPath;
   }
 
-  return resolved;
+  throw new Error(
+    `No task config found. Run \`agent-task-loop init\` to create a global config, or pass --config / set AGENT_TASK_LOOP_CONFIG.`,
+  );
+}
+
+function loadConfigFromPath(resolvedPath: string): Promise<AppConfig> | AppConfig {
+  if (resolvedPath.endsWith('.json')) {
+    const raw = JSON.parse(readFileSync(resolvedPath, 'utf8'));
+    return appConfigSchema.parse(raw);
+  }
+  return import(pathToFileURL(resolvedPath).href).then(mod => {
+    const raw = mod.default ?? mod.config;
+    return appConfigSchema.parse(raw);
+  });
 }
 
 export async function loadConfig(configPath?: string): Promise<AppConfig> {
   const resolvedPath = resolveConfigPath(configPath);
-  const mod = await import(pathToFileURL(resolvedPath).href);
-  const raw = mod.default ?? mod.config;
-  return appConfigSchema.parse(raw);
+  return loadConfigFromPath(resolvedPath);
 }

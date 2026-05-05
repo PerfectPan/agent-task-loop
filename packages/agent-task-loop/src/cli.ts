@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from 'citty';
 import { cleanupCommand } from './commands/cleanup';
+import { initCommand } from './commands/init';
 import { completeCommand } from './commands/complete';
 import { rejectCommand } from './commands/reject';
 import { runCommand } from './commands/run';
@@ -20,6 +21,7 @@ const main = defineCommand({
   },
   subCommands: {
     cleanup: cleanupCommand,
+    init: initCommand,
     complete: completeCommand,
     reject: rejectCommand,
     start: startCommand,

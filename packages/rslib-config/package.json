@@ -1,0 +1,21 @@
+{
+  "name": "@rivus/rslib-config",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "main": "./src/lib.config.ts",
+  "exports": {
+    ".": "./src/lib.config.ts",
+    "./lib.config": "./src/lib.config.ts",
+    "./cli.config": "./src/cli.config.ts",
+    "./sync-moonbit": "./src/sync-moonbit.ts",
+    "./moonbit-plugin": "./src/moonbit-plugin.ts",
+    "./*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.0.3",
+    "@rslib/core": "^0.21.3",
+    "typescript": "^5.8.3"
+  }
+}

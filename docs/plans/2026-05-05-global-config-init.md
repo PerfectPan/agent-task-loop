@@ -6,7 +6,7 @@
 
 **Architecture:** Modify `resolveConfigPath` to walk the new candidate list and fall back to global JSON; add a JSON loader path in `loadConfig`; add `@rivus/agent-finder-core` workspace dependency; implement `init` with a pure testable core (`createGlobalConfig(inputs)`) and a thin interactive shell (`initCommand`) that collects inputs via `readline`.
 
-**Tech Stack:** Node.js 20 ESM, TypeScript, Zod, Vitest, `citty`, `@rivus/agent-finder-core` (workspace).
+**Tech Stack:** Node.js ≥20 ESM, TypeScript, Zod, Vitest, `citty`, `@rivus/agent-finder-core` (workspace).
 
 ---
 

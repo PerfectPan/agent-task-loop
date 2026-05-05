@@ -1,8 +1,13 @@
-# agent-finder
+# PerfectPan/agent-finder
 
 Read-only local code agent discovery for Agent Task Loop and JavaScript consumers.
 
-This package is the MoonBit provider core for RFC 0002. It models supported coding-agent providers, evaluates host probe facts, derives stable discovery statuses, records evidence for each status, and emits JSON with `schema_version: "0.1"`.
+This directory publishes two things from one source tree:
+
+- **MoonBit module** `PerfectPan/agent-finder` on [mooncakes.io](https://mooncakes.io) — the provider discovery core.
+- **npm package** `@rivus/agent-finder-core` — a TypeScript wrapper that embeds the MoonBit JS output for Node.js consumers.
+
+It models supported coding-agent providers, evaluates host probe facts, derives stable discovery statuses, records evidence for each status, and emits JSON with `schema_version: "0.1"`.
 
 ## Structure
 

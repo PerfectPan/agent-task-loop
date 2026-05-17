@@ -40,6 +40,12 @@ npx --no-install @rivus/agent-task-loop --help
 - `npx agent-task-loop resume --task TASK-101`
 - `npx agent-task-loop complete --task TASK-101`
 
+## Guides
+
+- [Getting started](../../docs/getting-started.md)
+- [Configuration](../../docs/configuration.md)
+- [Agent workflow](../../docs/agent-workflow.md)
+
 ## Complete Flow
 
 `complete` closes a task that is already in `待发布` or `待验收`.

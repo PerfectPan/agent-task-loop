@@ -24,6 +24,9 @@ GPL-3.0-only. See [LICENSE](./LICENSE).
 
 - Contribution workflow: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Agent guidelines: [AGENTS.md](./AGENTS.md)
+- Getting started: [docs/getting-started.md](./docs/getting-started.md)
+- Configuration: [docs/configuration.md](./docs/configuration.md)
+- Agent workflow: [docs/agent-workflow.md](./docs/agent-workflow.md)
 - RFCs: [rfcs/](./rfcs/)
 - npm publishing: [docs/npm-publish.md](./docs/npm-publish.md)
 

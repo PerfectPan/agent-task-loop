@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -62,5 +64,37 @@ describe("@rivus/agent-finder-cli", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Total providers: 26");
     expect(result.stdout).toContain("Runnable:");
+  });
+
+  test("lists sessions from an explicit root as stable json", () => {
+    const root = mkdtempSync(join(tmpdir(), "agent-finder-sessions-"));
+    writeFileSync(
+      join(root, "session-1.json"),
+      JSON.stringify({
+        id: "session-1",
+        agent: "codex",
+        title: "Fix release workflow",
+        updatedAt: "2026-05-10T10:00:00.000Z"
+      }),
+      "utf8"
+    );
+
+    const result = runCli(["sessions", "list", "--root", root, "--json"]);
+
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout) as {
+      schema_version: string;
+      sessions: Array<{ id: string; agent: string; title: string; path: string; updatedAt: string }>;
+    };
+    expect(json.schema_version).toBe("0.1");
+    expect(json.sessions).toEqual([
+      expect.objectContaining({
+        id: "session-1",
+        agent: "codex",
+        title: "Fix release workflow",
+        updatedAt: "2026-05-10T10:00:00.000Z"
+      })
+    ]);
+    expect(json.sessions[0]?.path).toContain("session-1.json");
   });
 });

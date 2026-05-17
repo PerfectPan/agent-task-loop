@@ -65,4 +65,27 @@ describe('completeCommand', () => {
     expect(logSpy).toHaveBeenCalledWith('Status: 已完成');
     logSpy.mockRestore();
   });
+
+  it('prints publish result as json when requested', async () => {
+    const { completeCommand } = await import('../../src/commands/complete');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await completeCommand.run?.({
+      args: {
+        task: 'TASK-101',
+        config: 'task.config.ts',
+        json: true,
+      },
+    } as never);
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual({
+      taskId: 'TASK-101',
+      branch: 'task/task-101-claude',
+      commit: 'abc123',
+      pullRequestUrl: 'https://github.com/acme/demo/pull/12',
+      status: '已完成',
+    });
+    logSpy.mockRestore();
+  });
 });

@@ -9,6 +9,7 @@ import { GitPublishService } from '../services/git-publish-service';
 import { PublishContextService } from '../services/publish-context-service';
 import { buildCommitPrompt, buildPullRequestPrompt } from '../services/publish-prompt-service';
 import { TaskService } from '../services/task-service';
+import { printJson } from './json-output';
 
 interface ClaudeStructuredResult<T> {
   data: T;
@@ -132,6 +133,10 @@ export const completeCommand = defineCommand({
     config: {
       type: 'string',
     },
+    json: {
+      type: 'boolean',
+      default: false,
+    },
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
@@ -199,10 +204,23 @@ export const completeCommand = defineCommand({
     });
 
     const result = await service.complete({ taskId: String(args.task) });
+    const output = {
+      taskId: String(args.task),
+      branch: result.branch,
+      commit: result.commit,
+      pullRequestUrl: result.pullRequestUrl,
+      status: '已完成',
+    };
+
+    if (args.json) {
+      printJson(output);
+      return;
+    }
+
     console.log(`Task: ${String(args.task)}`);
     console.log(`Branch: ${result.branch}`);
     console.log(`Commit: ${result.commit}`);
     console.log(`PullRequest: ${result.pullRequestUrl}`);
-    console.log('Status: 已完成');
+    console.log(`Status: ${output.status}`);
   },
 });

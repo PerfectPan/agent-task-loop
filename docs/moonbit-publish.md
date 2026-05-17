@@ -21,7 +21,9 @@ moon -C packages/agent-finder package
 
 MoonBit publish follows the common MoonBit GitHub Actions pattern used by upstream MoonBit packages: publish from a GitHub Release, install the MoonBit toolchain, validate all targets, write the mooncakes credential secret to `$HOME/.moon/credentials.json`, then run `moon publish`.
 
-The dedicated MoonBit publish workflow runs on `release: released` and `workflow_dispatch`. It follows the upstream workflow shape used by MoonBit packages:
+The dedicated MoonBit publish workflow runs on `release: released`, `workflow_dispatch`, and `workflow_call`. The reusable `workflow_call` entry point lets the npm publish workflow publish the MoonBit module automatically after Changesets successfully publishes npm packages.
+
+The workflow follows the upstream workflow shape used by MoonBit packages:
 
 ```bash
 moon -C packages/agent-finder fmt
@@ -32,7 +34,7 @@ moon -C packages/agent-finder package
 moon -C packages/agent-finder publish
 ```
 
-The npm publish workflow still installs MoonBit and runs `moon -C packages/agent-finder package` as a packaging preflight, but npm publishing remains managed by Changesets.
+The npm publish workflow still installs MoonBit and runs `moon -C packages/agent-finder package` as a packaging preflight. npm publishing remains managed by Changesets. When `pnpm release` succeeds, the npm workflow calls `.github/workflows/moonbit-publish.yml` with inherited secrets so the matching MoonBit package is published in the same release flow.
 
 ## Credentials
 

@@ -17,6 +17,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     environment: NPM_TOKEN
+    outputs:
+      published: ${{ steps.npm-publish.outputs.published || 'false' }}
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
@@ -68,5 +70,14 @@ jobs:
           fi
 
       - name: Publish to npm
+        id: npm-publish
         if: steps.changesets.outputs.hasChangesets == 'false'
-        run: pnpm release
+        run: |
+          pnpm release
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+  publish-moonbit:
+    needs: publish
+    if: ${{ needs.publish.outputs.published == 'true' }}
+    uses: ./.github/workflows/moonbit-publish.yml
+    secrets: inherit

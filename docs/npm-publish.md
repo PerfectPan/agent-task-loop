@@ -78,12 +78,13 @@ pnpm test
 pnpm build
 ```
 
-After the pull request lands on `main`, GitHub Actions opens or updates a release pull request. Merging that release pull request runs `pnpm release`, which builds the package and publishes unpublished package versions through Changesets.
+After the pull request lands on `main`, GitHub Actions opens or updates a release pull request. Merging that release pull request runs `pnpm release`, which builds the package and publishes unpublished package versions through Changesets. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
 
 ## Failure Handling
 
 - If CI fails before npm upload, fix the workflow or code and re-run the publish workflow.
 - If npm accepted the version, do not publish the same version again. Bump the patch version.
+- If npm publish succeeds but MoonBit publish fails, re-run the `Publish MoonBit Package` workflow manually after fixing the MoonBit workflow, credentials, or package metadata issue.
 - If a bad version is published, prefer `npm deprecate` and publish a fixed version.
 
 ## Safety Checks

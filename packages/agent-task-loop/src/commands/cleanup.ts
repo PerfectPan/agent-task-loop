@@ -4,7 +4,7 @@ import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
 import { CleanupService } from '../services/cleanup-service';
 import { PublishContextService } from '../services/publish-context-service';
 import { TaskService } from '../services/task-service';
-import { printJson } from './json-output';
+import { printCommandOutput } from './command-output';
 
 export const cleanupCommand = defineCommand({
   meta: {
@@ -41,19 +41,20 @@ export const cleanupCommand = defineCommand({
     const result = await service.cleanup({ taskId: String(args.task), force: Boolean(args.force) });
     const status = args.force ? '已强制清理工作区' : '已清理工作区';
 
-    if (args.json) {
-      printJson({
+    printCommandOutput({
+      json: Boolean(args.json),
+      jsonValue: {
         taskId: String(args.task),
         branch: result.branch,
         workspacePath: result.workspacePath,
         status,
-      });
-      return;
-    }
-
-    console.log(`Task: ${String(args.task)}`);
-    console.log(`Branch: ${result.branch}`);
-    console.log(`Workspace removed: ${result.workspacePath}`);
-    console.log(`Status: ${status}`);
+      },
+      textLines: [
+        `Task: ${String(args.task)}`,
+        `Branch: ${result.branch}`,
+        `Workspace removed: ${result.workspacePath}`,
+        `Status: ${status}`,
+      ],
+    });
   },
 });

@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { printJson } from './json-output';
+import { printCommandOutput } from './command-output';
 
 export const syncCommand = defineCommand({
   meta: {
@@ -24,13 +24,10 @@ export const syncCommand = defineCommand({
       agents: Object.keys(config.agents).length,
     };
 
-    if (args.json) {
-      printJson(result);
-      return;
-    }
-
-    console.log(`projects=${result.projects}`);
-    console.log(`repositories=${result.repositories}`);
-    console.log(`agents=${result.agents}`);
+    printCommandOutput({
+      json: Boolean(args.json),
+      jsonValue: result,
+      textLines: [`projects=${result.projects}`, `repositories=${result.repositories}`, `agents=${result.agents}`],
+    });
   },
 });

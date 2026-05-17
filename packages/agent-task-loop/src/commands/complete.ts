@@ -9,7 +9,7 @@ import { GitPublishService } from '../services/git-publish-service';
 import { PublishContextService } from '../services/publish-context-service';
 import { buildCommitPrompt, buildPullRequestPrompt } from '../services/publish-prompt-service';
 import { TaskService } from '../services/task-service';
-import { printJson } from './json-output';
+import { printCommandOutput } from './command-output';
 
 interface ClaudeStructuredResult<T> {
   data: T;
@@ -212,15 +212,16 @@ export const completeCommand = defineCommand({
       status: '已完成',
     };
 
-    if (args.json) {
-      printJson(output);
-      return;
-    }
-
-    console.log(`Task: ${String(args.task)}`);
-    console.log(`Branch: ${result.branch}`);
-    console.log(`Commit: ${result.commit}`);
-    console.log(`PullRequest: ${result.pullRequestUrl}`);
-    console.log(`Status: ${output.status}`);
+    printCommandOutput({
+      json: Boolean(args.json),
+      jsonValue: output,
+      textLines: [
+        `Task: ${String(args.task)}`,
+        `Branch: ${result.branch}`,
+        `Commit: ${result.commit}`,
+        `PullRequest: ${result.pullRequestUrl}`,
+        `Status: ${output.status}`,
+      ],
+    });
   },
 });

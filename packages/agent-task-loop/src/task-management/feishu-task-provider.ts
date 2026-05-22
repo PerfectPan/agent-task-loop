@@ -1,6 +1,19 @@
 import type { AppConfig } from '../config/schema';
 import type { AcceptanceVerdict, ReviewVerdict, TargetAgent, TaskRecord, TaskStatus } from '../types/task';
 import { runLarkCli } from '../services/lark-cli';
+import type {
+  ClaimTaskPayload,
+  MarkTaskFailedPayload,
+  MarkTaskSucceededPayload,
+  TaskProvider,
+  TaskRef,
+  UpdateCleanupStatePayload,
+  UpdatePublishResultPayload,
+  UpdateReviewStatePayload,
+  UpdateRunnerStatePayload,
+  UpdateTaskAssignmentPayload,
+  UpdateTaskProgressPayload,
+} from './task-provider';
 
 interface LarkRecordListResponse {
   items?: Array<{
@@ -121,7 +134,7 @@ function buildRecordPayload(
   };
 }
 
-export class FeishuTaskProvider {
+export class FeishuTaskProvider implements TaskProvider {
   constructor(private readonly config: AppConfig) {}
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -162,7 +175,7 @@ export class FeishuTaskProvider {
       .filter(task => task.taskId.length > 0);
   }
 
-  private async resolveRecordRef(task: Pick<TaskRecord, 'taskId' | 'recordId'>): Promise<Pick<TaskRecord, 'taskId' | 'recordId'>> {
+  private async resolveRecordRef(task: TaskRef): Promise<TaskRef> {
     if (task.recordId) {
       return task;
     }
@@ -180,23 +193,8 @@ export class FeishuTaskProvider {
   }
 
   async claimTask(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      claimedBy: string;
-      claimedAt: string;
-      runId: string;
-      workspacePath?: string;
-      logPath?: string;
-      progressSummary?: string;
-      sessionId?: string;
-      sessionName?: string;
-      sessionHistory?: string;
-      runnerPid?: number;
-      runnerKind?: 'execute' | 'review';
-      runnerAgent?: string;
-      runnerRound?: number;
-      lastHeartbeatAt?: string;
-    },
+    task: TaskRef,
+    payload: ClaimTaskPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -231,20 +229,8 @@ export class FeishuTaskProvider {
   }
 
   async updateTaskProgress(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      progressSummary: string;
-      workspacePath?: string;
-      logPath?: string;
-      sessionId?: string;
-      sessionName?: string;
-      sessionHistory?: string;
-      runnerPid?: number;
-      runnerKind?: 'execute' | 'review';
-      runnerAgent?: string;
-      runnerRound?: number;
-      lastHeartbeatAt?: string;
-    },
+    task: TaskRef,
+    payload: UpdateTaskProgressPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -273,14 +259,8 @@ export class FeishuTaskProvider {
   }
 
   async updateRunnerState(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      runnerPid?: number;
-      runnerKind?: 'execute' | 'review';
-      runnerAgent?: string;
-      runnerRound?: number;
-      lastHeartbeatAt?: string;
-    },
+    task: TaskRef,
+    payload: UpdateRunnerStatePayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -303,14 +283,8 @@ export class FeishuTaskProvider {
   }
 
   async updateTaskAssignment(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      targetAgent: TargetAgent;
-      currentOwner?: string;
-      progressSummary?: string;
-      lastError?: string;
-      workspacePath?: string;
-    },
+    task: TaskRef,
+    payload: UpdateTaskAssignmentPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -333,17 +307,8 @@ export class FeishuTaskProvider {
   }
 
   async markTaskSucceeded(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      resultSummary: string;
-      workspacePath?: string;
-      logPath?: string;
-      progressSummary?: string;
-      sessionId?: string;
-      sessionName?: string;
-      prLink?: string;
-      sessionHistory?: string;
-    },
+    task: TaskRef,
+    payload: MarkTaskSucceededPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -371,16 +336,8 @@ export class FeishuTaskProvider {
   }
 
   async markTaskFailed(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      lastError: string;
-      workspacePath?: string;
-      logPath?: string;
-      progressSummary?: string;
-      sessionId?: string;
-      sessionName?: string;
-      sessionHistory?: string;
-    },
+    task: TaskRef,
+    payload: MarkTaskFailedPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -406,33 +363,8 @@ export class FeishuTaskProvider {
   }
 
   async updateReviewState(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      status: TaskStatus;
-      currentOwner?: string;
-      reviewRound?: number;
-      reviewVerdict?: ReviewVerdict;
-      reviewFindings?: string;
-      acceptanceRound?: number;
-      acceptanceVerdict?: AcceptanceVerdict;
-      acceptanceFeedback?: string;
-      executionSessionId?: string;
-      executionSessionName?: string;
-      reviewSessionId?: string;
-      reviewSessionName?: string;
-      reviewLogPath?: string;
-      sessionHistory?: string;
-      progressSummary?: string;
-      resultSummary?: string;
-      workspacePath?: string;
-      logPath?: string;
-      lastError?: string;
-      runnerPid?: number;
-      runnerKind?: 'execute' | 'review';
-      runnerAgent?: string;
-      runnerRound?: number;
-      lastHeartbeatAt?: string;
-    },
+    task: TaskRef,
+    payload: UpdateReviewStatePayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     const shouldClearRunner = !RUNNING_STATUSES.has(payload.status);
@@ -475,17 +407,8 @@ export class FeishuTaskProvider {
   }
 
   async updatePublishResult(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      prLink?: string;
-      publishBranch?: string;
-      publishCommit?: string;
-      publishedAt?: string;
-      progressSummary?: string;
-      resultSummary?: string;
-      sessionHistory?: string;
-      lastError?: string;
-    },
+    task: TaskRef,
+    payload: UpdatePublishResultPayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
@@ -511,11 +434,8 @@ export class FeishuTaskProvider {
   }
 
   async updateCleanupState(
-    task: Pick<TaskRecord, 'taskId' | 'recordId'>,
-    payload: {
-      progressSummary: string;
-      currentOwner?: string;
-    },
+    task: TaskRef,
+    payload: UpdateCleanupStatePayload,
   ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([

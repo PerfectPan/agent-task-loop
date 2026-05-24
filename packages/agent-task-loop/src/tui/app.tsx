@@ -1,29 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, useApp, useInput, useStdout } from 'ink';
-import type { TaskRecord, TaskStatus } from '../types/task';
+import type { TaskRecord } from '../types/task';
 import { TaskList } from './task-list';
 import { TaskDetail } from './task-detail';
+import { sortTasks } from './sort';
 
 const REFRESH_INTERVAL = 30;
-
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  '执行中': 0,
-  '修复中': 1,
-  '待复核': 2,
-  '待决策': 3,
-  '待发布': 4,
-  '进行中': 5,
-  '待处理': 6,
-  '待验收': 7,
-  '已失败': 8,
-  '已完成': 9,
-};
-
-function sortTasks(a: TaskRecord, b: TaskRecord): number {
-  const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
-  if (statusDiff !== 0) return statusDiff;
-  return b.priority - a.priority;
-}
 
 export function App({ onFetch }: { onFetch: () => Promise<TaskRecord[]> }) {
   const { exit } = useApp();

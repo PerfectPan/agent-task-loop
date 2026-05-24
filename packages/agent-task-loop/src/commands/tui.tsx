@@ -10,12 +10,13 @@ import { App } from '../tui/app';
 export const tuiCommand = defineCommand({
   meta: {
     name: 'tui',
-    description: 'Open task TUI',
+    description: 'Open interactive task dashboard',
   },
   args: {
     agent: {
       type: 'string',
-      required: true,
+      description: 'Filter tasks by agent (optional)',
+      required: false,
     },
     config: {
       type: 'string',
@@ -25,7 +26,11 @@ export const tuiCommand = defineCommand({
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
     assertFeishuRuntimeConfig(config);
     const service = new TaskService(config);
-    const tasks = await service.listPendingTasks(args.agent as TargetAgent);
-    render(<App tasks={tasks} />);
+    const agent = args.agent as TargetAgent | undefined;
+
+    const onFetch = () =>
+      agent ? service.listPendingTasks(agent) : service.listTasks();
+
+    render(<App onFetch={onFetch} />);
   },
 });

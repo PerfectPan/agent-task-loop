@@ -70,5 +70,6 @@ jobs:
   publish-moonbit:
     needs: publish
     if: ${{ needs.publish.outputs.published == 'true' }}
+    concurrency: ${{ github.workflow }}-moonbit-${{ github.ref }}
     uses: ./.github/workflows/moonbit-publish.yml
     secrets: inherit

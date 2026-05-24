@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
+import { printCommandOutput } from './command-output';
 
 export const syncCommand = defineCommand({
   meta: {
@@ -10,11 +11,23 @@ export const syncCommand = defineCommand({
     config: {
       type: 'string',
     },
+    json: {
+      type: 'boolean',
+      default: false,
+    },
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    console.log(`projects=${Object.keys(config.projects).length}`);
-    console.log(`repositories=${Object.keys(config.repositories).length}`);
-    console.log(`agents=${Object.keys(config.agents).length}`);
+    const result = {
+      projects: Object.keys(config.projects).length,
+      repositories: Object.keys(config.repositories).length,
+      agents: Object.keys(config.agents).length,
+    };
+
+    printCommandOutput({
+      json: Boolean(args.json),
+      jsonValue: result,
+      textLines: [`projects=${result.projects}`, `repositories=${result.repositories}`, `agents=${result.agents}`],
+    });
   },
 });

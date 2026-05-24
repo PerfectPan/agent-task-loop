@@ -67,4 +67,27 @@ describe('cleanupCommand', () => {
 
     expect(cleanupSpy).toHaveBeenCalledWith({ taskId: 'TASK-102', force: true });
   });
+
+  it('prints cleanup result as json when requested', async () => {
+    const { cleanupCommand } = await import('../../src/commands/cleanup');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await cleanupCommand.run?.({
+      args: {
+        task: 'TASK-102',
+        force: true,
+        config: 'task.config.ts',
+        json: true,
+      },
+    } as never);
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual({
+      taskId: 'TASK-102',
+      branch: 'task/task-102-claude',
+      workspacePath: '/tmp/worktree',
+      status: '已强制清理工作区',
+    });
+    logSpy.mockRestore();
+  });
 });

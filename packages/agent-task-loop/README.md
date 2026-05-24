@@ -40,6 +40,16 @@ npx --no-install @rivus/agent-task-loop --help
 - `npx agent-task-loop resume --task TASK-101`
 - `npx agent-task-loop complete --task TASK-101`
 
+Summary commands support `--json` for scripts and agents:
+
+```bash
+npx agent-task-loop sync --json
+npx agent-task-loop schema --json
+npx agent-task-loop schema --apply --json
+npx agent-task-loop cleanup --task TASK-101 --json
+npx agent-task-loop complete --task TASK-101 --json
+```
+
 ## Complete Flow
 
 `complete` closes a task that is already in `待发布` or `待验收`.

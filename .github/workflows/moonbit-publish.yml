@@ -10,7 +10,7 @@ on:
       MOONCAKES_PERFECTPAN_TOKEN:
         required: true
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency: Publish MoonBit Package-${{ github.ref }}
 
 permissions:
   contents: read

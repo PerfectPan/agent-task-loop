@@ -6,6 +6,7 @@ import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { App } from '../tui/app';
+import { DEMO_TASKS } from '../tui/demo-data';
 
 export const tuiCommand = defineCommand({
   meta: {
@@ -21,8 +22,18 @@ export const tuiCommand = defineCommand({
     config: {
       type: 'string',
     },
+    demo: {
+      type: 'boolean',
+      description: 'Run with mock data (no config required)',
+      default: false,
+    },
   },
   async run({ args }) {
+    if (args.demo) {
+      render(<App onFetch={async () => DEMO_TASKS} />);
+      return;
+    }
+
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
     assertFeishuRuntimeConfig(config);
     const service = new TaskService(config);

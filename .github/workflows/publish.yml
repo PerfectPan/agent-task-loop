@@ -16,11 +16,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: NPM_TOKEN
     outputs:
       published: ${{ steps.npm-publish.outputs.published || 'false' }}
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -29,6 +26,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: corepack enable
 
@@ -61,13 +59,6 @@ jobs:
           commitMode: github-api
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure npm token for bootstrap publish
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          fi
 
       - name: Publish to npm
         id: npm-publish

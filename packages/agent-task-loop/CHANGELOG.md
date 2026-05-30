@@ -1,5 +1,11 @@
 # @rivus/agent-task-loop
 
+## 0.4.0
+
+### Minor Changes
+
+- b13bd1b: Add `--json` flag to `sync`, `schema`, `cleanup`, and `complete` commands for machine-readable output.
+
 ## 0.3.0
 
 ### Minor Changes

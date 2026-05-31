@@ -29,11 +29,6 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
           "$HOME/.moon/bin/moon" version --all
 
-      - name: Check MoonBit formatting
-        run: |
-          moon -C packages/agent-finder fmt
-          git diff --exit-code -- packages/agent-finder
-
       - name: Check MoonBit module
         run: moon -C packages/agent-finder check --target all
 

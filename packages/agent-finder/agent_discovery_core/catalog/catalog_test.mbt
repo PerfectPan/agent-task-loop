@@ -41,8 +41,15 @@ test "provider specs validate adapter modes and duplicate ids" {
     warnings: [],
   }
   inspect(validate_provider_specs(known_provider_specs()), content="[]")
-  let errors = validate_provider_specs([known_provider_specs()[5], duplicate, invalid_mode])
+  let errors = validate_provider_specs([
+    known_provider_specs()[5],
+    duplicate,
+    invalid_mode,
+  ])
   assert_eq(errors.length(), 2)
   assert_eq(errors[0], "duplicate provider id: codex")
-  assert_eq(errors[1], "unsupported adapter mode for bad-provider: custom-shell")
+  assert_eq(
+    errors[1],
+    "unsupported adapter mode for bad-provider: custom-shell",
+  )
 }

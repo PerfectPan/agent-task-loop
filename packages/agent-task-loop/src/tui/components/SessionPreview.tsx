@@ -19,6 +19,8 @@ export interface SessionPreviewProps {
   transcript?: string[];
   /** Whether the selected round's transcript is still loading. */
   transcriptLoading?: boolean;
+  /** Session ids that have a transcript on disk (rounds are marked accordingly). */
+  availableIds?: ReadonlySet<string>;
 }
 
 const MODE_LABELS: Record<PreviewMode, string> = {
@@ -86,6 +88,7 @@ export function SessionPreview({
   roundIndex = 0,
   transcript = [],
   transcriptLoading = false,
+  availableIds,
 }: SessionPreviewProps): React.JSX.Element {
   return (
     <Box
@@ -129,12 +132,13 @@ export function SessionPreview({
           ) : (
             preview.history.map((e, i) => {
               const selected = focused && i === roundIndex;
+              const viewable = !!e.sessionId && (availableIds?.has(e.sessionId) ?? false);
               return (
                 <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
                   <Text color={selected ? 'cyan' : undefined}>{selected ? '❯ ' : '  '}</Text>
+                  <Text color={viewable ? 'green' : 'gray'}>{viewable ? '●' : '○'} </Text>
                   <Text dimColor={!selected}>r{e.round}</Text> {e.kind}{' '}
                   <Text color="cyan">{e.agent}</Text>
-                  {e.sessionId ? '' : <Text dimColor> (no transcript)</Text>}
                 </Text>
               );
             })
@@ -159,7 +163,7 @@ export function SessionPreview({
                 {transcriptLoading ? (
                   <Text dimColor>Loading…</Text>
                 ) : transcript.length === 0 ? (
-                  <Text dimColor>No transcript</Text>
+                  <Text dimColor>Transcript not found on this machine</Text>
                 ) : (
                   transcript.map((line, i) => (
                     <Text key={i} wrap="truncate-end">

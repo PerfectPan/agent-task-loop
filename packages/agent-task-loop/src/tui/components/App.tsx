@@ -69,6 +69,20 @@ export function App({
   const [previewScroll, setPreviewScroll] = useState(0);
   // -1 means "latest round"; a concrete index once the user navigates rounds.
   const [roundIndex, setRoundIndex] = useState(-1);
+  // Session ids with a transcript on disk, so rounds can be marked viewable.
+  const [availableIds, setAvailableIds] = useState<ReadonlySet<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve(sessionProvider.listAvailableSessionIds())
+      .then(ids => {
+        if (active) setAvailableIds(new Set(ids));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [sessionProvider]);
 
   const nowMs = now();
 
@@ -292,6 +306,7 @@ export function App({
                 roundIndex={effRound}
                 transcript={transcript}
                 transcriptLoading={transcriptLoading}
+                availableIds={availableIds}
               />
             ) : null}
           </Box>

@@ -21,6 +21,8 @@ export interface SessionProvider {
    * readable lines, or [] when no transcript can be found.
    */
   getTranscript(sessionId: string): string[] | Promise<string[]>;
+  /** Session ids that have a resolvable transcript (for availability hints). */
+  listAvailableSessionIds(): string[] | Promise<string[]>;
 }
 
 /**
@@ -68,6 +70,9 @@ export function createFakeSessionProvider(
     },
     async getTranscript(sessionId: string): Promise<string[]> {
       return transcripts[sessionId] ?? [];
+    },
+    async listAvailableSessionIds(): Promise<string[]> {
+      return Object.keys(transcripts);
     },
   };
 }

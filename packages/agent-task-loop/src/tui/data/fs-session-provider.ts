@@ -9,11 +9,12 @@ import { type SessionProvider, buildPreviewFromTask } from './session-provider';
 
 /** Default number of trailing lines surfaced in the preview pane. */
 const DEFAULT_MAX_LINES = 40;
-/** Upper bound on directory entries scanned while resolving a transcript. */
-const SCAN_BUDGET = 20_000;
+/** Upper bound on directory entries scanned while indexing transcripts. */
+const SCAN_BUDGET = 50_000;
 const MAX_DEPTH = 6;
+/** Session ids are UUIDs, embedded in codex filenames and naming claude files. */
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
-/** Reads a UTF-8 text file. Matches `node:fs/promises` `readFile(path, 'utf8')`. */
 type ReadFile = (path: string) => Promise<string>;
 
 interface DirEntry {
@@ -29,30 +30,27 @@ function defaultSessionRoots(): string[] {
 }
 
 export interface FsSessionProviderOptions {
-  /** Max trailing lines to keep in the preview (default 40). */
   maxLines?: number;
-  /** Injectable reader; defaults to `node:fs/promises` readFile as utf8. */
   readFile?: ReadFile;
-  /** Injectable directory reader; defaults to `node:fs/promises` readdir. */
   readdir?: ReadDir;
-  /** Roots searched for a transcript file by session id. */
   sessionRoots?: string[];
 }
 
 /**
- * A {@link SessionProvider} backed by the local filesystem. It surfaces, in
- * order of preference: the tail of the task's active log file, or — when that
- * file is gone (common once a worktree is cleaned up) — the tail of the agent's
- * session transcript, resolved from the task's session id under the standard
- * agent session roots (`~/.codex/sessions`, `~/.claude/projects`). Transcript
- * lookups are cached per id. `getPreview` never throws.
+ * A {@link SessionProvider} backed by the local filesystem. It surfaces the tail
+ * of a task's active log file, or — when that file is gone (common once a
+ * worktree is cleaned up) — the agent session transcript resolved from the
+ * task's session id. Transcripts live under the standard roots
+ * (`~/.codex/sessions`, `~/.claude/projects`); the provider indexes them once
+ * (session-id → path) so lookups and availability checks are O(1).
+ * `getPreview` never throws.
  */
 export class FsSessionProvider implements SessionProvider {
   private readonly maxLines: number;
   private readonly readFile: ReadFile;
   private readonly readdir: ReadDir;
   private readonly roots: string[];
-  private readonly transcriptCache = new Map<string, string | null>();
+  private indexPromise: Promise<Map<string, string>> | null = null;
 
   constructor(opts: FsSessionProviderOptions = {}) {
     this.maxLines = opts.maxLines ?? DEFAULT_MAX_LINES;
@@ -71,9 +69,7 @@ export class FsSessionProvider implements SessionProvider {
       const sessionId = reviewing
         ? task.reviewSessionId ?? task.sessionId
         : task.executionSessionId ?? task.sessionId;
-      if (sessionId) {
-        tail = await this.getTranscript(sessionId);
-      }
+      if (sessionId) tail = await this.getTranscript(sessionId);
     }
 
     return buildPreviewFromTask(task, now, tail);
@@ -82,8 +78,13 @@ export class FsSessionProvider implements SessionProvider {
   /** Resolve and parse the transcript for a single session id (one round). */
   async getTranscript(sessionId: string): Promise<string[]> {
     if (!sessionId) return [];
-    const path = await this.resolveTranscript(sessionId);
+    const path = (await this.index()).get(sessionId);
     return this.readTail(path, content => parseTranscript(content, this.maxLines));
+  }
+
+  /** Session ids that have a resolvable transcript on disk. */
+  async listAvailableSessionIds(): Promise<string[]> {
+    return [...(await this.index()).keys()];
   }
 
   private async readTail(
@@ -98,42 +99,38 @@ export class FsSessionProvider implements SessionProvider {
     }
   }
 
-  /** Find (and cache) the transcript file whose name contains `sessionId`. */
-  private async resolveTranscript(sessionId: string): Promise<string | null> {
-    const cached = this.transcriptCache.get(sessionId);
-    if (cached !== undefined) return cached;
+  /** Lazily build (once) a map of session id → transcript file path. */
+  private index(): Promise<Map<string, string>> {
+    if (!this.indexPromise) this.indexPromise = this.buildIndex();
+    return this.indexPromise;
+  }
 
+  private async buildIndex(): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
     let budget = SCAN_BUDGET;
-    const walk = async (dir: string, depth: number): Promise<string | null> => {
-      if (depth > MAX_DEPTH || budget <= 0) return null;
+
+    const walk = async (dir: string, depth: number): Promise<void> => {
+      if (depth > MAX_DEPTH || budget <= 0) return;
       let entries: DirEntry[];
       try {
         entries = await this.readdir(dir);
       } catch {
-        return null;
+        return;
       }
       const dirs: string[] = [];
       for (const entry of entries) {
-        if (--budget <= 0) return null;
+        if (--budget <= 0) return;
         if (entry.isDirectory()) {
           dirs.push(join(dir, entry.name));
-        } else if (entry.name.includes(sessionId)) {
-          return join(dir, entry.name);
+        } else {
+          const match = entry.name.match(UUID_RE);
+          if (match && !map.has(match[0])) map.set(match[0], join(dir, entry.name));
         }
       }
-      for (const sub of dirs) {
-        const hit = await walk(sub, depth + 1);
-        if (hit) return hit;
-      }
-      return null;
+      for (const sub of dirs) await walk(sub, depth + 1);
     };
 
-    let found: string | null = null;
-    for (const root of this.roots) {
-      found = await walk(root, 0);
-      if (found) break;
-    }
-    this.transcriptCache.set(sessionId, found);
-    return found;
+    for (const root of this.roots) await walk(root, 0);
+    return map;
   }
 }

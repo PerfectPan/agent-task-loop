@@ -117,10 +117,10 @@ describe('FsSessionProvider', () => {
   });
 
   it('falls back to the session transcript when no log file exists', async () => {
-    const sid = '019dae6d-6faa-7383';
+    const sid = '019dae6d-6faa-7383-8010-11f907e4beb9';
     const tree: Record<string, ReturnType<typeof dir>[]> = {
       '/root': [dir('2026')],
-      '/root/2026': [file('other.jsonl'), file(`rollout-${sid}.jsonl`)],
+      '/root/2026': [file('other.jsonl'), file(`rollout-2026-${sid}.jsonl`)],
     };
     const readdir = vi.fn(async (path: string) => tree[path] ?? []);
     const readFile = vi.fn(async () =>
@@ -131,15 +131,15 @@ describe('FsSessionProvider', () => {
     const task = makeTask({ executionSessionId: sid });
     const preview = await provider.getPreview(task, fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith(`/root/2026/rollout-${sid}.jsonl`);
+    expect(readFile).toHaveBeenCalledWith(`/root/2026/rollout-2026-${sid}.jsonl`);
     expect(preview.logTail).toEqual(['user: hi', 'assistant: done']);
     expect(preview.hasLog).toBe(true);
   });
 
-  it('caches transcript resolution across calls', async () => {
-    const sid = 'abc-123';
+  it('caches the transcript index across calls', async () => {
+    const sid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     const readdir = vi.fn(async (path: string) =>
-      path === '/root' ? [file(`s-${sid}.jsonl`)] : [],
+      path === '/root' ? [file(`${sid}.jsonl`)] : [],
     );
     const readFile = vi.fn(async () => '{"payload":{"type":"agent_message","message":"x"}}\n');
     const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });

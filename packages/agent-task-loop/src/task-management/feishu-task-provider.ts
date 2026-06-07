@@ -167,6 +167,9 @@ export class FeishuTaskProvider implements TaskProvider {
       this.config.feishu.tableId,
       '--limit',
       '200',
+      // lark-cli defaults to markdown output; we parse the raw JSON envelope.
+      '--format',
+      'json',
     ]);
 
     const data = JSON.parse(stdout) as LarkRecordListResponse;

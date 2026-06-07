@@ -13,6 +13,7 @@ import { TABS, type TabKey, tabIncludes } from '../logic/status';
 import { nextPane, nextPreviewMode, prevPane } from '../logic/pane';
 import { useTaskPoll } from '../hooks/use-task-poll';
 import { useSessionPreview } from '../hooks/use-session-preview';
+import { useTranscript } from '../hooks/use-transcript';
 import { useTerminalSize } from '../hooks/use-terminal-size';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
@@ -66,6 +67,8 @@ export function App({
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [detailScroll, setDetailScroll] = useState(0);
   const [previewScroll, setPreviewScroll] = useState(0);
+  // -1 means "latest round"; a concrete index once the user navigates rounds.
+  const [roundIndex, setRoundIndex] = useState(-1);
 
   const nowMs = now();
 
@@ -109,15 +112,27 @@ export function App({
   // footer (1); pin its height so a tall pane can't push the chrome off-screen.
   const bodyHeight = Math.max(1, rows - 5);
 
-  // A new selection (or preview mode) starts scrolled back at the top.
+  // Rounds (each its own agent session) and which one is selected for drill-in.
+  const history = preview?.history ?? [];
+  const effRound = roundIndex < 0 ? Math.max(0, history.length - 1) : clampIndex(roundIndex, history.length);
+  const selectedRound = history[effRound];
+  const transcriptSessionId =
+    previewMode === 'logs' ? selectedRound?.sessionId ?? selected?.executionSessionId ?? null : null;
+  const { lines: transcript, isLoading: transcriptLoading } = useTranscript(
+    sessionProvider,
+    transcriptSessionId ?? null,
+  );
+
+  // A new selection (or preview mode / round) starts scrolled back at the top.
   const selectedId = selected?.taskId ?? null;
   useEffect(() => {
     setDetailScroll(0);
     setPreviewScroll(0);
+    setRoundIndex(-1);
   }, [selectedId]);
   useEffect(() => {
     setPreviewScroll(0);
-  }, [previewMode]);
+  }, [previewMode, effRound]);
 
   // Estimate each scrollable pane's content height so scrolling can be clamped.
   const paneViewport = Math.max(1, visibleRows - 1);
@@ -131,7 +146,7 @@ export function App({
   const previewLines = !preview
     ? 1
     : previewMode === 'logs'
-      ? preview.logTail.length + 1
+      ? transcript.length + 2
       : previewMode === 'history'
         ? preview.history.length + 1
         : 8 + Math.min(4, preview.history.length);
@@ -174,20 +189,25 @@ export function App({
   // --- main navigation / actions ---
   useInput(
     (input, key) => {
+      const previewRounds = focusedPane === 'preview' && previewMode === 'history';
       if (key.upArrow || input === 'k') {
         if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s - 1, detailLines, paneViewport));
+        else if (previewRounds) setRoundIndex(clampIndex(effRound - 1, history.length));
         else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s - 1, previewLines, paneViewport));
         else setSelectedIndex(i => nextIndex(clampIndex(i, len), -1, len));
       } else if (key.downArrow || input === 'j') {
         if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s + 1, detailLines, paneViewport));
+        else if (previewRounds) setRoundIndex(clampIndex(effRound + 1, history.length));
         else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s + 1, previewLines, paneViewport));
         else setSelectedIndex(i => nextIndex(clampIndex(i, len), 1, len));
       } else if (input === 'g') {
         if (focusedPane === 'detail') setDetailScroll(0);
+        else if (previewRounds) setRoundIndex(0);
         else if (focusedPane === 'preview') setPreviewScroll(0);
         else setSelectedIndex(0);
       } else if (input === 'G') {
         if (focusedPane === 'detail') setDetailScroll(detailMax);
+        else if (previewRounds) setRoundIndex(Math.max(0, history.length - 1));
         else if (focusedPane === 'preview') setPreviewScroll(previewMax);
         else setSelectedIndex(Math.max(0, len - 1));
       } else if (key.tab && key.shift) {
@@ -219,8 +239,10 @@ export function App({
             setConfirm(null);
           },
         });
-      } else if (key.return && selected) {
-        onAttachTask?.(selected);
+      } else if (key.return) {
+        // In the rounds list, Enter drills into that round's transcript.
+        if (previewRounds) setPreviewMode('logs');
+        else if (selected) onAttachTask?.(selected);
       } else if (input === 'q' || key.escape) {
         exit();
       }
@@ -267,6 +289,9 @@ export function App({
                 focused={focusedPane === 'preview'}
                 isLoading={previewLoading}
                 scroll={previewScroll}
+                roundIndex={effRound}
+                transcript={transcript}
+                transcriptLoading={transcriptLoading}
               />
             ) : null}
           </Box>

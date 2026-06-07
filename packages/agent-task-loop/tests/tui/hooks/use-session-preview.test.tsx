@@ -37,7 +37,7 @@ function previewFor(task: TaskRecord): SessionPreview {
 /** Hand-rolled fake provider whose getPreview echoes the task id. */
 function makeFakeProvider(): SessionProvider & { getPreview: ReturnType<typeof vi.fn> } {
   const getPreview = vi.fn((task: TaskRecord, _now: number) => previewFor(task));
-  return { getPreview };
+  return { getPreview, getTranscript: async () => [] };
 }
 
 function lastFrame(frame: string | undefined): string {

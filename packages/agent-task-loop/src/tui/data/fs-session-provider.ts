@@ -72,12 +72,18 @@ export class FsSessionProvider implements SessionProvider {
         ? task.reviewSessionId ?? task.sessionId
         : task.executionSessionId ?? task.sessionId;
       if (sessionId) {
-        const path = await this.resolveTranscript(sessionId);
-        tail = await this.readTail(path, content => parseTranscript(content, this.maxLines));
+        tail = await this.getTranscript(sessionId);
       }
     }
 
     return buildPreviewFromTask(task, now, tail);
+  }
+
+  /** Resolve and parse the transcript for a single session id (one round). */
+  async getTranscript(sessionId: string): Promise<string[]> {
+    if (!sessionId) return [];
+    const path = await this.resolveTranscript(sessionId);
+    return this.readTail(path, content => parseTranscript(content, this.maxLines));
   }
 
   private async readTail(

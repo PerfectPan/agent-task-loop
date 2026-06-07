@@ -16,6 +16,11 @@ export interface SessionProvider {
    * way.
    */
   getPreview(task: TaskRecord, now: number): SessionPreview | Promise<SessionPreview>;
+  /**
+   * Resolve and read the transcript for a single session id (one round). Returns
+   * readable lines, or [] when no transcript can be found.
+   */
+  getTranscript(sessionId: string): string[] | Promise<string[]>;
 }
 
 /**
@@ -53,12 +58,16 @@ export function buildPreviewFromTask(
  */
 export function createFakeSessionProvider(
   overrides: Record<string, Partial<SessionPreview>> = {},
+  transcripts: Record<string, string[]> = {},
 ): SessionProvider {
   return {
     async getPreview(task: TaskRecord, now: number): Promise<SessionPreview> {
       const base = buildPreviewFromTask(task, now);
       const override = overrides[task.taskId];
       return override ? { ...base, ...override } : base;
+    },
+    async getTranscript(sessionId: string): Promise<string[]> {
+      return transcripts[sessionId] ?? [];
     },
   };
 }

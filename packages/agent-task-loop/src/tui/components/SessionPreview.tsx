@@ -13,6 +13,12 @@ export interface SessionPreviewProps {
   isLoading?: boolean;
   /** Vertical scroll offset in rows (content shifts up by this many lines). */
   scroll?: number;
+  /** Selected round in the history list (cursor position). */
+  roundIndex?: number;
+  /** Transcript lines for the selected round (shown in transcript mode). */
+  transcript?: string[];
+  /** Whether the selected round's transcript is still loading. */
+  transcriptLoading?: boolean;
 }
 
 const MODE_LABELS: Record<PreviewMode, string> = {
@@ -77,6 +83,9 @@ export function SessionPreview({
   focused,
   isLoading,
   scroll = 0,
+  roundIndex = 0,
+  transcript = [],
+  transcriptLoading = false,
 }: SessionPreviewProps): React.JSX.Element {
   return (
     <Box
@@ -116,27 +125,51 @@ export function SessionPreview({
       ) : mode === 'history' ? (
         <Box flexDirection="column">
           {preview.history.length === 0 ? (
-            <Text dimColor>No history</Text>
+            <Text dimColor>No rounds</Text>
           ) : (
-            preview.history.map((e, i) => (
-              <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
-                <Text dimColor>r{e.round}</Text> {e.kind} <Text color="cyan">{e.agent}</Text>
-                {e.sessionName ? ` ${e.sessionName}` : ''}
-              </Text>
-            ))
+            preview.history.map((e, i) => {
+              const selected = focused && i === roundIndex;
+              return (
+                <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
+                  <Text color={selected ? 'cyan' : undefined}>{selected ? '❯ ' : '  '}</Text>
+                  <Text dimColor={!selected}>r{e.round}</Text> {e.kind}{' '}
+                  <Text color="cyan">{e.agent}</Text>
+                  {e.sessionId ? '' : <Text dimColor> (no transcript)</Text>}
+                </Text>
+              );
+            })
           )}
+          {focused ? <Text dimColor>{'\n'}[↑↓] round  [Enter] open transcript</Text> : null}
         </Box>
       ) : (
         <Box flexDirection="column">
-          {!preview.hasLog || preview.logTail.length === 0 ? (
-            <Text dimColor>No transcript</Text>
-          ) : (
-            preview.logTail.map((line, i) => (
-              <Text key={i} wrap="truncate-end">
-                {line}
-              </Text>
-            ))
-          )}
+          {(() => {
+            const round = preview.history[roundIndex];
+            return (
+              <>
+                <Text wrap="truncate-end">
+                  {round ? (
+                    <Text dimColor>
+                      r{round.round} {round.kind} {round.agent}
+                    </Text>
+                  ) : (
+                    <Text dimColor>transcript</Text>
+                  )}
+                </Text>
+                {transcriptLoading ? (
+                  <Text dimColor>Loading…</Text>
+                ) : transcript.length === 0 ? (
+                  <Text dimColor>No transcript</Text>
+                ) : (
+                  transcript.map((line, i) => (
+                    <Text key={i} wrap="truncate-end">
+                      {line}
+                    </Text>
+                  ))
+                )}
+              </>
+            );
+          })()}
         </Box>
       )}
       </Box>

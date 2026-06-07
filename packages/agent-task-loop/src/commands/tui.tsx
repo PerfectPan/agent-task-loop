@@ -3,29 +3,60 @@ import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
 import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import type { FetchTasks } from '../tui/types';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
-import { App } from '../tui/app';
+import { App } from '../tui/components/App';
+import { FsSessionProvider } from '../tui/data/fs-session-provider';
+import { demoSessionProvider, demoTasks } from '../tui/demo-data';
 
 export const tuiCommand = defineCommand({
   meta: {
     name: 'tui',
-    description: 'Open task TUI',
+    description: 'Open the interactive task + session dashboard',
   },
   args: {
     agent: {
       type: 'string',
-      required: true,
+      description: 'Only show tasks pending for this agent (claude|codex|coco|glm)',
+    },
+    demo: {
+      type: 'boolean',
+      description: 'Run against built-in fixture data, no backend required',
+      default: false,
     },
     config: {
       type: 'string',
     },
   },
   async run({ args }) {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      console.error('The tui command requires an interactive terminal (TTY).');
+      process.exitCode = 1;
+      return;
+    }
+
+    if (args.demo) {
+      const tasks = demoTasks(Date.now());
+      const onFetch: FetchTasks = async () => tasks;
+      render(
+        <App agent={(args.agent as string) || 'demo'} onFetchTasks={onFetch} sessionProvider={demoSessionProvider()} />,
+      );
+      return;
+    }
+
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
     assertFeishuRuntimeConfig(config);
     const service = new TaskService(config);
-    const tasks = await service.listPendingTasks(args.agent as TargetAgent);
-    render(<App tasks={tasks} />);
+    const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
+    const onFetch: FetchTasks = () => (agent ? service.listPendingTasks(agent) : service.listTasks());
+
+    render(
+      <App
+        agent={agent ?? 'all'}
+        onFetchTasks={onFetch}
+        sessionProvider={new FsSessionProvider()}
+      />,
+    );
   },
 });

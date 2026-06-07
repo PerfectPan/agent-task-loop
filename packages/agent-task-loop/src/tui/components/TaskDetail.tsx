@@ -21,6 +21,7 @@ export function TaskDetail({ task, now, width, focused }: TaskDetailProps): Reac
       borderColor={focused ? 'cyan' : 'gray'}
       borderDimColor={!focused}
       paddingX={1}
+      overflow="hidden"
     >
       <Text bold color={focused ? 'cyan' : undefined}>
         detail

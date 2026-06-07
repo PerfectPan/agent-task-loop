@@ -83,6 +83,7 @@ export function SessionPreview({
       borderColor={focused ? 'cyan' : 'gray'}
       borderDimColor={!focused}
       paddingX={1}
+      overflow="hidden"
     >
       <ModeTabs mode={mode} />
       {!preview ? (

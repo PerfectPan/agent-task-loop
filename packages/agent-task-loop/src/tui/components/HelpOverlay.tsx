@@ -22,6 +22,7 @@ const BINDINGS: readonly Binding[] = [
   { keys: 'p', action: 'toggle preview' },
   { keys: 'd', action: 'stop (confirm)' },
   { keys: 'g/G', action: 'first/last' },
+  { keys: 'w', action: 'workflow diagram' },
   { keys: '?', action: 'help' },
   { keys: 'q', action: 'quit' },
 ];

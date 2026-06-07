@@ -22,6 +22,7 @@ import { TaskDetail } from './TaskDetail';
 import { SessionPreview } from './SessionPreview';
 import { StatusBar } from './StatusBar';
 import { HelpOverlay } from './HelpOverlay';
+import { WorkflowOverlay } from './WorkflowOverlay';
 import { ConfirmPrompt } from './ConfirmPrompt';
 import { ResizeGuard } from './ResizeGuard';
 
@@ -64,6 +65,7 @@ export function App({
   const [previewOpen, setPreviewOpen] = useState(true);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('output');
   const [helpVisible, setHelpVisible] = useState(false);
+  const [workflowVisible, setWorkflowVisible] = useState(false);
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [detailScroll, setDetailScroll] = useState(0);
   const [previewScroll, setPreviewScroll] = useState(0);
@@ -192,12 +194,18 @@ export function App({
     { isActive: filtering },
   );
 
-  // --- help overlay: any key closes ---
+  // --- help / workflow overlays: any key closes ---
   useInput(
     () => {
       setHelpVisible(false);
     },
     { isActive: helpVisible && !confirm },
+  );
+  useInput(
+    () => {
+      setWorkflowVisible(false);
+    },
+    { isActive: workflowVisible && !confirm },
   );
 
   // --- main navigation / actions ---
@@ -238,6 +246,8 @@ export function App({
         refetch();
       } else if (input === '?') {
         setHelpVisible(true);
+      } else if (input === 'w') {
+        setWorkflowVisible(true);
       } else if (/^[1-9]$/.test(input) && Number(input) <= TABS.length) {
         setTab(TABS[Number(input) - 1].key);
       } else if (input === ']') {
@@ -261,7 +271,7 @@ export function App({
         exit();
       }
     },
-    { isActive: !filtering && !helpVisible && !confirm },
+    { isActive: !filtering && !helpVisible && !workflowVisible && !confirm },
   );
 
   return (
@@ -278,6 +288,10 @@ export function App({
         {helpVisible ? (
           <Box height={bodyHeight} minHeight={0}>
             <HelpOverlay visible />
+          </Box>
+        ) : workflowVisible ? (
+          <Box height={bodyHeight} minHeight={0}>
+            <WorkflowOverlay visible currentStatus={selected?.status} />
           </Box>
         ) : (
           <Box flexDirection="row" height={bodyHeight} minHeight={0}>

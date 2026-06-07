@@ -7,6 +7,8 @@ import { sortTasks } from '../logic/sort';
 import { filterTasks } from '../logic/filter';
 import { clampIndex, nextIndex } from '../logic/viewport';
 import { computeColumnWidths, reservedRows } from '../logic/layout';
+import { clampScroll, maxScroll, wrappedLineCount } from '../logic/measure';
+import { formatDetailFields } from '../logic/format';
 import { TABS, type TabKey, tabIncludes } from '../logic/status';
 import { nextPane, nextPreviewMode, prevPane } from '../logic/pane';
 import { useTaskPoll } from '../hooks/use-task-poll';
@@ -62,6 +64,8 @@ export function App({
   const [previewMode, setPreviewMode] = useState<PreviewMode>('output');
   const [helpVisible, setHelpVisible] = useState(false);
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
+  const [detailScroll, setDetailScroll] = useState(0);
+  const [previewScroll, setPreviewScroll] = useState(0);
 
   const nowMs = now();
 
@@ -102,6 +106,35 @@ export function App({
   const colWidths = computeColumnWidths(columns, { previewOpen });
   const visibleRows = Math.max(1, rows - reservedRows());
 
+  // A new selection (or preview mode) starts scrolled back at the top.
+  const selectedId = selected?.taskId ?? null;
+  useEffect(() => {
+    setDetailScroll(0);
+    setPreviewScroll(0);
+  }, [selectedId]);
+  useEffect(() => {
+    setPreviewScroll(0);
+  }, [previewMode]);
+
+  // Estimate each scrollable pane's content height so scrolling can be clamped.
+  const paneViewport = Math.max(1, visibleRows - 1);
+  const detailLines = selected
+    ? 1 +
+      formatDetailFields(selected, nowMs).length +
+      (selected.progressSummary ? 1 + wrappedLineCount(selected.progressSummary, Math.max(1, colWidths.detail - 4)) : 0) +
+      (selected.lastError ? 1 + wrappedLineCount(selected.lastError, Math.max(1, colWidths.detail - 4)) : 0) +
+      4
+    : 1;
+  const previewLines = !preview
+    ? 1
+    : previewMode === 'logs'
+      ? preview.logTail.length + 1
+      : previewMode === 'history'
+        ? preview.history.length + 1
+        : 8 + Math.min(4, preview.history.length);
+  const detailMax = maxScroll(detailLines, paneViewport);
+  const previewMax = maxScroll(previewLines, paneViewport);
+
   const togglePreview = useCallback(() => {
     setPreviewOpen(open => {
       const next = !open;
@@ -139,13 +172,21 @@ export function App({
   useInput(
     (input, key) => {
       if (key.upArrow || input === 'k') {
-        setSelectedIndex(i => nextIndex(clampIndex(i, len), -1, len));
+        if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s - 1, detailLines, paneViewport));
+        else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s - 1, previewLines, paneViewport));
+        else setSelectedIndex(i => nextIndex(clampIndex(i, len), -1, len));
       } else if (key.downArrow || input === 'j') {
-        setSelectedIndex(i => nextIndex(clampIndex(i, len), 1, len));
+        if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s + 1, detailLines, paneViewport));
+        else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s + 1, previewLines, paneViewport));
+        else setSelectedIndex(i => nextIndex(clampIndex(i, len), 1, len));
       } else if (input === 'g') {
-        setSelectedIndex(0);
+        if (focusedPane === 'detail') setDetailScroll(0);
+        else if (focusedPane === 'preview') setPreviewScroll(0);
+        else setSelectedIndex(0);
       } else if (input === 'G') {
-        setSelectedIndex(Math.max(0, len - 1));
+        if (focusedPane === 'detail') setDetailScroll(detailMax);
+        else if (focusedPane === 'preview') setPreviewScroll(previewMax);
+        else setSelectedIndex(Math.max(0, len - 1));
       } else if (key.tab && key.shift) {
         setFocusedPane(p => prevPane(p, previewOpen));
       } else if (key.tab) {
@@ -213,6 +254,7 @@ export function App({
               now={nowMs}
               width={colWidths.detail}
               focused={focusedPane === 'detail'}
+              scroll={detailScroll}
             />
             {previewOpen ? (
               <SessionPreview
@@ -221,6 +263,7 @@ export function App({
                 width={colWidths.preview}
                 focused={focusedPane === 'preview'}
                 isLoading={previewLoading}
+                scroll={previewScroll}
               />
             ) : null}
           </Box>

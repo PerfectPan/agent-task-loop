@@ -11,6 +11,8 @@ export interface SessionPreviewProps {
   width: number;
   focused: boolean;
   isLoading?: boolean;
+  /** Vertical scroll offset in rows (content shifts up by this many lines). */
+  scroll?: number;
 }
 
 const MODE_LABELS: Record<PreviewMode, string> = {
@@ -74,6 +76,7 @@ export function SessionPreview({
   width,
   focused,
   isLoading,
+  scroll = 0,
 }: SessionPreviewProps): React.JSX.Element {
   return (
     <Box
@@ -86,6 +89,8 @@ export function SessionPreview({
       overflow="hidden"
     >
       <ModeTabs mode={mode} />
+      <Box flexGrow={1} flexDirection="column" overflow="hidden">
+      <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
       {!preview ? (
         <Text dimColor>{isLoading ? 'Loading…' : 'No session'}</Text>
       ) : mode === 'output' ? (
@@ -133,6 +138,8 @@ export function SessionPreview({
           )}
         </Box>
       )}
+      </Box>
+      </Box>
     </Box>
   );
 }

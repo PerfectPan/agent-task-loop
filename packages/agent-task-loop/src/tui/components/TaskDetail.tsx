@@ -9,10 +9,12 @@ export interface TaskDetailProps {
   now: number;
   width: number;
   focused: boolean;
+  /** Vertical scroll offset in rows (content shifts up by this many lines). */
+  scroll?: number;
 }
 
 /** Center pane: the selected task's fields plus progress / error sections. */
-export function TaskDetail({ task, now, width, focused }: TaskDetailProps): React.JSX.Element {
+export function TaskDetail({ task, now, width, focused, scroll = 0 }: TaskDetailProps): React.JSX.Element {
   return (
     <Box
       flexDirection="column"
@@ -24,12 +26,13 @@ export function TaskDetail({ task, now, width, focused }: TaskDetailProps): Reac
       overflow="hidden"
     >
       <Text bold color={focused ? 'cyan' : undefined}>
-        detail
+        detail{focused && scroll > 0 ? <Text dimColor> ↑{scroll}</Text> : null}
       </Text>
+      <Box flexGrow={1} flexDirection="column" overflow="hidden">
       {!task ? (
         <Text dimColor>Select a task</Text>
       ) : (
-        <>
+        <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
           <Text bold wrap="truncate-end">
             {task.taskId} {task.title}
           </Text>
@@ -59,8 +62,9 @@ export function TaskDetail({ task, now, width, focused }: TaskDetailProps): Reac
               </Text>
             </Box>
           ) : null}
-        </>
+        </Box>
       )}
+      </Box>
     </Box>
   );
 }

@@ -28,7 +28,7 @@ function hintsFor(focusedPane: Pane): string {
         ...COMMON_HINTS,
       ].join('  ');
     case 'detail':
-      return ['[↑↓/jk] nav', '[Tab] focus', '[Enter] attach', ...COMMON_HINTS].join('  ');
+      return ['[↑↓/jk] scroll', '[Tab] focus', '[Enter] attach', ...COMMON_HINTS].join('  ');
     case 'preview':
       return ['[↑↓/jk] scroll', '[Tab] focus', '[m] mode', ...COMMON_HINTS].join('  ');
   }

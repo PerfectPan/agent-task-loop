@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { pickNextTask } from '../../src/utils/priority';
 import type { TaskRecord } from '../../src/types/task';
 import { TaskService } from '../../src/services/task-service';
+import { FeishuTaskProvider } from '../../src/task-management/feishu-task-provider';
 import type { AppConfig } from '../../src/config/schema';
 
 vi.mock('../../src/services/lark-cli', () => ({
@@ -155,8 +156,8 @@ describe('TaskService', () => {
   });
 
   it('maps review loop and acceptance fields from lark records', async () => {
-    const service = new TaskService(config);
-    const task = (service as any).mapFields({
+    const provider = new FeishuTaskProvider(config);
+    const task = (provider as any).mapFields({
       TaskID: 'TASK-201',
       Title: 'review loop',
       Description: 'desc',

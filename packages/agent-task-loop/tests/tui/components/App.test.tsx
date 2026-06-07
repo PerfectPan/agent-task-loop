@@ -4,7 +4,7 @@ import { render } from 'ink-testing-library';
 import { App } from '../../../src/tui/components/App';
 import { createFakeSessionProvider } from '../../../src/tui/data/session-provider';
 import type { FetchTasks } from '../../../src/tui/types';
-import { demoTasks } from '../../../src/tui/demo-data';
+import { demoTasks } from '../fixtures';
 import { FIXED_NOW, stripAnsi } from '../helpers';
 
 const now = () => FIXED_NOW;

@@ -3,13 +3,13 @@ import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
 import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
-import type { FetchTasks } from '../tui/types';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { App } from '../tui/components/App';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
-import type { SessionProvider } from '../tui/data/session-provider';
-import { demoSessionProvider, demoTasks } from '../tui/demo-data';
+
+const ENTER_ALT_SCREEN = '[?1049h';
+const LEAVE_ALT_SCREEN = '[?1049l';
 
 export const tuiCommand = defineCommand({
   meta: {
@@ -20,11 +20,6 @@ export const tuiCommand = defineCommand({
     agent: {
       type: 'string',
       description: 'Only show tasks pending for this agent (claude|codex|coco|glm)',
-    },
-    demo: {
-      type: 'boolean',
-      description: 'Run against built-in fixture data, no backend required',
-      default: false,
     },
     config: {
       type: 'string',
@@ -37,25 +32,30 @@ export const tuiCommand = defineCommand({
       return;
     }
 
-    let agentLabel: string;
-    let onFetch: FetchTasks;
-    let sessionProvider: SessionProvider;
+    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    assertFeishuRuntimeConfig(config);
+    const service = new TaskService(config);
+    const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
 
-    if (args.demo) {
-      const tasks = demoTasks(Date.now());
-      agentLabel = (args.agent as string) || 'demo';
-      onFetch = async () => tasks;
-      sessionProvider = demoSessionProvider();
-    } else {
-      const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-      assertFeishuRuntimeConfig(config);
-      const service = new TaskService(config);
-      const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
-      agentLabel = agent ?? 'all';
-      onFetch = () => (agent ? service.listPendingTasks(agent) : service.listTasks());
-      sessionProvider = new FsSessionProvider();
+    // Take over the whole terminal (alternate screen buffer), restoring the
+    // user's scrollback on exit — the dashboard runs full-screen.
+    process.stdout.write(ENTER_ALT_SCREEN);
+    const restore = () => process.stdout.write(LEAVE_ALT_SCREEN);
+    process.once('exit', restore);
+
+    const instance = render(
+      <App
+        agent={agent ?? 'all'}
+        onFetchTasks={() => (agent ? service.listPendingTasks(agent) : service.listTasks())}
+        sessionProvider={new FsSessionProvider()}
+      />,
+    );
+
+    try {
+      await instance.waitUntilExit();
+    } finally {
+      process.off('exit', restore);
+      restore();
     }
-
-    render(<App agent={agentLabel} onFetchTasks={onFetch} sessionProvider={sessionProvider} />);
   },
 });

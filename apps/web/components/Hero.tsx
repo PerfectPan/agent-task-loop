@@ -2,7 +2,7 @@ import { CopyButton } from './CopyButton';
 import { NPM_PACKAGE } from '../lib/data';
 
 export function Hero({ version, repoUrl }: { version: string; repoUrl: string }) {
-  const install = `npx ${NPM_PACKAGE} tui --demo`;
+  const install = `npx ${NPM_PACKAGE} init`;
   return (
     <section id="top" className="hero-grid border-b border-border/60">
       <div className="mx-auto max-w-6xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">

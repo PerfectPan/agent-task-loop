@@ -1,9 +1,8 @@
-import type { TaskRecord } from '../types/task';
-import { createFakeSessionProvider, type SessionProvider } from './data/session-provider';
+import type { TaskRecord } from '../../src/types/task';
 
 /**
  * Fixture tasks spanning every TaskStatus plus the session fields the preview
- * pane reads, so `tui --demo` exercises the whole dashboard without a backend.
+ * pane reads, so component/integration tests exercise the whole dashboard.
  * Timestamps are anchored to an injected `now` so the demo looks "live".
  */
 export function demoTasks(now: number): TaskRecord[] {
@@ -181,19 +180,4 @@ export function demoTasks(now: number): TaskRecord[] {
       claimedAt: ago(600),
     },
   ];
-}
-
-/** Synthetic session provider for `--demo`: gives live tasks a fake log tail. */
-export function demoSessionProvider(): SessionProvider {
-  const logTail = [
-    '12:00:01 running vitest…',
-    '12:00:03 tests/tui/logic/sort.test.ts ✓',
-    '12:00:04 tests/tui/logic/filter.test.ts ✓',
-    '12:00:05 12 passed',
-  ];
-  return createFakeSessionProvider({
-    'TASK-101': { logTail, hasLog: true },
-    'TASK-102': { logTail: ['12:01:10 applying fix…', '12:01:12 lint clean'], hasLog: true },
-    'TASK-104': { logTail: ['12:02:00 reviewing diff…', '12:02:09 2 findings'], hasLog: true },
-  });
 }

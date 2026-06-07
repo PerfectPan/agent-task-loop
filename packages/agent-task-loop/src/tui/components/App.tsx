@@ -186,7 +186,7 @@ export function App({
 
   return (
     <ResizeGuard columns={columns} rows={rows}>
-      <Box flexDirection="column" width={columns}>
+      <Box flexDirection="column" width={columns} height={rows}>
         <Header
           agent={agent}
           taskCount={tasks.length}
@@ -196,9 +196,11 @@ export function App({
         />
         <Tabs active={tab} counts={counts} />
         {helpVisible ? (
-          <HelpOverlay visible />
+          <Box flexGrow={1}>
+            <HelpOverlay visible />
+          </Box>
         ) : (
-          <Box flexDirection="row">
+          <Box flexDirection="row" flexGrow={1}>
             <TaskList
               tasks={visible}
               selectedIndex={selIdx}

@@ -106,4 +106,59 @@ describe('FsSessionProvider', () => {
     expect(readFile).toHaveBeenCalledWith('/log/exec.log');
     expect(preview.logTail).toEqual(['exec only']);
   });
+
+  const dir = (name: string): { name: string; isDirectory(): boolean } => ({
+    name,
+    isDirectory: () => true,
+  });
+  const file = (name: string): { name: string; isDirectory(): boolean } => ({
+    name,
+    isDirectory: () => false,
+  });
+
+  it('falls back to the session transcript when no log file exists', async () => {
+    const sid = '019dae6d-6faa-7383';
+    const tree: Record<string, ReturnType<typeof dir>[]> = {
+      '/root': [dir('2026')],
+      '/root/2026': [file('other.jsonl'), file(`rollout-${sid}.jsonl`)],
+    };
+    const readdir = vi.fn(async (path: string) => tree[path] ?? []);
+    const readFile = vi.fn(async () =>
+      '{"payload":{"type":"user_message","message":"hi"}}\n{"payload":{"type":"agent_message","message":"done"}}\n',
+    );
+    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+
+    const task = makeTask({ executionSessionId: sid });
+    const preview = await provider.getPreview(task, fixedNow());
+
+    expect(readFile).toHaveBeenCalledWith(`/root/2026/rollout-${sid}.jsonl`);
+    expect(preview.logTail).toEqual(['user: hi', 'assistant: done']);
+    expect(preview.hasLog).toBe(true);
+  });
+
+  it('caches transcript resolution across calls', async () => {
+    const sid = 'abc-123';
+    const readdir = vi.fn(async (path: string) =>
+      path === '/root' ? [file(`s-${sid}.jsonl`)] : [],
+    );
+    const readFile = vi.fn(async () => '{"payload":{"type":"agent_message","message":"x"}}\n');
+    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+
+    await provider.getPreview(makeTask({ executionSessionId: sid }), fixedNow());
+    await provider.getPreview(makeTask({ executionSessionId: sid }), fixedNow());
+
+    // Directory walked only once thanks to the per-id cache.
+    expect(readdir).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns hasLog false when the transcript cannot be found', async () => {
+    const readdir = vi.fn(async () => []);
+    const readFile = vi.fn(async () => 'unused');
+    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+
+    const preview = await provider.getPreview(makeTask({ executionSessionId: 'missing' }), fixedNow());
+
+    expect(readFile).not.toHaveBeenCalled();
+    expect(preview.hasLog).toBe(false);
+  });
 });

@@ -18,7 +18,7 @@ export interface SessionPreviewProps {
 const MODE_LABELS: Record<PreviewMode, string> = {
   output: 'output',
   history: 'history',
-  logs: 'logs',
+  logs: 'transcript',
 };
 
 function ModeTabs({ mode }: { mode: PreviewMode }): React.JSX.Element {
@@ -129,7 +129,7 @@ export function SessionPreview({
       ) : (
         <Box flexDirection="column">
           {!preview.hasLog || preview.logTail.length === 0 ? (
-            <Text dimColor>No log output</Text>
+            <Text dimColor>No transcript</Text>
           ) : (
             preview.logTail.map((line, i) => (
               <Text key={i} wrap="truncate-end">

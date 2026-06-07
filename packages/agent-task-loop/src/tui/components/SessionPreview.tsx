@@ -87,9 +87,10 @@ export function SessionPreview({
       borderDimColor={!focused}
       paddingX={1}
       overflow="hidden"
+      minHeight={0}
     >
       <ModeTabs mode={mode} />
-      <Box flexGrow={1} flexDirection="column" overflow="hidden">
+      <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
       <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
       {!preview ? (
         <Text dimColor>{isLoading ? 'Loading…' : 'No session'}</Text>

@@ -24,11 +24,12 @@ export function TaskDetail({ task, now, width, focused, scroll = 0 }: TaskDetail
       borderDimColor={!focused}
       paddingX={1}
       overflow="hidden"
+      minHeight={0}
     >
       <Text bold color={focused ? 'cyan' : undefined}>
         detail{focused && scroll > 0 ? <Text dimColor> ↑{scroll}</Text> : null}
       </Text>
-      <Box flexGrow={1} flexDirection="column" overflow="hidden">
+      <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
       {!task ? (
         <Text dimColor>Select a task</Text>
       ) : (

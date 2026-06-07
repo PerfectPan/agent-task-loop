@@ -42,6 +42,7 @@ export function TaskList({
       borderDimColor={!focused}
       paddingX={1}
       overflow="hidden"
+      minHeight={0}
     >
       <Text bold color={focused ? 'cyan' : undefined}>
         tasks ({tasks.length})

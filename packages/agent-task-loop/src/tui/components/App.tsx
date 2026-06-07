@@ -105,6 +105,9 @@ export function App({
 
   const colWidths = computeColumnWidths(columns, { previewOpen });
   const visibleRows = Math.max(1, rows - reservedRows());
+  // The body sits between the bordered header (3 rows), the tab bar (1) and the
+  // footer (1); pin its height so a tall pane can't push the chrome off-screen.
+  const bodyHeight = Math.max(1, rows - 5);
 
   // A new selection (or preview mode) starts scrolled back at the top.
   const selectedId = selected?.taskId ?? null;
@@ -237,11 +240,11 @@ export function App({
         />
         <Tabs active={tab} counts={counts} />
         {helpVisible ? (
-          <Box flexGrow={1}>
+          <Box height={bodyHeight} minHeight={0}>
             <HelpOverlay visible />
           </Box>
         ) : (
-          <Box flexDirection="row" flexGrow={1}>
+          <Box flexDirection="row" height={bodyHeight} minHeight={0}>
             <TaskList
               tasks={visible}
               selectedIndex={selIdx}

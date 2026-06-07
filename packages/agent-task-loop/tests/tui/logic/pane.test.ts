@@ -6,7 +6,6 @@ import {
   nextPane,
   prevPane,
   nextPreviewMode,
-  prevPreviewMode,
 } from '../../../src/tui/logic/pane';
 
 describe('PANE_ORDER', () => {
@@ -47,11 +46,5 @@ describe('preview mode cycling', () => {
     expect(nextPreviewMode('output')).toBe('history');
     expect(nextPreviewMode('history')).toBe('logs');
     expect(nextPreviewMode('logs')).toBe('output');
-  });
-
-  it('cycles backward through output/history/logs', () => {
-    expect(prevPreviewMode('output')).toBe('logs');
-    expect(prevPreviewMode('logs')).toBe('history');
-    expect(prevPreviewMode('history')).toBe('output');
   });
 });

@@ -6,7 +6,6 @@ import {
   TABS,
   bucketOf,
   isLiveStatus,
-  statusColor,
   statusConfig,
   statusWeight,
   tabIncludes,
@@ -82,8 +81,8 @@ describe('helpers', () => {
     expect(isLiveStatus('已完成')).toBe(false);
   });
 
-  it('statusColor and statusWeight resolve from config', () => {
-    expect(statusColor('已失败')).toBe('red');
+  it('statusConfig.color and statusWeight resolve from config', () => {
+    expect(statusConfig('已失败').color).toBe('red');
     expect(statusWeight('执行中')).toBe(0);
     expect(statusWeight('已完成')).toBe(9);
   });

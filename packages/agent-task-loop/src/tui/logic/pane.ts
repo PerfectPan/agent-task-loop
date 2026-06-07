@@ -41,8 +41,3 @@ export function prevPane(current: Pane, previewOpen: boolean): Pane {
 export function nextPreviewMode(current: PreviewMode): PreviewMode {
   return cycle(PREVIEW_MODES, current, 1);
 }
-
-/** Move the preview pane to its previous mode (output -> logs -> history -> output). */
-export function prevPreviewMode(current: PreviewMode): PreviewMode {
-  return cycle(PREVIEW_MODES, current, -1);
-}

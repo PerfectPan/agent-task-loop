@@ -4,10 +4,8 @@ import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import type { TaskRecord } from '../../../src/types/task';
 import type { SessionPreview } from '../../../src/tui/types';
-import {
-  useSessionPreview,
-  type SessionProvider,
-} from '../../../src/tui/hooks/use-session-preview';
+import { useSessionPreview } from '../../../src/tui/hooks/use-session-preview';
+import type { SessionProvider } from '../../../src/tui/data/session-provider';
 import { FIXED_NOW, stripAnsi } from '../helpers';
 
 const INTERVAL = 1000;

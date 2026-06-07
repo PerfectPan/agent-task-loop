@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { TaskRecord } from '../../types/task';
 import { computeVisibleWindow } from '../logic/viewport';
+import { rowChromeWidth } from '../logic/layout';
 import { TaskRow } from './TaskRow';
 
 export interface TaskListProps {
@@ -28,8 +29,7 @@ export function TaskList({
 }: TaskListProps): React.JSX.Element {
   const { start, end } = computeVisibleWindow(tasks.length, selectedIndex, visibleRows);
   const slice = tasks.slice(start, end);
-  // border (2) + marker (2) + badge (2) + id (9) + priority (4) + slack.
-  const titleWidth = Math.max(4, width - 2 - 2 - 2 - 9 - 4 - 1);
+  const titleWidth = Math.max(4, width - rowChromeWidth());
   const hiddenBelow = tasks.length - end;
   const hiddenAbove = start;
 

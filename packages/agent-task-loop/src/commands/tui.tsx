@@ -8,6 +8,7 @@ import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { App } from '../tui/components/App';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
+import type { SessionProvider } from '../tui/data/session-provider';
 import { demoSessionProvider, demoTasks } from '../tui/demo-data';
 
 export const tuiCommand = defineCommand({
@@ -36,27 +37,25 @@ export const tuiCommand = defineCommand({
       return;
     }
 
+    let agentLabel: string;
+    let onFetch: FetchTasks;
+    let sessionProvider: SessionProvider;
+
     if (args.demo) {
       const tasks = demoTasks(Date.now());
-      const onFetch: FetchTasks = async () => tasks;
-      render(
-        <App agent={(args.agent as string) || 'demo'} onFetchTasks={onFetch} sessionProvider={demoSessionProvider()} />,
-      );
-      return;
+      agentLabel = (args.agent as string) || 'demo';
+      onFetch = async () => tasks;
+      sessionProvider = demoSessionProvider();
+    } else {
+      const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+      assertFeishuRuntimeConfig(config);
+      const service = new TaskService(config);
+      const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
+      agentLabel = agent ?? 'all';
+      onFetch = () => (agent ? service.listPendingTasks(agent) : service.listTasks());
+      sessionProvider = new FsSessionProvider();
     }
 
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
-    const service = new TaskService(config);
-    const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
-    const onFetch: FetchTasks = () => (agent ? service.listPendingTasks(agent) : service.listTasks());
-
-    render(
-      <App
-        agent={agent ?? 'all'}
-        onFetchTasks={onFetch}
-        sessionProvider={new FsSessionProvider()}
-      />,
-    );
+    render(<App agent={agentLabel} onFetchTasks={onFetch} sessionProvider={sessionProvider} />);
   },
 });

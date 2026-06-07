@@ -1,4 +1,4 @@
-import { TASK_STATUSES, type TaskStatus } from '../../types/task';
+import type { TaskStatus } from '../../types/task';
 
 /**
  * Coarse grouping of the 10 task statuses into the buckets the dashboard tabs
@@ -43,10 +43,6 @@ export function statusConfig(status: TaskStatus): StatusConfig {
 
 export function bucketOf(status: TaskStatus): StatusBucket {
   return statusConfig(status).bucket;
-}
-
-export function statusColor(status: TaskStatus): string {
-  return statusConfig(status).color;
 }
 
 export function isLiveStatus(status: TaskStatus): boolean {
@@ -101,6 +97,3 @@ export function tabIncludes(tab: TabKey, status: TaskStatus): boolean {
   }
   return def.buckets.includes(bucketOf(status));
 }
-
-/** All statuses, handy for exhaustiveness tests and demo coverage. */
-export const ALL_STATUSES = TASK_STATUSES;

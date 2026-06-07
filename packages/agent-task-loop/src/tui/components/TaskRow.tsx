@@ -4,6 +4,7 @@ import type { TaskRecord } from '../../types/task';
 import { statusConfig } from '../logic/status';
 import { formatPriority } from '../logic/format';
 import { truncateToWidth } from '../logic/truncate';
+import { BADGE_WIDTH, PRIORITY_WIDTH, TASK_ID_WIDTH } from '../logic/layout';
 import { Spinner } from './Spinner';
 
 export interface TaskRowProps {
@@ -25,12 +26,12 @@ function TaskRowImpl({ task, selected, titleWidth }: TaskRowProps): React.JSX.El
   return (
     <Box>
       <Text>{selected ? '❯ ' : '  '}</Text>
-      <Box width={2} flexShrink={0}>
+      <Box width={BADGE_WIDTH} flexShrink={0}>
         {cfg.live ? <Spinner color={cfg.color} /> : <Text color={cfg.color}>{cfg.glyph}</Text>}
       </Box>
-      <Box width={9} flexShrink={0}>
+      <Box width={TASK_ID_WIDTH} flexShrink={0}>
         <Text color="cyan" dimColor={!selected}>
-          {truncateToWidth(task.taskId, 9)}
+          {truncateToWidth(task.taskId, TASK_ID_WIDTH)}
         </Text>
       </Box>
       <Box flexGrow={1}>
@@ -38,7 +39,7 @@ function TaskRowImpl({ task, selected, titleWidth }: TaskRowProps): React.JSX.El
           {title}
         </Text>
       </Box>
-      <Box width={4} flexShrink={0} justifyContent="flex-end">
+      <Box width={PRIORITY_WIDTH} flexShrink={0} justifyContent="flex-end">
         <Text color="gray">{formatPriority(task.priority)}</Text>
       </Box>
     </Box>

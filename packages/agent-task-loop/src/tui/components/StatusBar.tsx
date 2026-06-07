@@ -5,8 +5,6 @@ import type { Pane } from '../types';
 export interface StatusBarProps {
   /** Which pane currently holds keyboard focus. */
   focusedPane: Pane;
-  /** Whether the session-preview pane is open. */
-  previewOpen: boolean;
   /** True while the user is typing a filter query. */
   filtering: boolean;
 }

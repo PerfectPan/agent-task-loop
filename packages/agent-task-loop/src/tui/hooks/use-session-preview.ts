@@ -3,8 +3,6 @@ import type { TaskRecord } from '../../types/task';
 import type { Now, SessionPreview } from '../types';
 import type { SessionProvider } from '../data/session-provider';
 
-export type { SessionProvider };
-
 export interface UseSessionPreviewOptions {
   /** Poll interval in millis while enabled and a task is selected. */
   intervalMs: number;

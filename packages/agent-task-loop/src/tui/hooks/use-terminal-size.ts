@@ -28,12 +28,7 @@ export function useTerminalSize(): TerminalSize {
 
   useEffect(() => {
     if (!stdout) return;
-    const onResize = (): void => {
-      setSize({
-        columns: stdout.columns ?? DEFAULT_COLUMNS,
-        rows: stdout.rows ?? DEFAULT_ROWS,
-      });
-    };
+    const onResize = (): void => setSize(read());
     stdout.on('resize', onResize);
     // Sync once in case the size changed before the listener attached.
     onResize();

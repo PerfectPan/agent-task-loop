@@ -18,6 +18,20 @@ export const BADGE_WIDTH = 2;
 /** Width of the right-aligned priority cell in a list row. */
 export const PRIORITY_WIDTH = 3;
 
+/** Width of the selection marker cell ("❯ ") at the start of a list row. */
+export const MARKER_WIDTH = 2;
+
+/** Width of the task-id cell in a list row. */
+export const TASK_ID_WIDTH = 9;
+
+/**
+ * Display width a list row reserves for everything except the flexible title:
+ * pane borders + marker + badge + id + priority + one column of slack.
+ */
+export function rowChromeWidth(): number {
+  return 2 + MARKER_WIDTH + BADGE_WIDTH + TASK_ID_WIDTH + PRIORITY_WIDTH + 1;
+}
+
 /** Smallest a pane may shrink to before its content becomes unreadable. */
 const MIN_PANE = 10;
 

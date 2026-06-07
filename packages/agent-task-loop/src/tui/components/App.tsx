@@ -40,8 +40,6 @@ interface Confirmation {
   onConfirm: () => void;
 }
 
-const NUMBER_KEYS: Record<string, number> = { '1': 0, '2': 1, '3': 2, '4': 3 };
-
 export function App({
   onFetchTasks,
   sessionProvider,
@@ -162,8 +160,8 @@ export function App({
         refetch();
       } else if (input === '?') {
         setHelpVisible(true);
-      } else if (input in NUMBER_KEYS) {
-        setTab(TABS[NUMBER_KEYS[input]].key);
+      } else if (/^[1-9]$/.test(input) && Number(input) <= TABS.length) {
+        setTab(TABS[Number(input) - 1].key);
       } else if (input === ']') {
         setTab(t => TABS[(TABS.findIndex(x => x.key === t) + 1) % TABS.length].key);
       } else if (input === '[') {
@@ -232,7 +230,7 @@ export function App({
             onCancel={() => setConfirm(null)}
           />
         ) : null}
-        <StatusBar focusedPane={focusedPane} previewOpen={previewOpen} filtering={filtering} />
+        <StatusBar focusedPane={focusedPane} filtering={filtering} />
       </Box>
     </ResizeGuard>
   );

@@ -7,7 +7,6 @@ import { stripAnsi } from '../helpers';
 
 function renderBar(props: {
   focusedPane: Pane;
-  previewOpen: boolean;
   filtering: boolean;
 }): string {
   const { lastFrame } = render(<StatusBar {...props} />);
@@ -16,19 +15,19 @@ function renderBar(props: {
 
 describe('StatusBar', () => {
   it('shows navigation hints when the list pane is focused', () => {
-    const out = renderBar({ focusedPane: 'list', previewOpen: false, filtering: false });
+    const out = renderBar({ focusedPane: 'list', filtering: false });
     expect(out).toContain('[↑↓/jk] nav');
     expect(out).toContain('[Tab] focus');
     expect(out).toContain('[/] filter');
   });
 
   it("shows '[m] mode' when the preview pane is focused", () => {
-    const out = renderBar({ focusedPane: 'preview', previewOpen: true, filtering: false });
+    const out = renderBar({ focusedPane: 'preview', filtering: false });
     expect(out).toContain('[m] mode');
   });
 
   it('shows filter-mode hints while filtering', () => {
-    const out = renderBar({ focusedPane: 'list', previewOpen: false, filtering: true });
+    const out = renderBar({ focusedPane: 'list', filtering: true });
     expect(out).toContain('[Esc] cancel');
     expect(out).toContain('[Enter] apply');
     expect(out).toContain('type to filter');
@@ -39,14 +38,14 @@ describe('StatusBar', () => {
   it('always shows quit and help hints when not filtering', () => {
     const panes: Pane[] = ['list', 'detail', 'preview'];
     for (const focusedPane of panes) {
-      const out = renderBar({ focusedPane, previewOpen: false, filtering: false });
+      const out = renderBar({ focusedPane, filtering: false });
       expect(out).toContain('[?] help');
       expect(out).toContain('[q] quit');
     }
   });
 
   it('includes [Tab] focus when the detail pane is focused', () => {
-    const out = renderBar({ focusedPane: 'detail', previewOpen: false, filtering: false });
+    const out = renderBar({ focusedPane: 'detail', filtering: false });
     expect(out).toContain('[Tab] focus');
   });
 });

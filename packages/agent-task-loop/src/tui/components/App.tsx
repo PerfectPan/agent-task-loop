@@ -53,7 +53,7 @@ export function App({
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
 
-  const [tab, setTab] = useState<TabKey>('active');
+  const [tab, setTab] = useState<TabKey>('all');
   const [query, setQuery] = useState('');
   const [filtering, setFiltering] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);

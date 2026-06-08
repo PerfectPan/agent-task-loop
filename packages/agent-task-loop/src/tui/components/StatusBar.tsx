@@ -7,16 +7,21 @@ export interface StatusBarProps {
   focusedPane: Pane;
   /** True while the user is typing a filter query. */
   filtering: boolean;
+  /** Whether the new-task action (n) is available; adds an `[n] new` hint. */
+  canCreate?: boolean;
 }
 
 /** Keybinding hints shown while the filter input is active. */
 const FILTER_HINTS = '[Esc] cancel  [Enter] apply  type to filter';
 
-/** Hints shared across every (non-filtering) pane. */
-const COMMON_HINTS = ['[?] help', '[q] quit'];
+/** Hints shared across every (non-filtering) pane. `n` is global, so it sits here. */
+function commonHints(canCreate: boolean): string[] {
+  return [...(canCreate ? ['[n] new'] : []), '[?] help', '[q] quit'];
+}
 
 /** Build the per-pane keybinding hints (filter mode handled by caller). */
-function hintsFor(focusedPane: Pane): string {
+function hintsFor(focusedPane: Pane, canCreate: boolean): string {
+  const common = commonHints(canCreate);
   switch (focusedPane) {
     case 'list':
       return [
@@ -25,12 +30,12 @@ function hintsFor(focusedPane: Pane): string {
         '[Enter] attach',
         '[/] filter',
         '[d] stop',
-        ...COMMON_HINTS,
+        ...common,
       ].join('  ');
     case 'detail':
-      return ['[↑↓/jk] scroll', '[Tab] focus', '[Enter] attach', ...COMMON_HINTS].join('  ');
+      return ['[↑↓/jk] scroll', '[Tab] focus', '[Enter] attach', ...common].join('  ');
     case 'preview':
-      return ['[↑↓/jk] scroll', '[Tab] focus', '[m] mode', ...COMMON_HINTS].join('  ');
+      return ['[↑↓/jk] scroll', '[Tab] focus', '[m] mode', ...common].join('  ');
   }
 }
 
@@ -38,8 +43,8 @@ function hintsFor(focusedPane: Pane): string {
  * Single footer line of context-relevant keybinding hints. Pure presentation:
  * the hint set is derived solely from focus + filter state passed in via props.
  */
-export function StatusBar({ focusedPane, filtering }: StatusBarProps): React.ReactElement {
-  const hints = filtering ? FILTER_HINTS : hintsFor(focusedPane);
+export function StatusBar({ focusedPane, filtering, canCreate = false }: StatusBarProps): React.ReactElement {
+  const hints = filtering ? FILTER_HINTS : hintsFor(focusedPane, canCreate);
   return (
     <Box>
       <Text dimColor>{hints}</Text>

@@ -48,4 +48,16 @@ describe('StatusBar', () => {
     const out = renderBar({ focusedPane: 'detail', filtering: false });
     expect(out).toContain('[Tab] focus');
   });
+
+  it('shows [n] new only when creating is available', () => {
+    const without = stripAnsi(
+      render(<StatusBar focusedPane="list" filtering={false} />).lastFrame() ?? '',
+    );
+    expect(without).not.toContain('[n] new');
+
+    const withCreate = stripAnsi(
+      render(<StatusBar focusedPane="list" filtering={false} canCreate />).lastFrame() ?? '',
+    );
+    expect(withCreate).toContain('[n] new');
+  });
 });

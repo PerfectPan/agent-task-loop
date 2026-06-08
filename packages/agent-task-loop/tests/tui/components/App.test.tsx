@@ -124,6 +124,22 @@ describe('App dashboard', () => {
     app.unmount();
   });
 
+  it('tags rows when multiple sources are configured even if tasks share one', async () => {
+    const tasks = demoTasks(FIXED_NOW).map(t => ({ ...t, source: 'feishu' }));
+    const app = render(
+      <App
+        agent="claude"
+        onFetchTasks={async () => tasks}
+        sessionProvider={provider}
+        now={now}
+        sources={['feishu', 'github']}
+      />,
+    );
+    await settle();
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('feishu');
+    app.unmount();
+  });
+
   it('opens the new-task form on n and creates via onCreateTask', async () => {
     const onCreateTask = vi.fn(async (_payload: CreateTaskPayload) => {});
     const app = render(

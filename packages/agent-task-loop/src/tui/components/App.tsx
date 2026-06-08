@@ -121,10 +121,11 @@ export function App({
     [tasks, tab, query],
   );
 
-  // Only tag rows with their backend when the board actually spans >1 source.
+  // Tag rows with their backend when more than one source is in play — either
+  // configured (multi-source setup) or actually present in the fetched tasks.
   const showSource = useMemo(
-    () => new Set(tasks.map(task => task.source).filter(Boolean)).size > 1,
-    [tasks],
+    () => (sources?.length ?? 0) > 1 || new Set(tasks.map(task => task.source).filter(Boolean)).size > 1,
+    [sources, tasks],
   );
 
   const len = visible.length;
@@ -386,7 +387,7 @@ export function App({
             onCancel={() => setConfirm(null)}
           />
         ) : null}
-        <StatusBar focusedPane={focusedPane} filtering={filtering} />
+        <StatusBar focusedPane={focusedPane} filtering={filtering} canCreate={!!onCreateTask} />
       </Box>
     </ResizeGuard>
   );

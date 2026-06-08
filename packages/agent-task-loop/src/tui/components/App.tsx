@@ -159,10 +159,12 @@ export function App({
       (selected.lastError ? 1 + wrappedLineCount(selected.lastError, Math.max(1, colWidths.detail - 4)) : 0) +
       4
     : 1;
+  const previewInner = Math.max(1, colWidths.preview - 4);
+  const transcriptHeight = transcript.reduce((n, l) => n + wrappedLineCount(l, previewInner) + 1, 2);
   const previewLines = !preview
     ? 1
     : previewMode === 'logs'
-      ? transcript.length + 2
+      ? transcriptHeight
       : previewMode === 'history'
         ? preview.history.length + 1
         : 8 + Math.min(4, preview.history.length);

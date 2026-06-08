@@ -19,8 +19,19 @@ describe('WorkflowOverlay', () => {
     }
   });
 
-  it('marks the current status', () => {
-    const { lastFrame } = render(<WorkflowOverlay visible currentStatus="待发布" />);
-    expect(stripAnsi(lastFrame() ?? '')).toContain('◀ current');
+  it('draws the rework loops (打回)', () => {
+    const frame = stripAnsi(render(<WorkflowOverlay visible />).lastFrame() ?? '');
+    expect(frame).toContain('打回');
+    expect(frame).toContain('修复中'); // rework node only appears in the loop section
+    expect(frame).toContain('issues');
+    expect(frame).toContain('re-review');
+    expect(frame).toContain('待决策');
+    expect(frame).toContain('已失败');
+  });
+
+  it('highlights the current status with inverse styling (raw frame)', () => {
+    const raw = render(<WorkflowOverlay visible currentStatus="待发布" />).lastFrame() ?? '';
+    // inverse SGR (7) wraps the active chip
+    expect(/\[[0-9;]*7[0-9;]*m/.test(raw)).toBe(true);
   });
 });

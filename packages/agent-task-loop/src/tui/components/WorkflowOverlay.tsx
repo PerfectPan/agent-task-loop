@@ -9,60 +9,82 @@ export interface WorkflowOverlayProps {
   currentStatus?: TaskStatus;
 }
 
-/** The happy-path pipeline; loops/branches are shown as side notes. */
-const FLOW: { status: TaskStatus; en: string; note?: string }[] = [
-  { status: '待处理', en: 'queued', note: 'agent claims it' },
-  { status: '执行中', en: 'executing', note: '→ 待决策 if a human call is needed' },
-  { status: '待复核', en: 'review', note: '⇄ 修复中 — review/rework loops until it passes' },
-  { status: '待发布', en: 'publish', note: 'publish-commit / publish-mr' },
-  { status: '待验收', en: 'accept', note: '→ 修复中 if changes are requested' },
-  { status: '已完成', en: 'done', note: '✗ 已失败 = terminal failure (from any stage)' },
-];
-
-function Node({ status, en, note, active }: { status: TaskStatus; en: string; note?: string; active: boolean }) {
+/** A coloured status chip; inverse-highlighted when it is the current stage. */
+function Chip({ status, active }: { status: TaskStatus; active: boolean }) {
   const cfg = statusConfig(status);
   return (
-    <Text wrap="truncate-end">
-      <Text color={cfg.color}>{cfg.glyph} </Text>
-      <Text color={active ? 'cyan' : undefined} bold={active} inverse={active}>
-        {status}
-      </Text>
-      <Text dimColor> {en}</Text>
-      {active ? <Text color="cyan" bold>{'  ◀ current'}</Text> : null}
-      {note ? <Text dimColor>{'   · ' + note}</Text> : null}
+    <Text color={cfg.color} bold={active} inverse={active}>
+      {cfg.glyph} {status}
     </Text>
   );
 }
 
-/** Full-screen overlay drawing the task workflow, with the current task's stage lit up. */
+const MAIN: TaskStatus[] = ['待处理', '执行中', '待复核', '待发布', '待验收', '已完成'];
+
+/** Full-screen overlay drawing the task workflow incl. the rework loops. */
 export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps): React.ReactElement | null {
   if (!visible) return null;
+  const cur = (s: TaskStatus) => s === currentStatus;
   return (
-    <Box
-      flexGrow={1}
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={2}
-      overflow="hidden"
-    >
+    <Box flexGrow={1} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} overflow="hidden">
       <Text bold color="cyan">
         Task workflow
       </Text>
-      <Box flexDirection="column" marginTop={1}>
-        {FLOW.map((stage, i) => (
-          <Box key={stage.status} flexDirection="column">
-            <Node {...stage} active={stage.status === currentStatus} />
-            {i < FLOW.length - 1 ? <Text dimColor>{'    ↓'}</Text> : null}
-          </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>main path</Text>
+      </Box>
+      <Text wrap="truncate-end">
+        {MAIN.map((s, i) => (
+          <Text key={s}>
+            {i > 0 ? <Text dimColor> → </Text> : '  '}
+            <Chip status={s} active={cur(s)} />
+          </Text>
         ))}
-      </Box>
+      </Text>
+
       <Box marginTop={1}>
-        <Text dimColor>Tabs group these: Active = running/queued · Needs Input = 待决策/待验收 · Done</Text>
+        <Text dimColor>打回 / loops &amp; branches</Text>
       </Box>
+
+      {/* review → rework → re-review cycle */}
+      <Text wrap="truncate-end">
+        {'  '}
+        <Chip status="待复核" active={cur('待复核')} />
+        <Text color="red"> ──issues──▶ </Text>
+        <Chip status="修复中" active={cur('修复中')} />
+        <Text dimColor> ──re-review──▶ </Text>
+        <Chip status="待复核" active={false} />
+        <Text color="yellow"> ⟲</Text>
+      </Text>
+      {/* acceptance bounce-back */}
+      <Text wrap="truncate-end">
+        {'  '}
+        <Chip status="待验收" active={cur('待验收')} />
+        <Text color="red"> ──changes──▶ </Text>
+        <Chip status="修复中" active={cur('修复中')} />
+        <Text color="yellow"> ⟲</Text>
+      </Text>
+      {/* human decision */}
+      <Text wrap="truncate-end">
+        {'  '}
+        <Chip status="执行中" active={cur('执行中')} />
+        <Text dimColor> ──needs human──▶ </Text>
+        <Chip status="待决策" active={cur('待决策')} />
+        <Text dimColor> ──▶ </Text>
+        <Chip status="执行中" active={false} />
+      </Text>
+      {/* terminal failure */}
+      <Text wrap="truncate-end">
+        {'  '}
+        <Text dimColor>any stage ──error──▶ </Text>
+        <Chip status="已失败" active={cur('已失败')} />
+      </Text>
+
       <Box marginTop={1}>
-        <Text dimColor>press any key to close</Text>
+        <Text dimColor>Tabs: Active = running/queued · Needs Input = 待决策/待验收 · Done</Text>
       </Box>
+      <Text dimColor>press any key to close</Text>
     </Box>
   );
 }

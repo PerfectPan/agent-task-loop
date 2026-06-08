@@ -77,6 +77,43 @@ function MetaRow({ label, value }: { label: string; value: string }): React.JSX.
   );
 }
 
+const ROLE_STYLE: Record<string, { color: string; icon: string }> = {
+  user: { color: 'cyan', icon: '▌' },
+  assistant: { color: 'green', icon: '▌' },
+  reasoning: { color: 'magenta', icon: '·' },
+};
+
+/** Render one parsed transcript line as a chat-style block (role header + body). */
+function TranscriptEntry({ line }: { line: string }) {
+  if (line.startsWith('⚙')) {
+    return (
+      <Box marginBottom={1}>
+        <Text color="yellow" wrap="truncate-end">
+          {line}
+        </Text>
+      </Box>
+    );
+  }
+  const sep = line.indexOf(': ');
+  const role = sep > 0 ? line.slice(0, sep) : '';
+  const style = ROLE_STYLE[role];
+  if (!style) {
+    return (
+      <Box marginBottom={1}>
+        <Text wrap="wrap">{line}</Text>
+      </Box>
+    );
+  }
+  return (
+    <Box flexDirection="column" marginBottom={1}>
+      <Text color={style.color} bold>
+        {style.icon} {role}
+      </Text>
+      <Text wrap="wrap">{line.slice(sep + 2)}</Text>
+    </Box>
+  );
+}
+
 /** Right pane: a multi-mode view (output / history / logs) of the selected task's session. */
 export function SessionPreview({
   preview,
@@ -165,11 +202,7 @@ export function SessionPreview({
                 ) : transcript.length === 0 ? (
                   <Text dimColor>Transcript not found on this machine</Text>
                 ) : (
-                  transcript.map((line, i) => (
-                    <Text key={i} wrap="truncate-end">
-                      {line}
-                    </Text>
-                  ))
+                  transcript.map((line, i) => <TranscriptEntry key={i} line={line} />)
                 )}
               </>
             );

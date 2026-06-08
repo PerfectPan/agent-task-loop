@@ -36,6 +36,8 @@ export const tuiCommand = defineCommand({
     assertFeishuRuntimeConfig(config);
     const service = new TaskService(config);
     const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
+    // Backends a new task can be created in (the create-form source selector).
+    const sources = ['feishu', ...(config.githubIssues ? ['github'] : [])];
 
     // Take over the whole terminal (alternate screen buffer), restoring the
     // user's scrollback on exit — the dashboard runs full-screen.
@@ -49,6 +51,7 @@ export const tuiCommand = defineCommand({
         onFetchTasks={() => (agent ? service.listPendingTasks(agent) : service.listTasks())}
         sessionProvider={new FsSessionProvider()}
         onCreateTask={payload => service.createTask(payload)}
+        sources={sources}
       />,
     );
 

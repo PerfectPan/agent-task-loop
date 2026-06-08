@@ -2,7 +2,7 @@
 
 Agent Task Loop is a local CLI for running AI coding agent task delivery workflows.
 
-It connects a Feishu Base task table to local coding agents, then drives a task through execution, review, rework, branch publishing, and Pull Request handoff.
+It connects your task trackers (a Feishu Base table today, GitHub Issues optionally) to local coding agents, then drives a task through execution, review, rework, branch publishing, and Pull Request handoff. Tasks stay owned by their source — the CLI and TUI are an integration layer, not a system of record — so writes route back to the backend each task came from.
 
 ## Local CLI
 

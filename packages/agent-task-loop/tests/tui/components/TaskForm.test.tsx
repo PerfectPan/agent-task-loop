@@ -54,6 +54,38 @@ describe('TaskForm', () => {
     app.unmount();
   });
 
+  it('hides the source selector with one or no source', () => {
+    const out = render(<TaskForm onSubmit={vi.fn()} onCancel={vi.fn()} sources={['feishu']} />);
+    expect(stripAnsi(out.lastFrame() ?? '')).not.toContain('Source');
+    out.unmount();
+  });
+
+  it('shows a source selector with multiple sources and submits the chosen one', async () => {
+    const onSubmit = vi.fn();
+    const app = render(<TaskForm onSubmit={onSubmit} onCancel={vi.fn()} sources={['feishu', 'github']} />);
+    await tick();
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('Source');
+    app.stdin.write('IDEA-300'); // taskId
+    await tick();
+    app.stdin.write('\t'); // → title
+    await tick();
+    app.stdin.write('Wire github'); // title
+    await tick();
+    app.stdin.write('\t'); // → source
+    await tick();
+    app.stdin.write('[C'); // right arrow → github
+    await tick();
+    app.stdin.write('\r'); // submit
+    await tick();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      taskId: 'IDEA-300',
+      title: 'Wire github',
+      source: 'github',
+    });
+    app.unmount();
+  });
+
   it('cancels on Escape', async () => {
     const onCancel = vi.fn();
     const app = render(<TaskForm onSubmit={vi.fn()} onCancel={onCancel} />);

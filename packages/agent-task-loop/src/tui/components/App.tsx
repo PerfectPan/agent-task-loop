@@ -41,6 +41,11 @@ export interface AppProps {
   onAttachTask?: (task: TaskRecord) => void;
   /** Creates a new task (n). Without it, the new-task form is disabled. */
   onCreateTask?: (payload: CreateTaskPayload) => Promise<void>;
+  /**
+   * Backends a new task can be created in (capability-aware: only create-capable
+   * sources). When more than one, the new-task form shows a source selector.
+   */
+  sources?: string[];
 }
 
 interface Confirmation {
@@ -58,6 +63,7 @@ export function App({
   onStopTask,
   onAttachTask,
   onCreateTask,
+  sources,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
@@ -113,6 +119,12 @@ export function App({
   const visible = useMemo(
     () => sortTasks(filterTasks(tasks, { tab, query })),
     [tasks, tab, query],
+  );
+
+  // Only tag rows with their backend when the board actually spans >1 source.
+  const showSource = useMemo(
+    () => new Set(tasks.map(task => task.source).filter(Boolean)).size > 1,
+    [tasks],
   );
 
   const len = visible.length;
@@ -331,6 +343,7 @@ export function App({
               onCancel={() => setFormVisible(false)}
               submitting={creating}
               error={createError}
+              sources={sources}
             />
           </Box>
         ) : (
@@ -341,6 +354,7 @@ export function App({
               visibleRows={visibleRows}
               width={colWidths.list}
               focused={focusedPane === 'list'}
+              showSource={showSource}
             />
             <TaskDetail
               task={selected}

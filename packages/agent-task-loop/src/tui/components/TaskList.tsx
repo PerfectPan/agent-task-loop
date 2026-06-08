@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { TaskRecord } from '../../types/task';
 import { computeVisibleWindow } from '../logic/viewport';
-import { rowChromeWidth } from '../logic/layout';
+import { rowChromeWidth, SOURCE_TAG_WIDTH } from '../logic/layout';
 import { TaskRow } from './TaskRow';
 
 export interface TaskListProps {
@@ -13,6 +13,8 @@ export interface TaskListProps {
   /** Total pane width in columns (incl. border). */
   width: number;
   focused: boolean;
+  /** Show a per-row source tag (set when the list spans more than one source). */
+  showSource?: boolean;
 }
 
 /**
@@ -26,10 +28,11 @@ export function TaskList({
   visibleRows,
   width,
   focused,
+  showSource = false,
 }: TaskListProps): React.JSX.Element {
   const { start, end } = computeVisibleWindow(tasks.length, selectedIndex, visibleRows);
   const slice = tasks.slice(start, end);
-  const titleWidth = Math.max(4, width - rowChromeWidth());
+  const titleWidth = Math.max(4, width - rowChromeWidth() - (showSource ? SOURCE_TAG_WIDTH : 0));
   const hiddenBelow = tasks.length - end;
   const hiddenAbove = start;
 
@@ -58,6 +61,7 @@ export function TaskList({
               task={task}
               selected={start + i === selectedIndex}
               titleWidth={titleWidth}
+              showSource={showSource}
             />
           ))}
           {hiddenBelow > 0 && <Text dimColor>↓ {hiddenBelow} more</Text>}

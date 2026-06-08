@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Agent Task Loop — drive AI coding agents end to end',
   description:
-    'A local CLI and TUI that drives AI coding agents through task execution, review, rework, and pull-request handoff. Pluggable task backends, multi-agent ready.',
+    'A local CLI and TUI that drives AI coding agents through task execution, review, rework, and pull-request handoff. Reads your existing trackers, multi-agent ready.',
   metadataBase: new URL('https://agent-task-loop.vercel.app'),
   openGraph: {
     title: 'Agent Task Loop',

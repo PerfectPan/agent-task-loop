@@ -59,6 +59,8 @@ export function formatDetailFields(task: TaskRecord, now: number): DetailField[]
     { label: '状态', value: task.status },
     { label: 'Agent', value: task.targetAgent },
     { label: '项目', value: task.project },
+    // Only surfaced for secondary backends — Feishu is the implicit default.
+    { label: '来源', value: task.source && task.source !== 'feishu' ? task.source : '' },
     { label: '负责人', value: task.currentOwner ?? '' },
     { label: '轮次', value: task.reviewRound === undefined ? '' : String(task.reviewRound) },
     { label: 'PR', value: task.prLink ?? '' },

@@ -106,6 +106,24 @@ describe('App dashboard', () => {
     app.unmount();
   });
 
+  it('tags rows with their source when the board spans more than one', async () => {
+    const tasks = demoTasks(FIXED_NOW);
+    tasks[0] = { ...tasks[0], source: 'github' }; // mix two sources into the board
+    const mixed = tasks.map((t, i) => (i === 0 ? t : { ...t, source: 'feishu' }));
+    const app = renderApp(mixed);
+    await settle();
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('github');
+    app.unmount();
+  });
+
+  it('does not tag rows when every task shares one source', async () => {
+    const tasks = demoTasks(FIXED_NOW).map(t => ({ ...t, source: 'feishu' }));
+    const app = renderApp(tasks);
+    await settle();
+    expect(stripAnsi(app.lastFrame() ?? '')).not.toContain('feishu');
+    app.unmount();
+  });
+
   it('opens the new-task form on n and creates via onCreateTask', async () => {
     const onCreateTask = vi.fn(async (_payload: CreateTaskPayload) => {});
     const app = render(

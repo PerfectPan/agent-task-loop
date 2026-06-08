@@ -7,8 +7,8 @@ export const FEATURES = [
     icon: 'loop',
   },
   {
-    title: 'Pluggable task backend',
-    body: 'A provider boundary abstracts the task store. Feishu Base ships today; GitHub Issues and others slot in behind the same contract.',
+    title: 'Reads your trackers',
+    body: 'An integration layer, not a system of record. Read tasks from Feishu Base and GitHub Issues at once; writes route back to whichever backend owns each task.',
     icon: 'plug',
   },
   {

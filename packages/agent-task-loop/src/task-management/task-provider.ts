@@ -11,6 +11,8 @@ export interface CreateTaskPayload {
   targetAgent: TargetAgent;
   priority: number;
   description?: string;
+  /** Backend to create the task in. Defaults to the composite's default source. */
+  source?: string;
 }
 
 export interface ClaimTaskPayload {

@@ -25,7 +25,7 @@ export function Hero({ version, repoUrl }: { version: string; repoUrl: string })
 
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted sm:text-lg">
           A local CLI and terminal dashboard that runs your coding agents through the full loop —
-          execution, review, rework, and a publish-ready pull request. Pluggable task backends,
+          execution, review, rework, and a publish-ready pull request. Reads your existing trackers,
           multi-agent ready.
         </p>
 

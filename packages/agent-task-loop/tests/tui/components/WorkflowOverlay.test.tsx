@@ -19,14 +19,16 @@ describe('WorkflowOverlay', () => {
     }
   });
 
-  it('draws the rework loops (打回)', () => {
+  it('draws the rework loop with connecting arrows', () => {
     const frame = stripAnsi(render(<WorkflowOverlay visible />).lastFrame() ?? '');
-    expect(frame).toContain('打回');
-    expect(frame).toContain('修复中'); // rework node only appears in the loop section
-    expect(frame).toContain('issues');
-    expect(frame).toContain('re-review');
+    expect(frame).toContain('修复中'); // rework node
+    expect(frame).toContain('issues'); // 待复核 → 修复中
+    expect(frame).toContain('re-review'); // 修复中 → back to 待复核
+    expect(frame).toContain('changes'); // 待验收 → 修复中
     expect(frame).toContain('待决策');
     expect(frame).toContain('已失败');
+    // the loop arc is drawn with box-drawing characters
+    expect(frame).toMatch(/[┌┐│▼]/);
   });
 
   it('highlights the current status with inverse styling (raw frame)', () => {

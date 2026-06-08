@@ -46,4 +46,20 @@ jobs:
           chmod 600 "$HOME/.moon/credentials.json"
 
       - name: Publish to mooncakes.io
-        run: moon -C packages/agent-finder publish
+        # The MoonBit module version (moon.mod.json) only changes when a
+        # changeset bumps @rivus/agent-finder-core. On releases where it is
+        # unchanged, `moon publish` returns a duplicate-version 409 — treat that
+        # as a no-op success so the release workflow stays green. Any other
+        # failure still fails the step.
+        run: |
+          set +e
+          output="$(moon -C packages/agent-finder publish 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            if printf '%s' "$output" | grep -qiE "duplicated|already (been )?(published|exists)|409"; then
+              echo "::notice::MoonBit version already on mooncakes.io — nothing to publish."
+              exit 0
+            fi
+            exit "$status"
+          fi

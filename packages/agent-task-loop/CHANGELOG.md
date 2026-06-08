@@ -1,5 +1,50 @@
 # @rivus/agent-task-loop
 
+## 0.5.0
+
+### Minor Changes
+
+- 2c8078b: feat(task): integration-layer multi-source task backends
+
+  Position the tool as an integration layer over your existing trackers rather
+  than a system of record. Each task's source of truth stays its own backend;
+  the CLI and TUI read from many and route writes back to the owning source.
+
+  - Every `TaskRecord`/`TaskRef` carries a `source`; a `SourceProvider` interface
+    declares each leaf backend's id. Feishu Base reports `source: 'feishu'`.
+  - `CompositeTaskProvider` reads/merges from all configured sources and routes
+    writes (and creates) back to the backend that owns each task, with a default
+    source for unrouted creates. No global store, no cross-source sync.
+  - New `GitHubIssuesTaskProvider`: read + create tasks backed by GitHub Issues
+    (task-id marker, `agent:`/`P{n}` labels, PRs skipped), with lifecycle changes
+    synced back as issue comments / close. Enabled via an optional `githubIssues`
+    config block (`owner`/`repo`/`token`/`defaultAgent`).
+  - TUI multi-source affordances: a per-row source tag and a `来源` detail field
+    for secondary backends, plus a capability-aware Source selector in the create
+    form (shown only when more than one create-capable source is configured).
+
+- 2c8078b: feat(tui): interactive task + agent-session dashboard
+
+  Rebuild the `tui` command into a full-screen three-pane dashboard (task list ·
+  detail · live session preview) on a layered, fully-tested architecture:
+
+  - Pure, React-free logic (sort/filter/viewport/format/truncate/layout/heartbeat/
+    session-history parsing) with exhaustive unit tests.
+  - Provider-agnostic data layer (`SessionProvider` + fs-backed implementation)
+    and an injected clock, so the whole UI is deterministic under test.
+  - Performance: manual list windowing, memoized rows, and signature-gated
+    polling to avoid re-render/flicker.
+  - CJK-aware truncation, semantic status colors, focus-aware borders, a help
+    overlay, and live filtering.
+  - Runs full-screen on the alternate screen buffer by default.
+  - Create tasks without leaving the dashboard (`n`), with required-field
+    validation; the footer shows an `[n] new` hint when creation is available.
+  - An in-app workflow diagram overlay (`w`) drawn as one connected diagram with
+    the rework loop arc.
+  - Per-round transcript drill-in: each agent round resolves its own session and
+    renders a chat-style transcript, with markers for which rounds are viewable
+    on this machine.
+
 ## 0.4.0
 
 ### Minor Changes

@@ -18,6 +18,7 @@ describe('TaskService provider boundary', () => {
       listTasks: vi.fn().mockRejectedValue(new Error('listTasks should not be used for targeted reads')),
       listPendingTasks: vi.fn().mockResolvedValue([task]),
       getTaskById: vi.fn().mockResolvedValue(task),
+      createTask: vi.fn().mockResolvedValue(undefined),
       claimTask: vi.fn().mockResolvedValue(undefined),
       updateTaskProgress: vi.fn().mockResolvedValue(undefined),
       updateRunnerState: vi.fn().mockResolvedValue(undefined),

@@ -48,6 +48,7 @@ export const tuiCommand = defineCommand({
         agent={agent ?? 'all'}
         onFetchTasks={() => (agent ? service.listPendingTasks(agent) : service.listTasks())}
         sessionProvider={new FsSessionProvider()}
+        onCreateTask={payload => service.createTask(payload)}
       />,
     );
 

@@ -3,6 +3,7 @@ import type { AcceptanceVerdict, ReviewVerdict, TargetAgent, TaskRecord, TaskSta
 import { runLarkCli } from '../services/lark-cli';
 import type {
   ClaimTaskPayload,
+  CreateTaskPayload,
   MarkTaskFailedPayload,
   MarkTaskSucceededPayload,
   TaskProvider,
@@ -143,6 +144,30 @@ export class FeishuTaskProvider implements TaskProvider {
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
     return (await this.listTasks()).find(task => task.taskId === taskId);
+  }
+
+  async createTask(payload: CreateTaskPayload): Promise<void> {
+    // No --record-id ⇒ record-upsert inserts a brand-new row.
+    await runLarkCli([
+      'base',
+      '+record-upsert',
+      '--base-token',
+      this.config.feishu.baseToken,
+      '--table-id',
+      this.config.feishu.tableId,
+      '--json',
+      JSON.stringify(
+        buildRecordPayload(payload.taskId, {
+          Title: payload.title,
+          Project: payload.project,
+          TargetAgent: [payload.targetAgent],
+          Priority: payload.priority,
+          Status: '待处理',
+          Description: payload.description ?? '',
+          CreatedAt: new Date().toISOString(),
+        }),
+      ),
+    ]);
   }
 
   async listTasks(): Promise<TaskRecord[]> {

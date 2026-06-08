@@ -23,6 +23,8 @@ import { SessionPreview } from './SessionPreview';
 import { StatusBar } from './StatusBar';
 import { HelpOverlay } from './HelpOverlay';
 import { WorkflowOverlay } from './WorkflowOverlay';
+import { TaskForm } from './TaskForm';
+import type { CreateTaskPayload } from '../../task-management/task-provider';
 import { ConfirmPrompt } from './ConfirmPrompt';
 import { ResizeGuard } from './ResizeGuard';
 
@@ -37,6 +39,8 @@ export interface AppProps {
   onStopTask?: (task: TaskRecord) => void;
   /** Optional hook for "attach into session" (Enter). */
   onAttachTask?: (task: TaskRecord) => void;
+  /** Creates a new task (n). Without it, the new-task form is disabled. */
+  onCreateTask?: (payload: CreateTaskPayload) => Promise<void>;
 }
 
 interface Confirmation {
@@ -53,6 +57,7 @@ export function App({
   previewIntervalMs = 3000,
   onStopTask,
   onAttachTask,
+  onCreateTask,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
@@ -66,6 +71,9 @@ export function App({
   const [previewMode, setPreviewMode] = useState<PreviewMode>('output');
   const [helpVisible, setHelpVisible] = useState(false);
   const [workflowVisible, setWorkflowVisible] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [detailScroll, setDetailScroll] = useState(0);
   const [previewScroll, setPreviewScroll] = useState(0);
@@ -171,6 +179,24 @@ export function App({
   const detailMax = maxScroll(detailLines, paneViewport);
   const previewMax = maxScroll(previewLines, paneViewport);
 
+  const submitNewTask = useCallback(
+    async (payload: CreateTaskPayload) => {
+      if (!onCreateTask) return;
+      setCreating(true);
+      setCreateError(null);
+      try {
+        await onCreateTask(payload);
+        setFormVisible(false);
+        refetch();
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setCreating(false);
+      }
+    },
+    [onCreateTask, refetch],
+  );
+
   const togglePreview = useCallback(() => {
     setPreviewOpen(open => {
       const next = !open;
@@ -250,6 +276,9 @@ export function App({
         setHelpVisible(true);
       } else if (input === 'w') {
         setWorkflowVisible(true);
+      } else if (input === 'n' && onCreateTask) {
+        setCreateError(null);
+        setFormVisible(true);
       } else if (/^[1-9]$/.test(input) && Number(input) <= TABS.length) {
         setTab(TABS[Number(input) - 1].key);
       } else if (input === ']') {
@@ -273,7 +302,7 @@ export function App({
         exit();
       }
     },
-    { isActive: !filtering && !helpVisible && !workflowVisible && !confirm },
+    { isActive: !filtering && !helpVisible && !workflowVisible && !formVisible && !confirm },
   );
 
   return (
@@ -294,6 +323,15 @@ export function App({
         ) : workflowVisible ? (
           <Box height={bodyHeight} minHeight={0}>
             <WorkflowOverlay visible currentStatus={selected?.status} />
+          </Box>
+        ) : formVisible ? (
+          <Box height={bodyHeight} minHeight={0}>
+            <TaskForm
+              onSubmit={submitNewTask}
+              onCancel={() => setFormVisible(false)}
+              submitting={creating}
+              error={createError}
+            />
           </Box>
         ) : (
           <Box flexDirection="row" height={bodyHeight} minHeight={0}>

@@ -4,6 +4,15 @@ export type TaskRef = Pick<TaskRecord, 'taskId' | 'recordId'>;
 export type TaskRunnerKind = 'execute' | 'review';
 export type TaskRunnerKindUpdate = TaskRunnerKind | '';
 
+export interface CreateTaskPayload {
+  taskId: string;
+  title: string;
+  project: string;
+  targetAgent: TargetAgent;
+  priority: number;
+  description?: string;
+}
+
 export interface ClaimTaskPayload {
   claimedBy: string;
   claimedAt: string;
@@ -119,6 +128,7 @@ export interface TaskProvider {
   listTasks(): Promise<TaskRecord[]>;
   listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]>;
   getTaskById(taskId: string): Promise<TaskRecord | undefined>;
+  createTask(payload: CreateTaskPayload): Promise<void>;
   claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void>;
   updateTaskProgress(task: TaskRef, payload: UpdateTaskProgressPayload): Promise<void>;
   updateRunnerState(task: TaskRef, payload: UpdateRunnerStatePayload): Promise<void>;

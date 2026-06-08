@@ -5,6 +5,7 @@ import { App } from '../../../src/tui/components/App';
 import { createFakeSessionProvider } from '../../../src/tui/data/session-provider';
 import type { FetchTasks } from '../../../src/tui/types';
 import { demoTasks } from '../fixtures';
+import type { CreateTaskPayload } from '../../../src/task-management/task-provider';
 import { FIXED_NOW, stripAnsi } from '../helpers';
 
 const now = () => FIXED_NOW;
@@ -102,6 +103,36 @@ describe('App dashboard', () => {
     app.stdin.write('r');
     await settle();
     expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBefore);
+    app.unmount();
+  });
+
+  it('opens the new-task form on n and creates via onCreateTask', async () => {
+    const onCreateTask = vi.fn(async (_payload: CreateTaskPayload) => {});
+    const app = render(
+      <App
+        agent="claude"
+        onFetchTasks={async () => demoTasks(FIXED_NOW)}
+        sessionProvider={provider}
+        now={now}
+        onCreateTask={onCreateTask}
+      />,
+    );
+    await settle();
+    app.stdin.write('n');
+    await settle();
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('New task');
+    app.stdin.write('IDEA-900');
+    await settle();
+    app.stdin.write('\t');
+    await settle();
+    app.stdin.write('Wire it up');
+    await settle();
+    app.stdin.write('\r');
+    await settle();
+    expect(onCreateTask).toHaveBeenCalledTimes(1);
+    expect(onCreateTask.mock.calls[0][0]).toMatchObject({ taskId: 'IDEA-900', title: 'Wire it up' });
+    // form closes after a successful create
+    expect(stripAnsi(app.lastFrame() ?? '')).not.toContain('New task');
     app.unmount();
   });
 });

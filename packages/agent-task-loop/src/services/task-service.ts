@@ -2,6 +2,7 @@ import type { AppConfig } from '../config/schema';
 import { FeishuTaskProvider } from '../task-management/feishu-task-provider';
 import type {
   ClaimTaskPayload,
+  CreateTaskPayload,
   MarkTaskFailedPayload,
   MarkTaskSucceededPayload,
   TaskProvider,
@@ -36,6 +37,10 @@ export class TaskService implements TaskProvider {
 
   async listTasks(): Promise<TaskRecord[]> {
     return this.provider.listTasks();
+  }
+
+  async createTask(payload: CreateTaskPayload): Promise<void> {
+    return this.provider.createTask(payload);
   }
 
   async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {

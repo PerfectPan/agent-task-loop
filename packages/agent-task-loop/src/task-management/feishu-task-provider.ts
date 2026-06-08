@@ -3,9 +3,10 @@ import type { AcceptanceVerdict, ReviewVerdict, TargetAgent, TaskRecord, TaskSta
 import { runLarkCli } from '../services/lark-cli';
 import type {
   ClaimTaskPayload,
+  CreateTaskPayload,
   MarkTaskFailedPayload,
   MarkTaskSucceededPayload,
-  TaskProvider,
+  SourceProvider,
   TaskRef,
   UpdateCleanupStatePayload,
   UpdatePublishResultPayload,
@@ -134,7 +135,11 @@ function buildRecordPayload(
   };
 }
 
-export class FeishuTaskProvider implements TaskProvider {
+export const FEISHU_SOURCE = 'feishu';
+
+export class FeishuTaskProvider implements SourceProvider {
+  readonly source = FEISHU_SOURCE;
+
   constructor(private readonly config: AppConfig) {}
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -143,6 +148,30 @@ export class FeishuTaskProvider implements TaskProvider {
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
     return (await this.listTasks()).find(task => task.taskId === taskId);
+  }
+
+  async createTask(payload: CreateTaskPayload): Promise<void> {
+    // No --record-id ⇒ record-upsert inserts a brand-new row.
+    await runLarkCli([
+      'base',
+      '+record-upsert',
+      '--base-token',
+      this.config.feishu.baseToken,
+      '--table-id',
+      this.config.feishu.tableId,
+      '--json',
+      JSON.stringify(
+        buildRecordPayload(payload.taskId, {
+          Title: payload.title,
+          Project: payload.project,
+          TargetAgent: [payload.targetAgent],
+          Priority: payload.priority,
+          Status: '待处理',
+          Description: payload.description ?? '',
+          CreatedAt: new Date().toISOString(),
+        }),
+      ),
+    ]);
   }
 
   async listTasks(): Promise<TaskRecord[]> {
@@ -167,6 +196,9 @@ export class FeishuTaskProvider implements TaskProvider {
       this.config.feishu.tableId,
       '--limit',
       '200',
+      // lark-cli defaults to markdown output; we parse the raw JSON envelope.
+      '--format',
+      'json',
     ]);
 
     const data = JSON.parse(stdout) as LarkRecordListResponse;
@@ -477,6 +509,7 @@ export class FeishuTaskProvider implements TaskProvider {
 
   private mapFields(fields: Record<string, unknown>, recordId?: string): TaskRecord {
     return {
+      source: this.source,
       recordId,
       taskId: String(fields.TaskID ?? ''),
       title: String(fields.Title ?? ''),

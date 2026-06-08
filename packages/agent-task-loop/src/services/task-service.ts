@@ -1,7 +1,8 @@
 import type { AppConfig } from '../config/schema';
-import { FeishuTaskProvider } from '../task-management/feishu-task-provider';
+import { buildTaskProvider } from '../task-management/build-task-provider';
 import type {
   ClaimTaskPayload,
+  CreateTaskPayload,
   MarkTaskFailedPayload,
   MarkTaskSucceededPayload,
   TaskProvider,
@@ -23,7 +24,7 @@ export class TaskService implements TaskProvider {
   private readonly provider: TaskProvider;
 
   constructor(input: AppConfig | TaskProvider) {
-    this.provider = isTaskProvider(input) ? input : new FeishuTaskProvider(input);
+    this.provider = isTaskProvider(input) ? input : buildTaskProvider(input);
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -36,6 +37,10 @@ export class TaskService implements TaskProvider {
 
   async listTasks(): Promise<TaskRecord[]> {
     return this.provider.listTasks();
+  }
+
+  async createTask(payload: CreateTaskPayload): Promise<void> {
+    return this.provider.createTask(payload);
   }
 
   async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {

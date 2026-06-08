@@ -3,6 +3,15 @@ const config = {
     baseToken: 'demo_base_token',
     tableId: 'tbl_demo_tasks',
   },
+  // Optional secondary source. When present, the loop and TUI read tasks from
+  // Feishu *and* GitHub Issues; each task's writes are routed back to its owning
+  // backend. The TUI is an integration layer — it never owns tasks itself.
+  // githubIssues: {
+  //   owner: 'your-org',
+  //   repo: 'your-repo',
+  //   token: process.env.GITHUB_TOKEN, // or omit to use the GITHUB_TOKEN env var
+  //   defaultAgent: 'codex',
+  // },
   projects: {
     demo: {
       key: 'demo',

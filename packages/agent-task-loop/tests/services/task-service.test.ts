@@ -188,6 +188,7 @@ describe('TaskService', () => {
       PublishedAt: '2026-04-16 10:00',
     });
 
+    expect(task.source).toBe('feishu');
     expect(task.currentOwner).toBe('codex');
     expect(task.reviewRound).toBe(2);
     expect(task.reviewVerdict).toBe('驳回');

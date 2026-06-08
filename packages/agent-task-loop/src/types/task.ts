@@ -9,6 +9,12 @@ export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
 export type AcceptanceVerdict = (typeof ACCEPTANCE_VERDICTS)[number];
 
 export interface TaskRecord {
+  /**
+   * Id of the backend that owns this task (its system of record), e.g. `'feishu'`.
+   * The TUI is an integration layer — it never owns tasks, so every record carries
+   * the source it was read from. Writes are routed back to the owning source.
+   */
+  source?: string;
   recordId?: string;
   taskId: string;
   title: string;

@@ -1,6 +1,6 @@
 import type { AcceptanceVerdict, ReviewVerdict, TaskRecord, TargetAgent, TaskStatus } from '../types/task';
 
-export type TaskRef = Pick<TaskRecord, 'taskId' | 'recordId'>;
+export type TaskRef = Pick<TaskRecord, 'taskId' | 'recordId' | 'source'>;
 export type TaskRunnerKind = 'execute' | 'review';
 export type TaskRunnerKindUpdate = TaskRunnerKind | '';
 
@@ -138,4 +138,13 @@ export interface TaskProvider {
   updateReviewState(task: TaskRef, payload: UpdateReviewStatePayload): Promise<void>;
   updatePublishResult(task: TaskRef, payload: UpdatePublishResultPayload): Promise<void>;
   updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void>;
+}
+
+/**
+ * A leaf provider that owns exactly one backend (Feishu, GitHub Issues, …).
+ * It stamps `source` on every record it returns; a multi-source aggregator
+ * (see CompositeTaskProvider) uses that id to route writes back to the owner.
+ */
+export interface SourceProvider extends TaskProvider {
+  readonly source: string;
 }

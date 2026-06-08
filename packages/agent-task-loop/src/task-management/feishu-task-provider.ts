@@ -6,7 +6,7 @@ import type {
   CreateTaskPayload,
   MarkTaskFailedPayload,
   MarkTaskSucceededPayload,
-  TaskProvider,
+  SourceProvider,
   TaskRef,
   UpdateCleanupStatePayload,
   UpdatePublishResultPayload,
@@ -135,7 +135,11 @@ function buildRecordPayload(
   };
 }
 
-export class FeishuTaskProvider implements TaskProvider {
+export const FEISHU_SOURCE = 'feishu';
+
+export class FeishuTaskProvider implements SourceProvider {
+  readonly source = FEISHU_SOURCE;
+
   constructor(private readonly config: AppConfig) {}
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -505,6 +509,7 @@ export class FeishuTaskProvider implements TaskProvider {
 
   private mapFields(fields: Record<string, unknown>, recordId?: string): TaskRecord {
     return {
+      source: this.source,
       recordId,
       taskId: String(fields.TaskID ?? ''),
       title: String(fields.Title ?? ''),

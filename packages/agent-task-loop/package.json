@@ -57,7 +57,7 @@
     "@rslib/core": "^0.21.3",
     "@rivus/rslib-config": "workspace:*",
     "@types/node": "^22.15.3",
-    "@types/react": "^18.3.12",
+    "@types/react": "^19.2.0",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",

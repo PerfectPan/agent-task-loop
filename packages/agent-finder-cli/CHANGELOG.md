@@ -1,5 +1,12 @@
 # @rivus/agent-finder-cli
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [c7a99de]
+  - @rivus/agent-finder-core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

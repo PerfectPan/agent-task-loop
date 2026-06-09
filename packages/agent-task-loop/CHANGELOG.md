@@ -1,5 +1,12 @@
 # @rivus/agent-task-loop
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [c7a99de]
+  - @rivus/agent-finder-core@0.1.2
+
 ## 0.5.0
 
 ### Minor Changes

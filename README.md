@@ -4,10 +4,16 @@ Agent Task Loop is a monorepo for AI coding agent task delivery workflows.
 
 The core package provides a local CLI that drives tasks from assignment through execution, review, rework, and publish-ready handoff. It is an integration layer over your existing trackers rather than a system of record: tasks are read from their owning backend (Feishu Base today, GitHub Issues optionally) and writes route back to that source. The repository layout leaves room for future apps such as a website or documentation portal.
 
+## Documentation
+
+- Getting started (install, first run, common commands): [docs/getting-started.md](./docs/getting-started.md)
+- Configuration reference: [docs/configuration.md](./docs/configuration.md)
+- Workflow & task lifecycle (diagrams): [docs/workflow.md](./docs/workflow.md)
+
 ## Monorepo Layout
 
 - `packages/agent-task-loop`: CLI package and task loop runtime
-- `apps/`: future user-facing apps, such as the official website
+- `apps/web`: marketing/landing site (Next.js)
 
 ## Workspace Commands
 

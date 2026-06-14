@@ -1,0 +1,39 @@
+{
+  "name": "@rivus/agent-sessions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tool-agnostic coding-agent session discovery and transcript parsing, shared by agent-finder-cli and agent-task-loop.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/**/*.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rslib build",
+    "dev": "tsx src/index.ts",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.0.3",
+    "@rslib/core": "^0.21.3",
+    "@rivus/rslib-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

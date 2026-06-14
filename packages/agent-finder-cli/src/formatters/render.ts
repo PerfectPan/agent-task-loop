@@ -100,3 +100,14 @@ export function renderTable<T>(columns: Column<T>[], rows: T[]): string[] {
 
   return [header, ...body];
 }
+
+export interface KeyValue {
+  label: string;
+  value: string;
+}
+
+/** Render aligned `label   value` rows with dimmed labels. */
+export function renderKeyValues(rows: KeyValue[]): string[] {
+  const width = Math.max(0, ...rows.map((r) => r.label.length));
+  return rows.map((r) => `${style.dim(padEnd(`${r.label}:`, width + 1))}  ${r.value}`);
+}

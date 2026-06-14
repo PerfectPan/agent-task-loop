@@ -10,7 +10,7 @@ interface StatusStyle {
   label: string;
 }
 
-const STATUS_THEME: Record<AgentStatus, StatusStyle> = {
+export const STATUS_THEME: Record<AgentStatus, StatusStyle> = {
   runnable: { glyph: "●", color: style.green, label: "runnable" },
   found: { glyph: "○", color: style.cyan, label: "found" },
   missing: { glyph: "✗", color: style.red, label: "missing" },

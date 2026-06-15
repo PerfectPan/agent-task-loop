@@ -7,6 +7,8 @@ export interface SessionsBrowserProps {
   sessions: Session[];
   loadTranscript: (id: string) => Promise<TranscriptEntry[]>;
   nowMs: number;
+  /** Resolve the resume command for a session, or null when unsupported. */
+  loadResume?: (id: string) => Promise<string | null>;
   /** Preview lines to keep (most recent). */
   previewLines?: number;
 }
@@ -16,10 +18,11 @@ export interface SessionsBrowserProps {
  * selected session's transcript preview on the right. ↑/↓ (or k/j) navigate,
  * q/Esc quits.
  */
-export function SessionsBrowser({ sessions, loadTranscript, nowMs, previewLines = 20 }: SessionsBrowserProps) {
+export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, previewLines = 20 }: SessionsBrowserProps) {
   const { exit } = useApp();
   const [selected, setSelected] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [resume, setResume] = useState<string | null>(null);
   const current = sessions[selected];
 
   useInput((input, key) => {
@@ -34,6 +37,7 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, previewLines 
   useEffect(() => {
     let active = true;
     setTranscript([]);
+    setResume(null);
     if (current) {
       loadTranscript(current.id).then(
         (t) => {
@@ -43,11 +47,19 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, previewLines 
           /* ignore — preview stays empty */
         }
       );
+      loadResume?.(current.id).then(
+        (cmd) => {
+          if (active) setResume(cmd);
+        },
+        () => {
+          /* ignore — no resume hint */
+        }
+      );
     }
     return () => {
       active = false;
     };
-  }, [current?.id, loadTranscript]);
+  }, [current?.id, loadTranscript, loadResume]);
 
   if (sessions.length === 0) return <Text dimColor>No sessions found.</Text>;
 
@@ -68,6 +80,11 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, previewLines 
           <Text dimColor wrap="truncate">
             {current?.path ?? current?.id ?? ""}
           </Text>
+          {resume ? (
+            <Text color="green" wrap="truncate">
+              resume: {resume}
+            </Text>
+          ) : null}
           {transcript.length === 0 ? (
             <Text dimColor>(no transcript)</Text>
           ) : (

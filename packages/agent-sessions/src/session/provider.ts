@@ -118,6 +118,8 @@ export function codexProvider(opts: ProviderFactoryOptions = {}): FsSessionProvi
   return new FsSessionProvider({
     agent: "codex",
     roots: [{ path: join(home, ".codex", "sessions"), agent: "codex" }],
+    // Verified against `codex resume --help`: `codex resume <SESSION_ID>`.
+    resume: (session) => `codex resume ${session.id}`,
     ...rest
   });
 }
@@ -127,6 +129,8 @@ export function claudeProvider(opts: ProviderFactoryOptions = {}): FsSessionProv
   return new FsSessionProvider({
     agent: "claude",
     roots: [{ path: join(home, ".claude", "projects"), agent: "claude" }],
+    // Verified against `claude --help`: `-r, --resume <session ID>`.
+    resume: (session) => `claude --resume ${session.id}`,
     ...rest
   });
 }

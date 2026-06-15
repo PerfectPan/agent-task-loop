@@ -22,12 +22,13 @@ export const sessionsInspectCommand = defineCommand({
     }
 
     const transcript = await registry.getTranscript(id);
+    const resumeCommand = await registry.resumeCommand(id);
     if (args.json) {
-      console.log(JSON.stringify({ schema_version: "0.1", session, transcript }, null, 2));
+      console.log(JSON.stringify({ schema_version: "0.1", session, transcript, resumeCommand }, null, 2));
       return;
     }
 
-    for (const line of renderInspect(session, transcript, Date.now())) {
+    for (const line of renderInspect(session, transcript, Date.now(), resumeCommand)) {
       console.log(line);
     }
   }

@@ -96,6 +96,7 @@ describe('ReviewService', () => {
       resultSummary: 'done',
       workspacePath: '/tmp/workspace',
       reviewRound: 1,
+      reviewerAgent: 'codex',
       acceptanceFeedback: '删除这次新增测试，不要保留',
     });
 

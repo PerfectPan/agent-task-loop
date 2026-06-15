@@ -41,7 +41,7 @@ export async function readLogDelta(
       await handle.close();
     }
   } catch {
-    return { nextOffset: offset, chunk: '' };
+    return { nextOffset: offset ?? 0, chunk: '' };
   }
 }
 

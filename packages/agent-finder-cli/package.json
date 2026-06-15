@@ -41,6 +41,7 @@
   },
   "scripts": {
     "build": "rslib build",
+    "typecheck": "tsc --noEmit",
     "dev": "tsx --conditions=development src/cli.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",

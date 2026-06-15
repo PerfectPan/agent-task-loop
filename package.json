@@ -15,6 +15,7 @@
     "release": "pnpm build && changeset publish",
     "sync:moonbit-version": "node scripts/sync-moonbit-version.mjs",
     "test": "node --test tests/**/*.test.mjs && pnpm -r test && moon -C packages/agent-finder test",
+    "typecheck": "pnpm -r typecheck",
     "version-packages": "changeset version && pnpm sync:moonbit-version"
   },
   "devDependencies": {

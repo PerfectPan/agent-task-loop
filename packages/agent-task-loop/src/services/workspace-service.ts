@@ -37,7 +37,7 @@ export function resolveWorkspacePath(input: WorkspaceInput): string {
   if (input.strategy === 'existing-repo') {
     return input.repositoryPath;
   }
-  if (shouldReuseExistingWorkspace(input)) {
+  if (shouldReuseExistingWorkspace(input) && input.existingWorkspacePath) {
     return input.existingWorkspacePath;
   }
   return `${input.workspaceRoot}/${input.taskId}`;

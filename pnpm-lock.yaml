@@ -156,6 +156,9 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@rivus/agent-sessions':
+        specifier: workspace:*
+        version: link:../agent-sessions
       '@rivus/rslib-config':
         specifier: workspace:*
         version: link:../rslib-config

@@ -13,6 +13,9 @@
     "./moonbit-plugin": "./src/moonbit-plugin.ts",
     "./*": "./src/*.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "devDependencies": {
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",

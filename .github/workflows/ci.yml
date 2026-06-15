@@ -23,6 +23,16 @@ jobs:
 
       - run: corepack prepare pnpm@9.15.9 --activate
 
+      - name: Resolve pnpm store path
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
       - name: Install MoonBit
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
@@ -36,3 +46,5 @@ jobs:
       - run: pnpm test
 
       - run: pnpm build
+
+      - run: pnpm typecheck

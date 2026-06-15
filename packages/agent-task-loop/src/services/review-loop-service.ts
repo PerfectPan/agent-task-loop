@@ -25,6 +25,7 @@ export class ReviewLoopService {
         workspacePath: string;
         reviewRound: number;
         reviewerAgent: TargetAgent;
+        acceptanceFeedback?: string;
         onSpawn?: (payload: { pid?: number }) => void;
         onHeartbeat?: () => void;
         onSession?: (payload: { sessionId?: string; sessionName?: string }) => void;

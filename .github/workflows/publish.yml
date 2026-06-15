@@ -46,6 +46,8 @@ jobs:
 
       - run: pnpm build
 
+      - run: pnpm typecheck
+
       - name: Package MoonBit module
         run: moon -C packages/agent-finder package
 

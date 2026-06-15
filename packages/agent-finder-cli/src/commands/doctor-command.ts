@@ -1,6 +1,8 @@
 import { defineCommand } from "citty";
 import { collectHostProbe, discover } from "@rivus/agent-finder-core";
 import { summarizeAgents } from "../summary/summarize-agents.js";
+import { STATUS_THEME } from "../formatters/agent-table.js";
+import { style } from "../formatters/render.js";
 
 export const doctorCommand = defineCommand({
   meta: {
@@ -11,15 +13,18 @@ export const doctorCommand = defineCommand({
     const report = discover(collectHostProbe());
     const summary = summarizeAgents(report.agents);
 
-    console.log(`Total providers: ${summary.total}`);
-    console.log(`Runnable: ${summary.runnable}`);
-    console.log(`Found: ${summary.found}`);
-    console.log(`Missing: ${summary.missing}`);
-    console.log(`Unknown: ${summary.unknown}`);
+    console.log(style.bold(`Total providers: ${summary.total}`));
+    for (const status of ["runnable", "found", "missing", "unknown"] as const) {
+      const theme = STATUS_THEME[status];
+      const label = `${theme.label.charAt(0).toUpperCase()}${theme.label.slice(1)}:`;
+      console.log(theme.color(`${theme.glyph} ${label.padEnd(9)} ${summary[status]}`));
+    }
+
     if (summary.warnings.length > 0) {
-      console.log("Warnings:");
+      console.log("");
+      console.log(style.yellow(`Warnings (${summary.warnings.length}):`));
       for (const warning of summary.warnings) {
-        console.log(`- ${warning}`);
+        console.log(style.dim(`- ${warning}`));
       }
     }
   }

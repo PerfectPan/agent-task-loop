@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { collectHostProbe, discover } from "@rivus/agent-finder-core";
-import { formatAgentRecordLine } from "../formatters/agent-record-line.js";
+import { renderAgentTable, renderScanSummary } from "../formatters/agent-table.js";
 
 export const scanCommand = defineCommand({
   meta: {
@@ -21,9 +21,12 @@ export const scanCommand = defineCommand({
       return;
     }
 
-    console.log("STATUS\tTYPE\tPROVIDER\tLOCATION");
-    for (const agent of report.agents) {
-      console.log(formatAgentRecordLine(agent));
+    for (const line of renderAgentTable(report.agents)) {
+      console.log(line);
+    }
+    console.log("");
+    for (const line of renderScanSummary(report.agents)) {
+      console.log(line);
     }
   }
 });

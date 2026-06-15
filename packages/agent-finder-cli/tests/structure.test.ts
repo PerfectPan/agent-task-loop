@@ -22,7 +22,8 @@ describe("@rivus/agent-finder-cli structure", () => {
       "commands/scan-command.ts",
       "commands/doctor-command.ts",
       "formatters/provider-lines.ts",
-      "formatters/agent-record-line.ts",
+      "formatters/render.ts",
+      "formatters/agent-table.ts",
       "summary/summarize-agents.ts"
     ]) {
       expect(existsSync(join(sourceRoot, path)), path).toBe(true);

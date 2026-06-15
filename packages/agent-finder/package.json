@@ -43,6 +43,7 @@
   },
   "scripts": {
     "build": "rslib build",
+    "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",

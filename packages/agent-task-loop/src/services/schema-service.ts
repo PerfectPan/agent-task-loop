@@ -205,7 +205,7 @@ export class TaskTableSchemaService {
   }
 
   async applyMissingFields(existing?: string[]): Promise<{ created: string[]; updated: string[] }> {
-    const fieldDetails =
+    const fieldDetails: ExistingField[] =
       existing ?
         existing.map(name => ({ name }))
       : await this.listExistingFields();

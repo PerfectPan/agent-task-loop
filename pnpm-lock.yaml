@@ -88,7 +88,16 @@ importers:
       citty:
         specifier: ^0.1.6
         version: 0.1.6
+      ink:
+        specifier: ^5.1.0
+        version: 5.2.1(@types/react@19.2.17)(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
     devDependencies:
+      '@rivus/agent-sessions':
+        specifier: workspace:*
+        version: link:../agent-sessions
       '@rivus/rslib-config':
         specifier: workspace:*
         version: link:../rslib-config
@@ -101,6 +110,12 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.17
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.17
+      ink-testing-library:
+        specifier: ^4.0.0
+        version: 4.0.0(@types/react@19.2.17)
       tsx:
         specifier: ^4.19.2
         version: 4.21.0

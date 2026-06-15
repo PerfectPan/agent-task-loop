@@ -45,6 +45,15 @@ describe("renderInspect", () => {
     expect(out).toContain("assistant: done");
   });
 
+  it("shows the resume command when supported, else (not supported)", () => {
+    const withResume = renderInspect(SESSIONS[0], [], NOW, `codex resume ${SESSIONS[0].id}`).join("\n");
+    expect(withResume).toContain(`Resume:`);
+    expect(withResume).toContain(`codex resume ${SESSIONS[0].id}`);
+
+    const noResume = renderInspect(SESSIONS[0], [], NOW, null).join("\n");
+    expect(noResume).toContain("(not supported)");
+  });
+
   it("notes an empty transcript", () => {
     const out = renderInspect(SESSIONS[0], [], NOW).join("\n");
     expect(out).toContain("(no transcript)");

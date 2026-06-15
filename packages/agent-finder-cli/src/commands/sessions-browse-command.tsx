@@ -31,6 +31,7 @@ export const sessionsBrowseCommand = defineCommand({
       <SessionsBrowser
         sessions={sessions}
         loadTranscript={(id) => registry.getTranscript(id)}
+        loadResume={(id) => registry.resumeCommand(id)}
         nowMs={Date.now()}
       />
     );

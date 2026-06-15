@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { sessionsBrowseCommand } from "./sessions-browse-command.js";
 import { sessionsInspectCommand } from "./sessions-inspect-command.js";
 import { sessionsListCommand } from "./sessions-list-command.js";
+import { sessionsResumeCommand } from "./sessions-resume-command.js";
 
 export const sessionsCommand = defineCommand({
   meta: {
@@ -11,6 +12,7 @@ export const sessionsCommand = defineCommand({
   subCommands: {
     list: sessionsListCommand,
     inspect: sessionsInspectCommand,
-    browse: sessionsBrowseCommand
+    browse: sessionsBrowseCommand,
+    resume: sessionsResumeCommand
   }
 });

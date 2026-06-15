@@ -26,6 +26,14 @@ Implemented:
   `stat` for tests. Generalized from agent-task-loop's `fs-session-provider`.
 - `defaultSessionRoots` — the standard Codex/Claude roots.
 
-Still to come (see the plan): `SessionRegistry` + per-tool providers (P2c),
-`agent-task-loop` composing this core (P3), the browsing TUI (P4), resume (P5).
-OpenCode stays behind `SPIKE-OC` (SQLite).
+**P2c — providers + registry**
+- `SessionProvider` interface + `FsSessionProvider` (list / getTranscript /
+  resumeCommand over a fs root), and `codexProvider` / `claudeProvider` factories.
+- `SessionRegistry` — aggregates providers: `list` merges newest-first,
+  `getTranscript` / `resumeCommand` delegate to the owning provider.
+  `defaultRegistry()` wires Codex + Claude.
+- `resumeCommand` returns `null` by default; verified per-tool resume commands
+  are wired in P5 (not guessed).
+
+Still to come (see the plan): `agent-task-loop` composing this core (P3), the
+browsing TUI (P4), resume (P5). OpenCode stays behind `SPIKE-OC` (SQLite).

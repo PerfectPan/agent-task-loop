@@ -10,5 +10,10 @@ export default defineConfig({
       bundle: true
     }
   ],
-  source: { entry: { cli: "src/cli.ts" } }
+  source: { entry: { cli: "src/cli.ts" } },
+  tools: {
+    rspack: {
+      externals: ["react-devtools-core"]
+    }
+  }
 });

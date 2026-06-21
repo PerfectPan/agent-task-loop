@@ -21,9 +21,15 @@ describe("@rivus/agent-finder-cli structure", () => {
       "commands/provider-inspect-command.ts",
       "commands/scan-command.ts",
       "commands/doctor-command.ts",
+      "commands/sessions-command.ts",
+      "commands/sessions-list-command.ts",
+      "commands/sessions-inspect-command.ts",
+      "commands/sessions-browse-command.tsx",
       "formatters/provider-lines.ts",
       "formatters/render.ts",
       "formatters/agent-table.ts",
+      "sessions/view.ts",
+      "tui/SessionsBrowser.tsx",
       "summary/summarize-agents.ts"
     ]) {
       expect(existsSync(join(sourceRoot, path)), path).toBe(true);

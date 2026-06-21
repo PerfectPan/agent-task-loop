@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
-    "test": "vitest run",
+    "test": "rslib build && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {

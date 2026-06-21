@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { doctorCommand } from "./commands/doctor-command.js";
 import { providerCommand } from "./commands/provider-command.js";
 import { scanCommand } from "./commands/scan-command.js";
+import { sessionsCommand } from "./commands/sessions-command.js";
 import { printProviderHelpAndExitIfRequested } from "./provider-help.js";
 
 printProviderHelpAndExitIfRequested(process.argv);
@@ -15,6 +16,7 @@ export const main = defineCommand({
   subCommands: {
     scan: scanCommand,
     provider: providerCommand,
-    doctor: doctorCommand
+    doctor: doctorCommand,
+    sessions: sessionsCommand
   }
 });

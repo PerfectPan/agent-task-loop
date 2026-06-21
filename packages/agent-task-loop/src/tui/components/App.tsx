@@ -46,6 +46,8 @@ export interface AppProps {
    * sources). When more than one, the new-task form shows a source selector.
    */
   sources?: string[];
+  /** When provided, the new-task form can AI-refine the description (Ctrl+R). */
+  onRefineDescription?: (input: { title: string; description: string }) => Promise<string>;
 }
 
 interface Confirmation {
@@ -64,6 +66,7 @@ export function App({
   onAttachTask,
   onCreateTask,
   sources,
+  onRefineDescription,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
@@ -345,6 +348,7 @@ export function App({
               submitting={creating}
               error={createError}
               sources={sources}
+              onRefineDescription={onRefineDescription}
             />
           </Box>
         ) : (

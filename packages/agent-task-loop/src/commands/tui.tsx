@@ -5,6 +5,7 @@ import { loadConfig } from '../config/load-config';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
+import { refineDescription } from '../services/refine-description-service';
 import { App } from '../tui/components/App';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
 
@@ -41,6 +42,10 @@ export const tuiCommand = defineCommand({
       ...(config.feishu ? ['feishu'] : []),
       ...(config.githubIssues ? ['github'] : []),
     ];
+    // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
+    const onRefineDescription = config.agents.claude
+      ? (input: { title: string; description: string }) => refineDescription(config, input)
+      : undefined;
 
     // Take over the whole terminal (alternate screen buffer), restoring the
     // user's scrollback on exit — the dashboard runs full-screen.
@@ -55,6 +60,7 @@ export const tuiCommand = defineCommand({
         sessionProvider={new FsSessionProvider()}
         onCreateTask={payload => service.createTask(payload)}
         sources={sources}
+        onRefineDescription={onRefineDescription}
       />,
     );
 

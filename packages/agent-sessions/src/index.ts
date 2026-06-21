@@ -9,3 +9,13 @@ export {
   type SessionRoot,
   type BuildFsIndexOptions
 } from "./session/fs-index.js";
+export {
+  FsSessionProvider,
+  codexProvider,
+  claudeProvider,
+  type SessionProvider,
+  type ListOptions,
+  type FsSessionProviderOptions,
+  type ProviderFactoryOptions
+} from "./session/provider.js";
+export { SessionRegistry, defaultRegistry } from "./session/registry.js";

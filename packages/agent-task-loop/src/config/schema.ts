@@ -36,18 +36,32 @@ export const githubIssuesConfigSchema = z.object({
   defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).default('codex'),
 });
 
-export const appConfigSchema = z.object({
-  feishu: z.object({
-    baseToken: z.string().min(1),
-    tableId: z.string().min(1),
-    viewId: z.string().optional(),
-  }),
-  /** Optional secondary source. When present, tasks are read from Feishu + GitHub Issues. */
-  githubIssues: githubIssuesConfigSchema.optional(),
-  projects: z.record(projectConfigSchema),
-  repositories: z.record(repositoryConfigSchema),
-  agents: z.record(agentConfigSchema),
+export const feishuConfigSchema = z.object({
+  baseToken: z.string().min(1),
+  tableId: z.string().min(1),
+  viewId: z.string().optional(),
 });
+
+export const appConfigSchema = z
+  .object({
+    /** Optional task source. Configure at least one of `feishu` / `githubIssues`. */
+    feishu: feishuConfigSchema.optional(),
+    /** Optional task source. When present alongside feishu, tasks are read from both. */
+    githubIssues: githubIssuesConfigSchema.optional(),
+    projects: z.record(projectConfigSchema),
+    repositories: z.record(repositoryConfigSchema),
+    agents: z.record(agentConfigSchema),
+  })
+  .superRefine((cfg, ctx) => {
+    if (!cfg.feishu && !cfg.githubIssues) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'configure at least one task source: feishu or githubIssues',
+      });
+    }
+  });
+
+export type FeishuConfig = z.infer<typeof feishuConfigSchema>;
 
 export type GitHubIssuesConfig = z.infer<typeof githubIssuesConfigSchema>;
 

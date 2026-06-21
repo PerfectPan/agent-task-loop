@@ -68,27 +68,57 @@ The flow is:
 
 - Node.js 20+
 - pnpm
-- lark-cli
-- GitHub CLI (`gh`) authenticated for Pull Request creation
+- GitHub CLI (`gh`) authenticated for Pull Request creation (and as the GitHub-Issues token source)
+- lark-cli — only when using a Feishu task source
 - Locally executable coding agents such as `claude`, `codex`, `coco`, or `glm`
 
 ## Config
 
-Config discovery checks:
+Config is **JSON only** and resolved from exactly three places, in order:
 
-- `task.config.ts` in the current directory or its parents
-- `AGENT_TASK_LOOP_CONFIG`
-- `task.config.ts` in the package directory
+1. `--config <path>` (explicit)
+2. `AGENT_TASK_LOOP_CONFIG` environment variable
+3. `~/.agent-task-loop/config.json` (the global config; the default)
 
-Start from the example:
+There is no per-directory `task.config.*` discovery. The fastest way to create
+the global config is:
 
 ```bash
-cp task.config.example.ts task.config.ts
+npx agent-task-loop init
 ```
 
-Then replace the example Feishu table values and local repository paths with real values.
+`init` asks which task source(s) to use — GitHub Issues, Feishu Base, or both —
+and writes `~/.agent-task-loop/config.json`. Fill in `projects` and
+`repositories` afterward. See `config.example.json` for the full shape.
 
-## Initialize Task Table Schema
+### Task sources
+
+Configure **at least one** of `feishu` / `githubIssues`:
+
+- **GitHub-only** — set `githubIssues` (`owner`, `repo`, optional `defaultAgent`),
+  omit `feishu`. The token is resolved from `githubIssues.token`, then
+  `GITHUB_TOKEN`, then `gh auth token` — so a `gh`-authenticated machine needs
+  no token in config. Tasks created from the TUI become GitHub issues (the
+  issue number/URL link back to the task).
+- **Feishu-only** — set `feishu` (`baseToken`, `tableId`), omit `githubIssues`.
+- **Both** — tasks are read from both; writes route back to each task's owning
+  backend, defaulting new creates to Feishu.
+
+## Manage tasks in the TUI
+
+```bash
+npx agent-task-loop tui
+```
+
+Press `n` to open the new-task form. With more than one configured source a
+selector lets you choose where to publish. When a `claude` agent is configured,
+press `Ctrl+R` on the form to have the AI refine the description before
+publishing.
+
+## Initialize Task Table Schema (Feishu only)
+
+Feishu task tables need a schema; GitHub Issues do not (`schema` prints a notice
+and exits when no Feishu source is configured).
 
 Check fields:
 

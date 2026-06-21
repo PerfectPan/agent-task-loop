@@ -56,8 +56,7 @@ describe('discoverRunnableAgents', () => {
 describe('createGlobalConfig', () => {
   it('writes config.json with feishu and agents', () => {
     const result = createGlobalConfig({
-      baseToken: 'tok',
-      tableId: 'tbl',
+      feishu: { baseToken: 'tok', tableId: 'tbl' },
       agents: {
         claude: { name: 'claude', command: 'claude', args: [], env: {} },
         codex: { name: 'codex', command: 'codex', args: [], env: {} },
@@ -69,8 +68,24 @@ describe('createGlobalConfig', () => {
     const written = JSON.parse(readFileSync(globalConfigPath(), 'utf8'));
     expect(written.feishu.baseToken).toBe('tok');
     expect(written.feishu.tableId).toBe('tbl');
+    expect(written.githubIssues).toBeUndefined();
     expect(written.agents.claude.command).toBe('claude');
     expect(written.agents.codex.command).toBe('codex');
+    expect(written.projects).toEqual({});
+    expect(written.repositories).toEqual({});
+  });
+
+  it('writes a github-only config without a feishu block', () => {
+    const result = createGlobalConfig({
+      githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' },
+      agents: { codex: { name: 'codex', command: 'codex', args: [], env: {} } },
+    });
+
+    expect(result).toBe('created');
+
+    const written = JSON.parse(readFileSync(globalConfigPath(), 'utf8'));
+    expect(written.feishu).toBeUndefined();
+    expect(written.githubIssues).toEqual({ owner: 'o', repo: 'r', defaultAgent: 'codex' });
     expect(written.projects).toEqual({});
     expect(written.repositories).toEqual({});
   });
@@ -81,8 +96,7 @@ describe('createGlobalConfig', () => {
     writeFileSync(configPath, JSON.stringify({ feishu: { baseToken: 'original', tableId: 't' }, projects: {}, repositories: {}, agents: {} }), 'utf8');
 
     const result = createGlobalConfig({
-      baseToken: 'new-tok',
-      tableId: 'new-tbl',
+      feishu: { baseToken: 'new-tok', tableId: 'new-tbl' },
       agents: {},
     });
 

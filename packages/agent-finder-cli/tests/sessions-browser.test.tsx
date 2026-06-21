@@ -23,6 +23,15 @@ describe("SessionsBrowser", () => {
     await vi.waitFor(() => expect(lastFrame()).toContain("hello from transcript"));
   });
 
+  it("shows the resume command for the selected session", async () => {
+    const loadTranscript = vi.fn(async () => []);
+    const loadResume = vi.fn(async (id: string) => `codex resume ${id}`);
+    const { lastFrame } = render(
+      <SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} loadResume={loadResume} nowMs={NOW} />
+    );
+    await vi.waitFor(() => expect(lastFrame()).toContain(`resume: codex resume ${SESSIONS[0].id}`));
+  });
+
   it("navigates to the next session on down-arrow", async () => {
     const loadTranscript = vi.fn(async () => []);
     const { stdin } = render(<SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} nowMs={NOW} />);

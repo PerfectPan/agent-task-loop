@@ -25,6 +25,7 @@ describe("@rivus/agent-finder-cli structure", () => {
       "commands/sessions-list-command.ts",
       "commands/sessions-inspect-command.ts",
       "commands/sessions-browse-command.tsx",
+      "commands/sessions-resume-command.ts",
       "formatters/provider-lines.ts",
       "formatters/render.ts",
       "formatters/agent-table.ts",

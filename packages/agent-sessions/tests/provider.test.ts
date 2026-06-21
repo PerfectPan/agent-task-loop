@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FsSessionProvider,
   SessionRegistry,
+  claudeProvider,
   codexProvider,
   type SessionProvider
 } from "../src/index.js";
@@ -69,6 +70,33 @@ describe("FsSessionProvider", () => {
       resume: (s) => `codex resume ${s.id}`
     });
     expect(await resumable.resumeCommand(CODEX_ID)).toBe(`codex resume ${CODEX_ID}`);
+  });
+});
+
+describe("default resume commands (verified against the CLIs)", () => {
+  it("codexProvider resumes via `codex resume <id>`", async () => {
+    const provider = codexProvider({
+      home: "/h",
+      readdir: async (path) =>
+        path === "/h/.codex/sessions" ? [{ name: `${CODEX_ID}.jsonl`, isDirectory: () => false }] : [],
+      stat: async () => ({ mtimeMs: 0 })
+    });
+    expect(await provider.resumeCommand(CODEX_ID)).toBe(`codex resume ${CODEX_ID}`);
+  });
+
+  it("claudeProvider resumes via `claude --resume <id>`", async () => {
+    const provider = claudeProvider({
+      home: "/h",
+      readdir: async (path) =>
+        path === "/h/.claude/projects" ? [{ name: `${CLAUDE_ID}.jsonl`, isDirectory: () => false }] : [],
+      stat: async () => ({ mtimeMs: 0 })
+    });
+    expect(await provider.resumeCommand(CLAUDE_ID)).toBe(`claude --resume ${CLAUDE_ID}`);
+  });
+
+  it("returns null for an unknown id", async () => {
+    const provider = codexProvider({ home: "/h", readdir: async () => [], stat: async () => ({ mtimeMs: 0 }) });
+    expect(await provider.resumeCommand("nope")).toBeNull();
   });
 });
 

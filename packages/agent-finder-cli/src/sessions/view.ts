@@ -35,13 +35,19 @@ export function renderSessionTable(sessions: Session[], nowMs: number): string[]
 }
 
 /** Key-value header + transcript body for a single session. */
-export function renderInspect(session: Session, transcript: TranscriptEntry[], nowMs: number): string[] {
+export function renderInspect(
+  session: Session,
+  transcript: TranscriptEntry[],
+  nowMs: number,
+  resumeCommand?: string | null
+): string[] {
   const header = renderKeyValues([
     { label: "Session", value: session.id },
     { label: "Agent", value: session.agent },
     { label: "Updated", value: session.updatedAt || "-" },
     { label: "Age", value: relativeAge(session.updatedAt, nowMs) },
-    { label: "Path", value: session.path ?? "-" }
+    { label: "Path", value: session.path ?? "-" },
+    { label: "Resume", value: resumeCommand ?? "(not supported)" }
   ]);
   const body =
     transcript.length === 0

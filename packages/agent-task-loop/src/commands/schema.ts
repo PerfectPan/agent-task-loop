@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { TaskTableSchemaService } from '../services/schema-service';
 import { printCommandOutput } from './command-output';
 
@@ -24,7 +24,19 @@ export const schemaCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
+
+    if (!config.feishu) {
+      printCommandOutput({
+        json: Boolean(args.json),
+        jsonValue: { skipped: true, reason: 'no-feishu-source' },
+        textLines: [
+          'No Feishu source configured; schema applies only to Feishu Base. GitHub Issues need no schema.',
+        ],
+      });
+      return;
+    }
+
     const service = new TaskTableSchemaService(config);
     const result = await service.checkSchema();
     const textLines = [`existing=${result.existing.length}`, `missing=${result.missing.length}`];

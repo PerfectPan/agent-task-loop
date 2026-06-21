@@ -1,0 +1,37 @@
+{
+  "githubIssues": {
+    "owner": "your-org",
+    "repo": "your-repo",
+    "defaultAgent": "codex"
+  },
+  "feishu": {
+    "baseToken": "your_base_token",
+    "tableId": "your_table_id"
+  },
+  "projects": {
+    "demo": {
+      "key": "demo",
+      "name": "Demo",
+      "defaultRepository": "demo_app",
+      "workspaceRoot": "/workspace/demo-worktrees",
+      "deployProfile": "staging",
+      "taskTemplatePrompt": "请按仓库内 AGENTS.md 执行任务。"
+    }
+  },
+  "repositories": {
+    "demo_app": {
+      "key": "demo_app",
+      "localPath": "/workspace/demo-app",
+      "defaultBranch": "main",
+      "installCommand": "pnpm install",
+      "testCommand": "pnpm test",
+      "buildCommand": "pnpm build",
+      "deployCommand": "pnpm deploy:small",
+      "workspaceStrategy": "worktree"
+    }
+  },
+  "agents": {
+    "claude": { "name": "claude", "command": "claude", "args": [], "env": {} },
+    "codex": { "name": "codex", "command": "codex", "args": [], "env": {} }
+  }
+}

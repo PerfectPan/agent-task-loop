@@ -21,7 +21,7 @@ export function resolveTaskExecutionContext(config: AppConfig, task: TaskRecord)
     throw new Error(
       `Task ${task.taskId} references unknown project "${projectKey}". ` +
         `Known projects: ${formatKnownKeys(config.projects)}. ` +
-        `Update task.config.ts or fix the task row in Feishu.`,
+        `Update your config (projects/repositories) or fix the task source (Feishu row / GitHub issue).`,
     );
   }
 
@@ -32,7 +32,7 @@ export function resolveTaskExecutionContext(config: AppConfig, task: TaskRecord)
     throw new Error(
       `Task ${task.taskId} references unknown repository "${repositoryKey}". ` +
         `Known repositories: ${formatKnownKeys(config.repositories)}. ` +
-        `Update task.config.ts or fix the task row in Feishu.`,
+        `Update your config (projects/repositories) or fix the task source (Feishu row / GitHub issue).`,
     );
   }
 

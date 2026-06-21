@@ -10,7 +10,27 @@ async function tick() {
 
 afterEach(() => vi.restoreAllMocks());
 
+const CTRL_R = String.fromCharCode(18);
+
 describe('TaskForm', () => {
+  it('refines the description on Ctrl+R via onRefineDescription', async () => {
+    const onRefine = vi.fn(async () => 'REFINED TEXT');
+    const app = render(<TaskForm onSubmit={vi.fn()} onCancel={vi.fn()} onRefineDescription={onRefine} />);
+    await tick();
+    app.stdin.write('IDEA-9'); // taskId
+    await tick();
+    app.stdin.write('\t'); // → title
+    await tick();
+    app.stdin.write('Add feature'); // title
+    await tick();
+    app.stdin.write(CTRL_R); // refine
+    await tick();
+    await tick();
+    expect(onRefine).toHaveBeenCalledWith(expect.objectContaining({ title: 'Add feature' }));
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('REFINED TEXT');
+    app.unmount();
+  });
+
   it('renders the fields and a default agent', () => {
     const out = render(<TaskForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
     const frame = stripAnsi(out.lastFrame() ?? '');

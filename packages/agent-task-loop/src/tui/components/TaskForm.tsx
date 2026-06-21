@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { TARGET_AGENTS, type TargetAgent } from '../../types/task';
 import type { CreateTaskPayload } from '../../task-management/task-provider';
@@ -10,12 +10,14 @@ export interface TaskFormProps {
   error?: string | null;
   /** Create-capable backends. With >1, a source selector field is shown. */
   sources?: string[];
+  /** When provided, Ctrl+R asks the AI to refine the current description. */
+  onRefineDescription?: (input: { title: string; description: string }) => Promise<string>;
 }
 
 type FieldKey = 'taskId' | 'title' | 'project' | 'targetAgent' | 'priority' | 'description' | 'source';
 
 /** New-task form. Owns its own key handling while mounted. */
-export function TaskForm({ onSubmit, onCancel, submitting, error, sources }: TaskFormProps): React.JSX.Element {
+export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRefineDescription }: TaskFormProps): React.JSX.Element {
   const sourceOptions = sources ?? [];
   const showSource = sourceOptions.length > 1;
 
@@ -38,6 +40,10 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources }: Tas
   const [description, setDescription] = useState('');
   const [index, setIndex] = useState(0);
   const [touched, setTouched] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   const targetAgent = TARGET_AGENTS[agentIndex] as TargetAgent;
   const source = showSource ? sourceOptions[sourceIndex] : sourceOptions[0];
@@ -80,6 +86,15 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources }: Tas
     const field = fields[index].key;
 
     if (key.return) return submit();
+    if (key.ctrl && input === 'r' && onRefineDescription && !refining) {
+      setRefining(true);
+      setRefineError(null);
+      Promise.resolve(onRefineDescription({ title: title.trim(), description: description.trim() }))
+        .then(next => { if (mounted.current) setDescription(next); })
+        .catch(err => { if (mounted.current) setRefineError(err instanceof Error ? err.message : String(err)); })
+        .finally(() => { if (mounted.current) setRefining(false); });
+      return;
+    }
     if (key.tab && key.shift) return setIndex(i => (i - 1 + fields.length) % fields.length);
     if (key.tab || key.downArrow) return setIndex(i => (i + 1) % fields.length);
     if (key.upArrow) return setIndex(i => (i - 1 + fields.length) % fields.length);
@@ -131,10 +146,14 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources }: Tas
         })}
       </Box>
       {touched && !valid ? <Text color="red">Task ID and Title are required.</Text> : null}
+      {refining ? <Text color="yellow">Refining description…</Text> : null}
+      {refineError ? <Text color="red">{refineError}</Text> : null}
       {error ? <Text color="red">{error}</Text> : null}
       <Box marginTop={1}>
         <Text dimColor>
-          {submitting ? 'Creating…' : '[Tab/↑↓] field  [←/→] agent  [Enter] submit  [Esc] cancel'}
+          {submitting
+            ? 'Creating…'
+            : `[Tab/↑↓] field  [←/→] agent  [Enter] submit  [Esc] cancel${onRefineDescription ? '  [^R] refine' : ''}`}
         </Text>
       </Box>
     </Box>

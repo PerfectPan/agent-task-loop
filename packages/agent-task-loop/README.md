@@ -68,27 +68,88 @@ The flow is:
 
 - Node.js 20+
 - pnpm
-- lark-cli
-- GitHub CLI (`gh`) authenticated for Pull Request creation
+- GitHub CLI (`gh`) authenticated for Pull Request creation (and as the GitHub-Issues token source)
+- lark-cli — only when using a Feishu task source
 - Locally executable coding agents such as `claude`, `codex`, `coco`, or `glm`
 
 ## Config
 
-Config discovery checks:
+Config is **JSON only** and resolved from exactly three places, in order:
 
-- `task.config.ts` in the current directory or its parents
-- `AGENT_TASK_LOOP_CONFIG`
-- `task.config.ts` in the package directory
+1. `--config <path>` (explicit)
+2. `AGENT_TASK_LOOP_CONFIG` environment variable
+3. `~/.agent-task-loop/config.json` (the global config; the default)
 
-Start from the example:
+There is no per-directory `task.config.*` discovery. The fastest way to create
+the global config is:
 
 ```bash
-cp task.config.example.ts task.config.ts
+npx agent-task-loop init
 ```
 
-Then replace the example Feishu table values and local repository paths with real values.
+`init` asks which task source(s) to use — GitHub Issues, Feishu Base, or both —
+and writes `~/.agent-task-loop/config.json`. Fill in `projects` and
+`repositories` afterward. See `config.example.json` for the full shape.
 
-## Initialize Task Table Schema
+### Task sources
+
+Configure **at least one** of `feishu` / `githubIssues`:
+
+- **GitHub-only** — set `githubIssues` (`owner`, `repo`, optional `defaultAgent`),
+  omit `feishu`. The token is resolved from `githubIssues.token`, then
+  `GITHUB_TOKEN`, then `gh auth token` — so a `gh`-authenticated machine needs
+  no token in config. Tasks created from the TUI become GitHub issues (the
+  issue number/URL link back to the task).
+
+  **Multiple repositories** — instead of a single `owner`/`repo`, list several
+  under `repositories`; each becomes its own `github:<owner>/<repo>` source and
+  shows up as a separate option in the TUI's create-form source selector. A
+  top-level `token` / `defaultAgent` applies to all; a repo may override
+  `defaultAgent`:
+
+  ```json
+  {
+    "githubIssues": {
+      "defaultAgent": "codex",
+      "repositories": [
+        { "owner": "your-org", "repo": "service-a" },
+        { "owner": "your-org", "repo": "service-b", "defaultAgent": "claude" }
+      ]
+    }
+  }
+  ```
+
+  **Which issues become tasks** — to avoid adopting every issue in a repo, an
+  issue is treated as a task only when it opts in: it carries the hidden
+  `<!-- task-id: ... -->` marker (issues created through this tool) **or** an
+  `agent:<name>` label (the way you hand off an existing issue). Issues with
+  neither are ignored.
+- **Feishu-only** — set `feishu` (`baseToken`, `tableId`), omit `githubIssues`.
+- **Both** — tasks are read from both; writes route back to each task's owning
+  backend, defaulting new creates to Feishu.
+
+## Manage tasks in the TUI
+
+```bash
+npx agent-task-loop tui
+```
+
+Press `n` to open the new-task form. With more than one configured source a
+selector lets you choose where to publish. When a `claude` agent is configured,
+press `Ctrl+R` on the form to have the AI refine the description before
+publishing.
+
+When the board spans more than one source (e.g. several GitHub repos), each row
+shows a compact source tag (the repo short name) and the detail pane shows the
+full `github:<owner>/<repo>`. Press `s` to open the **source filter** — a
+multi-select popup (Space toggles, `a` all, Enter applies) to focus on one or
+more repos; the active selection appears as a `src:…` chip in the header. The
+`/` text filter also matches source/repository.
+
+## Initialize Task Table Schema (Feishu only)
+
+Feishu task tables need a schema; GitHub Issues do not (`schema` prints a notice
+and exits when no Feishu source is configured).
 
 Check fields:
 

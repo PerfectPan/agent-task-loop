@@ -12,7 +12,7 @@ vi.mock('../../src/config/load-config', () => ({
 }));
 
 vi.mock('../../src/config/runtime-guard', () => ({
-  assertFeishuRuntimeConfig: vi.fn(),
+  assertRuntimeConfig: vi.fn(),
 }));
 
 vi.mock('../../src/services/task-service', () => ({

@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { buildReworkPrompt } from '../services/rework-prompt-service';
 import { TaskService } from '../services/task-service';
@@ -30,7 +30,7 @@ export const startCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const task = await taskService.getTaskById(String(args.task));
 

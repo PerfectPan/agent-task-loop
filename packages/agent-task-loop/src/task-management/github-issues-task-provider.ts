@@ -1,4 +1,3 @@
-import type { GitHubIssuesConfig } from '../config/schema';
 import { TARGET_AGENTS, type TargetAgent, type TaskRecord, type TaskStatus } from '../types/task';
 import type {
   ClaimTaskPayload,
@@ -16,6 +15,19 @@ import type {
 } from './task-provider';
 
 export const GITHUB_SOURCE = 'github';
+
+/** Source id for a GitHub-Issues-backed repo, e.g. `github:owner/repo`. */
+export function githubSource(owner: string, repo: string): string {
+  return `${GITHUB_SOURCE}:${owner}/${repo}`;
+}
+
+/** A single repository this provider reads/writes. */
+export interface GitHubRepoTarget {
+  owner: string;
+  repo: string;
+  token?: string;
+  defaultAgent: TargetAgent;
+}
 
 const TASK_ID_MARKER = /<!--\s*task-id:\s*(\S+)\s*-->/;
 const AGENT_LABEL = /^agent:(claude|codex|coco|glm)$/;
@@ -43,23 +55,41 @@ function labelNames(labels: GitHubIssue['labels']): string[] {
 }
 
 /**
- * Reads and creates tasks backed by GitHub Issues. Proves the multi-source
- * abstraction: it owns the `'github'` source, stamps it on every record, and
- * syncs lifecycle transitions back as issue comments / state changes. Loop
+ * Reads and creates tasks backed by GitHub Issues for one repository. Owns the
+ * `github:<owner>/<repo>` source, stamps it on every record, and syncs
+ * lifecycle transitions back as issue comments / state changes. Loop
  * book-keeping that has no issue-tracker analogue (runner pids, cleanup) is a
  * no-op — the issue stays the system of record for its own task.
  */
 export class GitHubIssuesTaskProvider implements SourceProvider {
-  readonly source = GITHUB_SOURCE;
+  readonly source: string;
 
-  constructor(private readonly config: GitHubIssuesConfig) {}
+  constructor(private readonly config: GitHubRepoTarget) {
+    this.source = githubSource(config.owner, config.repo);
+  }
+
+  /**
+   * An issue is a managed task only when it opts in: it carries our task-id
+   * marker (issues we created) or an `agent:<name>` label (issues a human hands
+   * off). Unmarked, unlabeled issues are ignored so the loop never adopts every
+   * issue in the repo.
+   */
+  private isManaged(issue: GitHubIssue): boolean {
+    if (TASK_ID_MARKER.test(issue.body ?? '')) {
+      return true;
+    }
+    return labelNames(issue.labels).some(name => AGENT_LABEL.test(name));
+  }
 
   async listTasks(): Promise<TaskRecord[]> {
     const issues = await this.api<GitHubIssue[]>(
       'GET',
       `/repos/${this.config.owner}/${this.config.repo}/issues?state=all&per_page=100`,
     );
-    return issues.filter(issue => !issue.pull_request).map(issue => this.mapIssue(issue));
+    return issues
+      .filter(issue => !issue.pull_request)
+      .filter(issue => this.isManaged(issue))
+      .map(issue => this.mapIssue(issue));
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -158,8 +188,38 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     };
   }
 
+  private tokenPromise?: Promise<string | undefined>;
+
+  /**
+   * Resolves the GitHub token from, in order: config, `GITHUB_TOKEN`, then the
+   * `gh` CLI (`gh auth token`). The lookup is memoized as a single Promise so
+   * concurrent `api()` calls share one `gh` invocation, and degrades to no
+   * token (unauthenticated request) when `gh` is missing or errors.
+   */
+  private resolveToken(): Promise<string | undefined> {
+    if (!this.tokenPromise) {
+      this.tokenPromise = (async () => {
+        let token = this.config.token ?? process.env.GITHUB_TOKEN;
+        if (!token) {
+          try {
+            const { execa } = await import('execa');
+            const result = await execa('gh', ['auth', 'token'], { reject: false });
+            const candidate = result.stdout?.trim();
+            if (candidate) {
+              token = candidate;
+            }
+          } catch {
+            // `gh` missing or errored — fall through to an unauthenticated request.
+          }
+        }
+        return token;
+      })();
+    }
+    return this.tokenPromise;
+  }
+
   private async api<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const token = this.config.token ?? process.env.GITHUB_TOKEN;
+    const token = await this.resolveToken();
     const response = await fetch(`https://api.github.com${path}`, {
       method,
       headers: {

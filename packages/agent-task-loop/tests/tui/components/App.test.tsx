@@ -140,6 +140,42 @@ describe('App dashboard', () => {
     app.unmount();
   });
 
+  it('filters the board by source via the s picker', async () => {
+    const all = demoTasks(FIXED_NOW);
+    // Put the first task on repo "a" and the rest on repo "b".
+    const mixed = all.map((t, i) => ({ ...t, source: i === 0 ? 'github:o/a' : 'github:o/b' }));
+    const onlyA = mixed[0].taskId;
+    const someB = mixed.find(t => t.source === 'github:o/b')!.taskId;
+
+    const app = render(
+      <App
+        agent="claude"
+        onFetchTasks={async () => mixed}
+        sessionProvider={provider}
+        now={now}
+        sources={['github:o/a', 'github:o/b']}
+      />,
+    );
+    await settle();
+    // Both repos present initially.
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain(someB);
+
+    app.stdin.write('s'); // open the source picker
+    await settle();
+    expect(stripAnsi(app.lastFrame() ?? '')).toContain('Sources');
+
+    app.stdin.write(' '); // toggle the first option (github:o/a → label "a")
+    await settle();
+    app.stdin.write('\r'); // apply
+    await settle();
+
+    const frame = stripAnsi(app.lastFrame() ?? '');
+    expect(frame).toContain('src:a'); // header chip
+    expect(frame).toContain(onlyA);
+    expect(frame).not.toContain(someB);
+    app.unmount();
+  });
+
   it('opens the new-task form on n and creates via onCreateTask', async () => {
     const onCreateTask = vi.fn(async (_payload: CreateTaskPayload) => {});
     const app = render(

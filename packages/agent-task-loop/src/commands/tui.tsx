@@ -2,9 +2,12 @@ import React from 'react';
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { normalizeGitHubRepos } from '../config/github-repos';
+import { assertRuntimeConfig } from '../config/runtime-guard';
+import { githubSource } from '../task-management/github-issues-task-provider';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
+import { refineDescription } from '../services/refine-description-service';
 import { App } from '../tui/components/App';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
 
@@ -33,11 +36,20 @@ export const tuiCommand = defineCommand({
     }
 
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const service = new TaskService(config);
     const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
     // Backends a new task can be created in (the create-form source selector).
-    const sources = ['feishu', ...(config.githubIssues ? ['github'] : [])];
+    const sources = [
+      ...(config.feishu ? ['feishu'] : []),
+      ...(config.githubIssues
+        ? normalizeGitHubRepos(config.githubIssues).map(repo => githubSource(repo.owner, repo.repo))
+        : []),
+    ];
+    // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
+    const onRefineDescription = config.agents.claude
+      ? (input: { title: string; description: string }) => refineDescription(config, input)
+      : undefined;
 
     // Take over the whole terminal (alternate screen buffer), restoring the
     // user's scrollback on exit — the dashboard runs full-screen.
@@ -52,6 +64,7 @@ export const tuiCommand = defineCommand({
         sessionProvider={new FsSessionProvider()}
         onCreateTask={payload => service.createTask(payload)}
         sources={sources}
+        onRefineDescription={onRefineDescription}
       />,
     );
 

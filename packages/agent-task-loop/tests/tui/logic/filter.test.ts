@@ -76,4 +76,23 @@ describe('filterTasks', () => {
     expect(result).not.toBe(tasks);
     expect(tasks).toHaveLength(6);
   });
+
+  it('filters by selected sources (empty/undefined = all)', () => {
+    const sourced: TaskRecord[] = [
+      task({ taskId: 'S-1', status: '待处理', source: 'github:o/a' }),
+      task({ taskId: 'S-2', status: '待处理', source: 'github:o/b' }),
+      task({ taskId: 'S-3', status: '待处理', source: 'feishu' }),
+    ];
+    expect(ids(filterTasks(sourced, { tab: 'all', sources: [] }))).toEqual(['S-1', 'S-2', 'S-3']);
+    expect(ids(filterTasks(sourced, { tab: 'all', sources: ['github:o/a'] }))).toEqual(['S-1']);
+    expect(ids(filterTasks(sourced, { tab: 'all', sources: ['github:o/a', 'feishu'] }))).toEqual(['S-1', 'S-3']);
+  });
+
+  it('query also matches source and repository', () => {
+    const sourced: TaskRecord[] = [
+      task({ taskId: 'S-1', status: '待处理', source: 'github:o/alpha', repository: 'o/alpha' }),
+      task({ taskId: 'S-2', status: '待处理', source: 'github:o/beta', repository: 'o/beta' }),
+    ];
+    expect(ids(filterTasks(sourced, { tab: 'all', query: 'alpha' }))).toEqual(['S-1']);
+  });
 });

@@ -172,7 +172,19 @@ function normalizeExistingField(item: Record<string, unknown>): ExistingField | 
 }
 
 export class TaskTableSchemaService {
-  constructor(private readonly config: AppConfig) {}
+  constructor(private readonly config: AppConfig) {
+    if (!config.feishu) {
+      throw new Error('TaskTableSchemaService requires a `feishu` config block');
+    }
+  }
+
+  /** Narrowed accessor: the schema service only runs against a Feishu Base. */
+  private get feishu(): NonNullable<AppConfig['feishu']> {
+    if (!this.config.feishu) {
+      throw new Error('TaskTableSchemaService requires a `feishu` config block');
+    }
+    return this.config.feishu;
+  }
 
   getRequiredFields(): TaskFieldDefinition[] {
     return TASK_FIELD_DEFINITIONS;
@@ -183,9 +195,9 @@ export class TaskTableSchemaService {
       'base',
       '+field-list',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
     ]);
 
     const data = JSON.parse(stdout) as FieldListResponse;
@@ -220,9 +232,9 @@ export class TaskTableSchemaService {
           'base',
           '+field-create',
           '--base-token',
-          this.config.feishu.baseToken,
+          this.feishu.baseToken,
           '--table-id',
-          this.config.feishu.tableId,
+          this.feishu.tableId,
           '--json',
           JSON.stringify(field.json),
         ]);
@@ -247,9 +259,9 @@ export class TaskTableSchemaService {
             'base',
             '+field-update',
             '--base-token',
-            this.config.feishu.baseToken,
+            this.feishu.baseToken,
             '--table-id',
-            this.config.feishu.tableId,
+            this.feishu.tableId,
             '--field-id',
             existingField?.id ?? field.name,
             '--json',

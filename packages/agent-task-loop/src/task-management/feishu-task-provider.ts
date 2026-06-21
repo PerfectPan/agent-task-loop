@@ -140,7 +140,19 @@ export const FEISHU_SOURCE = 'feishu';
 export class FeishuTaskProvider implements SourceProvider {
   readonly source = FEISHU_SOURCE;
 
-  constructor(private readonly config: AppConfig) {}
+  constructor(private readonly config: AppConfig) {
+    if (!config.feishu) {
+      throw new Error('FeishuTaskProvider requires a `feishu` config block');
+    }
+  }
+
+  /** Narrowed accessor: this provider is only constructed when `feishu` is present. */
+  private get feishu(): NonNullable<AppConfig['feishu']> {
+    if (!this.config.feishu) {
+      throw new Error('FeishuTaskProvider requires a `feishu` config block');
+    }
+    return this.config.feishu;
+  }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
     return (await this.listTasks()).filter(task => task.targetAgent === agent && task.status === '待处理');
@@ -156,9 +168,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       '--json',
       JSON.stringify(
         buildRecordPayload(payload.taskId, {
@@ -191,9 +203,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-list',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       '--limit',
       '200',
       // lark-cli defaults to markdown output; we parse the raw JSON envelope.
@@ -233,9 +245,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -269,9 +281,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -299,9 +311,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -323,9 +335,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -347,9 +359,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -376,9 +388,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -404,9 +416,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -447,9 +459,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(buildRecordPayload(task.taskId, {
@@ -474,9 +486,9 @@ export class FeishuTaskProvider implements SourceProvider {
       'base',
       '+record-upsert',
       '--base-token',
-      this.config.feishu.baseToken,
+      this.feishu.baseToken,
       '--table-id',
-      this.config.feishu.tableId,
+      this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
       JSON.stringify(

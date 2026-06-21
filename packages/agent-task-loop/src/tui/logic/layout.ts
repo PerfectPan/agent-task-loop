@@ -25,7 +25,7 @@ export const MARKER_WIDTH = 2;
 export const TASK_ID_WIDTH = 9;
 
 /** Width of the per-row source tag, shown only when the list spans >1 source. */
-export const SOURCE_TAG_WIDTH = 8;
+export const SOURCE_TAG_WIDTH = 12;
 
 /**
  * Display width a list row reserves for everything except the flexible title:

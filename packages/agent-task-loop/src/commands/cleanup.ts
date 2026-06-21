@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { CleanupService } from '../services/cleanup-service';
 import { PublishContextService } from '../services/publish-context-service';
 import { TaskService } from '../services/task-service';
@@ -30,7 +30,7 @@ export const cleanupCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
 
     const service = new CleanupService({
       config,

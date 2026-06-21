@@ -100,6 +100,30 @@ Configure **at least one** of `feishu` / `githubIssues`:
   `GITHUB_TOKEN`, then `gh auth token` — so a `gh`-authenticated machine needs
   no token in config. Tasks created from the TUI become GitHub issues (the
   issue number/URL link back to the task).
+
+  **Multiple repositories** — instead of a single `owner`/`repo`, list several
+  under `repositories`; each becomes its own `github:<owner>/<repo>` source and
+  shows up as a separate option in the TUI's create-form source selector. A
+  top-level `token` / `defaultAgent` applies to all; a repo may override
+  `defaultAgent`:
+
+  ```json
+  {
+    "githubIssues": {
+      "defaultAgent": "codex",
+      "repositories": [
+        { "owner": "your-org", "repo": "service-a" },
+        { "owner": "your-org", "repo": "service-b", "defaultAgent": "claude" }
+      ]
+    }
+  }
+  ```
+
+  **Which issues become tasks** — to avoid adopting every issue in a repo, an
+  issue is treated as a task only when it opts in: it carries the hidden
+  `<!-- task-id: ... -->` marker (issues created through this tool) **or** an
+  `agent:<name>` label (the way you hand off an existing issue). Issues with
+  neither are ignored.
 - **Feishu-only** — set `feishu` (`baseToken`, `tableId`), omit `githubIssues`.
 - **Both** — tasks are read from both; writes route back to each task's owning
   backend, defaulting new creates to Feishu.

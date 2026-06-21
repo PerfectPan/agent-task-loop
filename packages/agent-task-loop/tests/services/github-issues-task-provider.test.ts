@@ -1,18 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GitHubIssuesTaskProvider } from '../../src/task-management/github-issues-task-provider';
-import type { GitHubIssuesConfig } from '../../src/config/schema';
+import { GitHubIssuesTaskProvider, type GitHubRepoTarget } from '../../src/task-management/github-issues-task-provider';
 
 const { execaMock } = vi.hoisted(() => ({ execaMock: vi.fn() }));
 vi.mock('execa', () => ({ execa: execaMock }));
 
-const config: GitHubIssuesConfig = {
+const config: GitHubRepoTarget = {
   owner: 'rivus',
   repo: 'idea',
   token: 'gh-token',
   defaultAgent: 'codex',
 };
 
-const tokenlessConfig: GitHubIssuesConfig = {
+const tokenlessConfig: GitHubRepoTarget = {
   owner: 'rivus',
   repo: 'idea',
   defaultAgent: 'codex',
@@ -67,12 +66,32 @@ describe('GitHubIssuesTaskProvider', () => {
         {
           number: 9,
           title: 'Closed one',
-          body: 'no marker here',
+          body: 'finished\n\n<!-- task-id: IDEA-902 -->',
           state: 'closed',
           labels: [],
           html_url: 'https://github.com/rivus/idea/issues/9',
           created_at: '2026-06-01T00:00:00Z',
           updated_at: '2026-06-03T00:00:00Z',
+        },
+        {
+          number: 10,
+          title: 'Handed off by label',
+          body: 'no marker, but labeled',
+          state: 'open',
+          labels: [{ name: 'agent:glm' }],
+          html_url: 'https://github.com/rivus/idea/issues/10',
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-04T00:00:00Z',
+        },
+        {
+          number: 11,
+          title: 'Unrelated issue',
+          body: 'just a normal issue nobody handed off',
+          state: 'open',
+          labels: [{ name: 'bug' }],
+          html_url: 'https://github.com/rivus/idea/issues/11',
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-05T00:00:00Z',
         },
       ]),
     );
@@ -80,9 +99,11 @@ describe('GitHubIssuesTaskProvider', () => {
 
     const tasks = await new GitHubIssuesTaskProvider(config).listTasks();
 
-    expect(tasks).toHaveLength(2); // PR skipped
+    // PR (#8) skipped; unmanaged issue (#11, no marker/no agent label) excluded.
+    expect(tasks).toHaveLength(3);
+    expect(tasks.map(t => t.recordId)).toEqual(['7', '9', '10']);
     expect(tasks[0]).toMatchObject({
-      source: 'github',
+      source: 'github:rivus/idea',
       recordId: '7',
       taskId: 'IDEA-900',
       title: 'Add dark mode',
@@ -92,8 +113,10 @@ describe('GitHubIssuesTaskProvider', () => {
       status: '待处理',
       repository: 'rivus/idea',
     });
-    // No marker ⇒ derived id; closed ⇒ 已完成; no agent label ⇒ default agent.
-    expect(tasks[1]).toMatchObject({ taskId: 'GH-9', status: '已完成', targetAgent: 'codex' });
+    // Marker ⇒ managed; closed ⇒ 已完成; no agent label ⇒ default agent.
+    expect(tasks[1]).toMatchObject({ taskId: 'IDEA-902', status: '已完成', targetAgent: 'codex' });
+    // No marker but agent label ⇒ managed; derived id; label drives the agent.
+    expect(tasks[2]).toMatchObject({ taskId: 'GH-10', status: '待处理', targetAgent: 'glm' });
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain('/repos/rivus/idea/issues?state=all');

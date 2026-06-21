@@ -27,14 +27,37 @@ export const projectConfigSchema = z.object({
   taskTemplatePrompt: z.string().default(''),
 });
 
-export const githubIssuesConfigSchema = z.object({
+export const githubRepoConfigSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
-  /** Personal access token; falls back to the GITHUB_TOKEN env var when omitted. */
-  token: z.string().optional(),
-  /** Agent assigned to issues that carry no `agent:<name>` label. */
-  defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).default('codex'),
+  /** Per-repo override of the issues source's `defaultAgent`. */
+  defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).optional(),
 });
+
+export const githubIssuesConfigSchema = z
+  .object({
+    /** Single-repo shorthand: `owner` + `repo`. Use `repositories` for several. */
+    owner: z.string().min(1).optional(),
+    repo: z.string().min(1).optional(),
+    /** Several repos. Each becomes its own `github:<owner>/<repo>` task source. */
+    repositories: z.array(githubRepoConfigSchema).optional(),
+    /** Personal access token; falls back to GITHUB_TOKEN, then `gh auth token`. */
+    token: z.string().optional(),
+    /** Agent assigned to issues that carry no `agent:<name>` label. */
+    defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).default('codex'),
+  })
+  .superRefine((cfg, ctx) => {
+    const hasSingle = Boolean(cfg.owner) && Boolean(cfg.repo);
+    const hasMulti = Boolean(cfg.repositories && cfg.repositories.length > 0);
+    if (!hasSingle && !hasMulti) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'githubIssues needs either owner+repo or a non-empty repositories[]',
+      });
+    }
+  });
+
+export type GitHubRepoConfig = z.infer<typeof githubRepoConfigSchema>;
 
 export const feishuConfigSchema = z.object({
   baseToken: z.string().min(1),

@@ -18,6 +18,16 @@ describe('appConfigSchema', () => {
     expect(appConfigSchema.safeParse({ ...base, feishu, githubIssues: github }).success).toBe(true);
   });
 
+  it('accepts githubIssues with a repositories[] (multi-repo)', () => {
+    const multi = { repositories: [{ owner: 'o', repo: 'a' }, { owner: 'o', repo: 'b' }] };
+    expect(appConfigSchema.safeParse({ ...base, githubIssues: multi }).success).toBe(true);
+  });
+
+  it('rejects githubIssues with neither owner+repo nor repositories', () => {
+    const result = appConfigSchema.safeParse({ ...base, githubIssues: { token: 'x' } });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects neither source with a clear message', () => {
     const result = appConfigSchema.safeParse(base);
     expect(result.success).toBe(false);

@@ -2,7 +2,9 @@ import React from 'react';
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
+import { normalizeGitHubRepos } from '../config/github-repos';
 import { assertRuntimeConfig } from '../config/runtime-guard';
+import { githubSource } from '../task-management/github-issues-task-provider';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { refineDescription } from '../services/refine-description-service';
@@ -40,7 +42,9 @@ export const tuiCommand = defineCommand({
     // Backends a new task can be created in (the create-form source selector).
     const sources = [
       ...(config.feishu ? ['feishu'] : []),
-      ...(config.githubIssues ? ['github'] : []),
+      ...(config.githubIssues
+        ? normalizeGitHubRepos(config.githubIssues).map(repo => githubSource(repo.owner, repo.repo))
+        : []),
     ];
     // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
     const onRefineDescription = config.agents.claude

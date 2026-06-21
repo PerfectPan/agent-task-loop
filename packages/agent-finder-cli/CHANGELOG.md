@@ -1,5 +1,17 @@
 # @rivus/agent-finder-cli
 
+## 0.2.0
+
+### Minor Changes
+
+- 480e372: Add a `sessions` command to browse and inspect local coding-agent sessions across Codex and Claude (backed by the shared `@rivus/agent-sessions` core):
+
+  - `agent-finder sessions browse` — interactive two-pane TUI: session list + transcript preview, ↑/↓ navigation, `q` to quit.
+  - `agent-finder sessions list [--agent <a>] [--filter <s>] [--json]` — aligned, color-coded table; `--json` emits a stable `{ schema_version, sessions }` payload.
+  - `agent-finder sessions inspect <id> [--json]` — session metadata + transcript.
+
+- 69d83c9: Add session resume support (print-only): `agent-finder sessions resume <id>` prints the verified command to resume a session in its agent (`codex resume <id>` / `claude --resume <id>`), `sessions inspect` shows it (and includes `resumeCommand` in `--json`), and the `sessions browse` TUI shows a resume hint for the selected session. The command is printed, never executed.
+
 ## 0.1.3
 
 ### Patch Changes

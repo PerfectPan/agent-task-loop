@@ -54,6 +54,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@rivus/agent-sessions": "workspace:*",
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",
     "@rivus/rslib-config": "workspace:*",

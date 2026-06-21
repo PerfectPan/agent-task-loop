@@ -158,8 +158,38 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     };
   }
 
+  private tokenResolved?: string;
+  private tokenResolvedDone = false;
+
+  /**
+   * Resolves the GitHub token from, in order: config, `GITHUB_TOKEN`, then the
+   * `gh` CLI (`gh auth token`). The `gh` lookup runs at most once and degrades
+   * to no token (unauthenticated request) when `gh` is missing or errors.
+   */
+  private async resolveToken(): Promise<string | undefined> {
+    if (this.tokenResolvedDone) {
+      return this.tokenResolved;
+    }
+    let token = this.config.token ?? process.env.GITHUB_TOKEN;
+    if (!token) {
+      try {
+        const { execa } = await import('execa');
+        const result = await execa('gh', ['auth', 'token'], { reject: false });
+        const candidate = result.stdout?.trim();
+        if (candidate) {
+          token = candidate;
+        }
+      } catch {
+        // `gh` missing or errored — fall through to an unauthenticated request.
+      }
+    }
+    this.tokenResolved = token;
+    this.tokenResolvedDone = true;
+    return token;
+  }
+
   private async api<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const token = this.config.token ?? process.env.GITHUB_TOKEN;
+    const token = await this.resolveToken();
     const response = await fetch(`https://api.github.com${path}`, {
       method,
       headers: {

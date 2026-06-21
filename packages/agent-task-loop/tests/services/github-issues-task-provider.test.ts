@@ -2,10 +2,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GitHubIssuesTaskProvider } from '../../src/task-management/github-issues-task-provider';
 import type { GitHubIssuesConfig } from '../../src/config/schema';
 
+const { execaMock } = vi.hoisted(() => ({ execaMock: vi.fn() }));
+vi.mock('execa', () => ({ execa: execaMock }));
+
 const config: GitHubIssuesConfig = {
   owner: 'rivus',
   repo: 'idea',
   token: 'gh-token',
+  defaultAgent: 'codex',
+};
+
+const tokenlessConfig: GitHubIssuesConfig = {
+  owner: 'rivus',
+  repo: 'idea',
   defaultAgent: 'codex',
 };
 
@@ -18,7 +27,17 @@ function jsonResponse(status: number, body: unknown): Response {
   } as unknown as Response;
 }
 
-afterEach(() => vi.restoreAllMocks());
+const originalGithubToken = process.env.GITHUB_TOKEN;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  execaMock.mockReset();
+  if (originalGithubToken === undefined) {
+    delete process.env.GITHUB_TOKEN;
+  } else {
+    process.env.GITHUB_TOKEN = originalGithubToken;
+  }
+});
 
 describe('GitHubIssuesTaskProvider', () => {
   it('maps issues to tasks, skips PRs, reads agent/priority labels and the task-id marker', async () => {
@@ -117,6 +136,31 @@ describe('GitHubIssuesTaskProvider', () => {
     expect(patch[0]).toContain('/issues/7');
     expect((patch[1] as RequestInit).method).toBe('PATCH');
     expect(JSON.parse(String((patch[1] as RequestInit).body))).toEqual({ state: 'closed' });
+  });
+
+  it('falls back to `gh auth token` when no config token / GITHUB_TOKEN', async () => {
+    delete process.env.GITHUB_TOKEN;
+    execaMock.mockResolvedValue({ stdout: 'ghp_fallback\n', exitCode: 0 });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(tokenlessConfig).listTasks();
+
+    expect(execaMock).toHaveBeenCalledWith('gh', ['auth', 'token'], expect.objectContaining({ reject: false }));
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer ghp_fallback' });
+  });
+
+  it('degrades to an unauthenticated request when `gh` is unavailable', async () => {
+    delete process.env.GITHUB_TOKEN;
+    execaMock.mockRejectedValue(new Error('gh: command not found'));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(tokenlessConfig).listTasks();
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).not.toHaveProperty('Authorization');
   });
 
   it('throws a clear error when writing without an issue number', async () => {

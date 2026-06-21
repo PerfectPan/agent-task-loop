@@ -37,7 +37,10 @@ export const tuiCommand = defineCommand({
     const service = new TaskService(config);
     const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
     // Backends a new task can be created in (the create-form source selector).
-    const sources = ['feishu', ...(config.githubIssues ? ['github'] : [])];
+    const sources = [
+      ...(config.feishu ? ['feishu'] : []),
+      ...(config.githubIssues ? ['github'] : []),
+    ];
 
     // Take over the whole terminal (alternate screen buffer), restoring the
     // user's scrollback on exit — the dashboard runs full-screen.

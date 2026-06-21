@@ -158,34 +158,34 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     };
   }
 
-  private tokenResolved?: string;
-  private tokenResolvedDone = false;
+  private tokenPromise?: Promise<string | undefined>;
 
   /**
    * Resolves the GitHub token from, in order: config, `GITHUB_TOKEN`, then the
-   * `gh` CLI (`gh auth token`). The `gh` lookup runs at most once and degrades
-   * to no token (unauthenticated request) when `gh` is missing or errors.
+   * `gh` CLI (`gh auth token`). The lookup is memoized as a single Promise so
+   * concurrent `api()` calls share one `gh` invocation, and degrades to no
+   * token (unauthenticated request) when `gh` is missing or errors.
    */
-  private async resolveToken(): Promise<string | undefined> {
-    if (this.tokenResolvedDone) {
-      return this.tokenResolved;
-    }
-    let token = this.config.token ?? process.env.GITHUB_TOKEN;
-    if (!token) {
-      try {
-        const { execa } = await import('execa');
-        const result = await execa('gh', ['auth', 'token'], { reject: false });
-        const candidate = result.stdout?.trim();
-        if (candidate) {
-          token = candidate;
+  private resolveToken(): Promise<string | undefined> {
+    if (!this.tokenPromise) {
+      this.tokenPromise = (async () => {
+        let token = this.config.token ?? process.env.GITHUB_TOKEN;
+        if (!token) {
+          try {
+            const { execa } = await import('execa');
+            const result = await execa('gh', ['auth', 'token'], { reject: false });
+            const candidate = result.stdout?.trim();
+            if (candidate) {
+              token = candidate;
+            }
+          } catch {
+            // `gh` missing or errored — fall through to an unauthenticated request.
+          }
         }
-      } catch {
-        // `gh` missing or errored — fall through to an unauthenticated request.
-      }
+        return token;
+      })();
     }
-    this.tokenResolved = token;
-    this.tokenResolvedDone = true;
-    return token;
+    return this.tokenPromise;
   }
 
   private async api<T>(method: string, path: string, body?: unknown): Promise<T> {

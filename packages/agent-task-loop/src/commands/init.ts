@@ -137,6 +137,12 @@ export const initCommand = defineCommand({
       sourceAnswer === 'b' ||
       sourceAnswer === 'both';
 
+    if (!useGitHub && !useFeishu) {
+      rl.close();
+      console.error('Unknown source. Choose github, feishu, or both. Re-run `agent-task-loop init`.');
+      process.exit(1);
+    }
+
     let githubIssues: GlobalConfigInputs['githubIssues'];
     if (useGitHub) {
       const detected = detectGitHubRepo();
@@ -145,6 +151,11 @@ export const initCommand = defineCommand({
       const owner = (await prompt(rl, ownerPrompt)).trim() || detected?.owner || '';
       const repo = (await prompt(rl, repoPrompt)).trim() || detected?.repo || '';
       const defaultAgent = (await prompt(rl, 'Default agent for issues without an agent label [codex]: ')).trim() || 'codex';
+      if (!owner || !repo) {
+        rl.close();
+        console.error('GitHub owner and repo are required. Re-run `agent-task-loop init`.');
+        process.exit(1);
+      }
       githubIssues = { owner, repo, defaultAgent };
     }
 

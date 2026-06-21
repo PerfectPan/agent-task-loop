@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { TARGET_AGENTS, type TargetAgent } from '../../types/task';
 import type { CreateTaskPayload } from '../../task-management/task-provider';
@@ -42,6 +42,8 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
   const [touched, setTouched] = useState(false);
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   const targetAgent = TARGET_AGENTS[agentIndex] as TargetAgent;
   const source = showSource ? sourceOptions[sourceIndex] : sourceOptions[0];
@@ -84,13 +86,13 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
     const field = fields[index].key;
 
     if (key.return) return submit();
-    if (key.ctrl && (input === 'r' || input === '') && onRefineDescription && !refining) {
+    if (key.ctrl && input === 'r' && onRefineDescription && !refining) {
       setRefining(true);
       setRefineError(null);
       Promise.resolve(onRefineDescription({ title: title.trim(), description: description.trim() }))
-        .then(next => setDescription(next))
-        .catch(err => setRefineError(err instanceof Error ? err.message : String(err)))
-        .finally(() => setRefining(false));
+        .then(next => { if (mounted.current) setDescription(next); })
+        .catch(err => { if (mounted.current) setRefineError(err instanceof Error ? err.message : String(err)); })
+        .finally(() => { if (mounted.current) setRefining(false); });
       return;
     }
     if (key.tab && key.shift) return setIndex(i => (i - 1 + fields.length) % fields.length);

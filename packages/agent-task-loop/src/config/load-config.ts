@@ -27,7 +27,11 @@ export function resolveConfigPath(configPath?: string): string {
 
   const envConfig = process.env.AGENT_TASK_LOOP_CONFIG;
   if (envConfig) {
-    return path.resolve(process.cwd(), envConfig);
+    const resolved = path.resolve(process.cwd(), envConfig);
+    if (!existsSync(resolved)) {
+      throw new Error(`Config file not found: ${resolved} (from AGENT_TASK_LOOP_CONFIG)`);
+    }
+    return resolved;
   }
 
   const global = globalConfigPath();
@@ -42,6 +46,12 @@ export function resolveConfigPath(configPath?: string): string {
 
 export async function loadConfig(configPath?: string): Promise<AppConfig> {
   const resolved = resolveConfigPath(configPath);
-  const raw = JSON.parse(readFileSync(resolved, 'utf8'));
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(resolved, 'utf8'));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`Invalid config at ${resolved}: ${reason}`);
+  }
   return appConfigSchema.parse(raw);
 }

@@ -14,6 +14,8 @@ export interface HeaderProps {
   now: number;
   /** Active filter query; the filter segment is hidden when empty. */
   filterText?: string;
+  /** Active source-filter chip (e.g. `src:a,b`); hidden when empty. */
+  sourceFilterText?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function Header({
   lastFetchedAt,
   now,
   filterText,
+  sourceFilterText,
 }: HeaderProps): React.ReactElement {
   return (
     <Box borderStyle="round" borderColor="cyan" paddingX={1}>
@@ -38,6 +41,7 @@ export function Header({
       <Text> </Text>
       <Text color="yellow">{taskCount}</Text>
       <Text dimColor> updated {timeAgo(lastFetchedAt, now)}</Text>
+      {sourceFilterText ? <Text color="magenta"> {sourceFilterText}</Text> : null}
       {filterText ? <Text color="magenta"> /{filterText}</Text> : null}
     </Box>
   );

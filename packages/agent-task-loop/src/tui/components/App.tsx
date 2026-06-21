@@ -5,6 +5,7 @@ import type { FetchTasks, Now, Pane, PreviewMode } from '../types';
 import type { SessionProvider } from '../data/session-provider';
 import { sortTasks } from '../logic/sort';
 import { filterTasks } from '../logic/filter';
+import { buildSourceOptions, sourceLabel } from '../logic/source';
 import { clampIndex, nextIndex } from '../logic/viewport';
 import { computeColumnWidths, reservedRows } from '../logic/layout';
 import { clampScroll, maxScroll, wrappedLineCount } from '../logic/measure';
@@ -24,6 +25,7 @@ import { StatusBar } from './StatusBar';
 import { HelpOverlay } from './HelpOverlay';
 import { WorkflowOverlay } from './WorkflowOverlay';
 import { TaskForm } from './TaskForm';
+import { SourceFilter } from './SourceFilter';
 import type { CreateTaskPayload } from '../../task-management/task-provider';
 import { ConfirmPrompt } from './ConfirmPrompt';
 import { ResizeGuard } from './ResizeGuard';
@@ -83,6 +85,9 @@ export function App({
   const [formVisible, setFormVisible] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // Selected source ids ([] = all sources); the picker overlay toggles them.
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [sourceFilterVisible, setSourceFilterVisible] = useState(false);
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [detailScroll, setDetailScroll] = useState(0);
   const [previewScroll, setPreviewScroll] = useState(0);
@@ -120,9 +125,19 @@ export function App({
   }, [tasks]);
 
   const visible = useMemo(
-    () => sortTasks(filterTasks(tasks, { tab, query })),
-    [tasks, tab, query],
+    () => sortTasks(filterTasks(tasks, { tab, query, sources: sourceFilter })),
+    [tasks, tab, query, sourceFilter],
   );
+
+  // Sources available to the filter picker: configured ones (incl. empty) plus
+  // any seen on a task, each with its current task count.
+  const sourceOptions = useMemo(
+    () => buildSourceOptions(tasks, sources ?? []),
+    [tasks, sources],
+  );
+  const sourceFilterText = sourceFilter.length > 0
+    ? `src:${sourceFilter.map(sourceLabel).join(',')}`
+    : undefined;
 
   // Tag rows with their backend when more than one source is in play — either
   // configured (multi-source setup) or actually present in the fetched tasks.
@@ -292,6 +307,8 @@ export function App({
         setHelpVisible(true);
       } else if (input === 'w') {
         setWorkflowVisible(true);
+      } else if (input === 's' && showSource) {
+        setSourceFilterVisible(true);
       } else if (input === 'n' && onCreateTask) {
         setCreateError(null);
         setFormVisible(true);
@@ -318,7 +335,10 @@ export function App({
         exit();
       }
     },
-    { isActive: !filtering && !helpVisible && !workflowVisible && !formVisible && !confirm },
+    {
+      isActive:
+        !filtering && !helpVisible && !workflowVisible && !formVisible && !sourceFilterVisible && !confirm,
+    },
   );
 
   return (
@@ -330,6 +350,7 @@ export function App({
           lastFetchedAt={lastFetchedAt == null ? undefined : new Date(lastFetchedAt).toISOString()}
           now={nowMs}
           filterText={filtering ? query : undefined}
+          sourceFilterText={sourceFilterText}
         />
         <Tabs active={tab} counts={counts} />
         {helpVisible ? (
@@ -339,6 +360,18 @@ export function App({
         ) : workflowVisible ? (
           <Box height={bodyHeight} minHeight={0}>
             <WorkflowOverlay visible currentStatus={selected?.status} />
+          </Box>
+        ) : sourceFilterVisible ? (
+          <Box height={bodyHeight} minHeight={0}>
+            <SourceFilter
+              options={sourceOptions}
+              selected={sourceFilter}
+              onApply={next => {
+                setSourceFilter(next);
+                setSourceFilterVisible(false);
+              }}
+              onCancel={() => setSourceFilterVisible(false)}
+            />
           </Box>
         ) : formVisible ? (
           <Box height={bodyHeight} minHeight={0}>
@@ -391,7 +424,12 @@ export function App({
             onCancel={() => setConfirm(null)}
           />
         ) : null}
-        <StatusBar focusedPane={focusedPane} filtering={filtering} canCreate={!!onCreateTask} />
+        <StatusBar
+          focusedPane={focusedPane}
+          filtering={filtering}
+          canCreate={!!onCreateTask}
+          canFilterSource={showSource}
+        />
       </Box>
     </ResizeGuard>
   );

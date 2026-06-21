@@ -9,6 +9,8 @@ export interface StatusBarProps {
   filtering: boolean;
   /** Whether the new-task action (n) is available; adds an `[n] new` hint. */
   canCreate?: boolean;
+  /** Whether the source filter (s) is available; adds an `[s] source` hint. */
+  canFilterSource?: boolean;
 }
 
 /** Keybinding hints shown while the filter input is active. */
@@ -20,7 +22,7 @@ function commonHints(canCreate: boolean): string[] {
 }
 
 /** Build the per-pane keybinding hints (filter mode handled by caller). */
-function hintsFor(focusedPane: Pane, canCreate: boolean): string {
+function hintsFor(focusedPane: Pane, canCreate: boolean, canFilterSource: boolean): string {
   const common = commonHints(canCreate);
   switch (focusedPane) {
     case 'list':
@@ -29,6 +31,7 @@ function hintsFor(focusedPane: Pane, canCreate: boolean): string {
         '[Tab] focus',
         '[Enter] attach',
         '[/] filter',
+        ...(canFilterSource ? ['[s] source'] : []),
         '[d] stop',
         ...common,
       ].join('  ');
@@ -43,8 +46,13 @@ function hintsFor(focusedPane: Pane, canCreate: boolean): string {
  * Single footer line of context-relevant keybinding hints. Pure presentation:
  * the hint set is derived solely from focus + filter state passed in via props.
  */
-export function StatusBar({ focusedPane, filtering, canCreate = false }: StatusBarProps): React.ReactElement {
-  const hints = filtering ? FILTER_HINTS : hintsFor(focusedPane, canCreate);
+export function StatusBar({
+  focusedPane,
+  filtering,
+  canCreate = false,
+  canFilterSource = false,
+}: StatusBarProps): React.ReactElement {
+  const hints = filtering ? FILTER_HINTS : hintsFor(focusedPane, canCreate, canFilterSource);
   return (
     <Box>
       <Text dimColor>{hints}</Text>

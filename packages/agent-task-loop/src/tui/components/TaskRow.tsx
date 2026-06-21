@@ -4,6 +4,7 @@ import type { TaskRecord } from '../../types/task';
 import { statusConfig } from '../logic/status';
 import { formatPriority } from '../logic/format';
 import { truncateToWidth } from '../logic/truncate';
+import { sourceLabel } from '../logic/source';
 import { BADGE_WIDTH, PRIORITY_WIDTH, SOURCE_TAG_WIDTH, TASK_ID_WIDTH } from '../logic/layout';
 import { Spinner } from './Spinner';
 
@@ -39,7 +40,7 @@ function TaskRowImpl({ task, selected, titleWidth, showSource }: TaskRowProps): 
       {showSource ? (
         <Box width={SOURCE_TAG_WIDTH} flexShrink={0}>
           <Text color="magenta" dimColor={!selected}>
-            {truncateToWidth(task.source ?? '—', SOURCE_TAG_WIDTH - 1)}
+            {truncateToWidth(sourceLabel(task.source), SOURCE_TAG_WIDTH - 1)}
           </Text>
         </Box>
       ) : null}

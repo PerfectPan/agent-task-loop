@@ -139,6 +139,13 @@ selector lets you choose where to publish. When a `claude` agent is configured,
 press `Ctrl+R` on the form to have the AI refine the description before
 publishing.
 
+When the board spans more than one source (e.g. several GitHub repos), each row
+shows a compact source tag (the repo short name) and the detail pane shows the
+full `github:<owner>/<repo>`. Press `s` to open the **source filter** — a
+multi-select popup (Space toggles, `a` all, Enter applies) to focus on one or
+more repos; the active selection appears as a `src:…` chip in the header. The
+`/` text filter also matches source/repository.
+
 ## Initialize Task Table Schema (Feishu only)
 
 Feishu task tables need a schema; GitHub Issues do not (`schema` prints a notice

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { TaskService } from '../services/task-service';
 import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import type { TaskRecord } from '../types/task';
@@ -154,7 +154,7 @@ export const watchCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const livenessService = new TaskRunnerLivenessService();
     const intervalMs = Number(args.interval) * 1000;

@@ -4,7 +4,7 @@ import { cocoAdapter } from '../adapters/coco';
 import { codexAdapter } from '../adapters/codex';
 import { glmAdapter } from '../adapters/glm';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ExecutionService } from '../services/execution-service';
 import { resolveTaskExecutionContext } from '../services/task-context-service';
 import { buildTaskPrompt } from '../services/prompt-service';
@@ -41,7 +41,7 @@ export const runCommand = defineCommand({
   async run({ args }) {
     const agent = args.agent as TargetAgent;
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const tasks = await taskService.listPendingTasks(agent);
     const task = args.task

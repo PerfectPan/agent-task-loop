@@ -2,7 +2,7 @@ import React from 'react';
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { App } from '../tui/components/App';
@@ -33,7 +33,7 @@ export const tuiCommand = defineCommand({
     }
 
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const service = new TaskService(config);
     const agent = typeof args.agent === 'string' ? (args.agent as TargetAgent) : undefined;
     // Backends a new task can be created in (the create-form source selector).

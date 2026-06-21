@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { execa } from 'execa';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import type { TaskRecord } from '../types/task';
 import { CompleteService } from '../services/complete-service';
 import { GitHubPullRequestService } from '../services/github-pull-request-service';
@@ -140,7 +140,7 @@ export const completeCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const service = new CompleteService({
       config,

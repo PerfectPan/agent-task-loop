@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
-import { assertFeishuRuntimeConfig } from '../config/runtime-guard';
+import { assertRuntimeConfig } from '../config/runtime-guard';
 import { RejectService } from '../services/reject-service';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskService } from '../services/task-service';
@@ -29,7 +29,7 @@ export const rejectCommand = defineCommand({
   },
   async run({ args }) {
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertFeishuRuntimeConfig(config);
+    assertRuntimeConfig(config);
     const reason = String(args.reason).trim();
     if (!reason) {
       throw new Error('Reject reason must not be empty');

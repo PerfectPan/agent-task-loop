@@ -1,6 +1,6 @@
 {
   "name": "@rivus/agent-task-loop",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": false,
   "description": "Run AI coding agents through task execution, review, rework, and pull request handoff.",
   "license": "GPL-3.0-only",

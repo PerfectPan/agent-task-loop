@@ -83,13 +83,32 @@ describe('StatefulTaskProvider', () => {
     expect(inner.claimTask).toHaveBeenCalledTimes(1);
   });
 
-  it('updateReviewState mirrors review fields and delegates', async () => {
+  it('updateReviewState mirrors review fields AND the lifecycle status', async () => {
     const store = new MemStore();
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
-    await sp.updateReviewState(ref, { status: '待复核', reviewRound: 2, reviewSessionId: 'rev-1' } as never);
-    expect(store.read('github:o/r', '7')).toMatchObject({ reviewRound: 2, reviewSessionId: 'rev-1' });
+    await sp.updateReviewState(ref, { status: '待发布', reviewRound: 2, reviewSessionId: 'rev-1' } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({ status: '待发布', reviewRound: 2, reviewSessionId: 'rev-1' });
     expect(inner.updateReviewState).toHaveBeenCalledTimes(1);
+  });
+
+  it('injects the implied lifecycle status on claim / succeeded / failed', async () => {
+    const store = new MemStore();
+    const sp = new StatefulTaskProvider(fakeInner(), store);
+    await sp.claimTask(ref, { claimedBy: 'me', claimedAt: 't', runId: 'r' } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({ status: '执行中' });
+    await sp.markTaskFailed(ref, { lastError: 'boom' } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({ status: '已失败' });
+    await sp.markTaskSucceeded(ref, { resultSummary: 'done' } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({ status: '已完成' });
+  });
+
+  it('overlays the stored status onto a github record (待处理 → 待发布)', async () => {
+    const store = new MemStore();
+    store.merge('github:o/r', '7', { status: '待发布' });
+    const sp = new StatefulTaskProvider(fakeInner([record({ status: '待处理' })]), store);
+    const [task] = await sp.listTasks();
+    expect(task.status).toBe('待发布');
   });
 
   it('createTask only delegates (nothing mirrored)', async () => {

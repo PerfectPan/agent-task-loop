@@ -2,12 +2,20 @@ import type { TaskRecord } from '../types/task';
 
 /**
  * The loop-owned run-time fields of a {@link TaskRecord} — written by the loop
- * during execution and read back by `resume` / `watch` / the TUI. Deliberately
- * excludes task-definition fields (`taskId`, `title`, `project`, `priority`,
- * `targetAgent`, `status`, `source`, `recordId`, `createdAt`, `description`,
- * `repository`, `updatedAt`) which remain owned by the source backend.
+ * during execution and read back by `resume` / `watch` / `complete` / the TUI.
+ *
+ * Includes `status`: the lifecycle status is loop-owned for backends that cannot
+ * represent intermediate states. A GitHub issue is only open/closed (待处理 /
+ * 已完成), so 执行中 / 待复核 / 待发布 / 待验收 / 已失败 would otherwise vanish on
+ * re-read, breaking every command that gates on status (`complete`, `reject`,
+ * `cleanup`, `watch`, `start` recovery) and letting an in-flight task be
+ * re-claimed. Mirroring it locally keeps the whole loop working across commands
+ * on the same machine. Excludes pure task-definition fields (`taskId`, `title`,
+ * `project`, `priority`, `targetAgent`, `source`, `recordId`, `createdAt`,
+ * `description`, `repository`, `updatedAt`) which stay owned by the backend.
  */
 export const RUNTIME_KEYS = [
+  'status',
   'sessionId',
   'sessionName',
   'sessionHistory',

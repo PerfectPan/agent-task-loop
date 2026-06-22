@@ -86,7 +86,10 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
-    this.mirror(task, payload);
+    // Claiming means the task is now executing; inject the implied status so a
+    // low-fidelity backend (GitHub open/closed) doesn't report it back as 待处理
+    // and let it be re-claimed.
+    this.mirror(task, { ...payload, status: '执行中' });
     await this.inner.claimTask(task, payload);
   }
 
@@ -106,12 +109,14 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async markTaskSucceeded(task: TaskRef, payload: MarkTaskSucceededPayload): Promise<void> {
-    this.mirror(task, payload);
+    // Inject the terminal status so the local mirror agrees with the backend
+    // (GitHub closes the issue → 已完成) and never overlays a stale 待发布.
+    this.mirror(task, { ...payload, status: '已完成' });
     await this.inner.markTaskSucceeded(task, payload);
   }
 
   async markTaskFailed(task: TaskRef, payload: MarkTaskFailedPayload): Promise<void> {
-    this.mirror(task, payload);
+    this.mirror(task, { ...payload, status: '已失败' });
     await this.inner.markTaskFailed(task, payload);
   }
 

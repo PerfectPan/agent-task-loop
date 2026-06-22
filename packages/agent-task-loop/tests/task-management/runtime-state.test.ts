@@ -3,18 +3,19 @@ import type { TaskRecord } from '../../src/types/task';
 import { overlayRuntimeState, pickRuntimeState } from '../../src/task-management/runtime-state';
 
 describe('pickRuntimeState', () => {
-  it('keeps only run-time keys, dropping task-definition fields', () => {
+  it('keeps run-time keys (incl. status), dropping task-definition fields', () => {
     const picked = pickRuntimeState({
       taskId: 'T-1',
       title: 'def',
-      status: '执行中',
       targetAgent: 'claude',
-      // run-time:
+      project: 'p',
+      // run-time (incl. lifecycle status):
+      status: '待发布',
       executionSessionId: 'sess-1',
       runnerPid: 4242,
       workspacePath: '/ws/x',
     });
-    expect(picked).toEqual({ executionSessionId: 'sess-1', runnerPid: 4242, workspacePath: '/ws/x' });
+    expect(picked).toEqual({ status: '待发布', executionSessionId: 'sess-1', runnerPid: 4242, workspacePath: '/ws/x' });
   });
 
   it('records cleared values (empty string / 0 / null), not just truthy ones', () => {
@@ -49,5 +50,11 @@ describe('overlayRuntimeState', () => {
     const record = { ...base, progressSummary: 'stale' } as TaskRecord;
     const out = overlayRuntimeState(record, { progressSummary: '' });
     expect(out.progressSummary).toBe(''); // cleared, not "stale"
+  });
+
+  it('overlays lifecycle status (the github 待处理→待发布 case)', () => {
+    const githubOpen = { ...base, status: '待处理' } as TaskRecord; // github open issue
+    const out = overlayRuntimeState(githubOpen, { status: '待发布' });
+    expect(out.status).toBe('待发布'); // complete's guard can now pass
   });
 });

@@ -122,6 +122,7 @@ export const initCommand = defineCommand({
     const configPath = globalConfigPath();
     if (existsSync(configPath)) {
       console.log(`Global config already exists at: ${configPath}`);
+      console.log('Use `agent-task-loop source add` to add a task source, or edit the file directly.');
       return;
     }
 

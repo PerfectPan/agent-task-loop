@@ -6,6 +6,7 @@ import { completeCommand } from './commands/complete';
 import { rejectCommand } from './commands/reject';
 import { runCommand } from './commands/run';
 import { schemaCommand } from './commands/schema';
+import { sourceCommand } from './commands/source';
 import { startCommand } from './commands/start';
 import { resumeCommand } from './commands/resume';
 import { syncCommand } from './commands/sync';
@@ -28,6 +29,7 @@ const main = defineCommand({
     run: runCommand,
     resume: resumeCommand,
     schema: schemaCommand,
+    source: sourceCommand,
     sync: syncCommand,
     tui: tuiCommand,
     watch: watchCommand,

@@ -91,6 +91,21 @@ npx agent-task-loop init
 and writes `~/.agent-task-loop/config.json`. Fill in `projects` and
 `repositories` afterward. See `config.example.json` for the full shape.
 
+To add sources to an **existing** config (init refuses to overwrite), use the
+`source` command instead of hand-editing:
+
+```bash
+agent-task-loop source list                                   # show sources + default
+agent-task-loop source add --type github --owner you --repo your-repo
+agent-task-loop source add --type github --owner you --repo another-repo  # appends to repositories[]
+agent-task-loop source add --type feishu --token <base> --table <tableId>
+agent-task-loop source remove github:you/your-repo
+```
+
+`source add` merges into the config without touching unrelated blocks (adding a
+second GitHub repo appends to `repositories[]`); `source remove` keeps at least
+one source. Run with no flags in a terminal for interactive prompts.
+
 ### Task sources
 
 Configure **at least one** of `feishu` / `githubIssues`:

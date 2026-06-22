@@ -72,21 +72,48 @@ export class CompositeTaskProvider implements TaskProvider {
     return provider;
   }
 
+  private warnSourceFailure(source: string, reason: unknown): void {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    console.warn(`[agent-task-loop] task source "${source}" failed to read; skipping it: ${message}`);
+  }
+
+  /**
+   * Reads from every source and merges. A source that fails is **skipped with a
+   * warning** rather than failing the whole read — one unreachable or
+   * misconfigured backend (e.g. an expired Feishu scope) must not blank out the
+   * others.
+   */
+  private async mergeReads(read: (provider: SourceProvider) => Promise<TaskRecord[]>): Promise<TaskRecord[]> {
+    const settled = await Promise.allSettled(this.providers.map(read));
+    const tasks: TaskRecord[] = [];
+    settled.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        tasks.push(...result.value);
+      } else {
+        this.warnSourceFailure(this.providers[index]!.source, result.reason);
+      }
+    });
+    return tasks;
+  }
+
   async listTasks(): Promise<TaskRecord[]> {
-    const batches = await Promise.all(this.providers.map(provider => provider.listTasks()));
-    return batches.flat();
+    return this.mergeReads(provider => provider.listTasks());
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    const batches = await Promise.all(this.providers.map(provider => provider.listPendingTasks(agent)));
-    return batches.flat();
+    return this.mergeReads(provider => provider.listPendingTasks(agent));
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
     for (const provider of this.providers) {
-      const task = await provider.getTaskById(taskId);
-      if (task) {
-        return task;
+      try {
+        const task = await provider.getTaskById(taskId);
+        if (task) {
+          return task;
+        }
+      } catch (reason) {
+        // Skip a failing source so it can't hide a task owned by a healthy one.
+        this.warnSourceFailure(provider.source, reason);
       }
     }
     return undefined;

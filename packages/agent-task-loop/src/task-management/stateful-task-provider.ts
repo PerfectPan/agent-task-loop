@@ -1,4 +1,4 @@
-import type { TargetAgent, TaskRecord } from '../types/task';
+import type { TargetAgent, TaskRecord, TaskStatus } from '../types/task';
 import { overlayRuntimeState, pickRuntimeState } from './runtime-state';
 import type { TaskStateStore } from './task-state-store';
 import type {
@@ -72,7 +72,12 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return (await this.inner.listPendingTasks(agent)).map(record => this.overlay(record));
+    // Filter on the OVERLAID status, not the inner provider's. A low-fidelity
+    // backend (GitHub open/closed) reports an in-flight or finished task back as
+    // 待处理 on its raw record; only after overlaying the run-time store does the
+    // true status (执行中 / 已失败 / 已完成 / …) appear. Delegating the filter to
+    // the inner provider would re-offer such a task as pending — re-claimable.
+    return (await this.listTasks()).filter(task => task.targetAgent === agent && task.status === '待处理');
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
@@ -86,7 +91,10 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
-    this.mirror(task, payload);
+    // Claiming means the task is now executing; inject the implied status so a
+    // low-fidelity backend (GitHub open/closed) doesn't report it back as 待处理
+    // and let it be re-claimed.
+    this.mirror(task, { ...payload, status: '执行中' });
     await this.inner.claimTask(task, payload);
   }
 
@@ -106,12 +114,16 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async markTaskSucceeded(task: TaskRef, payload: MarkTaskSucceededPayload): Promise<void> {
-    this.mirror(task, payload);
+    // Execution succeeded ⇒ awaiting acceptance. Mirror the SAME status the
+    // full-fidelity backend writes (Feishu sets 待验收) so a low-fidelity backend
+    // reports it back identically. The terminal 已完成 is set later, by complete
+    // via updateReviewState.
+    this.mirror(task, { ...payload, status: '待验收' });
     await this.inner.markTaskSucceeded(task, payload);
   }
 
   async markTaskFailed(task: TaskRef, payload: MarkTaskFailedPayload): Promise<void> {
-    this.mirror(task, payload);
+    this.mirror(task, { ...payload, status: '已失败' });
     await this.inner.markTaskFailed(task, payload);
   }
 
@@ -126,14 +138,28 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void> {
+    // Capture the lifecycle status BEFORE wiping transient state. Cleanup must
+    // not resurrect a finished task: on a binary backend (GitHub) a cleared
+    // store falls back to the issue's open/closed flag, which would report a
+    // 已完成 / 已失败 task back as 待处理. Feishu keeps Status across cleanup, so
+    // we mirror that — drop the heavy run-time fields, preserve just `status`.
+    let status: TaskStatus | undefined;
+    if (task.source && task.recordId) {
+      try {
+        status = this.store.read(task.source, task.recordId)?.status;
+      } catch {
+        // best-effort
+      }
+    }
     try {
       await this.inner.updateCleanupState(task, payload);
     } finally {
-      // Clear regardless of the delegate's outcome so run-time state never
-      // outlives the task; the TTL sweep is the backstop if this also fails.
       if (task.source && task.recordId) {
         try {
           this.store.clear(task.source, task.recordId);
+          if (status !== undefined) {
+            this.store.merge(task.source, task.recordId, { status });
+          }
         } catch {
           // best-effort
         }

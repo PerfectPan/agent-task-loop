@@ -82,14 +82,33 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
   }
 
   async listTasks(): Promise<TaskRecord[]> {
-    const issues = await this.api<GitHubIssue[]>(
-      'GET',
-      `/repos/${this.config.owner}/${this.config.repo}/issues?state=all&per_page=100`,
-    );
+    const issues = await this.listAllIssues();
     return issues
       .filter(issue => !issue.pull_request)
       .filter(issue => this.isManaged(issue))
       .map(issue => this.mapIssue(issue));
+  }
+
+  /**
+   * Pages through `issues?state=all` (100 per page) so a repo with more than one
+   * page of issues still surfaces every task — parity with Feishu's full list.
+   * Capped at 10 pages (1000 issues) as a runaway guard.
+   */
+  private async listAllIssues(): Promise<GitHubIssue[]> {
+    const all: GitHubIssue[] = [];
+    const PER_PAGE = 100;
+    const MAX_PAGES = 10;
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const batch = await this.api<GitHubIssue[]>(
+        'GET',
+        `/repos/${this.config.owner}/${this.config.repo}/issues?state=all&per_page=${PER_PAGE}&page=${page}`,
+      );
+      all.push(...batch);
+      if (batch.length < PER_PAGE) {
+        break;
+      }
+    }
+    return all;
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -121,8 +140,9 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
 
   async markTaskSucceeded(task: TaskRef, payload: MarkTaskSucceededPayload): Promise<void> {
     const link = payload.prLink ? `\n\nPR: ${payload.prLink}` : '';
+    // Execution succeeded ⇒ awaiting acceptance (待验收), NOT done — keep the
+    // issue open. It only closes on the terminal 已完成 transition below.
     await this.comment(task, `✅ ${payload.resultSummary}${link}`);
-    await this.setState(task, 'closed');
   }
 
   async markTaskFailed(task: TaskRef, payload: MarkTaskFailedPayload): Promise<void> {
@@ -132,6 +152,12 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
   async updateReviewState(task: TaskRef, payload: UpdateReviewStatePayload): Promise<void> {
     const findings = payload.reviewFindings ? `\n\n${payload.reviewFindings}` : '';
     await this.comment(task, `🔎 ${payload.status}${findings}`);
+    // Terminal completion closes the issue so the binary backend itself records
+    // 已完成. The run-time store may later be cleared (cleanup), yet a closed
+    // issue still maps back to 已完成 instead of resurrecting as 待处理.
+    if (payload.status === '已完成') {
+      await this.setState(task, 'closed');
+    }
   }
 
   async updatePublishResult(task: TaskRef, payload: UpdatePublishResultPayload): Promise<void> {

@@ -144,7 +144,7 @@ describe('GitHubIssuesTaskProvider', () => {
     expect(payload.labels).toEqual(['agent:codex', 'P2']);
   });
 
-  it('comments and closes the issue when a task succeeds', async () => {
+  it('comments without closing on markTaskSucceeded (待验收 — awaiting acceptance)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -153,12 +153,77 @@ describe('GitHubIssuesTaskProvider', () => {
       { resultSummary: 'shipped', prLink: 'https://github.com/rivus/idea/pull/10' },
     );
 
+    // Only a comment — the issue stays open until the terminal 已完成 transition.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain('/issues/7/comments');
+    expect((fetchMock.mock.calls[0][1] as RequestInit).method).toBe('POST');
+  });
+
+  it('comments and closes the issue when the review state reaches 已完成', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(config).updateReviewState(
+      { taskId: 'IDEA-900', recordId: '7', source: 'github' },
+      { status: '已完成' },
+    );
+
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain('/issues/7/comments');
     const patch = fetchMock.mock.calls[1];
     expect(patch[0]).toContain('/issues/7');
     expect((patch[1] as RequestInit).method).toBe('PATCH');
     expect(JSON.parse(String((patch[1] as RequestInit).body))).toEqual({ state: 'closed' });
+  });
+
+  it('does not close the issue on a non-terminal review state (待发布)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(config).updateReviewState(
+      { taskId: 'IDEA-900', recordId: '7', source: 'github' },
+      { status: '待发布' },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain('/issues/7/comments');
+  });
+
+  it('paginates listTasks across pages until a short page', async () => {
+    const fullPage = Array.from({ length: 100 }, (_, index) => ({
+      number: index + 1,
+      title: `task ${index + 1}`,
+      body: `body\n\n<!-- task-id: IDEA-${index + 1} -->`,
+      state: 'open' as const,
+      labels: [{ name: 'agent:codex' }],
+      html_url: `https://github.com/rivus/idea/issues/${index + 1}`,
+      created_at: '2026-06-01T00:00:00Z',
+      updated_at: '2026-06-01T00:00:00Z',
+    }));
+    const secondPage = [
+      {
+        number: 101,
+        title: 'last task',
+        body: 'body\n\n<!-- task-id: IDEA-101 -->',
+        state: 'open' as const,
+        labels: [{ name: 'agent:codex' }],
+        html_url: 'https://github.com/rivus/idea/issues/101',
+        created_at: '2026-06-01T00:00:00Z',
+        updated_at: '2026-06-01T00:00:00Z',
+      },
+    ];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, fullPage))
+      .mockResolvedValueOnce(jsonResponse(200, secondPage));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const tasks = await new GitHubIssuesTaskProvider(config).listTasks();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('page=1');
+    expect(fetchMock.mock.calls[1][0]).toContain('page=2');
+    expect(tasks).toHaveLength(101);
   });
 
   it('falls back to `gh auth token` when no config token / GITHUB_TOKEN', async () => {

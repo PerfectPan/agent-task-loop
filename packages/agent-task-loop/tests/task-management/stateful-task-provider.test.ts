@@ -92,15 +92,32 @@ describe('StatefulTaskProvider', () => {
     expect(inner.updateReviewState).toHaveBeenCalledTimes(1);
   });
 
-  it('injects the implied lifecycle status on claim / succeeded / failed', async () => {
+  it('injects the implied lifecycle status on claim / succeeded / failed (matching Feishu)', async () => {
     const store = new MemStore();
     const sp = new StatefulTaskProvider(fakeInner(), store);
     await sp.claimTask(ref, { claimedBy: 'me', claimedAt: 't', runId: 'r' } as never);
     expect(store.read('github:o/r', '7')).toMatchObject({ status: '执行中' });
     await sp.markTaskFailed(ref, { lastError: 'boom' } as never);
     expect(store.read('github:o/r', '7')).toMatchObject({ status: '已失败' });
+    // markTaskSucceeded means "awaiting acceptance" — Feishu writes 待验收, NOT 已完成.
     await sp.markTaskSucceeded(ref, { resultSummary: 'done' } as never);
-    expect(store.read('github:o/r', '7')).toMatchObject({ status: '已完成' });
+    expect(store.read('github:o/r', '7')).toMatchObject({ status: '待验收' });
+  });
+
+  it('updateCleanupState preserves the lifecycle status but drops transient run-time state', async () => {
+    const store = new MemStore();
+    store.merge('github:o/r', '7', {
+      status: '已完成',
+      workspacePath: '/ws/x',
+      runnerPid: 9,
+      executionSessionId: 'sess-1',
+    });
+    const inner = fakeInner();
+    const sp = new StatefulTaskProvider(inner, store);
+    await sp.updateCleanupState(ref, { progressSummary: 'cleaned' });
+    // Status survives (no resurrection to 待处理); heavy run-time fields are gone.
+    expect(store.read('github:o/r', '7')).toEqual({ status: '已完成' });
+    expect(inner.updateCleanupState).toHaveBeenCalledTimes(1);
   });
 
   it('overlays the stored status onto a github record (待处理 → 待发布)', async () => {
@@ -109,6 +126,25 @@ describe('StatefulTaskProvider', () => {
     const sp = new StatefulTaskProvider(fakeInner([record({ status: '待处理' })]), store);
     const [task] = await sp.listTasks();
     expect(task.status).toBe('待发布');
+  });
+
+  it('listPendingTasks excludes a task the store knows is in-flight (overlaid status wins)', async () => {
+    const store = new MemStore();
+    // Backend reports 待处理 (open GitHub issue), but the store knows it's executing.
+    store.merge('github:o/r', '7', { status: '执行中' });
+    const sp = new StatefulTaskProvider(fakeInner([record({ targetAgent: 'codex', status: '待处理' })]), store);
+    expect(await sp.listPendingTasks('codex')).toHaveLength(0);
+  });
+
+  it('listPendingTasks includes a genuinely pending task for the agent', async () => {
+    const store = new MemStore();
+    const sp = new StatefulTaskProvider(
+      fakeInner([record({ taskId: 'T-9', recordId: '9', targetAgent: 'codex', status: '待处理' })]),
+      store,
+    );
+    const pending = await sp.listPendingTasks('codex');
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.taskId).toBe('T-9');
   });
 
   it('createTask only delegates (nothing mirrored)', async () => {

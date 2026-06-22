@@ -1,5 +1,19 @@
 # @rivus/agent-task-loop
 
+## 0.6.0
+
+### Minor Changes
+
+- 3254593: GitHub-Issues-only task source + JSON config (RFC 0005). `feishu` is now optional — configure at least one of `feishu` / `githubIssues`. Config is JSON-only and resolved from `--config` → `AGENT_TASK_LOOP_CONFIG` → `~/.agent-task-loop/config.json` (no more per-directory `task.config.*` discovery or `.ts`/`.js` config). The GitHub token falls back to `gh auth token`. `init` lets you pick the source(s); the TUI can publish a task as a linked GitHub issue and refine the description with AI (`Ctrl+R`, requires a `claude` agent).
+
+  `githubIssues` also supports **multiple repositories** via a `repositories[]` array — each becomes its own `github:<owner>/<repo>` task source (selectable in the TUI). To avoid adopting every issue in a repo, only issues that opt in are treated as tasks: those carrying the `<!-- task-id -->` marker (created through this tool) or an `agent:<name>` label (hand-off).
+
+  The TUI shows a compact per-row source tag (repo short name) and adds a `s` source-filter popup (multi-select, with a `src:` header chip) for focusing on specific repos; the `/` text filter now also matches source/repository.
+
+  Closes #24.
+
+- 8a18edc: Provider-unaware run-time state store (RFC 0006). The loop's run-time state — session ids, runner pid/heartbeat, workspace path, review/acceptance rounds, publish result, claim info — is now persisted in a local store (`~/.agent-task-loop/state/<source>/<recordId>.json`) by a `StatefulTaskProvider` decorator that wraps the provider tree. Writes mirror the run-time subset locally then delegate unchanged; reads overlay it (local authoritative for the subset, backend as fallback). Feishu writes are untouched (still authoritative, still in the Base); GitHub — and any future low-fidelity source — keeps `resume`/`watch`/TUI session preview working instead of losing run-time state. The providers never see the store. Writes are atomic and best-effort; `cleanup` clears per-task state.
+
 ## 0.5.3
 
 ### Patch Changes

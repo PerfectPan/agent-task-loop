@@ -37,6 +37,18 @@ describe('source add', () => {
     ]);
   });
 
+  it('rejects a github add missing --repo with a clear zod message (non-interactive)', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as never);
+    await expect(
+      sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', config: file } } as never),
+    ).rejects.toThrow('exit');
+    expect(err.mock.calls.map(c => String(c[0])).join('\n')).toContain('GitHub repo is required');
+    expect(exit).toHaveBeenCalledWith(1);
+  });
+
   it('adds feishu alongside github without clobbering it', async () => {
     await sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', repo: 'r', config: file } } as never);
     await sourceAddCommand.run?.({ args: { type: 'feishu', token: 'tok', table: 'tbl', config: file } } as never);

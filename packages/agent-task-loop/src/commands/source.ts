@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { defineCommand } from 'citty';
+import { z } from 'zod';
 import { globalConfigPath } from '../config/load-config';
 import { appConfigSchema } from '../config/schema';
 import {
@@ -45,8 +46,15 @@ function printSources(config: EditableConfig): void {
   }
 }
 
-function prompt(rl: readline.Interface, question: string): Promise<string> {
-  return new Promise(resolve => rl.question(question, resolve));
+/** One-shot interactive prompt: opens a readline, asks, returns the trimmed answer. */
+async function ask(question: string): Promise<string> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await new Promise<string>(resolve => rl.question(question, resolve));
+    return answer.trim();
+  } finally {
+    rl.close();
+  }
 }
 
 /** Best-effort `gh repo view` to prefill owner/repo. */
@@ -64,6 +72,34 @@ function detectRepo(): { owner: string; repo: string } | undefined {
 }
 
 const isTty = (): boolean => Boolean(process.stdin.isTTY && process.stdout.isTTY);
+
+/** A CLI flag that must resolve to a non-empty trimmed string, with a clear message. */
+const requiredFlag = (message: string) =>
+  z.preprocess(value => (typeof value === 'string' ? value : ''), z.string().trim().min(1, message));
+
+/** Validates the resolved `source add` inputs by type. Coercion, trimming and
+ *  per-type required-ness all live here instead of hand-rolled checks. */
+const addSourceSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('github'),
+    owner: requiredFlag('GitHub owner is required (--owner).'),
+    repo: requiredFlag('GitHub repo is required (--repo).'),
+    agent: z.preprocess(
+      value => (typeof value === 'string' && value.trim() ? value.trim() : 'codex'),
+      z.enum(['claude', 'codex', 'coco', 'glm']),
+    ),
+  }),
+  z.object({
+    type: z.literal('feishu'),
+    token: requiredFlag('Feishu base token is required (--token).'),
+    table: requiredFlag('Feishu table id is required (--table).'),
+  }),
+]);
+
+function failValidation(error: z.ZodError): never {
+  console.error(error.issues.map(issue => issue.message).join('\n'));
+  process.exit(1);
+}
 
 export const sourceListCommand = defineCommand({
   meta: { name: 'list', description: 'List configured task sources' },
@@ -93,58 +129,45 @@ export const sourceAddCommand = defineCommand({
     const file = resolvePath(args.config);
     const config = readConfig(file);
 
+    // Resolve the source type (flag → prompt). zod validates the rest.
     let type = typeof args.type === 'string' ? args.type.trim().toLowerCase() : '';
     if (type !== 'github' && type !== 'feishu') {
       if (!isTty()) {
         console.error('Specify --type github|feishu.');
         process.exit(1);
       }
-      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-      type = (await prompt(rl, 'Source type? [g]ithub / [f]eishu: ')).trim().toLowerCase();
-      rl.close();
-      type = type === 'f' || type === 'feishu' ? 'feishu' : 'github';
+      const answer = (await ask('Source type? [g]ithub / [f]eishu: ')).trim().toLowerCase();
+      type = answer === 'f' || answer === 'feishu' ? 'feishu' : 'github';
     }
 
-    let next: EditableConfig;
+    // Gather raw inputs, prompting (TTY only) for anything a flag didn't supply.
+    const raw: Record<string, unknown> = { type, agent: args.agent };
     if (type === 'github') {
-      let owner = typeof args.owner === 'string' ? args.owner.trim() : '';
-      let repo = typeof args.repo === 'string' ? args.repo.trim() : '';
-      const defaultAgent = typeof args.agent === 'string' && args.agent.trim() ? args.agent.trim() : 'codex';
-      if (!owner || !repo) {
-        if (!isTty()) {
-          console.error('GitHub source needs --owner and --repo.');
-          process.exit(1);
-        }
+      raw.owner = args.owner;
+      raw.repo = args.repo;
+      if ((!raw.owner || !raw.repo) && isTty()) {
         const detected = detectRepo();
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        owner = owner || (await prompt(rl, `GitHub owner${detected ? ` [${detected.owner}]` : ''}: `)).trim() || detected?.owner || '';
-        repo = repo || (await prompt(rl, `GitHub repo${detected ? ` [${detected.repo}]` : ''}: `)).trim() || detected?.repo || '';
-        rl.close();
+        raw.owner = raw.owner || (await ask(`GitHub owner${detected ? ` [${detected.owner}]` : ''}: `)) || detected?.owner;
+        raw.repo = raw.repo || (await ask(`GitHub repo${detected ? ` [${detected.repo}]` : ''}: `)) || detected?.repo;
       }
-      if (!owner || !repo) {
-        console.error('GitHub owner and repo are required.');
-        process.exit(1);
-      }
-      next = addGitHubRepo(config, { owner, repo, defaultAgent });
     } else {
-      let baseToken = typeof args.token === 'string' ? args.token.trim() : '';
-      let tableId = typeof args.table === 'string' ? args.table.trim() : '';
-      if (!baseToken || !tableId) {
-        if (!isTty()) {
-          console.error('Feishu source needs --token and --table.');
-          process.exit(1);
-        }
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        baseToken = baseToken || (await prompt(rl, 'Feishu base token: ')).trim();
-        tableId = tableId || (await prompt(rl, 'Feishu table id: ')).trim();
-        rl.close();
+      raw.token = args.token;
+      raw.table = args.table;
+      if ((!raw.token || !raw.table) && isTty()) {
+        raw.token = raw.token || (await ask('Feishu base token: '));
+        raw.table = raw.table || (await ask('Feishu table id: '));
       }
-      if (!baseToken || !tableId) {
-        console.error('Feishu base token and table id are required.');
-        process.exit(1);
-      }
-      next = addFeishuSource(config, { baseToken, tableId });
     }
+
+    const parsed = addSourceSchema.safeParse(raw);
+    if (!parsed.success) {
+      failValidation(parsed.error);
+    }
+
+    const next =
+      parsed.data.type === 'github'
+        ? addGitHubRepo(config, { owner: parsed.data.owner, repo: parsed.data.repo, defaultAgent: parsed.data.agent })
+        : addFeishuSource(config, { baseToken: parsed.data.token, tableId: parsed.data.table });
 
     writeConfig(file, next);
     console.log(`Updated ${file}`);

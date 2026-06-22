@@ -35,7 +35,46 @@ function fakeProvider(source: string, tasks: TaskRecord[]): SourceProvider {
   };
 }
 
+function failingProvider(source: string, message: string): SourceProvider {
+  const provider = fakeProvider(source, []);
+  const error = new Error(message);
+  provider.listTasks = vi.fn().mockRejectedValue(error);
+  provider.listPendingTasks = vi.fn().mockRejectedValue(error);
+  provider.getTaskById = vi.fn().mockRejectedValue(error);
+  return provider;
+}
+
 describe('CompositeTaskProvider', () => {
+  it('tolerates a failing source on listTasks — returns healthy sources and warns', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const feishu = failingProvider('feishu', 'missing required scope: base:record:read');
+    const github = fakeProvider('github', [record('GH-7', 'github')]);
+    const composite = new CompositeTaskProvider([feishu, github]);
+
+    const tasks = await composite.listTasks();
+    expect(tasks.map(task => task.taskId)).toEqual(['GH-7']); // not blanked by feishu's failure
+    const warned = warn.mock.calls.map(call => String(call[0])).join('\n');
+    expect(warned).toContain('feishu');
+    expect(warned).toContain('base:record:read');
+    warn.mockRestore();
+  });
+
+  it('tolerates a failing source on listPendingTasks', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const feishu = failingProvider('feishu', 'boom');
+    const github = fakeProvider('github', [record('GH-7', 'github')]);
+    const composite = new CompositeTaskProvider([feishu, github]);
+    expect((await composite.listPendingTasks('codex')).map(t => t.taskId)).toEqual(['GH-7']);
+  });
+
+  it('getTaskById skips a failing source and finds the task in a healthy one', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const feishu = failingProvider('feishu', 'boom'); // listed first (default), throws
+    const github = fakeProvider('github', [record('GH-7', 'github')]);
+    const composite = new CompositeTaskProvider([feishu, github]);
+    expect((await composite.getTaskById('GH-7'))?.source).toBe('github');
+  });
+
   it('merges reads from every source', async () => {
     const feishu = fakeProvider('feishu', [record('IDEA-1', 'feishu')]);
     const github = fakeProvider('github', [record('GH-7', 'github')]);

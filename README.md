@@ -57,3 +57,4 @@ npx agent-task-loop watch --task TASK-101
 npx agent-task-loop resume --task TASK-101
 npx agent-task-loop complete --task TASK-101
 ```
+managed by agent-task-loop

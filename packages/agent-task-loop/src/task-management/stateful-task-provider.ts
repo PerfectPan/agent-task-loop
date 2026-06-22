@@ -126,12 +126,17 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void> {
-    await this.inner.updateCleanupState(task, payload);
-    if (task.source && task.recordId) {
-      try {
-        this.store.clear(task.source, task.recordId);
-      } catch {
-        // best-effort
+    try {
+      await this.inner.updateCleanupState(task, payload);
+    } finally {
+      // Clear regardless of the delegate's outcome so run-time state never
+      // outlives the task; the TTL sweep is the backstop if this also fails.
+      if (task.source && task.recordId) {
+        try {
+          this.store.clear(task.source, task.recordId);
+        } catch {
+          // best-effort
+        }
       }
     }
   }

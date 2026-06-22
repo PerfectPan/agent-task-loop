@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync, existsSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FileTaskStateStore } from '../../src/task-management/task-state-store';
+import { FileTaskStateStore, stateFilePath } from '../../src/task-management/task-state-store';
 
 let dir: string;
 let store: FileTaskStateStore;
@@ -38,6 +38,14 @@ describe('FileTaskStateStore', () => {
     expect(readdirSync(dir).every(name => !name.includes(':') && !name.includes('/'))).toBe(true);
   });
 
+  it('does not collide sources that naive sanitize would merge', () => {
+    // Both would map to "github_a_b_c" under a lossy `_`-replacement scheme.
+    store.merge('github:a_b/c', '1', { runId: 'x' });
+    store.merge('github:a/b_c', '1', { runId: 'y' });
+    expect(store.read('github:a_b/c', '1')).toEqual({ runId: 'x' });
+    expect(store.read('github:a/b_c', '1')).toEqual({ runId: 'y' });
+  });
+
   it('clear removes the entry', () => {
     store.merge('github:o/r', '7', { runId: 'a' });
     store.clear('github:o/r', '7');
@@ -48,7 +56,7 @@ describe('FileTaskStateStore', () => {
     store.merge('github:o/r', '7', { runId: 'a' });
     expect(store.read('github:o/r', '7')).toEqual({ runId: 'a' });
     // Simulate another process overwriting the file with a newer mtime.
-    const file = join(dir, 'github_o_r', '7.json');
+    const file = stateFilePath(dir, 'github:o/r', '7');
     writeFileSync(file, JSON.stringify({ runId: 'b' }), 'utf8');
     const future = new Date(Date.now() + 5000);
     utimesSync(file, future, future);
@@ -57,13 +65,13 @@ describe('FileTaskStateStore', () => {
 
   it('degrades to undefined on a corrupt file (best-effort)', () => {
     store.merge('github:o/r', '7', { runId: 'a' });
-    writeFileSync(join(dir, 'github_o_r', '7.json'), '{ not json', 'utf8');
+    writeFileSync(stateFilePath(dir, 'github:o/r', '7'), '{ not json', 'utf8');
     expect(store.read('github:o/r', '7')).toBeUndefined();
   });
 
   it('prune removes files older than maxAgeMs', () => {
     store.merge('github:o/r', '7', { runId: 'a' });
-    const file = join(dir, 'github_o_r', '7.json');
+    const file = stateFilePath(dir, 'github:o/r', '7');
     const old = new Date(Date.now() - 40 * 24 * 3600 * 1000);
     utimesSync(file, old, old);
     store.prune(30 * 24 * 3600 * 1000);
@@ -73,7 +81,7 @@ describe('FileTaskStateStore', () => {
 
   it('writes valid JSON on disk', () => {
     store.merge('github:o/r', '7', { runId: 'a', runnerPid: 1 });
-    const raw = readFileSync(join(dir, 'github_o_r', '7.json'), 'utf8');
+    const raw = readFileSync(stateFilePath(dir, 'github:o/r', '7'), 'utf8');
     expect(JSON.parse(raw)).toEqual({ runId: 'a', runnerPid: 1 });
   });
 });

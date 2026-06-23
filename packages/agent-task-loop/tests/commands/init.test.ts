@@ -86,8 +86,11 @@ describe('createGlobalConfig', () => {
     const written = JSON.parse(readFileSync(globalConfigPath(), 'utf8'));
     expect(written.feishu).toBeUndefined();
     expect(written.githubIssues).toEqual({ owner: 'o', repo: 'r', defaultAgent: 'codex' });
-    expect(written.projects).toEqual({});
-    expect(written.repositories).toEqual({});
+    // The matching project/repository entries are scaffolded (keyed repo / owner/repo)
+    // so the GitHub-only config is runnable once the CHANGE_ME paths are filled in.
+    expect(written.projects.r).toMatchObject({ key: 'r', defaultRepository: 'o/r' });
+    expect(written.repositories['o/r']).toMatchObject({ key: 'o/r', workspaceStrategy: 'worktree' });
+    expect(written.repositories['o/r'].localPath).toContain('CHANGE_ME');
   });
 
   it('returns "exists" and does not overwrite when config already exists', async () => {

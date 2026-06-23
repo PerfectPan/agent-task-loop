@@ -59,10 +59,15 @@ function mergeProcessSummaryDescription(existingDescription: string | undefined,
   return `${existing}\n\n${nextSection}`;
 }
 
-function assertDescriptionContainsProcessSummary(description: string | undefined, generatedBody: string): void {
-  const trimmedGeneratedBody = generatedBody.trim();
-  if (!description?.includes(trimmedGeneratedBody)) {
-    throw new Error('pull request description update did not persist generated process summary');
+function warnIfProcessSummaryMissing(description: string | undefined, generatedBody: string): void {
+  // The pull request already exists and was updated by this point — a missing
+  // process-summary section is cosmetic and must NOT wedge the task (leaving a
+  // dangling open PR with the task stuck pre-已完成). Warn and continue.
+  if (!description?.includes(generatedBody.trim())) {
+    console.warn(
+      '[agent-task-loop] pull request description may not include the generated process summary; ' +
+        'the PR was created/updated regardless.',
+    );
   }
 }
 
@@ -112,6 +117,14 @@ export class CompleteService {
     const { repository } = resolveTaskExecutionContext(this.deps.config, task);
 
     let context = await this.deps.publishContextService.load(task.workspacePath);
+    if (context.branch === repository.defaultBranch) {
+      // Same guard AutoPublishService has: never push/PR the default branch into
+      // itself (happens with workspaceStrategy 'existing-repo' on the base branch).
+      throw new Error(
+        `Task ${task.taskId} workspace is on the default branch (${repository.defaultBranch}); ` +
+          `refusing to open a pull request from it into itself.`,
+      );
+    }
     let sessionHistory = task.sessionHistory;
 
     if (context.isDirty) {
@@ -225,7 +238,7 @@ export class CompleteService {
     const updatedDescription =
       updatedPullRequest.description ??
       (await this.deps.pullRequestService.getPullRequest({ number: pullRequest.number })).description;
-    assertDescriptionContainsProcessSummary(updatedDescription, generatedPullRequest.body);
+    warnIfProcessSummaryMissing(updatedDescription, generatedPullRequest.body);
 
     const publishedAt = new Date().toISOString();
     await this.deps.taskService.updatePublishResult(task, {

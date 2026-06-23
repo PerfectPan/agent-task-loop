@@ -297,4 +297,60 @@ describe('CompleteService', () => {
       expect.objectContaining({ status: '已完成' }),
     );
   });
+
+  it('refuses to publish when the workspace is on the default branch', async () => {
+    const { service, taskService } = createService({
+      task: { taskId: 'TASK-308' },
+      publishContextService: {
+        load: vi.fn().mockResolvedValue({
+          branch: 'main', // == repository.defaultBranch
+          headCommit: 'abc123',
+          isDirty: false,
+          diffStat: '',
+          diff: '',
+          status: '',
+          workspacePath: '/tmp/worktree',
+        }),
+      },
+    });
+
+    await expect(service.complete({ taskId: 'TASK-308' })).rejects.toThrow(/default branch/);
+    expect(taskService.updateReviewState).not.toHaveBeenCalled();
+  });
+
+  it('still marks 已完成 when the PR body does not echo the process summary (PR already created)', async () => {
+    const { service, taskService } = createService({
+      task: { taskId: 'TASK-309' },
+      pullRequestService: {
+        findOpenPullRequestByBranch: vi.fn().mockResolvedValue(undefined),
+        createReadyPullRequest: vi.fn().mockResolvedValue({
+          number: 20,
+          url: 'https://github.com/acme/demo/pull/20',
+          description: 'body',
+        }),
+        getPullRequest: vi.fn(),
+        // PR update succeeds but returns a body that lacks the generated summary.
+        updatePullRequest: vi.fn().mockResolvedValue({
+          number: 20,
+          url: 'https://github.com/acme/demo/pull/20',
+          description: 'something the server normalized',
+        }),
+      },
+      generatePullRequestContent: vi.fn().mockResolvedValue({
+        title: 'fix: x',
+        body: 'unique-summary-xyz',
+        sessionId: 'p',
+        sessionName: 's',
+      }),
+    });
+
+    // Must NOT wedge — the PR exists, so the task completes.
+    await expect(service.complete({ taskId: 'TASK-309' })).resolves.toMatchObject({
+      pullRequestUrl: 'https://github.com/acme/demo/pull/20',
+    });
+    expect(taskService.updateReviewState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: '已完成' }),
+    );
+  });
 });

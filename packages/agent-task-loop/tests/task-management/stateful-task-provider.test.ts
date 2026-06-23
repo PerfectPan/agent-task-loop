@@ -104,19 +104,30 @@ describe('StatefulTaskProvider', () => {
     expect(store.read('github:o/r', '7')).toMatchObject({ status: '待验收' });
   });
 
-  it('updateCleanupState preserves the lifecycle status but drops transient run-time state', async () => {
+  it('updateCleanupState keeps status / prLink / session history and never resurrects to 待处理', async () => {
     const store = new MemStore();
     store.merge('github:o/r', '7', {
       status: '已完成',
+      prLink: 'https://github.com/o/r/pull/74',
+      sessionHistory: 'round=1 execute',
+      executionSessionId: 'sess-1',
+      publishBranch: 'task/x',
       workspacePath: '/ws/x',
       runnerPid: 9,
-      executionSessionId: 'sess-1',
     });
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
     await sp.updateCleanupState(ref, { progressSummary: 'cleaned' });
-    // Status survives (no resurrection to 待处理); heavy run-time fields are gone.
-    expect(store.read('github:o/r', '7')).toEqual({ status: '已完成' });
+    const state = store.read('github:o/r', '7')!;
+    // Durable outcome survives cleanup — no resurrection, PR + transcript stay visible.
+    expect(state.status).toBe('已完成');
+    expect(state.prLink).toBe('https://github.com/o/r/pull/74');
+    expect(state.sessionHistory).toBe('round=1 execute');
+    expect(state.executionSessionId).toBe('sess-1');
+    expect(state.publishBranch).toBe('task/x');
+    // Transient run-time fields are cleared.
+    expect(state.workspacePath).toBe('');
+    expect(state.runnerPid).toBeNull();
     expect(inner.updateCleanupState).toHaveBeenCalledTimes(1);
   });
 
@@ -156,13 +167,16 @@ describe('StatefulTaskProvider', () => {
     expect(inner.createTask).toHaveBeenCalledTimes(1);
   });
 
-  it('updateCleanupState clears local state and delegates', async () => {
+  it('updateCleanupState clears transient run-time state but keeps session ids and delegates', async () => {
     const store = new MemStore();
-    store.merge('github:o/r', '7', { runnerPid: 9, executionSessionId: 'sess-1' });
+    store.merge('github:o/r', '7', { runnerPid: 9, executionSessionId: 'sess-1', workspacePath: '/ws/x' });
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
     await sp.updateCleanupState(ref, { progressSummary: 'cleaned' });
-    expect(store.read('github:o/r', '7')).toBeUndefined();
+    const state = store.read('github:o/r', '7')!;
+    expect(state.executionSessionId).toBe('sess-1'); // session id kept → transcript stays findable
+    expect(state.workspacePath).toBe('');            // transient wiped
+    expect(state.runnerPid).toBeNull();
     expect(inner.updateCleanupState).toHaveBeenCalledTimes(1);
   });
 

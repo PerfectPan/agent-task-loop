@@ -33,4 +33,22 @@ describe('GitPublishService', () => {
 
     expect(exec).toHaveBeenCalledTimes(1);
   });
+
+  it('turns a non-fast-forward push rejection into actionable guidance', async () => {
+    const exec = vi.fn().mockRejectedValue(new Error('! [rejected] task/x -> task/x (non-fast-forward)\nUpdates were rejected'));
+    const service = new GitPublishService(exec as never);
+
+    await expect(service.pushBranch({ workspacePath: '/tmp/worktree', branch: 'task/x' })).rejects.toThrow(
+      /diverged.*git push origin --delete task\/x/s,
+    );
+  });
+
+  it('rethrows an unrelated push failure unchanged', async () => {
+    const exec = vi.fn().mockRejectedValue(new Error('fatal: could not read from remote'));
+    const service = new GitPublishService(exec as never);
+
+    await expect(service.pushBranch({ workspacePath: '/tmp/worktree', branch: 'task/x' })).rejects.toThrow(
+      /could not read from remote/,
+    );
+  });
 });

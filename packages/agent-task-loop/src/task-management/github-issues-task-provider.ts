@@ -105,9 +105,15 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
       );
       all.push(...batch);
       if (batch.length < PER_PAGE) {
-        break;
+        return all;
       }
     }
+    // Hit the page cap with a still-full last page — there are more issues than
+    // we read. Warn instead of silently truncating the task list.
+    console.warn(
+      `[agent-task-loop] ${this.config.owner}/${this.config.repo} has more than ${PER_PAGE * MAX_PAGES} issues; ` +
+        `only the first ${PER_PAGE * MAX_PAGES} were read — some tasks may be missing.`,
+    );
     return all;
   }
 
@@ -166,9 +172,21 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     }
   }
 
+  async updateTaskAssignment(task: TaskRef, payload: UpdateTaskAssignmentPayload): Promise<void> {
+    // The agent lives in the issue's `agent:<name>` label (mapIssue derives
+    // targetAgent from it), so a reassignment must rewrite that label — otherwise
+    // a re-read re-derives the old agent and listPendingTasks keeps offering the
+    // task to the wrong agent.
+    const number = this.issueNumber(task);
+    const issue = await this.api<GitHubIssue>('GET', `/repos/${this.config.owner}/${this.config.repo}/issues/${number}`);
+    const kept = labelNames(issue.labels).filter(name => !AGENT_LABEL.test(name));
+    await this.api('PATCH', `/repos/${this.config.owner}/${this.config.repo}/issues/${number}`, {
+      labels: [...kept, `agent:${payload.targetAgent}`],
+    });
+  }
+
   // No issue-tracker analogue — the loop owns these in its own backend.
   async updateRunnerState(_task: TaskRef, _payload: UpdateRunnerStatePayload): Promise<void> {}
-  async updateTaskAssignment(_task: TaskRef, _payload: UpdateTaskAssignmentPayload): Promise<void> {}
   async updateCleanupState(_task: TaskRef, _payload: UpdateCleanupStatePayload): Promise<void> {}
 
   private async comment(task: TaskRef, body: string): Promise<void> {
@@ -208,7 +226,10 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
       targetAgent: agent && TARGET_AGENTS.includes(agent) ? agent : this.config.defaultAgent,
       priority: priorityLabel ? Number(priorityLabel) : 3,
       status,
-      prLink: issue.html_url,
+      // NB: do NOT use the issue URL as prLink. prLink means "the pull request",
+      // and a non-empty prLink makes DeliveryCheckService treat the task as
+      // already published. The real PR link is written to the run-time store by
+      // complete/markTaskSucceeded and overlaid back on reads.
       createdAt: issue.created_at,
       updatedAt: issue.updated_at,
     };

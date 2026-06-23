@@ -28,7 +28,19 @@ export class GitPublishService {
   }
 
   async pushBranch(input: { workspacePath: string; branch: string }): Promise<void> {
-    await this.exec('git', ['-C', input.workspacePath, 'push', '-u', 'origin', input.branch]);
+    try {
+      await this.exec('git', ['-C', input.workspacePath, 'push', '-u', 'origin', input.branch]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/non-fast-forward|fetch first|\[rejected\]|stale info/i.test(message)) {
+        throw new Error(
+          `Pushing "${input.branch}" was rejected as non-fast-forward: the remote branch has diverged, ` +
+            `usually a leftover branch from a previous run of this task. Delete the remote branch ` +
+            `(\`git push origin --delete ${input.branch}\`) or rebase the worktree onto it, then retry.\n${message}`,
+        );
+      }
+      throw error;
+    }
   }
 
   async getRemoteBranchHead(input: { workspacePath: string; branch: string }): Promise<string | undefined> {

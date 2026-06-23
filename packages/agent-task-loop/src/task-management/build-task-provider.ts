@@ -39,5 +39,10 @@ export function buildTaskProvider(config: AppConfig): TaskProvider {
 
   // Wrap the whole tree so the loop's run-time state (session ids, runner info,
   // …) is persisted source-agnostically — see RFC 0006. Providers stay unaware.
-  return new StatefulTaskProvider(inner, new FileTaskStateStore());
+  const store = new FileTaskStateStore();
+  // Best-effort orphan sweep so the store can't grow without bound. The TTL is
+  // deliberately generous (180d) so an in-flight task is never pruned out from
+  // under the loop; completed GitHub tasks have a closed issue to fall back on.
+  store.prune(180 * 24 * 60 * 60 * 1000);
+  return new StatefulTaskProvider(inner, store);
 }

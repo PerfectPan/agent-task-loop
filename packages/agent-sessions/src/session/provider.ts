@@ -54,6 +54,15 @@ export class FsSessionProvider implements SessionProvider {
   private readonly opts: FsSessionProviderOptions;
   private readonly readFile: ReadFile;
   private indexPromise: Promise<Map<string, Session>> | null = null;
+  private indexBuiltAtMs = 0;
+
+  /**
+   * How stale the index may be before a lookup miss is allowed to rebuild it.
+   * Sessions created after the first build aren't in the cached index; rebuilding
+   * on every miss would re-walk the FS on each poll of a genuinely-absent id, so
+   * we only refresh once the index is older than this window.
+   */
+  private static readonly REFRESH_AFTER_MS = 3000;
 
   constructor(opts: FsSessionProviderOptions) {
     this.agent = opts.agent;
@@ -65,17 +74,34 @@ export class FsSessionProvider implements SessionProvider {
     return this.opts.roots.map((r) => r.path);
   }
 
-  private index(): Promise<Map<string, Session>> {
-    if (!this.indexPromise) {
-      this.indexPromise = buildFsIndex({
-        roots: this.opts.roots,
-        readdir: this.opts.readdir,
-        stat: this.opts.stat,
-        scanBudget: this.opts.scanBudget,
-        maxDepth: this.opts.maxDepth
-      });
-    }
+  private buildIndex(): Promise<Map<string, Session>> {
+    this.indexBuiltAtMs = Date.now();
+    this.indexPromise = buildFsIndex({
+      roots: this.opts.roots,
+      readdir: this.opts.readdir,
+      stat: this.opts.stat,
+      scanBudget: this.opts.scanBudget,
+      maxDepth: this.opts.maxDepth
+    });
     return this.indexPromise;
+  }
+
+  private index(): Promise<Map<string, Session>> {
+    return this.indexPromise ?? this.buildIndex();
+  }
+
+  /**
+   * Look up a session by id, rebuilding the (otherwise memoized-forever) index
+   * once on a miss if it has gone stale — so a session created after startup
+   * becomes resolvable instead of permanently reading "not found".
+   */
+  private async resolve(id: string): Promise<Session | undefined> {
+    const hit = (await this.index()).get(id);
+    if (hit) return hit;
+    if (Date.now() - this.indexBuiltAtMs > FsSessionProvider.REFRESH_AFTER_MS) {
+      return (await this.buildIndex()).get(id);
+    }
+    return undefined;
   }
 
   async list(opts: ListOptions = {}): Promise<Session[]> {
@@ -85,7 +111,7 @@ export class FsSessionProvider implements SessionProvider {
   }
 
   async getTranscript(id: string, maxLines = DEFAULT_MAX_LINES): Promise<TranscriptEntry[]> {
-    const session = (await this.index()).get(id);
+    const session = await this.resolve(id);
     if (!session?.path) return [];
     try {
       return parseTranscript(await this.readFile(session.path), maxLines);
@@ -95,7 +121,7 @@ export class FsSessionProvider implements SessionProvider {
   }
 
   async resumeCommand(id: string): Promise<string | null> {
-    const session = (await this.index()).get(id);
+    const session = await this.resolve(id);
     if (!session || !this.opts.resume) return null;
     return this.opts.resume(session);
   }

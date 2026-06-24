@@ -10,6 +10,29 @@ import {
 const empty: EditableConfig = { projects: {}, repositories: {}, agents: {} };
 const feishu = { baseToken: 'tok', tableId: 'tbl' };
 
+describe('addGitHubRepo scaffolding', () => {
+  it('scaffolds matching project/repository entries keyed for the run path', () => {
+    const cfg = addGitHubRepo(empty, { owner: 'o', repo: 'r' });
+    // mapIssue stamps project = repo name, repository = owner/repo.
+    expect(cfg.projects?.['r']).toMatchObject({ key: 'r', defaultRepository: 'o/r' });
+    expect(cfg.repositories?.['o/r']).toMatchObject({ key: 'o/r', defaultBranch: 'main', workspaceStrategy: 'worktree' });
+    // localPath/workspaceRoot are CHANGE_ME placeholders the user must replace.
+    expect((cfg.repositories?.['o/r'] as { localPath: string }).localPath).toContain('CHANGE_ME');
+    expect((cfg.projects?.['r'] as { workspaceRoot: string }).workspaceRoot).toContain('CHANGE_ME');
+  });
+
+  it('does not clobber an existing project/repository entry', () => {
+    const seeded: EditableConfig = {
+      ...empty,
+      projects: { r: { key: 'r', name: 'mine', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
+      repositories: { 'o/r': { key: 'o/r', localPath: '/real', defaultBranch: 'main', installCommand: 'x', testCommand: 'x', buildCommand: 'x', workspaceStrategy: 'worktree' } },
+    };
+    const cfg = addGitHubRepo(seeded, { owner: 'o', repo: 'r' });
+    expect((cfg.repositories?.['o/r'] as { localPath: string }).localPath).toBe('/real');
+    expect((cfg.projects?.['r'] as { name: string }).name).toBe('mine');
+  });
+});
+
 describe('listSources', () => {
   it('lists feishu first then each github repo, marking the default', () => {
     const cfg: EditableConfig = {

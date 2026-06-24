@@ -27,6 +27,49 @@ function githubId(owner: string, repo: string): string {
 }
 
 /**
+ * Sentinel embedded in scaffolded paths the user MUST replace. It is non-empty
+ * (so the config still passes schema validation) but recognizable, so
+ * `assertRuntimeConfig` can fail fast with a "fill this in" error rather than
+ * letting the loop run against a bogus path.
+ */
+export const SCAFFOLD_PLACEHOLDER = 'CHANGE_ME';
+
+/**
+ * A GitHub task maps to `project = <repo name>` and `repository = <owner>/<repo>`
+ * (see GitHubIssuesTaskProvider.mapIssue), and the run path looks those up in
+ * `config.projects` / `config.repositories`. Without matching entries every task
+ * throws "unknown project/repository". This scaffolds schema-valid entries (keyed
+ * exactly as the run path expects) so a freshly-added GitHub source is runnable
+ * once the user replaces the `CHANGE_ME` localPath / workspaceRoot placeholders.
+ * Existing entries are left intact.
+ */
+export function ensureGitHubExecutionEntries(config: EditableConfig, owner: string, repo: string): void {
+  const repositoryKey = `${owner}/${repo}`;
+  config.projects ??= {};
+  config.repositories ??= {};
+  if (!config.projects[repo]) {
+    config.projects[repo] = {
+      key: repo,
+      name: repo,
+      defaultRepository: repositoryKey,
+      workspaceRoot: `${SCAFFOLD_PLACEHOLDER}-absolute-dir-for-task-worktrees`,
+      taskTemplatePrompt: '',
+    };
+  }
+  if (!config.repositories[repositoryKey]) {
+    config.repositories[repositoryKey] = {
+      key: repositoryKey,
+      localPath: `${SCAFFOLD_PLACEHOLDER}-absolute-path-to-local-clone`,
+      defaultBranch: 'main',
+      installCommand: 'pnpm install',
+      testCommand: 'pnpm test',
+      buildCommand: 'pnpm build',
+      workspaceStrategy: 'worktree',
+    };
+  }
+}
+
+/**
  * Configured sources: feishu first (when present), then one entry per GitHub
  * repo. The default is feishu when configured, else the first GitHub repo.
  */
@@ -73,6 +116,7 @@ export function addGitHubRepo(
     if (repo.token) {
       (next.githubIssues as { token?: string }).token = repo.token;
     }
+    ensureGitHubExecutionEntries(next, repo.owner, repo.repo);
     return next;
   }
 
@@ -85,6 +129,7 @@ export function addGitHubRepo(
     { owner: repo.owner, repo: repo.repo, defaultAgent },
   ];
   next.githubIssues = buildGitHubConfig(repos, repo.token ?? gi.token, gi.defaultAgent ?? 'codex');
+  ensureGitHubExecutionEntries(next, repo.owner, repo.repo);
   return next;
 }
 

@@ -190,23 +190,29 @@ export function App({
   }, [previewMode, effRound]);
 
   // Estimate each scrollable pane's content height so scrolling can be clamped.
+  // The estimates can't perfectly match ink's rendered height (section gaps,
+  // per-entry margins), so we add slack: it's far better to allow scrolling a
+  // couple of blank rows past the end than to clamp short and hide the last
+  // lines (the bug users hit on long transcripts).
+  const SCROLL_SLACK = 3;
   const paneViewport = Math.max(1, visibleRows - 1);
   const detailLines = selected
     ? 1 +
       formatDetailFields(selected, nowMs).length +
       (selected.progressSummary ? 1 + wrappedLineCount(selected.progressSummary, Math.max(1, colWidths.detail - 4)) : 0) +
       (selected.lastError ? 1 + wrappedLineCount(selected.lastError, Math.max(1, colWidths.detail - 4)) : 0) +
-      4
+      4 +
+      SCROLL_SLACK
     : 1;
   const previewInner = Math.max(1, colWidths.preview - 4);
   const transcriptHeight = transcript.reduce((n, l) => n + wrappedLineCount(l, previewInner) + 1, 2);
   const previewLines = !preview
     ? 1
-    : previewMode === 'logs'
-      ? transcriptHeight
-      : previewMode === 'history'
-        ? preview.history.length + 1
-        : 8 + Math.min(4, preview.history.length);
+    : (previewMode === 'logs'
+        ? transcriptHeight
+        : previewMode === 'history'
+          ? preview.history.length + 1
+          : 8 + Math.min(4, preview.history.length)) + SCROLL_SLACK;
   const detailMax = maxScroll(detailLines, paneViewport);
   const previewMax = maxScroll(previewLines, paneViewport);
 

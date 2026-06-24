@@ -11,10 +11,17 @@
   "projects": {
     "demo": {
       "key": "demo",
-      "name": "Demo",
+      "name": "Demo (Feishu-sourced tasks)",
       "defaultRepository": "demo_app",
       "workspaceRoot": "/workspace/demo-worktrees",
       "deployProfile": "staging",
+      "taskTemplatePrompt": "请按仓库内 AGENTS.md 执行任务。"
+    },
+    "your-repo": {
+      "key": "your-repo",
+      "name": "Your Repo (GitHub-sourced tasks). NOTE: this key MUST equal githubIssues.repo.",
+      "defaultRepository": "your-org/your-repo",
+      "workspaceRoot": "/workspace/your-repo-worktrees",
       "taskTemplatePrompt": "请按仓库内 AGENTS.md 执行任务。"
     }
   },
@@ -27,6 +34,15 @@
       "testCommand": "pnpm test",
       "buildCommand": "pnpm build",
       "deployCommand": "pnpm deploy:small",
+      "workspaceStrategy": "worktree"
+    },
+    "your-org/your-repo": {
+      "key": "your-org/your-repo",
+      "localPath": "/workspace/your-repo",
+      "defaultBranch": "main",
+      "installCommand": "pnpm install",
+      "testCommand": "pnpm test",
+      "buildCommand": "pnpm build",
       "workspaceStrategy": "worktree"
     }
   },

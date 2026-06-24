@@ -24,12 +24,40 @@ describe('assertRuntimeConfig', () => {
     );
   });
 
-  it('passes for github-only config (no feishu)', () => {
-    const github = {
-      ...base,
+  const githubRunnable = {
+    agents: {},
+    githubIssues: { owner: 'o', repo: 'r' },
+    projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
+    repositories: { 'o/r': { key: 'o/r', localPath: '/repo', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
+  } as unknown as AppConfig;
+
+  it('passes for a github-only config with matching project/repository entries', () => {
+    expect(() => assertRuntimeConfig(githubRunnable)).not.toThrow();
+  });
+
+  it('rejects a github source with no matching project entry', () => {
+    const bad = { ...base, githubIssues: { owner: 'o', repo: 'r' } } as unknown as AppConfig;
+    expect(() => assertRuntimeConfig(bad)).toThrow(/no matching projects\["r"\]/);
+  });
+
+  it('rejects a github source whose repository.localPath is empty', () => {
+    const bad = {
+      agents: {},
       githubIssues: { owner: 'o', repo: 'r' },
+      projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
+      repositories: { 'o/r': { key: 'o/r', localPath: '', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
     } as unknown as AppConfig;
-    expect(() => assertRuntimeConfig(github)).not.toThrow();
+    expect(() => assertRuntimeConfig(bad)).toThrow(/localPath is not set/);
+  });
+
+  it('rejects a worktree github project whose workspaceRoot is empty', () => {
+    const bad = {
+      agents: {},
+      githubIssues: { owner: 'o', repo: 'r' },
+      projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '', taskTemplatePrompt: '' } },
+      repositories: { 'o/r': { key: 'o/r', localPath: '/repo', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
+    } as unknown as AppConfig;
+    expect(() => assertRuntimeConfig(bad)).toThrow(/workspaceRoot is not set/);
   });
 
   it('rejects when no task source is configured', () => {

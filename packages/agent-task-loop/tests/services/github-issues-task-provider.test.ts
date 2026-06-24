@@ -123,6 +123,58 @@ describe('GitHubIssuesTaskProvider', () => {
     expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer gh-token' });
   });
 
+  it('does NOT put the issue URL in prLink (so delivery checks are not short-circuited)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, [
+        {
+          number: 7,
+          title: 'Add dark mode',
+          body: 'do the thing\n\n<!-- task-id: IDEA-900 -->',
+          state: 'open',
+          labels: [{ name: 'agent:codex' }],
+          html_url: 'https://github.com/rivus/idea/issues/7',
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-02T00:00:00Z',
+        },
+      ]),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const [task] = await new GitHubIssuesTaskProvider(config).listTasks();
+    expect(task!.prLink).toBeUndefined();
+  });
+
+  it('updateTaskAssignment rewrites the agent:<name> label on the issue', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          number: 7,
+          title: 't',
+          body: '',
+          state: 'open',
+          labels: [{ name: 'agent:codex' }, { name: 'P3' }],
+          html_url: 'x',
+          created_at: 'x',
+          updated_at: 'x',
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(config).updateTaskAssignment(
+      { taskId: 'IDEA-900', recordId: '7', source: 'github' },
+      { targetAgent: 'claude' },
+    );
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/issues/7');
+    const patch = fetchMock.mock.calls[1];
+    expect((patch[1] as RequestInit).method).toBe('PATCH');
+    const body = JSON.parse(String((patch[1] as RequestInit).body));
+    // Old agent label dropped, P3 kept, new agent label added.
+    expect(body.labels).toEqual(['P3', 'agent:claude']);
+  });
+
   it('creates an issue with the task-id marker and agent/priority labels', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { number: 42 }));
     vi.stubGlobal('fetch', fetchMock);

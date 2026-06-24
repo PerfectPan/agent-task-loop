@@ -167,8 +167,14 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     const afterCleanup = await sp.getTaskById('IDEA-50');
     expect(afterCleanup?.status).toBe('已完成');
     expect(fake.byNumber.get(50)?.state).toBe('closed');
-    // The heavy run-time state is gone; only the lifecycle status is preserved.
-    expect(store.read(SOURCE, '50')).toEqual({ status: '已完成' });
+    // The real PR link survives cleanup (does NOT fall back to the issue URL),
+    // and the publish info / status remain readable.
+    expect(afterCleanup?.prLink).toBe('https://github.com/rivus/idea/pull/77');
+    expect(afterCleanup?.publishBranch).toBe('task/idea-50');
+    const cleaned = store.read(SOURCE, '50')!;
+    expect(cleaned.status).toBe('已完成');
+    expect(cleaned.prLink).toBe('https://github.com/rivus/idea/pull/77');
+    expect(cleaned.workspacePath).toBe(''); // transient cleared
     // And it is no longer offered as a pending task.
     expect(await sp.listPendingTasks('codex')).toHaveLength(0);
   });

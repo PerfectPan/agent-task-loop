@@ -4,6 +4,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { defineCommand } from 'citty';
 import { globalConfigPath } from '../config/load-config';
+import { ensureGitHubExecutionEntries, type EditableConfig } from '../config/source-config';
 
 export { globalConfigPath };
 
@@ -62,6 +63,9 @@ export function createGlobalConfig(inputs: GlobalConfigInputs): 'created' | 'exi
   }
   if (inputs.githubIssues) {
     config.githubIssues = inputs.githubIssues;
+    // Scaffold the matching projects/repositories entries so a GitHub-only
+    // config is runnable once localPath/workspaceRoot are filled in.
+    ensureGitHubExecutionEntries(config as EditableConfig, inputs.githubIssues.owner, inputs.githubIssues.repo);
   }
   writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
   return 'created';

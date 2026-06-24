@@ -1,5 +1,27 @@
-import type { TargetAgent, TaskRecord, TaskStatus } from '../types/task';
-import { overlayRuntimeState, pickRuntimeState } from './runtime-state';
+import type { TargetAgent, TaskRecord } from '../types/task';
+import { overlayRuntimeState, pickRuntimeState, type RuntimeTaskState } from './runtime-state';
+
+/**
+ * Run-time fields cleared on cleanup, mirroring Feishu's `updateCleanupState`.
+ * The lifecycle `status`, result summary, PR link, publish info and session
+ * history / ids are deliberately KEPT so a finished task still shows its outcome
+ * and transcript, and never resurrects to 待处理 on a binary backend (GitHub).
+ */
+const CLEANUP_CLEARED_STATE = {
+  workspacePath: '',
+  logPath: '',
+  reviewLogPath: '',
+  runnerPid: null,
+  runnerKind: '',
+  runnerAgent: '',
+  runnerRound: null,
+  lastHeartbeatAt: '',
+  lastError: '',
+  reviewVerdict: '',
+  reviewFindings: '',
+  acceptanceVerdict: '',
+  acceptanceFeedback: '',
+} as unknown as RuntimeTaskState;
 import type { TaskStateStore } from './task-state-store';
 import type {
   ClaimTaskPayload,
@@ -138,28 +160,16 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void> {
-    // Capture the lifecycle status BEFORE wiping transient state. Cleanup must
-    // not resurrect a finished task: on a binary backend (GitHub) a cleared
-    // store falls back to the issue's open/closed flag, which would report a
-    // 已完成 / 已失败 task back as 待处理. Feishu keeps Status across cleanup, so
-    // we mirror that — drop the heavy run-time fields, preserve just `status`.
-    let status: TaskStatus | undefined;
-    if (task.source && task.recordId) {
-      try {
-        status = this.store.read(task.source, task.recordId)?.status;
-      } catch {
-        // best-effort
-      }
-    }
     try {
       await this.inner.updateCleanupState(task, payload);
     } finally {
+      // Mirror Feishu's cleanup: clear the transient run-time fields but KEEP
+      // the lifecycle status, result, PR link, publish info and session history.
+      // A finished task must still show its outcome + transcript, and must never
+      // resurrect to 待处理 once the binary backend's store is touched.
       if (task.source && task.recordId) {
         try {
-          this.store.clear(task.source, task.recordId);
-          if (status !== undefined) {
-            this.store.merge(task.source, task.recordId, { status });
-          }
+          this.store.merge(task.source, task.recordId, CLEANUP_CLEARED_STATE);
         } catch {
           // best-effort
         }

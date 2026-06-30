@@ -1,0 +1,38 @@
+[agent-task-loop] runId=f49ee9e3-16a3-435f-9d16-40870f5dfa71
+[agent-task-loop] workspace=/Users/bytedance/Workspace/atl-worktrees/IDEA-200
+[agent-task-loop] logPath=/Users/bytedance/Workspace/atl-worktrees/IDEA-200/.agent-task-loop/logs/f49ee9e3-16a3-435f-9d16-40870f5dfa71.log
+I'll start by reading the current RFC and verifying the two cited facts against source.
+[claude] tool=Read
+Let me verify both findings against the actual source files.
+[claude] tool=Bash
+The previous clone is gone. Let me re-clone agent-presence to verify, and read the agent-sessions files in parallel.
+[claude] tool=Bash
+
+[claude] tool=Bash
+
+[claude] tool=Bash
+Both findings confirmed. Now applying the two fixes.
+
+Fix 2 — the version-evidence path:
+[claude] tool=Edit
+Fix 1a — reframe the item 3 "exact match" claim to surface the `CLAUDE_CONFIG_DIR` divergence and cite it:
+[claude] tool=Edit
+Fix 1b — add an explicit gap bullet so a doc-driven migration won't silently drop the `CLAUDE_CONFIG_DIR` override:
+[claude] tool=Edit
+Update Phase 2's gap-closing list to include this root semantic, for consistency:
+[claude] tool=Edit
+Now verify the diff is confined to the single RFC file and clean up the temp clone:
+[claude] tool=Bash
+Both review findings are resolved, verified against source.
+
+**Fix 1 — `CLAUDE_CONFIG_DIR` coverage semantic (was missing).** Confirmed against source: `scan-claude.ts:13-20` `defaultClaudeRoot` reads `CLAUDE_CONFIG_DIR` (falling back to `~/.claude/projects`), whereas `agent-sessions` derives `~/.claude` strictly from `homedir()` (`fs-index.ts:35-40`, `provider.ts:127-131`, no env override). I:
+- Reframed duplication-table item 3 from "**Exact** match" to "**Near**-match, not exact" and named the `CLAUDE_CONFIG_DIR` divergence with citations.
+- Added a dedicated **Gaps/Uncertainties** bullet warning that a doc-driven migration swapping roots would lose this coverage semantic.
+- Added "`CLAUDE_CONFIG_DIR`-aware Claude root" to Phase 2's gap-closing list.
+
+**Fix 2 — wrong evidence path.** Confirmed `@rivus/agent-presence` v0.6.1 sits at root `package.json:3` and no `src/package.json` exists. Corrected `src/package.json:3` → `package.json:3`.
+
+The diff remains confined to the single new RFC file (`rfcs/0008-shared-infrastructure-with-agent-presence.md`); `.agent-task-loop/` is the runner's own pre-existing untracked dir. Temp clone removed.
+[claude] completed
+
+[agent-task-loop] status=待复核

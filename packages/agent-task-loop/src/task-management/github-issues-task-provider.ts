@@ -32,6 +32,23 @@ export interface GitHubRepoTarget {
 const TASK_ID_MARKER = /<!--\s*task-id:\s*(\S+)\s*-->/;
 const AGENT_LABEL = /^agent:(claude|codex|coco|glm)$/;
 const PRIORITY_LABEL = /^P([0-9])$/;
+const GH_TOKEN_ARGS = ['auth', 'token'] as const;
+
+type GitHubAuthSource = 'config' | 'env' | 'gh' | 'anonymous';
+
+interface GitHubAuthState {
+  source: GitHubAuthSource;
+  token?: string;
+  detail?: string;
+}
+
+interface GhTokenResult {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  failed?: boolean;
+  shortMessage?: string;
+}
 
 interface GitHubLabel {
   name: string;
@@ -52,6 +69,91 @@ interface GitHubIssue {
 
 function labelNames(labels: GitHubIssue['labels']): string[] {
   return labels.map(label => (typeof label === 'string' ? label : label.name));
+}
+
+function configuredToken(value: string | undefined): string | undefined {
+  const token = value?.trim();
+  return token ? token : undefined;
+}
+
+function ghCommandCandidates(): string[] {
+  const candidates =
+    process.platform === 'win32' ?
+      ['gh', 'gh.exe']
+    : ['gh', '/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh', '/snap/bin/gh'];
+  return [...new Set(candidates)];
+}
+
+function describeGhResult(command: string, result: GhTokenResult): string {
+  const reason =
+    result.failed ?
+      `failed${typeof result.exitCode === 'number' ? ` with exit code ${result.exitCode}` : ''}`
+    : 'returned no token';
+  const detail = result.stderr?.trim() || result.shortMessage?.trim();
+  return detail ? `${command}: ${reason} (${detail})` : `${command}: ${reason}`;
+}
+
+function describeGhError(command: string, error: unknown): string {
+  const detail =
+    error instanceof Error ?
+      'shortMessage' in error && typeof error.shortMessage === 'string' ?
+        error.shortMessage
+      : error.message
+    : String(error);
+  return `${command}: ${detail}`;
+}
+
+async function resolveTokenFromGh(): Promise<GitHubAuthState> {
+  let execa: (command: string, args: readonly string[], options: { reject: false }) => Promise<GhTokenResult>;
+  try {
+    ({ execa } = await import('execa'));
+  } catch (error) {
+    return { source: 'anonymous', detail: describeGhError('import execa', error) };
+  }
+
+  const attempts: string[] = [];
+  for (const command of ghCommandCandidates()) {
+    try {
+      const result = await execa(command, GH_TOKEN_ARGS, { reject: false });
+      const token = configuredToken(result.stdout);
+      if (token) {
+        return { source: 'gh', token, detail: command };
+      }
+      attempts.push(describeGhResult(command, result));
+    } catch (error) {
+      attempts.push(describeGhError(command, error));
+    }
+  }
+  return { source: 'anonymous', detail: attempts.join('; ') };
+}
+
+function isRateLimitFailure(response: Response, detail: string): boolean {
+  if (response.status !== 403) {
+    return false;
+  }
+  const lowerDetail = detail.toLowerCase();
+  return (
+    lowerDetail.includes('api rate limit exceeded') ||
+    lowerDetail.includes('rate limit exceeded') ||
+    response.headers?.get?.('x-ratelimit-remaining') === '0'
+  );
+}
+
+function githubApiError(method: string, path: string, response: Response, detail: string, auth: GitHubAuthState): Error {
+  const base = `GitHub API ${method} ${path} failed: ${response.status} ${detail}`.trim();
+  if (!isRateLimitFailure(response, detail)) {
+    return new Error(base);
+  }
+
+  if (auth.token) {
+    return new Error(`${base}. GitHub rate limit exceeded while using an authenticated GitHub token from ${auth.source}.`);
+  }
+
+  const ghDetail = auth.detail ? ` gh auth token attempts: ${auth.detail}` : '';
+  return new Error(
+    `${base}. GitHub rate limit exceeded with no GitHub token resolved; the request was unauthenticated. ` +
+      `Set githubIssues.token or GITHUB_TOKEN, or ensure gh auth token works in this subprocess.${ghDetail}`,
+  );
 }
 
 /**
@@ -235,44 +337,42 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     };
   }
 
-  private tokenPromise?: Promise<string | undefined>;
+  private authStatePromise?: Promise<GitHubAuthState>;
 
   /**
    * Resolves the GitHub token from, in order: config, `GITHUB_TOKEN`, then the
    * `gh` CLI (`gh auth token`). The lookup is memoized as a single Promise so
-   * concurrent `api()` calls share one `gh` invocation, and degrades to no
-   * token (unauthenticated request) when `gh` is missing or errors.
+   * concurrent `api()` calls share one lookup. `gh` is tried by PATH first and
+   * then by common absolute install paths so non-interactive subprocess PATH
+   * differences do not silently force anonymous requests.
    */
-  private resolveToken(): Promise<string | undefined> {
-    if (!this.tokenPromise) {
-      this.tokenPromise = (async () => {
-        let token = this.config.token ?? process.env.GITHUB_TOKEN;
-        if (!token) {
-          try {
-            const { execa } = await import('execa');
-            const result = await execa('gh', ['auth', 'token'], { reject: false });
-            const candidate = result.stdout?.trim();
-            if (candidate) {
-              token = candidate;
-            }
-          } catch {
-            // `gh` missing or errored — fall through to an unauthenticated request.
-          }
+  private resolveAuthState(): Promise<GitHubAuthState> {
+    if (!this.authStatePromise) {
+      this.authStatePromise = (async () => {
+        const configToken = configuredToken(this.config.token);
+        if (configToken) {
+          return { source: 'config', token: configToken };
         }
-        return token;
+
+        const envToken = configuredToken(process.env.GITHUB_TOKEN);
+        if (envToken) {
+          return { source: 'env', token: envToken };
+        }
+
+        return resolveTokenFromGh();
       })();
     }
-    return this.tokenPromise;
+    return this.authStatePromise;
   }
 
   private async api<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const token = await this.resolveToken();
+    const auth = await this.resolveAuthState();
     const response = await fetch(`https://api.github.com${path}`, {
       method,
       headers: {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -280,7 +380,7 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      throw new Error(`GitHub API ${method} ${path} failed: ${response.status} ${detail}`.trim());
+      throw githubApiError(method, path, response, detail, auth);
     }
     return (response.status === 204 ? undefined : await response.json()) as T;
   }

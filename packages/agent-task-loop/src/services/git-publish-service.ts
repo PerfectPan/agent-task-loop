@@ -14,7 +14,10 @@ export class GitPublishService {
       return;
     }
 
-    await this.exec('git', ['-C', input.workspacePath, 'add', '-A']);
+    // Exclude our own runtime bookkeeping dir regardless of the target repo's
+    // .gitignore — agent-task-loop runs against arbitrary repos, and a leaked
+    // .agent-task-loop/logs/*.log embeds local absolute paths in the commit.
+    await this.exec('git', ['-C', input.workspacePath, 'add', '-A', '--', '.', ':!.agent-task-loop']);
 
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-commit-'));
     const messageFile = path.join(tempDir, 'COMMIT_EDITMSG');

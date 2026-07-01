@@ -8,3 +8,4 @@ dist/
 .tmp-bin/
 log/
 **/.workspaces/
+.agent-task-loop/

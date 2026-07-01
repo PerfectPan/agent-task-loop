@@ -17,7 +17,16 @@ export class GitPublishService {
     // Exclude our own runtime bookkeeping dir regardless of the target repo's
     // .gitignore — agent-task-loop runs against arbitrary repos, and a leaked
     // .agent-task-loop/logs/*.log embeds local absolute paths in the commit.
-    await this.exec('git', ['-C', input.workspacePath, 'add', '-A', '--', '.', ':!.agent-task-loop']);
+    //
+    // A pathspec exclusion (`-- . ':!.agent-task-loop'`) looks equivalent but
+    // git treats an explicit pathspec referencing an *already-gitignored* path
+    // as "you asked me to add an ignored path" and errors ("paths are ignored
+    // by one of your .gitignore files") — which broke `complete` outright on
+    // this very repo once its own .gitignore picked up the rule. `reset` after
+    // a plain `add -A` has no such special case: it silently no-ops on a path
+    // that was never staged (already ignored, or absent entirely).
+    await this.exec('git', ['-C', input.workspacePath, 'add', '-A']);
+    await this.exec('git', ['-C', input.workspacePath, 'reset', '--', '.agent-task-loop']);
 
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-commit-'));
     const messageFile = path.join(tempDir, 'COMMIT_EDITMSG');

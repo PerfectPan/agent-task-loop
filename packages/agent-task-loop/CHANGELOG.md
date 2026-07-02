@@ -1,5 +1,13 @@
 # @rivus/agent-task-loop
 
+## 0.9.1
+
+### Patch Changes
+
+- 0fe70cc: Add an `agent-task-loop create` command for scriptable task creation, with required flags, interactive prompting in TTYs, source selection, validation, and JSON output.
+- de36605: Fix `complete`/auto-publish failing outright with "paths are ignored by one of your .gitignore files" once a target repo's own `.gitignore` covers `.agent-task-loop/` (as this repo's now does, per the prior fix in #83). `GitPublishService.commitAll` used a pathspec exclusion (`-- . ':!.agent-task-loop'`), which git treats as an error when the excluded path is _already_ gitignored. Switched to `git add -A` followed by `git reset -- .agent-task-loop`, which is a no-op whether the path was ignored, untracked, or absent — and still keeps the directory out of the commit either way.
+- 68e39c6: Fix `complete`/auto-publish committing agent-task-loop's own `.agent-task-loop/` runtime bookkeeping directory (session logs) into the task's commit. `GitPublishService.commitAll` used `git add -A`, which only skips a path when the _target_ repo's own `.gitignore` covers it — since agent-task-loop runs against arbitrary repos, a repo without that rule got its run logs (which embed local absolute paths) committed and pushed. `commitAll` now excludes `.agent-task-loop/` via an explicit pathspec regardless of the target repo's `.gitignore`.
+
 ## 0.9.0
 
 ### Minor Changes

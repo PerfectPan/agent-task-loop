@@ -5,13 +5,30 @@ import { loadConfig } from '../config/load-config';
 import { listSources } from '../config/source-config';
 import { TaskService } from '../services/task-service';
 import type { CreateTaskPayload } from '../task-management/task-provider';
-import { TARGET_AGENTS, type TargetAgent } from '../types/task';
+import { TARGET_AGENTS } from '../types/task';
 import { printCommandOutput } from './command-output';
 
 const agentSchema = z.enum(TARGET_AGENTS);
 // `z.coerce.number()` alone turns "" into 0 (`Number("")` is 0) rather than
 // failing; requiring a non-empty string first closes that gap.
 const prioritySchema = z.string().min(1).pipe(z.coerce.number().int().min(0).max(9));
+
+// Normalizes one raw CLI/prompt value into a trimmed, non-empty string (or
+// undefined) — the shape every field starts from before shape validation.
+const argSchema = z.preprocess(value => {
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}, z.string().optional());
+
+function parseArg(value: unknown): string | undefined {
+  return argSchema.parse(value);
+}
 
 interface CreateInputs {
   taskId?: string;
@@ -23,37 +40,48 @@ interface CreateInputs {
   source?: string;
 }
 
-type RequiredInput = 'taskId' | 'title' | 'project' | 'agent' | 'priority';
+type RequiredKey = 'taskId' | 'title' | 'project' | 'agent' | 'priority';
 
-const REQUIRED_INPUTS: Array<{ key: RequiredInput; flag: string; question: string }> = [
-  { key: 'taskId', flag: '--task', question: 'Task ID: ' },
-  { key: 'title', flag: '--title', question: 'Title: ' },
-  { key: 'project', flag: '--project', question: 'Project: ' },
-  { key: 'agent', flag: '--agent', question: `Agent (${TARGET_AGENTS.join('/')}): ` },
-  { key: 'priority', flag: '--priority', question: 'Priority (0-9): ' },
-];
+const FLAG_BY_KEY: Record<RequiredKey, string> = {
+  taskId: '--task',
+  title: '--title',
+  project: '--project',
+  agent: '--agent',
+  priority: '--priority',
+};
+
+const QUESTION_BY_KEY: Record<RequiredKey, string> = {
+  taskId: 'Task ID: ',
+  title: 'Title: ',
+  project: 'Project: ',
+  agent: `Agent (${TARGET_AGENTS.join('/')}): `,
+  priority: 'Priority (0-9): ',
+};
+
+// Presence-only shape (every required field just needs to be *some* string).
+// Used solely to find which fields still need collecting before the fuller
+// createInputsSchema below can run — interactive prompting needs that
+// incrementally, one field at a time, not as a single pass/fail result.
+const presenceSchema = z.object({
+  taskId: z.string(),
+  title: z.string(),
+  project: z.string(),
+  agent: z.string(),
+  priority: z.string(),
+});
+
+function missingKeys(inputs: CreateInputs): RequiredKey[] {
+  const result = presenceSchema.safeParse(inputs);
+  if (result.success) {
+    return [];
+  }
+  return result.error.issues
+    .filter(issue => issue.code === 'invalid_type' && issue.path.length === 1)
+    .map(issue => issue.path[0] as RequiredKey);
+}
 
 function isTty(): boolean {
   return Boolean(process.stdin.isTTY);
-}
-
-function stringArg(value: unknown): string | undefined {
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function optionalStringArg(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function fail(message: string): never {
@@ -61,29 +89,25 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function missingRequired(inputs: CreateInputs): typeof REQUIRED_INPUTS {
-  return REQUIRED_INPUTS.filter(input => !inputs[input.key]);
-}
-
 function question(rl: readline.Interface, prompt: string): Promise<string> {
   return new Promise(resolve => rl.question(prompt, resolve));
 }
 
 async function promptForMissing(inputs: CreateInputs): Promise<CreateInputs> {
-  const missing = missingRequired(inputs);
+  const missing = missingKeys(inputs);
   if (missing.length === 0) {
     return inputs;
   }
 
   if (!isTty()) {
-    fail(`Missing required flag(s): ${missing.map(input => input.flag).join(', ')}`);
+    fail(`Missing required flag(s): ${missing.map(key => FLAG_BY_KEY[key]).join(', ')}`);
   }
 
   const next = { ...inputs };
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-    for (const input of missing) {
-      next[input.key] = (await question(rl, input.question)).trim();
+    for (const key of missing) {
+      next[key] = parseArg(await question(rl, QUESTION_BY_KEY[key]));
     }
   } finally {
     rl.close();
@@ -91,28 +115,33 @@ async function promptForMissing(inputs: CreateInputs): Promise<CreateInputs> {
   return next;
 }
 
-function parseAgent(agent: string): TargetAgent {
-  const result = agentSchema.safeParse(agent);
-  if (result.success) {
-    return result.data;
+const createInputsSchema = z.object({
+  taskId: z.string(),
+  title: z.string(),
+  project: z.string(),
+  agent: agentSchema,
+  priority: prioritySchema,
+  description: z.string().optional(),
+  source: z.string().optional(),
+});
+
+type ValidatedInputs = z.infer<typeof createInputsSchema>;
+
+function formatIssue(issue: z.ZodIssue): string {
+  const key = issue.path[0];
+  const flag = typeof key === 'string' && key in FLAG_BY_KEY ? FLAG_BY_KEY[key as RequiredKey] : `--${String(key)}`;
+  if (issue.code === 'invalid_type' && issue.received === 'undefined') {
+    return `Missing required flag: ${flag}`;
   }
-  fail(`Invalid --agent "${agent}" (expected claude, codex, coco, or glm).`);
+  return `Invalid ${flag}: ${issue.message}`;
 }
 
-function parsePriority(priority: string): number {
-  const result = prioritySchema.safeParse(priority);
-  if (result.success) {
-    return result.data;
+function validateInputs(inputs: CreateInputs): ValidatedInputs {
+  const result = createInputsSchema.safeParse(inputs);
+  if (!result.success) {
+    fail(result.error.issues.map(formatIssue).join('; '));
   }
-  fail(`Invalid --priority "${priority}" (expected an integer from 0 to 9).`);
-}
-
-function validateRequired(inputs: CreateInputs): Required<CreateInputs> {
-  const missing = missingRequired(inputs);
-  if (missing.length > 0) {
-    fail(`Missing required flag(s): ${missing.map(input => input.flag).join(', ')}`);
-  }
-  return inputs as Required<CreateInputs>;
+  return result.data;
 }
 
 function expectedSourcesMessage(sources: readonly string[]): string {
@@ -182,17 +211,15 @@ export const createCommand = defineCommand({
   },
   async run({ args }) {
     const prompted = await promptForMissing({
-      taskId: stringArg(args.task),
-      title: stringArg(args.title),
-      project: stringArg(args.project),
-      agent: stringArg(args.agent),
-      priority: stringArg(args.priority),
-      description: optionalStringArg(args.description),
-      source: optionalStringArg(args.source),
+      taskId: parseArg(args.task),
+      title: parseArg(args.title),
+      project: parseArg(args.project),
+      agent: parseArg(args.agent),
+      priority: parseArg(args.priority),
+      description: parseArg(args.description),
+      source: parseArg(args.source),
     });
-    const inputs = validateRequired(prompted);
-    const targetAgent = parseAgent(inputs.agent);
-    const priority = parsePriority(inputs.priority);
+    const inputs = validateInputs(prompted);
 
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
     const sourceSummaries = listSources(config);
@@ -204,8 +231,8 @@ export const createCommand = defineCommand({
       taskId: inputs.taskId,
       title: inputs.title,
       project: inputs.project,
-      targetAgent,
-      priority,
+      targetAgent: inputs.agent,
+      priority: inputs.priority,
       ...(inputs.description ? { description: inputs.description } : {}),
       ...(source.payloadSource ? { source: source.payloadSource } : {}),
     };

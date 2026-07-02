@@ -105,7 +105,7 @@ describe('createCommand', () => {
     ).rejects.toThrow('exit');
 
     expect(err.mock.calls.map(call => String(call[0])).join('\n')).toContain(
-      'Invalid --agent "bard" (expected claude, codex, coco, or glm).',
+      'Invalid --agent: Invalid enum value',
     );
     expect(createTaskSpy).not.toHaveBeenCalled();
   });
@@ -128,7 +128,7 @@ describe('createCommand', () => {
     ).rejects.toThrow('exit');
 
     expect(err.mock.calls.map(call => String(call[0])).join('\n')).toContain(
-      'Invalid --priority "10" (expected an integer from 0 to 9).',
+      'Invalid --priority: Number must be less than or equal to 9',
     );
     expect(createTaskSpy).not.toHaveBeenCalled();
   });

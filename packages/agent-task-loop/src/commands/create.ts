@@ -1,11 +1,17 @@
 import readline from 'node:readline';
 import { defineCommand } from 'citty';
+import { z } from 'zod';
 import { loadConfig } from '../config/load-config';
 import { listSources } from '../config/source-config';
 import { TaskService } from '../services/task-service';
 import type { CreateTaskPayload } from '../task-management/task-provider';
 import { TARGET_AGENTS, type TargetAgent } from '../types/task';
 import { printCommandOutput } from './command-output';
+
+const agentSchema = z.enum(TARGET_AGENTS);
+// `z.coerce.number()` alone turns "" into 0 (`Number("")` is 0) rather than
+// failing; requiring a non-empty string first closes that gap.
+const prioritySchema = z.string().min(1).pipe(z.coerce.number().int().min(0).max(9));
 
 interface CreateInputs {
   taskId?: string;
@@ -86,15 +92,17 @@ async function promptForMissing(inputs: CreateInputs): Promise<CreateInputs> {
 }
 
 function parseAgent(agent: string): TargetAgent {
-  if (TARGET_AGENTS.includes(agent as TargetAgent)) {
-    return agent as TargetAgent;
+  const result = agentSchema.safeParse(agent);
+  if (result.success) {
+    return result.data;
   }
   fail(`Invalid --agent "${agent}" (expected claude, codex, coco, or glm).`);
 }
 
 function parsePriority(priority: string): number {
-  if (/^[0-9]$/.test(priority)) {
-    return Number(priority);
+  const result = prioritySchema.safeParse(priority);
+  if (result.success) {
+    return result.data;
   }
   fail(`Invalid --priority "${priority}" (expected an integer from 0 to 9).`);
 }

@@ -4,6 +4,13 @@ Agent Task Loop is a local CLI for running AI coding agent task delivery workflo
 
 It connects your task trackers (a Feishu Base table today, GitHub Issues optionally) to local coding agents, then drives a task through execution, review, rework, branch publishing, and Pull Request handoff. Tasks stay owned by their source — the CLI and TUI are an integration layer, not a system of record — so writes route back to the backend each task came from.
 
+The package also exports a Rivus Task Manager Plugin at
+`@rivus/agent-task-loop/rivus-plugin`. It provides one least-authority Agent
+Profile and four bounded task Tools without granting Shell, filesystem,
+credential, or Endpoint access. See the [Rivus Plugin guide](docs/rivus-plugin.md)
+for installation, Deployment configuration, Tool contracts, and data-safety
+boundaries.
+
 ## Local CLI
 
 Install dependencies from the monorepo root:

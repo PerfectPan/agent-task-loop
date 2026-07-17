@@ -1,5 +1,8 @@
 import type { AppConfig } from '../config/schema';
-import { buildTaskProvider } from '../task-management/build-task-provider';
+import {
+  buildTaskProvider,
+  type BuildTaskProviderOptions,
+} from '../task-management/build-task-provider';
 import type {
   ClaimTaskPayload,
   CreateTaskPayload,
@@ -23,8 +26,8 @@ function isTaskProvider(input: AppConfig | TaskProvider): input is TaskProvider 
 export class TaskService implements TaskProvider {
   private readonly provider: TaskProvider;
 
-  constructor(input: AppConfig | TaskProvider) {
-    this.provider = isTaskProvider(input) ? input : buildTaskProvider(input);
+  constructor(input: AppConfig | TaskProvider, options: BuildTaskProviderOptions = {}) {
+    this.provider = isTaskProvider(input) ? input : buildTaskProvider(input, options);
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {

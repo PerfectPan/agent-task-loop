@@ -148,8 +148,10 @@ The Plugin uses `RIVUS_PLUGIN_API_VERSION`, `RivusPlugin`,
 `RivusToolInputRejected`, and `@rivus/agent/testing`'s
 `assertRivusPluginConforms`. These APIs are present in the published
 `@rivus/agent@0.1.1` package and remain present in the 0.3.0 source. Therefore
-the peer range is `>=0.1.1 <0.4.0`; tests exercise the published lower bound and
-the current local 0.3.0 package without committing a local path or tarball.
+the peer range is `>=0.1.1 <0.4.0`. It is optional in package metadata so a
+CLI-only install retains the CLI's Node.js 20 compatibility; Plugin consumers
+must install Core explicitly. Tests exercise the published lower bound and the
+current local 0.3.0 package without committing a local path or tarball.
 
 ## Testing
 
@@ -190,8 +192,9 @@ contact a real backend.
 
 ## Compatibility and Release
 
-Existing CLI behavior and configuration stay compatible. The new peer is
-required only by consumers that install this package; package validation proves
-the CLI and Plugin coexist. The feature receives a Changeset and durable Plugin
-documentation. It does not publish `@rivus/agent`, this package, an npm tag, or a
-GitHub Release as part of implementation.
+Existing CLI behavior and configuration stay compatible. The new optional peer
+is required only by consumers that use the Plugin entrypoint; package validation
+proves the standalone CLI and explicit-Core Plugin installations both work. The
+feature receives a Changeset and durable Plugin documentation. It does not
+publish `@rivus/agent`, this package, an npm tag, or a GitHub Release as part of
+implementation.

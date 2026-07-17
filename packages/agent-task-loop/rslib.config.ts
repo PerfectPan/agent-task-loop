@@ -6,11 +6,16 @@ export default defineConfig({
   lib: [
     {
       format: "esm",
-      dts: { abortOnError: false },
+      dts: { abortOnError: false, bundle: true },
       bundle: true
     }
   ],
-  source: { entry: { cli: "src/cli.ts" } },
+  source: {
+    entry: {
+      cli: "src/cli.ts",
+      "rivus-plugin": "src/rivus-plugin.ts"
+    }
+  },
   tools: {
     rspack: {
       externals: ["react-devtools-core"]

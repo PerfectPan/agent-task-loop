@@ -436,4 +436,40 @@ describe('ReviewLoopService', () => {
     );
   });
 
+  it('uses an injected neutral failure message when review execution throws', async () => {
+    const sensitiveMessage = 'review provider leaked credential=sensitive-test-value';
+    const updateReviewState = vi.fn();
+    const service = new ReviewLoopService({
+      executeRound: vi.fn().mockResolvedValue({
+        resultSummary: 'done',
+        workspacePath: '/tmp/TASK-209-codex',
+      }),
+      review: vi.fn().mockRejectedValue(new Error(sensitiveMessage)),
+      isTaskDeliverable: vi.fn(),
+      publishForAcceptance: vi.fn(),
+      updatePublishResult: vi.fn(),
+      updateReviewState,
+      maxRounds: 1,
+      formatFailure: (_error, neutralMessage) => neutralMessage,
+    });
+
+    await service.start({
+      task: {
+        taskId: 'TASK-209',
+        title: 'title',
+        description: 'desc',
+        project: 'demo',
+        targetAgent: 'codex',
+        priority: 1,
+        status: '待处理',
+      } as never,
+    });
+
+    expect(updateReviewState).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'TASK-209' }),
+      expect.objectContaining({ lastError: 'Task review failed' }),
+    );
+    expect(JSON.stringify(updateReviewState.mock.calls)).not.toContain(sensitiveMessage);
+  });
+
 });

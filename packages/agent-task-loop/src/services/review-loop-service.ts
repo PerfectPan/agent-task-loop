@@ -2,6 +2,10 @@ import type { TaskService } from './task-service';
 import { buildReworkPrompt } from './rework-prompt-service';
 import type { TargetAgent, TaskRecord } from '../types/task';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
+import {
+  formatFailureMessage,
+  type FailureMessageFormatter,
+} from './failure-message';
 
 export class ReviewLoopService {
   constructor(
@@ -35,6 +39,7 @@ export class ReviewLoopService {
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
       maxRounds: number;
+      formatFailure?: FailureMessageFormatter;
     },
   ) {}
 
@@ -141,7 +146,11 @@ export class ReviewLoopService {
         reviewSessionName: input.task.reviewSessionName,
         sessionHistory: input.task.sessionHistory,
         progressSummary: `${reviewerAgent} 复核执行失败，请处理`,
-        lastError: error instanceof Error ? error.message : String(error),
+        lastError: formatFailureMessage(
+          this.deps.formatFailure,
+          error,
+          'Task review failed',
+        ),
         runnerKind: '',
         runnerAgent: '',
       });
@@ -190,7 +199,11 @@ export class ReviewLoopService {
             reviewSessionName: review.sessionName,
             sessionHistory: input.task.sessionHistory,
             progressSummary: '自动推送远端分支失败，请先处理发布问题',
-            lastError: error instanceof Error ? error.message : String(error),
+            lastError: formatFailureMessage(
+              this.deps.formatFailure,
+              error,
+              'Task publication failed',
+            ),
             runnerKind: '',
             runnerAgent: '',
           });

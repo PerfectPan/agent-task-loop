@@ -5,6 +5,10 @@ import type { AgentAdapter } from '../adapters/base';
 import type { TaskRecord } from '../types/task';
 import type { TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
+import {
+  formatFailureMessage,
+  type FailureMessageFormatter,
+} from './failure-message';
 
 function buildSessionName(task: TaskRecord): string {
   return `${task.taskId}-${task.targetAgent}`
@@ -28,6 +32,8 @@ export class ExecutionService {
         cwd: string;
         prompt: string;
       };
+      onHeartbeatError?: (error: unknown) => void;
+      formatFailure?: FailureMessageFormatter;
     },
   ) {}
 
@@ -73,8 +79,12 @@ export class ExecutionService {
           lastHeartbeatAt: latestHeartbeatAt,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
+        if (this.deps.onHeartbeatError) {
+          this.deps.onHeartbeatError(error);
+        } else {
+          const message = error instanceof Error ? error.message : String(error);
+          writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
+        }
       }
     };
     const writeProgress = async (summary: string) => {
@@ -210,7 +220,11 @@ export class ExecutionService {
       await this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
-        lastError: result.error ?? 'unknown error',
+        lastError: formatFailureMessage(
+          this.deps.formatFailure,
+          result.error ?? 'unknown error',
+          'Task execution failed',
+        ),
         workspacePath: result.workspacePath,
         logPath,
         progressSummary: '执行失败，请查看 LastError 和日志',
@@ -231,7 +245,11 @@ export class ExecutionService {
         status: '已失败',
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = formatFailureMessage(
+        this.deps.formatFailure,
+        error,
+        'Task execution failed',
+      );
       await this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',

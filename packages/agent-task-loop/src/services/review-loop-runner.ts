@@ -15,6 +15,7 @@ import { resolveTaskExecutionContext } from './task-context-service';
 import type { TaskService } from './task-service';
 import { ensureWorkspace } from './workspace-service';
 import type { TargetAgent, TaskRecord } from '../types/task';
+import type { FailureMessageFormatter } from './failure-message';
 
 const adapters = {
   claude: claudeAdapter,
@@ -42,6 +43,8 @@ export class ReviewLoopRunner {
     private readonly deps: {
       config: AppConfig;
       taskService: TaskService;
+      onBackgroundError?: (error: unknown) => void;
+      formatFailure?: FailureMessageFormatter;
     },
   ) {}
 
@@ -105,6 +108,8 @@ export class ReviewLoopRunner {
           cwd: workspacePath,
           prompt,
         },
+        onHeartbeatError: this.deps.onBackgroundError,
+        formatFailure: this.deps.formatFailure,
       });
       const result = await executionService.executeTask(roundInput.task, workspacePath, roundInput.round);
 
@@ -156,8 +161,12 @@ export class ReviewLoopRunner {
               },
             );
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.warn(`[agent-task-loop] review heartbeat update failed: ${message}`);
+            if (this.deps.onBackgroundError) {
+              this.deps.onBackgroundError(error);
+            } else {
+              const message = error instanceof Error ? error.message : String(error);
+              console.warn(`[agent-task-loop] review heartbeat update failed: ${message}`);
+            }
           }
         };
 
@@ -197,6 +206,7 @@ export class ReviewLoopRunner {
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
       maxRounds,
+      formatFailure: this.deps.formatFailure,
     });
   }
 }

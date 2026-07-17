@@ -60,7 +60,7 @@ describe('GitPublishService', () => {
       const status = await execa('git', ['-C', dir, 'status', '--short']);
       expect(status.stdout).toContain('.agent-task-loop/');
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -89,7 +89,7 @@ describe('GitPublishService', () => {
       const tracked = await execa('git', ['-C', dir, 'ls-files']);
       expect(tracked.stdout.split('\n').sort()).toEqual(['.gitignore', 'README.md']);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 

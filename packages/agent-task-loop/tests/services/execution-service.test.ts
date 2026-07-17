@@ -264,6 +264,55 @@ describe('ExecutionService', () => {
     );
   });
 
+  it('uses an injected neutral failure message for persisted state and logs', async () => {
+    const sensitiveMessage = 'provider failed with authorization: Bearer sensitive-test-value';
+    const taskService = {
+      claimTask: vi.fn(),
+      updateTaskProgress: vi.fn().mockRejectedValue(new Error(sensitiveMessage)),
+      updateRunnerState: vi.fn(),
+      updateReviewState: vi.fn(),
+      markTaskSucceeded: vi.fn(),
+      markTaskFailed: vi.fn(),
+    };
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    try {
+      const executionService = new ExecutionService({
+        taskService: taskService as never,
+        adapter: { execute: vi.fn() },
+        adapterCommand: {
+          command: 'codex',
+          args: [],
+          env: {},
+          cwd: '/tmp/TASK-12-codex',
+          prompt: 'do the task',
+        },
+        formatFailure: (_error, neutralMessage) => neutralMessage,
+      });
+
+      await executionService.executeTask(
+        {
+          taskId: 'TASK-12',
+          title: 'Provider failure',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 5,
+          status: '待处理',
+        },
+        '/tmp/TASK-12-codex',
+      );
+
+      expect(taskService.updateReviewState).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId: 'TASK-12' }),
+        expect.objectContaining({ lastError: 'Task execution failed' }),
+      );
+      expect(stdout.mock.calls.flat().join('')).not.toContain(sensitiveMessage);
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+
   it('continues execution when heartbeat persistence fails', async () => {
     const taskService = {
       claimTask: vi.fn(),
@@ -282,6 +331,7 @@ describe('ExecutionService', () => {
         workspacePath: '/tmp/TASK-11-codex',
       };
     });
+    const onHeartbeatError = vi.fn();
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
@@ -295,6 +345,7 @@ describe('ExecutionService', () => {
         cwd: '/tmp/TASK-11-codex',
         prompt: 'do the task',
       },
+      onHeartbeatError,
     });
 
     const result = await executionService.executeTask(
@@ -311,6 +362,9 @@ describe('ExecutionService', () => {
     );
 
     expect(result.status).toBe('待复核');
+    expect(onHeartbeatError).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'TLS handshake timeout',
+    }));
     expect(taskService.updateReviewState).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 'TASK-11' }),
       expect.objectContaining({

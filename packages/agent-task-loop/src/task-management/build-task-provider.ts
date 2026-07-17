@@ -7,6 +7,10 @@ import { StatefulTaskProvider } from './stateful-task-provider';
 import { FileTaskStateStore } from './task-state-store';
 import type { SourceProvider, TaskProvider } from './task-provider';
 
+export interface BuildTaskProviderOptions {
+  readFailureMode?: 'best-effort' | 'strict';
+}
+
 /**
  * Builds the task provider for a config. Each configured source contributes a
  * leaf provider: Feishu when `feishu` is present, and one GitHub Issues
@@ -16,7 +20,10 @@ import type { SourceProvider, TaskProvider } from './task-provider';
  * owning backend. The default write target is Feishu when configured, otherwise
  * the first GitHub repository.
  */
-export function buildTaskProvider(config: AppConfig): TaskProvider {
+export function buildTaskProvider(
+  config: AppConfig,
+  options: BuildTaskProviderOptions = {},
+): TaskProvider {
   const providers: SourceProvider[] = [];
   if (config.feishu) {
     providers.push(new FeishuTaskProvider(config));
@@ -35,7 +42,10 @@ export function buildTaskProvider(config: AppConfig): TaskProvider {
   const inner: TaskProvider =
     providers.length === 1
       ? providers[0]!
-      : new CompositeTaskProvider(providers, { defaultSource: providers[0]!.source });
+      : new CompositeTaskProvider(providers, {
+          defaultSource: providers[0]!.source,
+          readFailureMode: options.readFailureMode,
+        });
 
   // Wrap the whole tree so the loop's run-time state (session ids, runner info,
   // …) is persisted source-agnostically — see RFC 0006. Providers stay unaware.

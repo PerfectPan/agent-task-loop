@@ -1,0 +1,72 @@
+import { app, BrowserWindow, shell } from 'electron';
+import { join } from 'node:path';
+import { createConfiguredLocalServer } from '../server/configured';
+
+let mainWindow: BrowserWindow | null = null;
+let serverUrl: string | null = null;
+
+async function startServer(): Promise<{ baseUrl: string; token: string }> {
+  const server = await createConfiguredLocalServer();
+  const info = await server.listen(0);
+  serverUrl = `http://${info.host}:${info.port}`;
+  return { baseUrl: serverUrl, token: info.token };
+}
+
+function createWindow(baseUrl: string, token: string): void {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  // Pass base URL and token to the renderer via the preload script.
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.executeJavaScript(
+      `window.__ATL_CONFIG__ = ${JSON.stringify({ baseUrl, token })};`,
+    );
+  });
+
+  // Load the UI. In dev, load from the local server.
+  mainWindow.loadFile(join(__dirname, '../ui/index.html'));
+
+  // Open external links (http/https only) in the system browser.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+app.whenReady().then(async () => {
+  try {
+    const { baseUrl, token } = await startServer();
+    createWindow(baseUrl, token);
+  } catch (error) {
+    console.error('Failed to start desktop console:', error);
+    app.quit();
+  }
+});
+
+app.on('window-all-closed', () => {
+  // On macOS, applications stay active until the user quits explicitly.
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0 && serverUrl) {
+    // Re-create window if dock icon is clicked and no windows are open.
+    // Token is loaded from the state file on next start.
+  }
+});

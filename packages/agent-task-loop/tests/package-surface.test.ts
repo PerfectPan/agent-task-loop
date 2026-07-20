@@ -21,6 +21,10 @@ describe('published package surface', () => {
       types: './dist/rivus-plugin.d.ts',
       import: './dist/rivus-plugin.js',
     });
+    expect(packageJson.exports['./task-manager']).toEqual({
+      types: './dist/task-manager.d.ts',
+      import: './dist/task-manager.js',
+    });
     expect(packageJson.files).toContain('docs/rivus-plugin.md');
     expect(packageJson.peerDependenciesMeta['@rivus/agent']).toEqual({ optional: true });
     expect(packageJson.scripts['package:check']).toBe('node scripts/check-package.mjs');
@@ -31,5 +35,6 @@ describe('published package surface', () => {
     const config = await readFile(path.join(packageRoot, 'rslib.config.ts'), 'utf8');
 
     expect(config).toContain('"rivus-plugin": "src/rivus-plugin.ts"');
+    expect(config).toContain('"task-manager": "src/task-manager/index.ts"');
   });
 });

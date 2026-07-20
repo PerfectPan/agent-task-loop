@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Task Loop Console</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --fg: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 { font-size: 18px; margin: 0; }
+    .status { color: var(--muted); font-size: 13px; }
+    main { padding: 24px; max-width: 960px; margin: 0 auto; }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    select, input, button, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-weight: 500;
+    }
+    button:hover { opacity: 0.9; }
+    button.secondary { background: var(--surface); border: 1px solid var(--border); color: var(--fg); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card h3 { margin: 0 0 8px; font-size: 15px; }
+    .card p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-running { background: var(--warning); color: #000; }
+    .badge-done { background: var(--success); color: #000; }
+    .badge-failed { background: var(--danger); color: #fff; }
+    .badge-idle { background: var(--border); color: var(--fg); }
+    .detail {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .detail h2 { font-size: 20px; margin-top: 0; }
+    .detail dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px; margin: 0; }
+    .detail dt { color: var(--muted); font-size: 13px; }
+    .detail dd { margin: 0; font-size: 14px; }
+    .form-row { margin-bottom: 12px; }
+    .form-row label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 13px; }
+    .form-row input, .form-row textarea, .form-row select { width: 100%; }
+    .form-row textarea { min-height: 80px; resize: vertical; }
+    .error { color: var(--danger); font-size: 13px; margin-top: 8px; }
+    .run-phase {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Task Loop Console</h1>
+    <span class="status" id="status">Connecting...</span>
+  </header>
+  <main>
+    <div class="toolbar">
+      <select id="filter-status">
+        <option value="">All statuses</option>
+        <option value="待处理">待处理</option>
+        <option value="进行中">进行中</option>
+        <option value="执行中">执行中</option>
+        <option value="待复核">待复核</option>
+        <option value="修复中">修复中</option>
+        <option value="待决策">待决策</option>
+        <option value="待发布">待发布</option>
+        <option value="待验收">待验收</option>
+        <option value="已完成">已完成</option>
+        <option value="已失败">已失败</option>
+      </select>
+      <select id="filter-agent">
+        <option value="">All agents</option>
+        <option value="claude">claude</option>
+        <option value="codex">codex</option>
+        <option value="coco">coco</option>
+        <option value="glm">glm</option>
+      </select>
+      <button class="secondary" id="refresh-btn">Refresh</button>
+      <button id="new-task-btn">New Task</button>
+    </div>
+
+    <div id="task-list" class="grid"></div>
+    <div id="detail"></div>
+
+    <div id="create-form" class="detail" style="display:none;">
+      <h2>Create Task</h2>
+      <div class="form-row">
+        <label for="task-id">Task ID</label>
+        <input type="text" id="task-id" placeholder="e.g. TASK-001" />
+      </div>
+      <div class="form-row">
+        <label for="task-title">Title</label>
+        <input type="text" id="task-title" placeholder="Short title" />
+      </div>
+      <div class="form-row">
+        <label for="task-project">Project</label>
+        <input type="text" id="task-project" placeholder="project-name" />
+      </div>
+      <div class="form-row">
+        <label for="task-agent">Target Agent</label>
+        <select id="task-agent">
+          <option value="claude">claude</option>
+          <option value="codex">codex</option>
+          <option value="coco">coco</option>
+          <option value="glm">glm</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="task-priority">Priority (0-9)</label>
+        <input type="number" id="task-priority" value="5" min="0" max="9" />
+      </div>
+      <div class="form-row">
+        <label for="task-desc">Description</label>
+        <textarea id="task-desc" placeholder="Detailed description..."></textarea>
+      </div>
+      <div class="form-row">
+        <label for="task-source">Source (optional)</label>
+        <input type="text" id="task-source" placeholder="e.g. github:owner/repo" />
+      </div>
+      <button id="create-btn">Create</button>
+      <button class="secondary" id="cancel-create-btn">Cancel</button>
+      <div id="create-error" class="error"></div>
+    </div>
+  </main>
+
+  <script>
+    // Config is injected by Electron main process via preload.
+    // For headless/browser use, read from window.__ATL_CONFIG__ or localStorage.
+    const config = window.atlDesktop?.getConfig?.()
+      || window.__ATL_CONFIG__
+      || (function() {
+        try {
+          const stored = localStorage.getItem('atl-config');
+          return stored ? JSON.parse(stored) : null;
+        } catch (e) { return null; }
+      })();
+
+    if (!config || !config.baseUrl || !config.token) {
+      document.getElementById('status').textContent =
+        'No server config found. Start with: pnpm --filter @rivus/agent-task-loop-desktop dev';
+    } else {
+      init(config.baseUrl, config.token);
+    }
+
+    function init(baseUrl, token) {
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
+      const statusEl = document.getElementById('status');
+      const taskListEl = document.getElementById('task-list');
+      const detailEl = document.getElementById('detail');
+      const createFormEl = document.getElementById('create-form');
+
+      // Health check
+      fetch(`${baseUrl}/v1/health`)
+        .then(r => r.json())
+        .then(data => { statusEl.textContent = `Connected (${data.status})`; })
+        .catch(() => { statusEl.textContent = 'Disconnected'; });
+
+      // SSE for live updates
+      const es = new EventSource(`${baseUrl}/v1/events`, { withCredentials: false });
+      // EventSource does not support custom headers; the token is passed via
+      // the Authorization header by the server-side check. For browser SSE,
+      // we rely on the same-origin loopback binding for access control.
+      es.addEventListener('task.updated', (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          if (evt.type === 'task.updated') {
+            loadTasks();
+          }
+        } catch (err) { /* ignore malformed events */ }
+      });
+
+      loadTasks();
+
+      function loadTasks() {
+        const status = document.getElementById('filter-status').value;
+        const agent = document.getElementById('filter-agent').value;
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (agent) params.set('targetAgent', agent);
+        params.set('limit', '50');
+
+        fetch(`${baseUrl}/v1/tasks?${params}`, { headers })
+          .then(r => r.json())
+          .then(data => {
+            taskListEl.innerHTML = '';
+            (data.tasks || []).forEach(task => {
+              const card = document.createElement('div');
+              card.className = 'card';
+              card.onclick = () => showDetail(task.taskId);
+              const badgeClass = statusBadge(task.status);
+              card.innerHTML = `
+                <h3>${escapeHtml(task.title)}</h3>
+                <p>${escapeHtml(task.taskId)} &middot; ${escapeHtml(task.project)}</p>
+                <span class="badge ${badgeClass}">${escapeHtml(task.status)}</span>
+                ${task.targetAgent ? `<p>Agent: ${escapeHtml(task.targetAgent)}</p>` : ''}
+              `;
+              taskListEl.appendChild(card);
+            });
+          })
+          .catch(err => {
+            statusEl.textContent = 'Error loading tasks';
+          });
+      }
+
+      function showDetail(taskId) {
+        fetch(`${baseUrl}/v1/tasks/${encodeURIComponent(taskId)}`, { headers })
+          .then(r => r.json())
+          .then(data => {
+            const task = data.task;
+            if (!task) return;
+            const fields = [
+              ['Task ID', task.taskId],
+              ['Title', task.title],
+              ['Description', task.description],
+              ['Project', task.project],
+              ['Repository', task.repository || '—'],
+              ['Source', task.source || '—'],
+              ['Target Agent', task.targetAgent],
+              ['Priority', task.priority],
+              ['Status', task.status],
+              ['Progress', task.progressSummary || '—'],
+              ['Result', task.resultSummary || '—'],
+              ['PR Link', task.prLink ? `<a href="${escapeHtml(task.prLink)}" target="_blank">${escapeHtml(task.prLink)}</a>` : '—'],
+              ['Owner', task.currentOwner || '—'],
+              ['Review Round', task.reviewRound ?? '—'],
+              ['Created', task.createdAt || '—'],
+              ['Updated', task.updatedAt || '—'],
+            ];
+            detailEl.innerHTML = `
+              <div class="detail">
+                <h2>${escapeHtml(task.title)}</h2>
+                <dl>
+                  ${fields.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}
+                </dl>
+                <p style="margin-top:16px;">
+                  <button id="start-btn" onclick="startTask('${escapeHtml(task.taskId)}')">Start / Recover</button>
+                </p>
+                <div id="start-error" class="error"></div>
+              </div>
+            `;
+          });
+      }
+
+      window.startTask = function(taskId) {
+        const errEl = document.getElementById('start-error');
+        if (errEl) errEl.textContent = '';
+        fetch(`${baseUrl}/v1/tasks/${encodeURIComponent(taskId)}/start`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ maxRounds: 5 }),
+        })
+        .then(r => {
+          if (r.status === 409) {
+            return r.json().then(d => { throw new Error(d.error?.message || 'Task already active'); });
+          }
+          if (!r.ok) throw new Error('Start failed');
+          return r.json();
+        })
+        .then(data => {
+          loadTasks();
+          showDetail(taskId);
+        })
+        .catch(err => {
+          if (errEl) errEl.textContent = err.message;
+        });
+      };
+
+      // Create form toggle
+      document.getElementById('new-task-btn').onclick = () => {
+        createFormEl.style.display = 'block';
+        detailEl.innerHTML = '';
+      };
+      document.getElementById('cancel-create-btn').onclick = () => {
+        createFormEl.style.display = 'none';
+      };
+      document.getElementById('create-btn').onclick = () => {
+        const errEl = document.getElementById('create-error');
+        errEl.textContent = '';
+        const body = {
+          taskId: document.getElementById('task-id').value.trim(),
+          title: document.getElementById('task-title').value.trim(),
+          project: document.getElementById('task-project').value.trim(),
+          targetAgent: document.getElementById('task-agent').value,
+          priority: Number(document.getElementById('task-priority').value),
+          description: document.getElementById('task-desc').value || undefined,
+          source: document.getElementById('task-source').value.trim() || undefined,
+        };
+        fetch(`${baseUrl}/v1/tasks`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        })
+        .then(r => {
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error?.message || 'Create failed'); });
+          return r.json();
+        })
+        .then(() => {
+          createFormEl.style.display = 'none';
+          loadTasks();
+        })
+        .catch(err => {
+          errEl.textContent = err.message;
+        });
+      };
+
+      document.getElementById('refresh-btn').onclick = loadTasks;
+      document.getElementById('filter-status').onchange = loadTasks;
+      document.getElementById('filter-agent').onchange = loadTasks;
+    }
+
+    function statusBadge(status) {
+      if (['已完成'].includes(status)) return 'badge-done';
+      if (['已失败'].includes(status)) return 'badge-failed';
+      if (['执行中', '修复中', '待复核', '进行中'].includes(status)) return 'badge-running';
+      return 'badge-idle';
+    }
+
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

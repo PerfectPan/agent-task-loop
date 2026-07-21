@@ -329,10 +329,10 @@ function isDuplicate(prev: TranscriptMessageDto | undefined, next: TranscriptMes
 function isNoiseUserMessage(text: string): boolean {
   const t = text.trim();
   if (!t) return true;
-  if (t.startsWith('<recommended_plugins>')) return true;
-  if (t.startsWith('<permissions instructions>')) return true;
+  if (t.startsWith('<recommended_plugins>') || t.includes('recommended_plugins')) return true;
+  if (t.startsWith('<permissions instructions>') || t.includes('Filesystem sandboxing defines')) return true;
   if (t.startsWith('<multi_agent_mode>')) return true;
-  if (t.includes('<permissions instructions>') && t.length > 500) return true;
+  if (/list of plugins that are available but not installed/i.test(t)) return true;
   // Duplicate task prompt prefixes that are pure harness.
   if (/^You are `\/root`/.test(t)) return true;
   return false;

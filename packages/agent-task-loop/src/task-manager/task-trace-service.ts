@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises';
-import { FsSessionProvider } from '../tui/data/fs-session-provider';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import {
+  FsSessionProvider as SharedFsSessionProvider,
+  type TranscriptEntry,
+} from '@rivus/agent-sessions';
 import { parseSessionHistory } from '../tui/logic/session-history-parse';
 import type { SessionHistoryEntry } from '../tui/types';
 import type { TaskProvider } from '../task-management/task-provider';
@@ -19,8 +24,10 @@ export interface TaskRoundDto {
 }
 
 export interface TranscriptMessageDto {
-  role: 'user' | 'assistant' | 'system' | 'tool' | 'unknown';
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'reasoning' | 'unknown';
   text: string;
+  toolName?: string;
+  at?: string;
 }
 
 export interface TaskTranscriptDto {
@@ -30,6 +37,8 @@ export interface TaskTranscriptDto {
   messages: TranscriptMessageDto[];
   truncated: boolean;
   lineCount: number;
+  /** Counts by role after filtering — helps UI empty states. */
+  roleCounts: Record<string, number>;
 }
 
 export interface TaskLogTailDto {
@@ -39,53 +48,54 @@ export interface TaskLogTailDto {
   available: boolean;
 }
 
+export interface TaskTraceSessionSource {
+  getTranscript(sessionId: string, maxLines?: number): Promise<TranscriptEntry[]>;
+  listSessionIds(): Promise<string[]>;
+}
+
 export interface TaskTraceServiceDependencies {
   taskProvider: Pick<TaskProvider, 'getTaskById'>;
-  sessionProvider?: Pick<FsSessionProvider, 'getTranscript' | 'listAvailableSessionIds'>;
+  /** Inject structured session source in tests. Default: local agent-sessions FS index. */
+  sessionSource?: TaskTraceSessionSource;
   readFile?: (path: string) => Promise<string>;
   maxTranscriptLines?: number;
   maxLogLines?: number;
   maxMessageChars?: number;
+  /** When true, drop pure reasoning turns (default true for readability). */
+  hideReasoning?: boolean;
 }
 
 /**
  * Read-only task execution evidence for the desktop console.
- * Reuses TUI session-history parsing and FsSessionProvider transcript resolution.
+ * SessionHistory index + structured agent-sessions transcripts (not toLines collapse).
  */
 export class TaskTraceService {
-  private readonly sessions: Pick<FsSessionProvider, 'getTranscript' | 'listAvailableSessionIds'>;
+  private readonly sessions: TaskTraceSessionSource;
   private readonly readFile: (path: string) => Promise<string>;
   private readonly maxTranscriptLines: number;
   private readonly maxLogLines: number;
   private readonly maxMessageChars: number;
+  private readonly hideReasoning: boolean;
 
   constructor(private readonly deps: TaskTraceServiceDependencies) {
-    this.sessions = deps.sessionProvider ?? new FsSessionProvider({
-      maxLines: deps.maxTranscriptLines ?? 200,
-    });
+    this.sessions = deps.sessionSource ?? createDefaultSessionSource();
     this.readFile = deps.readFile ?? (path => readFile(path, 'utf8'));
     this.maxTranscriptLines = deps.maxTranscriptLines ?? 200;
     this.maxLogLines = deps.maxLogLines ?? 120;
-    this.maxMessageChars = deps.maxMessageChars ?? 4_000;
+    this.maxMessageChars = deps.maxMessageChars ?? 8_000;
+    this.hideReasoning = deps.hideReasoning ?? true;
   }
 
   async listRounds(taskId: string): Promise<{ taskId: string; rounds: TaskRoundDto[] }> {
     const task = await this.requireTask(taskId);
     const history = parseSessionHistory(task.sessionHistory);
-    const available = new Set(await this.sessions.listAvailableSessionIds().catch(() => [] as string[]));
+    const available = new Set(await this.sessions.listSessionIds().catch(() => [] as string[]));
 
-    // Also treat current pointers as available hints when history is sparse.
-    for (const id of [
-      task.sessionId,
-      task.executionSessionId,
-      task.reviewSessionId,
-    ]) {
+    for (const id of [task.sessionId, task.executionSessionId, task.reviewSessionId]) {
       if (id) available.add(id);
     }
 
     const rounds = history.map((entry, index) => toRoundDto(entry, index, available));
-
-    // If history is empty but task has a live session pointer, surface one synthetic round.
     if (rounds.length === 0) {
       const fallback = fallbackRound(task, available);
       if (fallback) rounds.push(fallback);
@@ -125,29 +135,28 @@ export class TaskTraceService {
       task.sessionId;
 
     if (!sessionId) {
-      return {
-        taskId: task.taskId,
-        roundKey: roundKey || 'none',
-        messages: [],
-        truncated: false,
-        lineCount: 0,
-      };
+      return emptyTranscript(task.taskId, roundKey || 'none');
     }
 
-    const lines = await this.sessions.getTranscript(sessionId);
-    const sliced = lines.slice(-this.maxTranscriptLines);
-    const messages = sliced.map(parseTranscriptLine).map(m => ({
-      role: m.role,
-      text: bound(m.text, this.maxMessageChars),
-    }));
+    const entries = await this.sessions.getTranscript(sessionId, this.maxTranscriptLines * 2);
+    const filtered = this.hideReasoning
+      ? entries.filter(e => normalizeRole(e.role) !== 'reasoning')
+      : entries;
+    const sliced = filtered.slice(-this.maxTranscriptLines);
+    const messages = sliced.map(e => toMessageDto(e, this.maxMessageChars));
+    const roleCounts: Record<string, number> = {};
+    for (const m of messages) {
+      roleCounts[m.role] = (roleCounts[m.role] ?? 0) + 1;
+    }
 
     return {
       taskId: task.taskId,
       roundKey: roundKey || `session:${sessionId}`,
       sessionId,
       messages,
-      truncated: lines.length > sliced.length,
-      lineCount: lines.length,
+      truncated: filtered.length > sliced.length,
+      lineCount: filtered.length,
+      roleCounts,
     };
   }
 
@@ -168,7 +177,7 @@ export class TaskTraceService {
       const sliced = all.slice(-this.maxLogLines).map(line => redactLogLine(line));
       return {
         taskId: task.taskId,
-        lines: sliced.filter(l => l.length > 0 || sliced.length <= 5),
+        lines: sliced,
         truncated: all.length > sliced.length,
         available: true,
       };
@@ -184,6 +193,33 @@ export class TaskTraceService {
     }
     return task;
   }
+}
+
+function createDefaultSessionSource(): TaskTraceSessionSource {
+  const home = homedir();
+  const roots = [
+    { path: join(home, '.codex', 'sessions'), agent: 'unknown' as const },
+    { path: join(home, '.claude', 'projects'), agent: 'unknown' as const },
+  ];
+  const provider = new SharedFsSessionProvider({
+    agent: 'unknown',
+    roots,
+  });
+  return {
+    getTranscript: (id, max) => provider.getTranscript(id, max),
+    listSessionIds: async () => (await provider.list()).map(s => s.id),
+  };
+}
+
+function emptyTranscript(taskId: string, roundKey: string): TaskTranscriptDto {
+  return {
+    taskId,
+    roundKey,
+    messages: [],
+    truncated: false,
+    lineCount: 0,
+    roleCounts: {},
+  };
 }
 
 function toRoundDto(
@@ -223,26 +259,38 @@ function roundKeyFor(entry: SessionHistoryEntry, index: number): string {
   return `r${entry.round}-${entry.kind}-${index}`;
 }
 
-function parseTranscriptLine(line: string): TranscriptMessageDto {
-  if (line.startsWith('⚙ ')) {
-    return { role: 'tool', text: line.slice(2).trim() };
+function normalizeRole(role: string): TranscriptMessageDto['role'] {
+  const r = role.toLowerCase();
+  if (r === 'user' || r === 'assistant' || r === 'system' || r === 'tool' || r === 'reasoning') {
+    return r;
   }
-  const idx = line.indexOf(':');
-  if (idx > 0) {
-    const roleRaw = line.slice(0, idx).trim().toLowerCase();
-    const text = line.slice(idx + 1).trim();
-    if (roleRaw === 'user' || roleRaw === 'assistant' || roleRaw === 'system' || roleRaw === 'tool') {
-      return { role: roleRaw, text };
-    }
-  }
-  return { role: 'unknown', text: line };
+  return 'unknown';
+}
+
+function toMessageDto(entry: TranscriptEntry, maxChars: number): TranscriptMessageDto {
+  const role = normalizeRole(entry.role);
+  const text = bound(preserveNewlines(entry.text), maxChars);
+  return {
+    role,
+    text,
+    ...(entry.toolName ? { toolName: entry.toolName } : role === 'tool' && entry.text ? { toolName: entry.text } : {}),
+    ...(entry.timestamp ? { at: entry.timestamp } : {}),
+  };
+}
+
+/** Keep paragraph breaks; strip JSON-illegal control chars (except \\n/\\t). */
+function preserveNewlines(text: string): string {
+  return text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function bound(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}…` : value;
+  return value.length > max ? `${value.slice(0, max)}\n…` : value;
 }
 
-/** Strip obvious home paths and token-like segments from log lines. */
 function redactLogLine(line: string): string {
   return line
     .replace(/\/(?:Users|home)\/[^\s:]+/g, '~/…')

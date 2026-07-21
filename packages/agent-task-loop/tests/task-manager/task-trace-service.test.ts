@@ -24,27 +24,22 @@ function task(overrides: Partial<TaskRecord> = {}): TaskRecord {
 
 describe('TaskTraceService', () => {
   it('lists rounds without absolute paths', async () => {
-    const record = task({
-      workspacePath: '/Users/someone/work/TASK-1',
-      sessionHistory: task().sessionHistory + '\n| workspace=/Users/someone/secret',
-    });
-    // repair history line - use proper format without leaking in dto
-    record.sessionHistory = [
-      '[2026-07-21T01:00:00.000Z] | round=1 | kind=execute | agent=claude | id=sess-exec-1',
-      '[2026-07-21T01:10:00.000Z] | round=1 | kind=review | agent=codex | id=sess-rev-1',
-    ].join('\n');
-
+    const record = task();
     const service = new TaskTraceService({
       taskProvider: {
         async getTaskById(id) {
           return id === 'TASK-1' ? record : undefined;
         },
       },
-      sessionProvider: {
+      sessionSource: {
         async getTranscript() {
-          return ['user: hello', 'assistant: world', '⚙ Bash'];
+          return [
+            { role: 'user', text: 'hello' },
+            { role: 'assistant', text: 'world' },
+            { role: 'tool', text: 'Bash', toolName: 'Bash' },
+          ];
         },
-        async listAvailableSessionIds() {
+        async listSessionIds() {
           return ['sess-exec-1', 'sess-rev-1'];
         },
       },
@@ -62,19 +57,24 @@ describe('TaskTraceService', () => {
     expect(JSON.stringify(rounds)).not.toContain('workspacePath');
   });
 
-  it('returns structured transcript messages', async () => {
+  it('returns structured transcript and hides reasoning by default', async () => {
     const service = new TaskTraceService({
       taskProvider: {
         async getTaskById() {
           return task();
         },
       },
-      sessionProvider: {
+      sessionSource: {
         async getTranscript(id) {
           expect(id).toBe('sess-exec-1');
-          return ['user: do the thing', 'assistant: done', '⚙ Read'];
+          return [
+            { role: 'reasoning', text: 'thinking hard' },
+            { role: 'user', text: 'do the thing\nwith two lines' },
+            { role: 'assistant', text: 'done' },
+            { role: 'tool', text: 'Read', toolName: 'Read' },
+          ];
         },
-        async listAvailableSessionIds() {
+        async listSessionIds() {
           return ['sess-exec-1'];
         },
       },
@@ -84,12 +84,11 @@ describe('TaskTraceService', () => {
       taskId: 'TASK-1',
       sessionId: 'sess-exec-1',
     });
-    expect(result.messages).toEqual([
-      { role: 'user', text: 'do the thing' },
-      { role: 'assistant', text: 'done' },
-      { role: 'tool', text: 'Read' },
-    ]);
-    expect(result.truncated).toBe(false);
+    expect(result.messages.map(m => m.role)).toEqual(['user', 'assistant', 'tool']);
+    expect(result.messages[0]?.text).toContain('\n');
+    expect(result.messages[2]?.toolName).toBe('Read');
+    expect(result.roleCounts).toMatchObject({ user: 1, assistant: 1, tool: 1 });
+    expect(result.messages.some(m => m.role === 'reasoning')).toBe(false);
   });
 
   it('redacts home paths in log tails', async () => {
@@ -99,11 +98,11 @@ describe('TaskTraceService', () => {
           return task({ logPath: '/tmp/x.log' });
         },
       },
-      sessionProvider: {
+      sessionSource: {
         async getTranscript() {
           return [];
         },
-        async listAvailableSessionIds() {
+        async listSessionIds() {
           return [];
         },
       },

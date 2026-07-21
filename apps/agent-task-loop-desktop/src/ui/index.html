@@ -1152,16 +1152,27 @@ function boot(baseUrl, token) {
       api(`/v1/tasks/${encodeURIComponent(t.taskId)}/transcript?${params}`)
         .then(tr => {
           if (!tr.messages?.length) {
-            body.innerHTML = `<div class="empty"><div><strong>没有 transcript</strong>该 round 可能尚未落盘，或 session 已被清理。</div></div>`;
+            body.innerHTML = `<div class="empty"><div><strong>没有 transcript</strong>该 round 可能尚未落盘，或 session 已被清理。可先在 Rounds 选有「有 transcript」的项。</div></div>`;
             return;
           }
+          const counts = tr.roleCounts
+            ? Object.entries(tr.roleCounts).map(([k, v]) => `${k}:${v}`).join(' · ')
+            : '';
           body.innerHTML = `
-            <p class="hint" style="margin-bottom:8px">${esc(tr.roundKey)}${tr.sessionId ? ' · ' + esc(tr.sessionId) : ''}${tr.truncated ? ' · truncated' : ''} · ${tr.lineCount || tr.messages.length} lines</p>
-            <div class="msgs">${tr.messages.map(m => `
+            <p class="hint" style="margin-bottom:8px">${esc(tr.roundKey)}${tr.sessionId ? ' · sid ' + esc(String(tr.sessionId).slice(0, 12)) + '…' : ''}${tr.truncated ? ' · truncated' : ''} · ${tr.messages.length} msgs${counts ? ' · ' + esc(counts) : ''}</p>
+            <div class="msgs">${tr.messages.map(m => {
+              const label = m.role === 'tool'
+                ? `tool · ${esc(m.toolName || m.text || 'tool')}`
+                : esc(m.role);
+              const text = m.role === 'tool' && m.toolName
+                ? (m.text && m.text !== m.toolName ? esc(m.text) : '')
+                : esc(m.text);
+              return `
               <div class="msg-row ${esc(m.role)}">
-                <div class="mr">${esc(m.role)}</div>
-                <div class="mt">${esc(m.text)}</div>
-              </div>`).join('')}</div>`;
+                <div class="mr">${label}${m.at ? ' · ' + esc(formatShortTime(m.at)) : ''}</div>
+                ${text ? `<div class="mt">${text}</div>` : '<div class="mt hint">（仅工具名）</div>'}
+              </div>`;
+            }).join('')}</div>`;
         })
         .catch(e => {
           body.innerHTML = `<div class="empty"><div><strong>加载失败</strong>${esc(e.message)}</div></div>`;
@@ -1328,6 +1339,12 @@ function boot(baseUrl, token) {
   loadWorkspace().then(() => loadTasks(true)).catch(e => toast(`工作区：${e.message}`));
 }
 
+function formatShortTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v).slice(0, 19);
+  return d.toLocaleString();
+}
 function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')

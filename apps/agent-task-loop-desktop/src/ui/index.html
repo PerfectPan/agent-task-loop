@@ -220,11 +220,10 @@
         .then(data => { statusEl.textContent = `Connected (${data.status})`; })
         .catch(() => { statusEl.textContent = 'Disconnected'; });
 
-      // SSE for live updates
-      const es = new EventSource(`${baseUrl}/v1/events`, { withCredentials: false });
-      // EventSource does not support custom headers; the token is passed via
-      // the Authorization header by the server-side check. For browser SSE,
-      // we rely on the same-origin loopback binding for access control.
+      // SSE for live updates. EventSource cannot set custom headers, so the
+      // token is passed via query param. The server accepts ?token= for
+      // /v1/events only. Safe because the UI is same-origin loopback.
+      const es = new EventSource(`${baseUrl}/v1/events?token=${encodeURIComponent(token)}`, { withCredentials: false });
       es.addEventListener('task.updated', (e) => {
         try {
           const evt = JSON.parse(e.data);

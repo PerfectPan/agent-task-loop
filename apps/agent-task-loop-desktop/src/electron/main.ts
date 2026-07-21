@@ -12,7 +12,7 @@ async function startServer(): Promise<{ baseUrl: string; token: string }> {
   return { baseUrl: serverUrl, token: info.token };
 }
 
-function createWindow(baseUrl: string, token: string): void {
+function createWindow(baseUrl: string, _token: string): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -24,15 +24,9 @@ function createWindow(baseUrl: string, token: string): void {
     },
   });
 
-  // Pass base URL and token to the renderer via the preload script.
-  mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow?.webContents.executeJavaScript(
-      `window.__ATL_CONFIG__ = ${JSON.stringify({ baseUrl, token })};`,
-    );
-  });
-
-  // Load the UI. In dev, load from the local server.
-  mainWindow.loadFile(join(__dirname, '../ui/index.html'));
+  // Load the UI from the local server (same-origin with the API).
+  // The server injects window.__ATL_CONFIG__ into the HTML.
+  mainWindow.loadURL(baseUrl);
 
   // Open external links (http/https only) in the system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

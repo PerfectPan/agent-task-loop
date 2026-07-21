@@ -91,4 +91,37 @@ describe('Authentication boundary', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it('serves the UI HTML at / with config injected (no auth required)', async () => {
+    await startServer();
+    const res = await fetch(`${baseUrl}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    // Config must be injected.
+    expect(html).toContain('window.__ATL_CONFIG__');
+    expect(html).toContain(TEST_TOKEN);
+    expect(html).toContain(baseUrl!);
+    // UI must not contain the raw token outside of the config injection.
+    // (It appears once in the injected script.)
+    const tokenOccurrences = html.split(TEST_TOKEN).length - 1;
+    expect(tokenOccurrences).toBe(1);
+  });
+
+  it('allows SSE connection with token via query param', async () => {
+    await startServer();
+    const res = await fetch(`${baseUrl}/v1/events?token=${encodeURIComponent(TEST_TOKEN)}`, {
+      headers: { Accept: 'text/event-stream' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+  });
+
+  it('returns 401 for SSE with invalid query param token', async () => {
+    await startServer();
+    const res = await fetch(`${baseUrl}/v1/events?token=wrong-token`, {
+      headers: { Accept: 'text/event-stream' },
+    });
+    expect(res.status).toBe(401);
+  });
 });

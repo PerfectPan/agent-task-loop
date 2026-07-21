@@ -5,11 +5,11 @@
   "type": "module",
   "description": "Local-first desktop console for agent-task-loop (RFC 0010). Loopback HTTP + SSE + Bearer token, Electron shell.",
   "license": "GPL-3.0-only",
-  "main": "dist/electron/main.js",
+  "main": "dist/src/electron/main.js",
   "scripts": {
     "dev": "tsx src/cli.ts serve",
-    "dev:electron": "electron src/electron/main.ts",
-    "build": "tsc -b",
+    "dev:electron": "tsc -b && cp -r src/ui dist/src/ui && electron dist/src/electron/main.js",
+    "build": "tsc -b && cp -r src/ui dist/src/ui",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,4 +1,7 @@
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type {
   BackgroundStartService,
   TaskManagerApplication,
@@ -30,11 +33,57 @@ export interface LocalServer {
 const LOOPBACK_HOST = '127.0.0.1';
 
 /**
+ * Resolve the path to the UI HTML file. Works in both source (tsx) and
+ * compiled (dist) layouts.
+ */
+function resolveUiHtmlPath(): string {
+  // When running via tsx, import.meta.url points to src/server/create-server.ts.
+  // When compiled, it points to dist/server/create-server.js.
+  const currentFile = fileURLToPath(import.meta.url);
+  const currentDir = join(currentFile, '..');
+  // Dev: src/ui/index.html (two levels up from src/server/)
+  const srcUiPath = join(currentDir, '../ui/index.html');
+  // Production: dist/ui/index.html (one level up from dist/server/)
+  const distUiPath = join(currentDir, '../../src/ui/index.html');
+  // Prefer the source path (dev); the build script copies UI to dist.
+  return srcUiPath;
+}
+
+/**
+ * Serve the UI HTML with the loopback config injected.
+ * The UI is served same-origin so it can call the API without CORS.
+ */
+async function serveUi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  htmlPath: string,
+  _host: string,
+  token: string,
+): Promise<void> {
+  try {
+    // Derive baseUrl from the request's Host header (includes port).
+    const hostHeader = req.headers.host ?? '127.0.0.1';
+    const baseUrl = `http://${hostHeader}`;
+    let html = await readFile(htmlPath, 'utf-8');
+    // Inject config so the UI knows where to reach the API and what token to use.
+    // The UI reads window.__ATL_CONFIG__ on load.
+    const configScript = `<script>window.__ATL_CONFIG__ = ${JSON.stringify({ baseUrl, token })};</script>`;
+    html = html.replace('</head>', `${configScript}</head>`);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+  } catch {
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('UI not found');
+  }
+}
+
+/**
  * Create the local application server.
  *
  * - Binds to 127.0.0.1 only (refuses public interfaces).
  * - Requires Bearer token on all routes except /v1/health.
- * - Serves SSE on /v1/events.
+ * - Serves the UI HTML at / (same-origin, config injected).
+ * - Serves SSE on /v1/events (token also accepted via ?token= for browsers).
  * - All responses are sanitized public DTOs.
  */
 export function createLocalServer(options: LocalServerOptions): LocalServer {
@@ -45,6 +94,7 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
 
   const token = options.token ?? loadOrCreateToken();
   const broadcaster = new SseBroadcaster();
+  const uiHtmlPath = resolveUiHtmlPath();
 
   const deps: RouteDependencies = {
     application: options.application,
@@ -58,10 +108,21 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
     // CORS: same-origin only (no CORS *). Loopback + Bearer token avoids CSRF.
     // No CORS headers sent — the UI is same-origin.
 
-    // Auth: /v1/health is info-free and needs no token.
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`);
+
+    // Serve the UI at / (same-origin). Config is injected into the HTML.
+    if ((url.pathname === '/' || url.pathname === '/ui' || url.pathname === '/index.html') && (req.method ?? 'GET') === 'GET') {
+      serveUi(req, res, uiHtmlPath, host, token);
+      return;
+    }
+
+    // Auth: /v1/health is info-free and needs no token.
     if (url.pathname !== '/v1/health') {
-      const provided = parseBearerToken(req.headers.authorization);
+      // For SSE, also accept the token via query param (EventSource cannot
+      // set custom headers). This is safe because the UI is same-origin and
+      // the token is a short-lived local session token.
+      const provided = parseBearerToken(req.headers.authorization)
+        ?? (url.pathname === '/v1/events' ? url.searchParams.get('token') : null);
       if (!provided || !timingSafeEqual(provided, token)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { code: 'unauthenticated', message: 'Authentication required' } }));

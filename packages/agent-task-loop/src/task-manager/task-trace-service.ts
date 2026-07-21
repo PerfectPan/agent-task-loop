@@ -269,13 +269,19 @@ function normalizeRole(role: string): TranscriptMessageDto['role'] {
 
 function toMessageDto(entry: TranscriptEntry, maxChars: number): TranscriptMessageDto {
   const role = normalizeRole(entry.role);
-  const text = bound(preserveNewlines(entry.text), maxChars);
+  const text = bound(redactMessageText(preserveNewlines(entry.text)), maxChars);
   return {
     role,
     text,
     ...(entry.toolName ? { toolName: entry.toolName } : role === 'tool' && entry.text ? { toolName: entry.text } : {}),
     ...(entry.timestamp ? { at: entry.timestamp } : {}),
   };
+}
+
+function redactMessageText(text: string): string {
+  return text
+    .replace(/\/(?:Users|home)\/[^\s"'`]+/g, '~/…')
+    .replace(/\b(?:ghp|sk|xox[baprs])-[A-Za-z0-9_-]{8,}\b/g, '[redacted]');
 }
 
 /** Keep paragraph breaks; strip JSON-illegal control chars (except \\n/\\t). */

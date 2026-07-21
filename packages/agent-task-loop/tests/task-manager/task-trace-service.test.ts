@@ -57,7 +57,7 @@ describe('TaskTraceService', () => {
     expect(JSON.stringify(rounds)).not.toContain('workspacePath');
   });
 
-  it('returns structured transcript and hides reasoning by default', async () => {
+  it('returns structured transcript and strips harness noise', async () => {
     const service = new TaskTraceService({
       taskProvider: {
         async getTaskById() {
@@ -68,9 +68,19 @@ describe('TaskTraceService', () => {
         async getTranscript(id) {
           expect(id).toBe('sess-exec-1');
           return [
+            { role: 'developer', text: '<permissions instructions> secret sandbox rules' },
             { role: 'reasoning', text: 'thinking hard' },
+            { role: 'user', text: '<recommended_plugins> install me' },
             { role: 'user', text: 'do the thing\nwith two lines' },
-            { role: 'assistant', text: 'done' },
+            { role: 'user', text: 'do the thing\nwith two lines' }, // dup
+            {
+              role: 'assistant',
+              text: 'done <oai-mem-citation><citation_entries>x</citation_entries></oai-mem-citation>',
+            },
+            {
+              role: 'assistant',
+              text: 'done <oai-mem-citation><citation_entries>x</citation_entries></oai-mem-citation>',
+            },
             { role: 'tool', text: 'Read', toolName: 'Read' },
           ];
         },
@@ -86,9 +96,12 @@ describe('TaskTraceService', () => {
     });
     expect(result.messages.map(m => m.role)).toEqual(['user', 'assistant', 'tool']);
     expect(result.messages[0]?.text).toContain('\n');
+    expect(result.messages[1]?.text).toBe('done');
+    expect(result.messages[1]?.text).not.toContain('oai-mem-citation');
     expect(result.messages[2]?.toolName).toBe('Read');
     expect(result.roleCounts).toMatchObject({ user: 1, assistant: 1, tool: 1 });
     expect(result.messages.some(m => m.role === 'reasoning')).toBe(false);
+    expect(result.messages.some(m => m.role === 'system')).toBe(false);
   });
 
   it('redacts home paths in log tails', async () => {

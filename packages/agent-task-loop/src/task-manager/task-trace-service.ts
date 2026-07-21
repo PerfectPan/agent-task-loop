@@ -138,14 +138,14 @@ export class TaskTraceService {
       return emptyTranscript(task.taskId, roundKey || 'none');
     }
 
-    const entries = await this.sessions.getTranscript(sessionId, this.maxTranscriptLines * 2);
-    const filtered = this.hideReasoning
-      ? entries.filter(e => normalizeRole(e.role) !== 'reasoning')
-      : entries;
-    const sliced = filtered.slice(-this.maxTranscriptLines);
-    const messages = sliced.map(e => toMessageDto(e, this.maxMessageChars));
+    const entries = await this.sessions.getTranscript(sessionId, this.maxTranscriptLines * 3);
+    const cleaned = cleanTranscriptEntries(entries, {
+      hideReasoning: this.hideReasoning,
+      maxMessageChars: this.maxMessageChars,
+    });
+    const sliced = cleaned.slice(-this.maxTranscriptLines);
     const roleCounts: Record<string, number> = {};
-    for (const m of messages) {
+    for (const m of sliced) {
       roleCounts[m.role] = (roleCounts[m.role] ?? 0) + 1;
     }
 
@@ -153,9 +153,9 @@ export class TaskTraceService {
       taskId: task.taskId,
       roundKey: roundKey || `session:${sessionId}`,
       sessionId,
-      messages,
-      truncated: filtered.length > sliced.length,
-      lineCount: filtered.length,
+      messages: sliced,
+      truncated: cleaned.length > sliced.length,
+      lineCount: cleaned.length,
       roleCounts,
     };
   }
@@ -264,18 +264,94 @@ function normalizeRole(role: string): TranscriptMessageDto['role'] {
   if (r === 'user' || r === 'assistant' || r === 'system' || r === 'tool' || r === 'reasoning') {
     return r;
   }
+  // Codex injects "developer" system blocks — treat as system (usually dropped).
+  if (r === 'developer') return 'system';
   return 'unknown';
 }
 
-function toMessageDto(entry: TranscriptEntry, maxChars: number): TranscriptMessageDto {
-  const role = normalizeRole(entry.role);
-  const text = bound(redactMessageText(preserveNewlines(entry.text)), maxChars);
-  return {
-    role,
-    text,
-    ...(entry.toolName ? { toolName: entry.toolName } : role === 'tool' && entry.text ? { toolName: entry.text } : {}),
-    ...(entry.timestamp ? { at: entry.timestamp } : {}),
-  };
+/**
+ * Turn raw agent-sessions entries into UI-readable messages:
+ * drop harness noise, strip citation XML, dedupe consecutive clones.
+ */
+function cleanTranscriptEntries(
+  entries: TranscriptEntry[],
+  opts: { hideReasoning: boolean; maxMessageChars: number },
+): TranscriptMessageDto[] {
+  const out: TranscriptMessageDto[] = [];
+
+  for (const entry of entries) {
+    const role = normalizeRole(entry.role);
+    if (opts.hideReasoning && role === 'reasoning') continue;
+    // Hide system / developer harness dumps and unparsed noise.
+    if (role === 'system' || role === 'unknown') continue;
+
+    let text = preserveNewlines(entry.text);
+    text = stripHarnessMarkup(text);
+    text = redactMessageText(text);
+    text = bound(text, opts.maxMessageChars);
+
+    if (role === 'user' && isNoiseUserMessage(text)) continue;
+    if (role === 'tool') {
+      const toolName = entry.toolName || text || 'tool';
+      // Skip pure tool name spam with no extra payload.
+      const dto: TranscriptMessageDto = {
+        role: 'tool',
+        text: toolName,
+        toolName,
+        ...(entry.timestamp ? { at: entry.timestamp } : {}),
+      };
+      if (isDuplicate(out[out.length - 1], dto)) continue;
+      out.push(dto);
+      continue;
+    }
+
+    if (!text) continue;
+
+    const dto: TranscriptMessageDto = {
+      role,
+      text,
+      ...(entry.timestamp ? { at: entry.timestamp } : {}),
+    };
+    if (isDuplicate(out[out.length - 1], dto)) continue;
+    out.push(dto);
+  }
+
+  return out;
+}
+
+function isDuplicate(prev: TranscriptMessageDto | undefined, next: TranscriptMessageDto): boolean {
+  if (!prev) return false;
+  return prev.role === next.role
+    && prev.text === next.text
+    && (prev.toolName ?? '') === (next.toolName ?? '');
+}
+
+function isNoiseUserMessage(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  if (t.startsWith('<recommended_plugins>')) return true;
+  if (t.startsWith('<permissions instructions>')) return true;
+  if (t.startsWith('<multi_agent_mode>')) return true;
+  if (t.includes('<permissions instructions>') && t.length > 500) return true;
+  // Duplicate task prompt prefixes that are pure harness.
+  if (/^You are `\/root`/.test(t)) return true;
+  return false;
+}
+
+/** Remove OpenAI/Codex memory citation and similar internal XML blobs. */
+function stripHarnessMarkup(text: string): string {
+  return text
+    .replace(/<oai-mem-citation>[\s\S]*?<\/oai-mem-citation>/gi, '')
+    .replace(/<citation_entries>[\s\S]*?<\/citation_entries>/gi, '')
+    .replace(/<rollout_ids>[\s\S]*?<\/rollout_ids>/gi, '')
+    .replace(/<\/?oai-mem-citation>/gi, '')
+    .replace(/<\/?citation_entries>/gi, '')
+    .replace(/<\/?rollout_ids>/gi, '')
+    .replace(/<\/?recommended_plugins>/gi, '')
+    .replace(/<\/?multi_agent_mode>/gi, '')
+    .replace(/<\/?permissions instructions>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function redactMessageText(text: string): string {

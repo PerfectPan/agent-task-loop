@@ -513,8 +513,19 @@
   .msg-row {
     border: 1px solid var(--line);
     border-radius: 2px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: var(--bg);
+  }
+  .msg-row.user {
+    border-color: var(--copper-line);
+    background: rgba(201,133,74,0.08);
+  }
+  .msg-row.assistant {
+    border-color: var(--line-strong);
+  }
+  .msg-row.tool {
+    padding: 6px 10px;
+    opacity: 0.85;
   }
   .msg-row .mr {
     font-family: var(--mono);
@@ -522,17 +533,21 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-faint);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
   .msg-row.user .mr { color: var(--copper); }
   .msg-row.assistant .mr { color: var(--ok); }
   .msg-row.tool .mr { color: var(--warn); }
   .msg-row .mt {
-    font-size: 12.5px;
-    line-height: 1.5;
+    font-size: 13px;
+    line-height: 1.55;
     color: var(--ink-dim);
     white-space: pre-wrap;
     word-break: break-word;
+  }
+  .msg-row.tool .mt {
+    font-family: var(--mono);
+    font-size: 11px;
   }
   .logbox {
     font-family: var(--mono);

@@ -3,8 +3,8 @@ import http from 'node:http';
 import type { TaskManagerApplication } from '@rivus/agent-task-loop/task-manager';
 import type { BackgroundStartService } from '@rivus/agent-task-loop/task-manager';
 import { toPublicTask } from '@rivus/agent-task-loop/task-manager';
-import { createLocalServer } from '../src/server/create-server';
-import { createFakeApplication, createFakeBackgroundStart, fakeTaskRecord } from './fixtures';
+import { createLocalServer } from '../src/server/create-server.js';
+import { createFakeApplication, createFakeBackgroundStart, fakeTaskRecord } from './fixtures.js';
 
 const TEST_TOKEN = 'test-session-token-1234567890abcdef';
 

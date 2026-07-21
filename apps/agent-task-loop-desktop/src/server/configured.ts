@@ -1,5 +1,5 @@
 import { createConfiguredDesktopServices } from '@rivus/agent-task-loop/task-manager';
-import { createLocalServer, type LocalServer } from './create-server';
+import { createLocalServer, type LocalServer } from './create-server.js';
 
 /**
  * Create a fully configured local server with real shared dependencies.

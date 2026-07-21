@@ -6,9 +6,9 @@ import type {
   BackgroundStartService,
   TaskManagerApplication,
 } from '@rivus/agent-task-loop/task-manager';
-import { loadOrCreateToken, parseBearerToken, timingSafeEqual } from './auth';
-import { createRequestHandler, type RouteDependencies } from './routes';
-import { SseBroadcaster } from './sse';
+import { loadOrCreateToken, parseBearerToken, timingSafeEqual } from './auth.js';
+import { createRequestHandler, type RouteDependencies } from './routes.js';
+import { SseBroadcaster } from './sse.js';
 
 export interface LocalServerOptions {
   application: TaskManagerApplication;

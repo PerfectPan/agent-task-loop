@@ -1,6 +1,9 @@
 import { app, BrowserWindow, shell } from 'electron';
-import { join } from 'node:path';
-import { createConfiguredLocalServer } from '../server/configured';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createConfiguredLocalServer } from '../server/configured.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
 let serverUrl: string | null = null;

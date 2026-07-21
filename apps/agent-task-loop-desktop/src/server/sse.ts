@@ -1,7 +1,7 @@
 import type { ServerResponse } from 'node:http';
 import type { PublicTaskDto } from '@rivus/agent-task-loop/task-manager';
-import type { RunPhase } from './redact';
-import { sanitizePublicTask } from './redact';
+import type { RunPhase } from './redact.js';
+import { sanitizePublicTask } from './redact.js';
 
 export interface TaskUpdatedEvent {
   type: 'task.updated';

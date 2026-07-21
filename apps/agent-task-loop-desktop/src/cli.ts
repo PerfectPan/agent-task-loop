@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createConfiguredLocalServer } from './server/configured';
+import { createConfiguredLocalServer } from './server/configured.js';
 
 const DEFAULT_PORT = 0; // ephemeral — let the OS pick a free port
 

@@ -12,8 +12,8 @@ import {
   startTaskInputSchema,
 } from '@rivus/agent-task-loop/task-manager';
 import type { BackgroundStartService, RunPhase } from '@rivus/agent-task-loop/task-manager';
-import type { SseBroadcaster } from './sse';
-import { mapErrorToResponse, sanitizePublicTask } from './redact';
+import type { SseBroadcaster } from './sse.js';
+import { mapErrorToResponse, sanitizePublicTask } from './redact.js';
 
 export interface RouteDependencies {
   application: TaskManagerApplication;

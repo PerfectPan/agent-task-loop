@@ -2,13 +2,13 @@ import { describe, expect, it, afterEach } from 'vitest';
 import http from 'node:http';
 import type { TaskManagerApplication } from '@rivus/agent-task-loop/task-manager';
 import type { BackgroundStartService } from '@rivus/agent-task-loop/task-manager';
-import { createLocalServer } from '../src/server/create-server';
+import { createLocalServer } from '../src/server/create-server.js';
 import {
   adversarialTaskRecord,
   createFakeApplication,
   createFakeBackgroundStart,
   DENIED_FIELDS,
-} from './fixtures';
+} from './fixtures.js';
 import type { TaskRecord } from '@rivus/agent-task-loop/task-manager';
 
 const TEST_TOKEN = 'test-session-token-1234567890abcdef';

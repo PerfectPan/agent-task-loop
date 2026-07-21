@@ -1,8 +1,8 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import type { TaskManagerApplication } from '@rivus/agent-task-loop/task-manager';
 import type { BackgroundStartService } from '@rivus/agent-task-loop/task-manager';
-import { createLocalServer } from '../src/server/create-server';
-import { createFakeApplication, createFakeBackgroundStart } from './fixtures';
+import { createLocalServer } from '../src/server/create-server.js';
+import { createFakeApplication, createFakeBackgroundStart } from './fixtures.js';
 
 const TEST_TOKEN = 'test-session-token-1234567890abcdef';
 

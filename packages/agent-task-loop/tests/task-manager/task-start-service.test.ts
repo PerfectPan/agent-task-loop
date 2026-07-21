@@ -43,7 +43,7 @@ describe('TaskStartService', () => {
     });
 
     await expect(service.startTask({ taskId: 'TASK-21', maxRounds: 5 })).rejects.toThrow(
-      'Task TASK-21 already has an active execute runner',
+      'Task TASK-21 already has an active runner',
     );
     expect(run).not.toHaveBeenCalled();
   });

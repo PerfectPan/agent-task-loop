@@ -33,7 +33,10 @@ export class TaskStartService {
 
     const inspection = await this.dependencies.livenessService.inspect(task);
     if (inspection.state === 'active') {
-      throw new Error(`Task ${task.taskId} already has an active ${inspection.mode} runner`);
+      throw new TaskManagerInputError(
+        'task-already-active',
+        `Task ${task.taskId} already has an active runner`,
+      );
     }
     if (inspection.state === 'stale') {
       this.dependencies.onRecovery?.(inspection);

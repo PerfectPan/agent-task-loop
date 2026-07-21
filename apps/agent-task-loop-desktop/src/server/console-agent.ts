@@ -559,7 +559,7 @@ function formatOperatorReply(
   notes: string[],
   toolCalls: ChatResult['toolCalls'],
 ): string {
-  if (!notes.length) return helpText({ projects: [], repositories: [], sources: [], agents: [] });
+  if (!notes.length) return helpText({ projects: [], sources: [], agents: [] });
   const failed = toolCalls.filter(t => !t.ok).length;
   const header = failed ? `完成，但有 ${failed} 处失败。` : '完成。';
   return [header, '', ...notes].join('\n').trim();

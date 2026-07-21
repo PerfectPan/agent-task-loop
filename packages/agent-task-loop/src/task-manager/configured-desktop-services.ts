@@ -12,6 +12,7 @@ import {
   type TaskManagerApplication,
 } from './task-manager-application';
 import { TaskStartService } from './task-start-service';
+import { TaskTraceService } from './task-trace-service';
 
 /**
  * Public workspace snapshot for the desktop console.
@@ -43,6 +44,7 @@ export interface ConfiguredDesktopServices {
   application: TaskManagerApplication;
   backgroundStart: BackgroundStartService;
   workspace: DesktopWorkspaceSnapshot;
+  trace: TaskTraceService;
 }
 
 /**
@@ -85,10 +87,15 @@ export async function createConfiguredDesktopServices(): Promise<ConfiguredDeskt
     livenessService,
   });
 
+  const trace = new TaskTraceService({
+    taskProvider: taskService,
+  });
+
   return {
     application,
     backgroundStart,
     workspace: buildDesktopWorkspaceSnapshot(config),
+    trace,
   };
 }
 

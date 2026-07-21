@@ -7,6 +7,7 @@ import type {
   BackgroundStartService,
   DesktopWorkspaceSnapshot,
   TaskManagerApplication,
+  TaskTraceService,
 } from '@rivus/agent-task-loop/task-manager';
 import { loadOrCreateToken, parseBearerToken, timingSafeEqual } from './auth.js';
 import { ConsoleAgent } from './console-agent.js';
@@ -24,6 +25,7 @@ export interface LocalServerOptions {
   application: TaskManagerApplication;
   backgroundStart: BackgroundStartService;
   workspace?: DesktopWorkspaceSnapshot;
+  trace?: TaskTraceService;
   /** Session token for auth. If not provided, one is loaded/created from the state dir. */
   token?: string;
   /** Host to bind to. Must be 127.0.0.1 (default). Refuse public interfaces. */
@@ -151,6 +153,7 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
     workspace,
     broadcaster,
     consoleAgent,
+    trace: options.trace,
   };
 
   const requestHandler = createRequestHandler(deps);

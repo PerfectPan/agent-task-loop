@@ -455,6 +455,100 @@
   }
   .kv dd { color: var(--ink-dim); overflow-wrap: anywhere; }
 
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    margin: 0 0 12px;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 8px 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 2px solid transparent;
+  }
+  .tabs button.on {
+    color: var(--ink);
+    border-bottom-color: var(--copper);
+  }
+  .rounds { display: flex; flex-direction: column; gap: 4px; }
+  .round {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+  .round:hover { border-color: var(--line-strong); }
+  .round.on {
+    border-color: var(--copper-line);
+    background: var(--copper-soft);
+  }
+  .round .rk {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--copper);
+  }
+  .round .rm {
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-family: var(--mono);
+  }
+  .round .rt {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .dot-yes { color: var(--ok); }
+  .dot-no { color: var(--ink-faint); }
+  .msgs { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow: auto; }
+  .msg-row {
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 8px 10px;
+    background: var(--bg);
+  }
+  .msg-row .mr {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .msg-row.user .mr { color: var(--copper); }
+  .msg-row.assistant .mr { color: var(--ok); }
+  .msg-row.tool .mr { color: var(--warn); }
+  .msg-row .mt {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-dim);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .logbox {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--ink-dim);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 10px;
+    max-height: 360px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /* —— Chat drawer —— */
   .chat-fab {
     position: fixed;
@@ -960,18 +1054,30 @@ function boot(baseUrl, token) {
   async function select(id) {
     if (!id) return;
     state.selectedId = id;
+    state.detailTab = state.detailTab || 'overview';
+    state.selectedRoundKey = null;
     renderList();
     $('detail').innerHTML = `<div class="empty"><div>加载中…</div></div>`;
     try {
       const d = await api(`/v1/tasks/${encodeURIComponent(id)}`);
-      renderDetail(d.task);
+      state.currentTask = d.task;
+      let rounds = [];
+      try {
+        const rr = await api(`/v1/tasks/${encodeURIComponent(id)}/rounds`);
+        rounds = rr.rounds || [];
+      } catch {
+        rounds = [];
+      }
+      state.rounds = rounds;
+      renderDetail(d.task, rounds);
     } catch (e) {
       $('detail').innerHTML = `<div class="empty"><div><strong>失败</strong>${esc(e.message)}</div></div>`;
     }
   }
 
-  function renderDetail(t) {
+  function renderDetail(t, rounds = state.rounds || []) {
     if (!t) return;
+    const tab = state.detailTab || 'overview';
     $('detail').innerHTML = `
       <div class="hero-id">${esc(t.taskId)}</div>
       <div class="hero-title">${esc(t.title)}</div>
@@ -984,24 +1090,98 @@ function boot(baseUrl, token) {
         <button type="button" class="btn btn-line" id="ask">问 Agent</button>
         ${t.prLink ? `<a class="btn btn-line" target="_blank" rel="noreferrer" href="${escAttr(t.prLink)}">PR</a>` : ''}
       </div>
-      <div class="section"><h4>Description</h4><p>${esc(t.description || '—')}</p></div>
-      <div class="section"><h4>Progress</h4><p>${esc(t.progressSummary || '—')}</p></div>
-      <div class="section"><h4>Result</h4><p>${esc(t.resultSummary || '—')}</p></div>
-      <div class="section"><h4>Meta</h4>
-        <dl class="kv">
-          <dt>project</dt><dd>${esc(t.project || '—')}</dd>
-          <dt>source</dt><dd>${esc(t.source || '—')}</dd>
-          <dt>repo</dt><dd>${esc(t.repository || '—')}</dd>
-          <dt>owner</dt><dd>${esc(t.currentOwner || '—')}</dd>
-          <dt>updated</dt><dd>${esc(t.updatedAt || '—')}</dd>
-        </dl>
-      </div>`;
+      <div class="tabs" id="detail-tabs">
+        <button type="button" data-tab="overview" class="${tab === 'overview' ? 'on' : ''}">概览</button>
+        <button type="button" data-tab="rounds" class="${tab === 'rounds' ? 'on' : ''}">Rounds (${rounds.length})</button>
+        <button type="button" data-tab="transcript" class="${tab === 'transcript' ? 'on' : ''}">Transcript</button>
+        <button type="button" data-tab="logs" class="${tab === 'logs' ? 'on' : ''}">Logs</button>
+      </div>
+      <div id="detail-body"></div>`;
     $('start').onclick = () => startTask(t.taskId);
     $('ask').onclick = () => {
       openChat();
       $('input').value = `查看 ${t.taskId} 并总结当前进度`;
       $('input').focus();
     };
+    $('detail-tabs').onclick = e => {
+      const b = e.target.closest('button[data-tab]');
+      if (!b) return;
+      state.detailTab = b.dataset.tab;
+      renderDetail(t, rounds);
+    };
+    const body = $('detail-body');
+    if (tab === 'overview') {
+      body.innerHTML = `
+        <div class="section" style="border-top:0;padding-top:0"><h4>Description</h4><p>${esc(t.description || '—')}</p></div>
+        <div class="section"><h4>Progress</h4><p>${esc(t.progressSummary || '—')}</p></div>
+        <div class="section"><h4>Result</h4><p>${esc(t.resultSummary || '—')}</p></div>
+        <div class="section"><h4>Meta</h4>
+          <dl class="kv">
+            <dt>project</dt><dd>${esc(t.project || '—')}</dd>
+            <dt>source</dt><dd>${esc(t.source || '—')}</dd>
+            <dt>repo</dt><dd>${esc(t.repository || '—')}</dd>
+            <dt>owner</dt><dd>${esc(t.currentOwner || '—')}</dd>
+            <dt>updated</dt><dd>${esc(t.updatedAt || '—')}</dd>
+          </dl>
+        </div>`;
+    } else if (tab === 'rounds') {
+      if (!rounds.length) {
+        body.innerHTML = `<div class="empty"><div><strong>暂无 rounds</strong>启动任务后，execute/review 会出现在这里。</div></div>`;
+      } else {
+        body.innerHTML = `<div class="rounds">${rounds.map(r => `
+          <button type="button" class="round ${state.selectedRoundKey === r.key ? 'on' : ''}" data-key="${esc(r.key)}" data-sid="${esc(r.sessionId || '')}">
+            <span class="rk">r${esc(String(r.round))} · ${esc(r.kind)}</span>
+            <span class="rm ${r.hasTranscript ? 'dot-yes' : 'dot-no'}">${r.hasTranscript ? '有 transcript' : '无稿'}</span>
+            <span class="rt">${esc(r.agent)}${r.at ? ' · ' + esc(r.at) : ''}${r.sessionName ? ' · ' + esc(r.sessionName) : ''}</span>
+          </button>`).join('')}</div>
+          <p class="hint" style="margin-top:10px">点击 round 打开 Transcript</p>`;
+        body.querySelectorAll('.round').forEach(el => {
+          el.onclick = () => {
+            state.selectedRoundKey = el.dataset.key;
+            state.selectedSessionId = el.dataset.sid || '';
+            state.detailTab = 'transcript';
+            renderDetail(t, rounds);
+          };
+        });
+      }
+    } else if (tab === 'transcript') {
+      body.innerHTML = `<div class="empty"><div>加载 transcript…</div></div>`;
+      const params = new URLSearchParams();
+      if (state.selectedRoundKey) params.set('roundKey', state.selectedRoundKey);
+      if (state.selectedSessionId) params.set('sessionId', state.selectedSessionId);
+      api(`/v1/tasks/${encodeURIComponent(t.taskId)}/transcript?${params}`)
+        .then(tr => {
+          if (!tr.messages?.length) {
+            body.innerHTML = `<div class="empty"><div><strong>没有 transcript</strong>该 round 可能尚未落盘，或 session 已被清理。</div></div>`;
+            return;
+          }
+          body.innerHTML = `
+            <p class="hint" style="margin-bottom:8px">${esc(tr.roundKey)}${tr.sessionId ? ' · ' + esc(tr.sessionId) : ''}${tr.truncated ? ' · truncated' : ''} · ${tr.lineCount || tr.messages.length} lines</p>
+            <div class="msgs">${tr.messages.map(m => `
+              <div class="msg-row ${esc(m.role)}">
+                <div class="mr">${esc(m.role)}</div>
+                <div class="mt">${esc(m.text)}</div>
+              </div>`).join('')}</div>`;
+        })
+        .catch(e => {
+          body.innerHTML = `<div class="empty"><div><strong>加载失败</strong>${esc(e.message)}</div></div>`;
+        });
+    } else if (tab === 'logs') {
+      body.innerHTML = `<div class="empty"><div>加载 logs…</div></div>`;
+      api(`/v1/tasks/${encodeURIComponent(t.taskId)}/log-tail`)
+        .then(log => {
+          if (!log.available || !log.lines?.length) {
+            body.innerHTML = `<div class="empty"><div><strong>没有 log</strong>runner 日志不可用或尚未产生。</div></div>`;
+            return;
+          }
+          body.innerHTML = `
+            <p class="hint" style="margin-bottom:8px">${log.truncated ? 'truncated · ' : ''}${log.lines.length} lines · 已脱敏</p>
+            <div class="logbox">${esc(log.lines.join('\n'))}</div>`;
+        })
+        .catch(e => {
+          body.innerHTML = `<div class="empty"><div><strong>加载失败</strong>${esc(e.message)}</div></div>`;
+        });
+    }
   }
 
   async function startTask(taskId) {
@@ -1013,7 +1193,7 @@ function boot(baseUrl, token) {
       });
       toast(`已启动 ${taskId} · ${r.runPhase || 'running'}`);
       await loadTasks();
-      if (r.task) renderDetail(r.task);
+      if (state.selectedId === taskId) await select(taskId);
     } catch (e) {
       toast(`启动失败：${e.message}`);
     } finally {

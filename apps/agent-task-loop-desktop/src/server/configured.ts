@@ -6,6 +6,6 @@ import { createLocalServer, type LocalServer } from './create-server.js';
  * Used by the Electron main process and the headless CLI.
  */
 export async function createConfiguredLocalServer(): Promise<LocalServer> {
-  const { application, backgroundStart, workspace } = await createConfiguredDesktopServices();
-  return createLocalServer({ application, backgroundStart, workspace });
+  const { application, backgroundStart, workspace, trace } = await createConfiguredDesktopServices();
+  return createLocalServer({ application, backgroundStart, workspace, trace });
 }

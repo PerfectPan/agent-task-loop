@@ -33,6 +33,14 @@ export {
   type RunPhase,
 } from './background-start';
 export {
+  TaskTraceService,
+  type TaskLogTailDto,
+  type TaskRoundDto,
+  type TaskTraceServiceDependencies,
+  type TaskTranscriptDto,
+  type TranscriptMessageDto,
+} from './task-trace-service';
+export {
   createTaskInputSchema,
   getTaskInputSchema,
   listTasksInputSchema,

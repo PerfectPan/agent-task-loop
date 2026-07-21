@@ -4,6 +4,7 @@ import type {
   CreateTaskPayload,
   DesktopWorkspaceSnapshot,
   TaskManagerApplication,
+  TaskTraceService,
 } from '@rivus/agent-task-loop/task-manager';
 import {
   createTaskInputSchema,
@@ -23,6 +24,7 @@ export interface RouteDependencies {
   workspace: DesktopWorkspaceSnapshot;
   broadcaster: SseBroadcaster;
   consoleAgent?: ConsoleAgent;
+  trace?: TaskTraceService;
 }
 
 const chatInputSchema = z
@@ -231,6 +233,47 @@ async function handleRequest(
           ? { name: deps.workspace.chatAgent.name, command: deps.workspace.chatAgent.command }
           : null,
       });
+      return;
+    }
+
+    // GET /v1/tasks/:id/rounds
+    const roundsMatch = /^\/v1\/tasks\/([^/]+)\/rounds$/.exec(pathname);
+    if (method === 'GET' && roundsMatch) {
+      if (!deps.trace) {
+        sendJson(res, 503, { error: { code: 'trace-unavailable', message: 'Trace service is not configured' } });
+        return;
+      }
+      const taskId = decodeURIComponent(roundsMatch[1]!);
+      const result = await deps.trace.listRounds(taskId);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    // GET /v1/tasks/:id/transcript?roundKey=&sessionId=
+    const transcriptMatch = /^\/v1\/tasks\/([^/]+)\/transcript$/.exec(pathname);
+    if (method === 'GET' && transcriptMatch) {
+      if (!deps.trace) {
+        sendJson(res, 503, { error: { code: 'trace-unavailable', message: 'Trace service is not configured' } });
+        return;
+      }
+      const taskId = decodeURIComponent(transcriptMatch[1]!);
+      const roundKey = url.searchParams.get('roundKey') ?? undefined;
+      const sessionId = url.searchParams.get('sessionId') ?? undefined;
+      const result = await deps.trace.getTranscript({ taskId, roundKey, sessionId });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    // GET /v1/tasks/:id/log-tail
+    const logMatch = /^\/v1\/tasks\/([^/]+)\/log-tail$/.exec(pathname);
+    if (method === 'GET' && logMatch) {
+      if (!deps.trace) {
+        sendJson(res, 503, { error: { code: 'trace-unavailable', message: 'Trace service is not configured' } });
+        return;
+      }
+      const taskId = decodeURIComponent(logMatch[1]!);
+      const result = await deps.trace.getLogTail(taskId);
+      sendJson(res, 200, result);
       return;
     }
 

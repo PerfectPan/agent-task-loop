@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
   BackgroundStartService,
+  DesktopWorkspaceSnapshot,
   TaskManagerApplication,
 } from '@rivus/agent-task-loop/task-manager';
 import { loadOrCreateToken, parseBearerToken, timingSafeEqual } from './auth.js';
@@ -12,9 +13,17 @@ import { ConsoleAgent } from './console-agent.js';
 import { createRequestHandler, type RouteDependencies } from './routes.js';
 import { SseBroadcaster } from './sse.js';
 
+const EMPTY_WORKSPACE: DesktopWorkspaceSnapshot = {
+  projects: [],
+  repositories: [],
+  sources: [],
+  agents: [],
+};
+
 export interface LocalServerOptions {
   application: TaskManagerApplication;
   backgroundStart: BackgroundStartService;
+  workspace?: DesktopWorkspaceSnapshot;
   /** Session token for auth. If not provided, one is loaded/created from the state dir. */
   token?: string;
   /** Host to bind to. Must be 127.0.0.1 (default). Refuse public interfaces. */
@@ -108,12 +117,15 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
   const broadcaster = new SseBroadcaster();
   const uiHtmlPath = resolveUiHtmlPath();
 
+  const workspace = options.workspace ?? EMPTY_WORKSPACE;
+
   const consoleAgent =
     options.enableAgent === false
       ? undefined
       : new ConsoleAgent({
           application: options.application,
           backgroundStart: options.backgroundStart,
+          workspace,
           onMutation: async taskId => {
             if (!taskId) {
               broadcaster.broadcastBoardRefresh();
@@ -136,6 +148,7 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
   const deps: RouteDependencies = {
     application: options.application,
     backgroundStart: options.backgroundStart,
+    workspace,
     broadcaster,
     consoleAgent,
   };

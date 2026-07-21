@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { URL } from 'node:url';
 import type {
   CreateTaskPayload,
+  DesktopWorkspaceSnapshot,
   TaskManagerApplication,
 } from '@rivus/agent-task-loop/task-manager';
 import {
@@ -19,6 +20,7 @@ import { z } from 'zod';
 export interface RouteDependencies {
   application: TaskManagerApplication;
   backgroundStart: BackgroundStartService;
+  workspace: DesktopWorkspaceSnapshot;
   broadcaster: SseBroadcaster;
   consoleAgent?: ConsoleAgent;
 }
@@ -199,7 +201,7 @@ async function handleRequest(
           'agent-task-loop/task-create',
           'agent-task-loop/task-start',
         ],
-        agents: ['claude', 'codex', 'coco', 'glm'],
+        agents: deps.workspace.agents,
         statuses: [
           '待处理',
           '进行中',
@@ -212,6 +214,22 @@ async function handleRequest(
           '已完成',
           '已失败',
         ],
+        chatMode: deps.workspace.chatAgent ? 'model' : 'rules',
+        chatAgent: deps.workspace.chatAgent?.name ?? null,
+      });
+      return;
+    }
+
+    // GET /v1/workspace — bound projects/repos/sources (no absolute paths)
+    if (method === 'GET' && pathname === '/v1/workspace') {
+      sendJson(res, 200, {
+        projects: deps.workspace.projects,
+        repositories: deps.workspace.repositories,
+        sources: deps.workspace.sources,
+        agents: deps.workspace.agents,
+        chatAgent: deps.workspace.chatAgent
+          ? { name: deps.workspace.chatAgent.name, command: deps.workspace.chatAgent.command }
+          : null,
       });
       return;
     }

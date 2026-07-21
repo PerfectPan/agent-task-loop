@@ -19,8 +19,10 @@ export {
 export { toPublicTask, type PublicTaskDto } from './public-task';
 export { createConfiguredTaskManagerApplication } from './configured-task-manager';
 export {
+  buildDesktopWorkspaceSnapshot,
   createConfiguredDesktopServices,
   type ConfiguredDesktopServices,
+  type DesktopWorkspaceSnapshot,
 } from './configured-desktop-services';
 export { TaskStartService, type TaskStartServiceDependencies } from './task-start-service';
 export {

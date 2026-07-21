@@ -18,6 +18,7 @@
   "dependencies": {
     "@rivus/agent": "0.1.1",
     "@rivus/agent-task-loop": "workspace:*",
+    "execa": "^9.6.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

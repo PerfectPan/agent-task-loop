@@ -33,6 +33,9 @@ importers:
       '@rivus/agent-task-loop':
         specifier: workspace:*
         version: link:../../packages/agent-task-loop
+      execa:
+        specifier: ^9.6.0
+        version: 9.6.1
       zod:
         specifier: ^3.24.1
         version: 3.25.76

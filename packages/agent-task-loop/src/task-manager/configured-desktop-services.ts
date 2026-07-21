@@ -1,8 +1,11 @@
 import { loadConfig } from '../config/load-config';
+import { normalizeGitHubRepos } from '../config/github-repos';
 import { assertRuntimeConfig } from '../config/runtime-guard';
+import type { AppConfig } from '../config/schema';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import { TaskService } from '../services/task-service';
+import { githubSource } from '../task-management/github-issues-task-provider';
 import { BackgroundStartService } from './background-start';
 import {
   createTaskManagerApplication,
@@ -10,9 +13,36 @@ import {
 } from './task-manager-application';
 import { TaskStartService } from './task-start-service';
 
+/**
+ * Public workspace snapshot for the desktop console.
+ * Deliberately omits absolute paths, tokens, and credentials.
+ */
+export interface DesktopWorkspaceSnapshot {
+  projects: Array<{
+    key: string;
+    name: string;
+    defaultRepository: string;
+  }>;
+  repositories: Array<{
+    key: string;
+    defaultBranch: string;
+    workspaceStrategy: 'existing-repo' | 'worktree';
+  }>;
+  sources: string[];
+  agents: string[];
+  /** Preferred coding agent for free-form console chat, if configured. */
+  chatAgent?: {
+    name: string;
+    command: string;
+    args: string[];
+    env: Record<string, string>;
+  };
+}
+
 export interface ConfiguredDesktopServices {
   application: TaskManagerApplication;
   backgroundStart: BackgroundStartService;
+  workspace: DesktopWorkspaceSnapshot;
 }
 
 /**
@@ -55,5 +85,51 @@ export async function createConfiguredDesktopServices(): Promise<ConfiguredDeskt
     livenessService,
   });
 
-  return { application, backgroundStart };
+  return {
+    application,
+    backgroundStart,
+    workspace: buildDesktopWorkspaceSnapshot(config),
+  };
+}
+
+export function buildDesktopWorkspaceSnapshot(config: AppConfig): DesktopWorkspaceSnapshot {
+  const sources = [
+    ...(config.feishu ? ['feishu'] : []),
+    ...(config.githubIssues
+      ? normalizeGitHubRepos(config.githubIssues).map(repo => githubSource(repo.owner, repo.repo))
+      : []),
+  ];
+
+  const agents = Object.keys(config.agents);
+  const preferred =
+    config.agents.claude ??
+    config.agents.codex ??
+    config.agents.coco ??
+    config.agents.glm ??
+    undefined;
+
+  return {
+    projects: Object.values(config.projects).map(project => ({
+      key: project.key,
+      name: project.name,
+      defaultRepository: project.defaultRepository,
+    })),
+    repositories: Object.values(config.repositories).map(repository => ({
+      key: repository.key,
+      defaultBranch: repository.defaultBranch,
+      workspaceStrategy: repository.workspaceStrategy,
+    })),
+    sources,
+    agents,
+    ...(preferred
+      ? {
+          chatAgent: {
+            name: preferred.name,
+            command: preferred.command,
+            args: preferred.args,
+            env: preferred.env,
+          },
+        }
+      : {}),
+  };
 }

@@ -285,12 +285,14 @@ function cleanTranscriptEntries(
     // Hide system / developer harness dumps and unparsed noise.
     if (role === 'system' || role === 'unknown') continue;
 
-    let text = preserveNewlines(entry.text);
-    text = stripHarnessMarkup(text);
+    const rawText = preserveNewlines(entry.text);
+    // Noise checks use raw text (before tag stripping removes markers).
+    if (role === 'user' && isNoiseUserMessage(rawText)) continue;
+
+    let text = stripHarnessMarkup(rawText);
     text = redactMessageText(text);
     text = bound(text, opts.maxMessageChars);
 
-    if (role === 'user' && isNoiseUserMessage(text)) continue;
     if (role === 'tool') {
       const toolName = entry.toolName || text || 'tool';
       // Skip pure tool name spam with no extra payload.

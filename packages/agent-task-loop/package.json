@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "@rivus/agent-finder-core": "workspace:*",
+    "@rivus/agent-sessions": "workspace:*",
     "citty": "^0.1.6",
     "execa": "^9.6.0",
     "ink": "^5.1.0",
@@ -67,7 +68,6 @@
   },
   "devDependencies": {
     "@rivus/agent": "0.1.1",
-    "@rivus/agent-sessions": "workspace:*",
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",
     "@rivus/rslib-config": "workspace:*",

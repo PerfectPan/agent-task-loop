@@ -17,8 +17,12 @@ async function startServer(): Promise<{ baseUrl: string; token: string }> {
 
 function createWindow(baseUrl: string, _token: string): void {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1440,
+    height: 900,
+    minWidth: 1100,
+    minHeight: 700,
+    title: 'ATL Console',
+    backgroundColor: '#08090b',
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,

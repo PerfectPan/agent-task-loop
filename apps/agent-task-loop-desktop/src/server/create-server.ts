@@ -7,6 +7,7 @@ import type {
   TaskManagerApplication,
 } from '@rivus/agent-task-loop/task-manager';
 import { loadOrCreateToken, parseBearerToken, timingSafeEqual } from './auth.js';
+import { ConsoleAgent } from './console-agent.js';
 import { createRequestHandler, type RouteDependencies } from './routes.js';
 import { SseBroadcaster } from './sse.js';
 
@@ -17,6 +18,8 @@ export interface LocalServerOptions {
   token?: string;
   /** Host to bind to. Must be 127.0.0.1 (default). Refuse public interfaces. */
   host?: string;
+  /** Disable Rivus console agent (tests). Default: enabled. */
+  enableAgent?: boolean;
 }
 
 export interface LocalServer {
@@ -96,10 +99,36 @@ export function createLocalServer(options: LocalServerOptions): LocalServer {
   const broadcaster = new SseBroadcaster();
   const uiHtmlPath = resolveUiHtmlPath();
 
+  const consoleAgent =
+    options.enableAgent === false
+      ? undefined
+      : new ConsoleAgent({
+          application: options.application,
+          backgroundStart: options.backgroundStart,
+          onMutation: async taskId => {
+            if (!taskId) {
+              broadcaster.broadcastBoardRefresh();
+              return;
+            }
+            try {
+              const { task } = await options.application.getTask({ taskId });
+              broadcaster.broadcastTaskUpdated({
+                taskId,
+                status: task.status,
+                runPhase: options.backgroundStart.registry.get(taskId),
+                task,
+              });
+            } catch {
+              broadcaster.broadcastBoardRefresh();
+            }
+          },
+        });
+
   const deps: RouteDependencies = {
     application: options.application,
     backgroundStart: options.backgroundStart,
     broadcaster,
+    consoleAgent,
   };
 
   const requestHandler = createRequestHandler(deps);

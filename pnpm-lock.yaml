@@ -27,6 +27,9 @@ importers:
 
   apps/agent-task-loop-desktop:
     dependencies:
+      '@rivus/agent':
+        specifier: 0.1.1
+        version: 0.1.1
       '@rivus/agent-task-loop':
         specifier: workspace:*
         version: link:../../packages/agent-task-loop
@@ -180,6 +183,9 @@ importers:
       '@rivus/agent-finder-core':
         specifier: workspace:*
         version: link:../agent-finder
+      '@rivus/agent-sessions':
+        specifier: workspace:*
+        version: link:../agent-sessions
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -199,9 +205,6 @@ importers:
       '@rivus/agent':
         specifier: 0.1.1
         version: 0.1.1
-      '@rivus/agent-sessions':
-        specifier: workspace:*
-        version: link:../agent-sessions
       '@rivus/rslib-config':
         specifier: workspace:*
         version: link:../rslib-config

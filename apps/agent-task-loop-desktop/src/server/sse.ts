@@ -11,6 +11,12 @@ export interface TaskUpdatedEvent {
   task: PublicTaskDto;
 }
 
+export interface BoardRefreshEvent {
+  type: 'board.refresh';
+}
+
+export type ConsoleSseEvent = TaskUpdatedEvent | BoardRefreshEvent;
+
 type SseClient = {
   res: ServerResponse;
   send: (data: string) => void;
@@ -62,7 +68,19 @@ export class SseBroadcaster {
       runPhase: event.runPhase,
       task: sanitizePublicTask(event.task),
     };
-    const data = JSON.stringify(payload);
+    this.publish(payload);
+  }
+
+  broadcastBoardRefresh(): void {
+    this.publish({ type: 'board.refresh' });
+  }
+
+  publish(event: ConsoleSseEvent): void {
+    const data = JSON.stringify(
+      event.type === 'task.updated'
+        ? { ...event, task: sanitizePublicTask(event.task) }
+        : event,
+    );
     for (const client of this.clients) {
       client.send(data);
     }

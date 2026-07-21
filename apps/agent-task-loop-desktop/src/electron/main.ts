@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createConfiguredLocalServer } from '../server/configured.js';
@@ -6,39 +6,48 @@ import { createConfiguredLocalServer } from '../server/configured.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
-let serverUrl: string | null = null;
+let serverClose: (() => Promise<void>) | null = null;
 
 async function startServer(): Promise<{ baseUrl: string; token: string }> {
   const server = await createConfiguredLocalServer();
   const info = await server.listen(0);
-  serverUrl = `http://${info.host}:${info.port}`;
-  return { baseUrl: serverUrl, token: info.token };
+  serverClose = () => server.close();
+  const baseUrl = `http://${info.host}:${info.port}`;
+  return { baseUrl, token: info.token };
 }
 
-function createWindow(baseUrl: string, _token: string): void {
+function createWindow(baseUrl: string): void {
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: 1480,
+    height: 920,
     minWidth: 1100,
-    minHeight: 700,
+    minHeight: 720,
     title: 'ATL Console',
-    backgroundColor: '#08090b',
+    backgroundColor: '#f4f1ea',
+    show: false,
     webPreferences: {
-      preload: join(__dirname, 'preload.js'),
+      preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
   });
 
-  // Load the UI from the local server (same-origin with the API).
-  // The server injects window.__ATL_CONFIG__ into the HTML.
-  mainWindow.loadURL(baseUrl);
+  // Bust any cached HTML from previous runs.
+  void mainWindow.loadURL(`${baseUrl}/?v=${Date.now()}`);
 
-  // Open external links (http/https only) in the system browser.
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+    if (process.platform === 'darwin') {
+      app.dock?.show();
+      app.focus({ steal: true });
+    }
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) {
-      shell.openExternal(url);
+      void shell.openExternal(url);
     }
     return { action: 'deny' };
   });
@@ -48,10 +57,16 @@ function createWindow(baseUrl: string, _token: string): void {
   });
 }
 
+ipcMain.on('open-external', (_event, url: unknown) => {
+  if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+    void shell.openExternal(url);
+  }
+});
+
 app.whenReady().then(async () => {
   try {
-    const { baseUrl, token } = await startServer();
-    createWindow(baseUrl, token);
+    const { baseUrl } = await startServer();
+    createWindow(baseUrl);
   } catch (error) {
     console.error('Failed to start desktop console:', error);
     app.quit();
@@ -59,15 +74,21 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  // On macOS, applications stay active until the user quits explicitly.
+  void serverClose?.();
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0 && serverUrl) {
-    // Re-create window if dock icon is clicked and no windows are open.
-    // Token is loaded from the state file on next start.
+  if (BrowserWindow.getAllWindows().length === 0) {
+    void startServer().then(({ baseUrl }) => createWindow(baseUrl));
+  } else {
+    mainWindow?.show();
+    mainWindow?.focus();
   }
+});
+
+app.on('before-quit', () => {
+  void serverClose?.();
 });

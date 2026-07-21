@@ -1,6 +1,7 @@
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
   BackgroundStartService,
@@ -36,20 +37,23 @@ export interface LocalServer {
 const LOOPBACK_HOST = '127.0.0.1';
 
 /**
- * Resolve the path to the UI HTML file. Works in both source (tsx) and
- * compiled (dist) layouts.
+ * Resolve the UI HTML path. Prefer package `src/ui` (always the latest
+ * source) over a stale `dist` copy.
  */
 function resolveUiHtmlPath(): string {
-  // When running via tsx, import.meta.url points to src/server/create-server.ts.
-  // When compiled, it points to dist/server/create-server.js.
   const currentFile = fileURLToPath(import.meta.url);
-  const currentDir = join(currentFile, '..');
-  // Dev: src/ui/index.html (two levels up from src/server/)
-  const srcUiPath = join(currentDir, '../ui/index.html');
-  // Production: dist/ui/index.html (one level up from dist/server/)
-  const distUiPath = join(currentDir, '../../src/ui/index.html');
-  // Prefer the source path (dev); the build script copies UI to dist.
-  return srcUiPath;
+  const serverDir = dirname(currentFile);
+  let dir = serverDir;
+  for (let i = 0; i < 8; i++) {
+    const srcUi = join(dir, 'src', 'ui', 'index.html');
+    if (existsSync(srcUi)) return srcUi;
+    const next = join(dir, '..');
+    if (next === dir) break;
+    dir = next;
+  }
+  // Fallback: sibling ui/ next to server/
+  const sibling = join(serverDir, '..', 'ui', 'index.html');
+  return sibling;
 }
 
 /**
@@ -67,12 +71,17 @@ async function serveUi(
     // Derive baseUrl from the request's Host header (includes port).
     const hostHeader = req.headers.host ?? '127.0.0.1';
     const baseUrl = `http://${hostHeader}`;
-    let html = await readFile(htmlPath, 'utf-8');
-    // Inject config so the UI knows where to reach the API and what token to use.
-    // The UI reads window.__ATL_CONFIG__ on load.
-    const configScript = `<script>window.__ATL_CONFIG__ = ${JSON.stringify({ baseUrl, token })};</script>`;
-    html = html.replace('</head>', `${configScript}</head>`);
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    // Always re-resolve so a rebuilt src/ui is picked up without restart when possible.
+    const resolvedPath = existsSync(htmlPath) ? htmlPath : resolveUiHtmlPath();
+    let html = await readFile(resolvedPath, 'utf-8');
+    const mtime = (await stat(resolvedPath)).mtimeMs;
+    const configScript = `<script>window.__ATL_CONFIG__ = ${JSON.stringify({ baseUrl, token, uiMtime: mtime })};</script>`;
+    html = html.replace('</head>', `${configScript}\n<meta http-equiv="Cache-Control" content="no-store" />\n</head>`);
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      Pragma: 'no-cache',
+    });
     res.end(html);
   } catch {
     res.writeHead(500, { 'Content-Type': 'text/plain' });

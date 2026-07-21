@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "tsx src/cli.ts serve --open",
     "dev:headless": "tsx src/cli.ts serve",
-    "dev:electron": "tsc -b && cp -r src/ui dist/src/ui && electron dist/src/electron/main.js",
-    "build": "tsc -b && cp -r src/ui dist/src/ui",
+    "dev:electron": "tsc -b && rm -rf dist/src/ui && cp -R src/ui dist/src/ui && cp src/electron/preload.cjs dist/src/electron/preload.cjs && electron dist/src/electron/main.js",
+    "build": "tsc -b && rm -rf dist/src/ui && cp -R src/ui dist/src/ui && cp src/electron/preload.cjs dist/src/electron/preload.cjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

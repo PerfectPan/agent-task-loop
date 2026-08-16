@@ -183,6 +183,9 @@ importers:
       '@rivus/agent-finder-core':
         specifier: workspace:*
         version: link:../agent-finder
+      '@rivus/agent-orchestration':
+        specifier: workspace:*
+        version: link:../agent-orchestration
       citty:
         specifier: ^0.1.6
         version: 0.1.6

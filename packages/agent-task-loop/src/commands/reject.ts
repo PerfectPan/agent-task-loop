@@ -1,8 +1,11 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
 import { assertRuntimeConfig } from '../config/runtime-guard';
+import { runWithOccupancy } from '../orchestration/run-with-occupancy';
+import { getSharedTaskOrchestration, taskOrchestrationKey } from '../orchestration/task-orchestration';
 import { RejectService } from '../services/reject-service';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
+import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import { TaskService } from '../services/task-service';
 
 export const rejectCommand = defineCommand({
@@ -36,14 +39,30 @@ export const rejectCommand = defineCommand({
     }
 
     const taskService = new TaskService(config);
-    const runner = new ReviewLoopRunner({ config, taskService });
+    const orchestration = getSharedTaskOrchestration();
+    const runner = new ReviewLoopRunner({ config, taskService, orchestration });
+    const livenessService = new TaskRunnerLivenessService();
     const configuredMaxRounds = Number(args.maxRounds ?? 5);
     const service = new RejectService({
       taskService,
       runLoop: input =>
-        runner.run({
-          ...input,
-          maxRounds: Math.max(configuredMaxRounds, input.startRound + configuredMaxRounds - 1),
+        runWithOccupancy({
+          orchestration,
+          key: taskOrchestrationKey(input.task.taskId),
+          taskId: input.task.taskId,
+          bind: {
+            impl: { cmd: input.task.targetAgent },
+            review: { cmd: 'codex' },
+          },
+          goal: input.task.title || input.task.description,
+          ref: { taskId: input.task.taskId },
+          inspect: () => livenessService.inspect(input.task),
+          award: 'impl',
+          fn: () =>
+            runner.run({
+              ...input,
+              maxRounds: Math.max(configuredMaxRounds, input.startRound + configuredMaxRounds - 1),
+            }),
         }),
     });
 

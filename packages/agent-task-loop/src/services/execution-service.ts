@@ -34,6 +34,7 @@ export class ExecutionService {
       };
       onHeartbeatError?: (error: unknown) => void;
       formatFailure?: FailureMessageFormatter;
+      onKernelHeartbeat?: () => void;
     },
   ) {}
 
@@ -78,6 +79,7 @@ export class ExecutionService {
           runnerRound: round,
           lastHeartbeatAt: latestHeartbeatAt,
         });
+        this.deps.onKernelHeartbeat?.();
       } catch (error) {
         if (this.deps.onHeartbeatError) {
           this.deps.onHeartbeatError(error);

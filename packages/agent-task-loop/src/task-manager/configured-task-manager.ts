@@ -7,20 +7,24 @@ import {
   createTaskManagerApplication,
   type TaskManagerApplication,
 } from './task-manager-application';
+import { getSharedTaskOrchestration } from '../orchestration/task-orchestration';
 import { TaskStartService } from './task-start-service';
 
 export async function createConfiguredTaskManagerApplication(): Promise<TaskManagerApplication> {
   const config = await loadConfig();
   const taskService = new TaskService(config, { readFailureMode: 'strict' });
+  const orchestration = getSharedTaskOrchestration();
   const startService = new TaskStartService({
     taskService,
     runner: new ReviewLoopRunner({
       config,
       taskService,
+      orchestration,
       onBackgroundError: () => undefined,
       formatFailure: (_error, neutralMessage) => neutralMessage,
     }),
     livenessService: new TaskRunnerLivenessService(),
+    orchestration,
   });
 
   return createTaskManagerApplication({

@@ -2,9 +2,12 @@
   "name": "@rivus/agent-orchestration",
   "version": "0.0.0",
   "private": true,
-  "description": "Register and occupy a multi-agent run: seats, turn-taking, shared context, and process spawn.",
+  "description": "Seats, tokens, and a channel for a multi-agent run.",
   "license": "GPL-3.0-only",
   "type": "module",
+  "bin": {
+    "orch": "./bin/orch.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,6 +16,7 @@
     }
   },
   "files": [
+    "bin/",
     "dist/",
     "src/**/*.ts",
     "README.md"
@@ -24,9 +28,6 @@
     "test": "rslib build && vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {
-    "execa": "^9.6.0"
-  },
   "devDependencies": {
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",
@@ -37,6 +38,6 @@
     "vitest": "^3.1.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   }
 }

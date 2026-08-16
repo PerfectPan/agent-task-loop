@@ -1,32 +1,36 @@
 export type {
-  FactEntry,
-  MailEntry,
-  ObservedRun,
-  OpenRunInput,
-  ProcessRunner,
-  ProcessRunnerInput,
-  RunContextInput,
+  ChannelEntry,
+  ChannelKind,
+  ChannelPage,
+  Clock,
+  Orchestration,
+  OrchestrationLogEvent,
+  OrchestrationLogger,
+  OrchestrationOptions,
+  ProcessLiveness,
   RunSnapshot,
   SeatBind,
-  SeatState,
-  SeatStatus,
-  SpawnResult,
+  SpawnPermit,
+  TemplateMailRoute,
   TemplateSpec,
-} from './types';
+} from './contracts/types';
 
 export {
   ORCHESTRATION_CONFLICT_CODE,
   ORCHESTRATION_NOT_FOUND_CODE,
   ORCHESTRATION_SEAT_CODE,
   ORCHESTRATION_TEMPLATE_CODE,
+  ORCHESTRATION_UNAUTHORIZED_CODE,
+  ORCHESTRATION_VALIDATION_CODE,
   OrchestrationConflictError,
   OrchestrationNotFoundError,
   OrchestrationSeatError,
   OrchestrationTemplateError,
-} from './errors';
+  OrchestrationUnauthorizedError,
+  OrchestrationValidationError,
+} from './contracts/errors';
 
-export { Orchestration, type OrchestrationOptions } from './orchestration';
-export { TemplateRegistry } from './templates';
-export { FileOrchestrationStore, type LockRecord, type OrchestrationStore } from './store';
-export { defaultBaseDir, safeSegment } from './paths';
-export { defaultProcessRunner } from './spawn';
+export { createOrchestration } from './infrastructure/node-factory';
+export { harvestMail, stitchInbox } from './infrastructure/cli-bridge';
+export type { HarvestedMail, OutboundEnvelope } from './infrastructure/cli-bridge';
+export { RecordingLogger, createStderrLogger, silentLogger } from './infrastructure/logger';

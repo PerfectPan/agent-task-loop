@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
 import { assertRuntimeConfig } from '../config/runtime-guard';
+import { getSharedTaskOrchestration } from '../orchestration/task-orchestration';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskService } from '../services/task-service';
 import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
@@ -40,11 +41,13 @@ export const startCommand = defineCommand({
       targetAgent = args.agent as TargetAgent;
     }
 
-    const runner = new ReviewLoopRunner({ config, taskService });
+    const orchestration = getSharedTaskOrchestration();
+    const runner = new ReviewLoopRunner({ config, taskService, orchestration });
     const startService = new TaskStartService({
       taskService,
       runner,
       livenessService: new TaskRunnerLivenessService(),
+      orchestration,
       onRecovery: inspection => {
         console.log(`[agent-task-loop] 检测到僵死 ${inspection.mode} 轮次，正在从当前现场恢复：${inspection.reason ?? 'unknown'}`);
       },

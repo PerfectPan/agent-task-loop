@@ -14,8 +14,17 @@ import { ReviewService } from './review-service';
 import { resolveTaskExecutionContext } from './task-context-service';
 import type { TaskService } from './task-service';
 import { ensureWorkspace } from './workspace-service';
+import type { Orchestration } from '@rivus/agent-orchestration';
 import type { TargetAgent, TaskRecord } from '../types/task';
 import type { FailureMessageFormatter } from './failure-message';
+import {
+  authorizeSeat,
+  ensureToken,
+  harvestImplMailIfNeeded,
+  readReviewInbox,
+  wrapReviewVerdictIfNeeded,
+} from '../orchestration/round';
+import { taskOrchestrationKey } from '../orchestration/task-orchestration';
 
 const adapters = {
   claude: claudeAdapter,
@@ -43,6 +52,7 @@ export class ReviewLoopRunner {
     private readonly deps: {
       config: AppConfig;
       taskService: TaskService;
+      orchestration: Orchestration;
       onBackgroundError?: (error: unknown) => void;
       formatFailure?: FailureMessageFormatter;
     },
@@ -80,6 +90,8 @@ export class ReviewLoopRunner {
 
   private createLoop(maxRounds: number): ReviewLoopService {
     const executeRound = async (roundInput: { task: TaskRecord; promptOverride?: string; round: number }) => {
+      const key = taskOrchestrationKey(roundInput.task.taskId);
+      const orch = this.deps.orchestration;
       const agent = roundInput.task.targetAgent as TargetAgent;
       const { project, repositoryKey, repository } = resolveTaskExecutionContext(this.deps.config, roundInput.task);
       const workspacePath = await ensureWorkspace({
@@ -110,8 +122,21 @@ export class ReviewLoopRunner {
         },
         onHeartbeatError: this.deps.onBackgroundError,
         formatFailure: this.deps.formatFailure,
+        onKernelHeartbeat: () => {
+          orch.heartbeat({ key });
+        },
       });
+      const sinceIndex = orch.snapshot({ key }).lastIndex;
+      authorizeSeat(orch, key, 'impl');
       const result = await executionService.executeTask(roundInput.task, workspacePath, roundInput.round);
+      const harvested = harvestImplMailIfNeeded(orch, key, result.resultSummary ?? '', sinceIndex);
+      if (harvested.length > 0) {
+        console.log(`[agent-task-loop] orch harvest impl mail count=${harvested.length} key=${key}`);
+      }
+      if (result.status !== '已失败') {
+        ensureToken(orch, key, 'review');
+        console.log(`[agent-task-loop] orch pass seat=review key=${key}`);
+      }
 
       return {
         resultSummary: result.resultSummary,
@@ -180,17 +205,34 @@ export class ReviewLoopRunner {
           },
         );
 
-        return reviewService.review({
+        const key = taskOrchestrationKey(input.task.taskId);
+        const orch = this.deps.orchestration;
+        const sinceIndex = orch.snapshot({ key }).lastIndex;
+        authorizeSeat(orch, key, 'review');
+        const inbox = readReviewInbox(orch, key);
+        const result = await reviewService.review({
           ...input,
           reviewerAgent,
+          inboxSuffix: inbox.suffix,
           onSpawn: async payload => {
             latestRunnerPid = payload.pid;
             await persistHeartbeat(true);
           },
           onHeartbeat: async () => {
             await persistHeartbeat();
+            orch.heartbeat({ key });
           },
         });
+        inbox.markRead();
+        const wrapped = wrapReviewVerdictIfNeeded(orch, key, result, sinceIndex);
+        if (wrapped) {
+          console.log(`[agent-task-loop] orch wrap review-verdict key=${key} verdict=${result.verdict}`);
+        }
+        if (result.verdict === '驳回') {
+          ensureToken(orch, key, 'impl');
+          console.log(`[agent-task-loop] orch pass seat=impl key=${key}`);
+        }
+        return result;
       },
       isTaskDeliverable: async deliveryInput => {
         const { repository } = resolveTaskExecutionContext(this.deps.config, deliveryInput.task);

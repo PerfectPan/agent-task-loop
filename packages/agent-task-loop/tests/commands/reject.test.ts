@@ -24,6 +24,22 @@ vi.mock('../../src/services/task-service', () => ({
   TaskService: vi.fn().mockImplementation(() => ({})),
 }));
 
+const { sharedOrch } = vi.hoisted(() => ({
+  sharedOrch: { heartbeat: vi.fn() },
+}));
+
+vi.mock('../../src/orchestration/task-orchestration', () => ({
+  getSharedTaskOrchestration: () => sharedOrch,
+  createTaskOrchestration: () => sharedOrch,
+  taskOrchestrationKey: (id: string) => `task:${id}`,
+}));
+
+vi.mock('../../src/orchestration/run-with-occupancy', () => ({
+  KERNEL_HEARTBEAT_INTERVAL_MS: 15_000,
+  awardStartSeat: () => 'impl',
+  runWithOccupancy: vi.fn(async ({ fn }) => fn({ inspection: { state: 'idle' }, seat: 'impl' })),
+}));
+
 vi.mock('../../src/services/review-loop-runner', () => ({
   ReviewLoopRunner: vi.fn().mockImplementation(() => ({
     run: runnerRunSpy,
@@ -65,6 +81,8 @@ describe('rejectCommand', () => {
       reason: '单测无效，注释改中文',
     });
     expect(logSpy).toHaveBeenCalledWith('Status: 修复中');
+    const { ReviewLoopRunner } = await import('../../src/services/review-loop-runner');
+    expect(ReviewLoopRunner).toHaveBeenCalledWith(expect.objectContaining({ orchestration: sharedOrch }));
     logSpy.mockRestore();
   });
 

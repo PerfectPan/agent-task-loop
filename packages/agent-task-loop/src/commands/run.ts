@@ -9,6 +9,9 @@ import { ExecutionService } from '../services/execution-service';
 import { resolveTaskExecutionContext } from '../services/task-context-service';
 import { buildTaskPrompt } from '../services/prompt-service';
 import { ensureWorkspace } from '../services/workspace-service';
+import { runWithOccupancy } from '../orchestration/run-with-occupancy';
+import { getSharedTaskOrchestration, taskOrchestrationKey } from '../orchestration/task-orchestration';
+import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import { TaskService } from '../services/task-service';
 import type { TargetAgent } from '../types/task';
 import { pickNextTask } from '../utils/priority';
@@ -71,6 +74,7 @@ export const runCommand = defineCommand({
       taskTemplatePrompt: project.taskTemplatePrompt,
     });
 
+    const orchestration = getSharedTaskOrchestration();
     const executionService = new ExecutionService({
       taskService,
       adapter: adapters[agent],
@@ -79,9 +83,25 @@ export const runCommand = defineCommand({
         cwd: workspacePath,
         prompt,
       },
+      onKernelHeartbeat: () => {
+        orchestration.heartbeat({ key: taskOrchestrationKey(task.taskId) });
+      },
     });
 
-    const execution = await executionService.executeTask(task, workspacePath);
+    const execution = await runWithOccupancy({
+      orchestration,
+      key: taskOrchestrationKey(task.taskId),
+      taskId: task.taskId,
+      bind: {
+        impl: { cmd: agent },
+        review: { cmd: 'codex' },
+      },
+      goal: task.title || task.description,
+      ref: { taskId: task.taskId },
+      inspect: () => new TaskRunnerLivenessService().inspect(task),
+      award: 'impl',
+      fn: () => executionService.executeTask(task, workspacePath),
+    });
     console.log(`Executed task ${task.taskId} log=${execution.logPath}`);
   },
 });

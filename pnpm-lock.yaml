@@ -127,10 +127,6 @@ importers:
         version: 3.2.4(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)
 
   packages/agent-orchestration:
-    dependencies:
-      execa:
-        specifier: ^9.6.0
-        version: 9.6.1
     devDependencies:
       '@rivus/rslib-config':
         specifier: workspace:*

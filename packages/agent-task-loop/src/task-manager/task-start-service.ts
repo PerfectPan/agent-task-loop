@@ -1,3 +1,5 @@
+import { OrchestrationConflictError } from '@rivus/agent-orchestration';
+import { createTaskOrchestration, taskOrchestrationKey } from '../orchestration/task-orchestration';
 import type { ReviewLoopRunner } from '../services/review-loop-runner';
 import { buildReworkPrompt } from '../services/rework-prompt-service';
 import type { TaskRunnerInspection, TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
@@ -9,16 +11,30 @@ import { TaskManagerInputError } from './task-manager-error';
 type TaskRunWorkflow = Pick<ReviewLoopRunner, 'run' | 'resumeReview'>;
 type TaskReader = Pick<TaskService, 'getTaskById'>;
 type TaskRunnerLiveness = Pick<TaskRunnerLivenessService, 'inspect'>;
+type TaskOrchestration = {
+  open(input: {
+    key: string;
+    template: string;
+    bind?: Record<string, { cmd: string }>;
+    context?: { goal?: string; ref?: Record<string, string> };
+  }): Promise<unknown>;
+  release(key: string): void;
+};
 
 export interface TaskStartServiceDependencies {
   taskService: TaskReader;
   runner: TaskRunWorkflow;
   livenessService: TaskRunnerLiveness;
+  orchestration?: TaskOrchestration;
   onRecovery?: (inspection: TaskRunnerInspection) => void;
 }
 
 export class TaskStartService {
-  constructor(private readonly dependencies: TaskStartServiceDependencies) {}
+  private readonly orchestration: TaskOrchestration;
+
+  constructor(private readonly dependencies: TaskStartServiceDependencies) {
+    this.orchestration = dependencies.orchestration ?? createTaskOrchestration();
+  }
 
   async startTask(input: StartTaskInput): Promise<TaskRecord> {
     const task = await this.dependencies.taskService.getTaskById(input.taskId);
@@ -31,6 +47,38 @@ export class TaskStartService {
       task.currentOwner = input.targetAgent;
     }
 
+    const key = taskOrchestrationKey(task.taskId);
+    try {
+      await this.orchestration.open({
+        key,
+        template: 'classic-delivery',
+        bind: {
+          impl: { cmd: task.targetAgent },
+          review: { cmd: 'codex' },
+        },
+        context: {
+          goal: task.title || task.description,
+          ref: { taskId: task.taskId },
+        },
+      });
+    } catch (error) {
+      if (error instanceof OrchestrationConflictError) {
+        throw new Error(
+          `Task ${task.taskId} already has an active orchestration` +
+            (error.holderPid !== undefined ? ` (pid ${error.holderPid})` : ''),
+        );
+      }
+      throw error;
+    }
+
+    try {
+      return await this.runOccupied(input, task);
+    } finally {
+      this.orchestration.release(key);
+    }
+  }
+
+  private async runOccupied(input: StartTaskInput, task: TaskRecord): Promise<TaskRecord> {
     const inspection = await this.dependencies.livenessService.inspect(task);
     if (inspection.state === 'active') {
       throw new Error(`Task ${task.taskId} already has an active ${inspection.mode} runner`);

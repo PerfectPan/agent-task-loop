@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentAdapter } from '../adapters/base';
-import type { TaskRecord } from '../types/task';
+import type { TaskRecord, TaskStatus } from '../types/task';
 import type { TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
 import {
@@ -34,6 +34,10 @@ export class ExecutionService {
       };
       onHeartbeatError?: (error: unknown) => void;
       formatFailure?: FailureMessageFormatter;
+      /** Claim guard: claim fails with task-state-conflict outside these statuses. */
+      claimExpectedStatuses?: TaskStatus[];
+      /** Review rounds run on this agent; used for the 待复核 owner label. */
+      reviewerAgent?: string;
     },
   ) {}
 
@@ -154,6 +158,7 @@ export class ExecutionService {
       claimedBy: `${task.targetAgent}@local`,
       claimedAt: new Date().toISOString(),
       runId,
+      expectedStatuses: this.deps.claimExpectedStatuses,
       workspacePath,
       logPath,
       progressSummary: latestProgressSummary,
@@ -193,7 +198,7 @@ export class ExecutionService {
       if (result.status === 'success') {
         await this.deps.taskService.updateReviewState(task, {
           status: '待复核',
-          currentOwner: 'codex',
+          currentOwner: this.deps.reviewerAgent ?? 'codex',
           reviewRound: round,
           resultSummary: result.summary,
           workspacePath: result.workspacePath,

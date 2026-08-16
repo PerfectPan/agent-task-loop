@@ -38,6 +38,8 @@ export class ReviewLoopService {
       publishForAcceptance: (task: TaskRecord, workspacePath: string) => Promise<{ branch: string; commit: string }>;
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
+      /** Review rounds run on this agent; defaults to codex for compat. */
+      reviewerAgent?: TargetAgent;
       maxRounds: number;
       formatFailure?: FailureMessageFormatter;
     },
@@ -122,7 +124,7 @@ export class ReviewLoopService {
     resultSummary?: string;
     workspacePath: string;
   }): Promise<{ done: boolean; nextPromptOverride?: string }> {
-    const reviewerAgent = 'codex' as TargetAgent;
+    const reviewerAgent = this.deps.reviewerAgent ?? ('codex' as TargetAgent);
     let review: Awaited<ReturnType<typeof this.deps.review>>;
     try {
       review = await this.deps.review({

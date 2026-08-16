@@ -473,3 +473,40 @@ describe('ReviewLoopService', () => {
   });
 
 });
+
+describe('ReviewLoopService reviewerAgent', () => {
+  it('defaults review rounds to codex when no reviewerAgent is configured', async () => {
+    const review = vi.fn().mockResolvedValue({ verdict: '通过', findings: '' });
+    const service = new ReviewLoopService({
+      executeRound: vi.fn().mockResolvedValue({ resultSummary: 'done', workspacePath: '/tmp/w' }),
+      review,
+      isTaskDeliverable: vi.fn().mockResolvedValue(false),
+      publishForAcceptance: vi.fn(),
+      updatePublishResult: vi.fn(),
+      updateReviewState: vi.fn(),
+      maxRounds: 1,
+    });
+
+    await service.start({ task: { taskId: 'T', title: '', description: '', project: '', targetAgent: 'claude', priority: 1, status: '待处理' } as never });
+
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ reviewerAgent: 'codex' }));
+  });
+
+  it('runs review on the configured reviewerAgent', async () => {
+    const review = vi.fn().mockResolvedValue({ verdict: '通过', findings: '' });
+    const service = new ReviewLoopService({
+      executeRound: vi.fn().mockResolvedValue({ resultSummary: 'done', workspacePath: '/tmp/w' }),
+      review,
+      isTaskDeliverable: vi.fn().mockResolvedValue(false),
+      publishForAcceptance: vi.fn(),
+      updatePublishResult: vi.fn(),
+      updateReviewState: vi.fn(),
+      reviewerAgent: 'grok',
+      maxRounds: 1,
+    });
+
+    await service.start({ task: { taskId: 'T', title: '', description: '', project: '', targetAgent: 'claude', priority: 1, status: '待处理' } as never });
+
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ reviewerAgent: 'grok' }));
+  });
+});

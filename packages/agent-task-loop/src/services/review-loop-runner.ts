@@ -2,6 +2,7 @@ import { claudeAdapter } from '../adapters/claude';
 import { cocoAdapter } from '../adapters/coco';
 import { codexAdapter } from '../adapters/codex';
 import { glmAdapter } from '../adapters/glm';
+import { grokAdapter } from '../adapters/grok';
 import type { AppConfig } from '../config/schema';
 import { DeliveryCheckService } from './delivery-check-service';
 import { ExecutionService } from './execution-service';
@@ -14,19 +15,16 @@ import { ReviewService } from './review-service';
 import { resolveTaskExecutionContext } from './task-context-service';
 import type { TaskService } from './task-service';
 import { ensureWorkspace } from './workspace-service';
-import type { TargetAgent, TaskRecord } from '../types/task';
+import type { TargetAgent, TaskRecord, TaskStatus } from '../types/task';
 import type { FailureMessageFormatter } from './failure-message';
 
 const adapters = {
   claude: claudeAdapter,
   codex: codexAdapter,
+  grok: grokAdapter,
   coco: cocoAdapter,
   glm: glmAdapter,
 };
-
-function pickReviewerAgent(_targetAgent: TargetAgent): TargetAgent {
-  return 'codex';
-}
 
 function buildAutoCommitMessage(input: {
   taskId: string;
@@ -53,8 +51,16 @@ export class ReviewLoopRunner {
     maxRounds: number;
     promptOverride?: string;
     startRound?: number;
+    /** Claim guard: statuses the task may be in when this run claims it. */
+    claimExpectedStatuses?: TaskStatus[];
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, {
+      reviewerAgent: this.deps.config.review?.reviewerAgent ?? 'codex',
+      claimExpectedStatuses:
+        input.claimExpectedStatuses ??
+        (input.startRound && input.startRound > 1 ? ['修复中'] : ['待处理']),
+      entryRound: input.startRound ?? 1,
+    });
     await loop.start({
       task: input.task,
       promptOverride: input.promptOverride,
@@ -69,7 +75,9 @@ export class ReviewLoopRunner {
     workspacePath: string;
     resultSummary?: string;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, {
+      reviewerAgent: this.deps.config.review?.reviewerAgent ?? 'codex',
+    });
     await loop.resumeFromReview({
       task: input.task,
       round: input.round,
@@ -78,7 +86,16 @@ export class ReviewLoopRunner {
     });
   }
 
-  private createLoop(maxRounds: number): ReviewLoopService {
+  private createLoop(
+    maxRounds: number,
+    options: {
+      reviewerAgent: TargetAgent;
+      /** Claim guard for the run's entry round; later rounds expect 修复中. */
+      claimExpectedStatuses?: TaskStatus[];
+      entryRound?: number;
+    },
+  ): ReviewLoopService {
+    const entryRound = options.entryRound ?? 1;
     const executeRound = async (roundInput: { task: TaskRecord; promptOverride?: string; round: number }) => {
       const agent = roundInput.task.targetAgent as TargetAgent;
       const { project, repositoryKey, repository } = resolveTaskExecutionContext(this.deps.config, roundInput.task);
@@ -108,6 +125,9 @@ export class ReviewLoopRunner {
           cwd: workspacePath,
           prompt,
         },
+        claimExpectedStatuses:
+          roundInput.round === entryRound ? options.claimExpectedStatuses : ['修复中'],
+        reviewerAgent: options.reviewerAgent,
         onHeartbeatError: this.deps.onBackgroundError,
         formatFailure: this.deps.formatFailure,
       });
@@ -133,7 +153,7 @@ export class ReviewLoopRunner {
     return new ReviewLoopService({
       executeRound,
       review: async input => {
-        const reviewerAgent = pickReviewerAgent(input.task.targetAgent as TargetAgent);
+        const reviewerAgent = options.reviewerAgent;
         const reviewService = new ReviewService({
           adapter: adapters[reviewerAgent],
           command: this.deps.config.agents[reviewerAgent],
@@ -205,6 +225,7 @@ export class ReviewLoopRunner {
       publishForAcceptance: autoPublishService.publish.bind(autoPublishService),
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
+      reviewerAgent: options.reviewerAgent,
       maxRounds,
       formatFailure: this.deps.formatFailure,
     });

@@ -54,6 +54,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@rivus/agent-orchestration": "workspace:*",
     "@rivus/agent-finder-core": "workspace:*",
     "citty": "^0.1.6",
     "execa": "^9.6.0",

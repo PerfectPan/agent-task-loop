@@ -52,6 +52,9 @@ export class TaskStartService {
           maxRounds,
           promptOverride: inspection.promptOverride,
           startRound: inspection.round,
+          // Resume of a dead execute runner: the task is still 执行中 from
+          // the dead run's claim.
+          claimExpectedStatuses: ['执行中'],
         });
       }
       return task;
@@ -63,6 +66,7 @@ export class TaskStartService {
       maxRounds: maxRoundsForStartRound(input.maxRounds, recoveryStartRound),
       ...(recoveryStartRound ? {
         startRound: recoveryStartRound,
+        claimExpectedStatuses: ['已失败'],
         promptOverride: buildReworkPrompt({
           taskDescription: task.description,
           resultSummary: task.resultSummary,

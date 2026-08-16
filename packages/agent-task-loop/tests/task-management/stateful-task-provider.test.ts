@@ -203,3 +203,58 @@ describe('StatefulTaskProvider', () => {
     await expect(sp.listTasks()).resolves.toHaveLength(1);
   });
 });
+
+describe('StatefulTaskProvider claim guard', () => {
+  it('rejects a second claim once another run moved the task off 待处理', async () => {
+    const inner = fakeInner([record({ status: '待处理' })]);
+    const provider = new StatefulTaskProvider(inner, new MemStore());
+
+    await provider.claimTask(ref, {
+      claimedBy: 'claude@local',
+      claimedAt: '2026-08-15T00:00:00Z',
+      runId: 'run-1',
+      expectedStatuses: ['待处理'],
+    });
+
+    // The first claim mirrored 执行中 into the store; a concurrent run that
+    // re-reads the task must lose its claim with a stable conflict error.
+    inner.getTaskById = vi.fn(async () => record({ status: '待处理' }));
+    await expect(provider.claimTask(ref, {
+      claimedBy: 'grok@local',
+      claimedAt: '2026-08-15T00:00:01Z',
+      runId: 'run-2',
+      expectedStatuses: ['待处理'],
+    })).rejects.toMatchObject({
+      name: 'TaskStateConflictError',
+      code: 'task-state-conflict',
+      actualStatus: '执行中',
+    });
+  });
+
+  it('allows a claim whose expected statuses cover the current status', async () => {
+    const inner = fakeInner([record({ status: '修复中' })]);
+    const provider = new StatefulTaskProvider(inner, new MemStore());
+
+    await provider.claimTask(ref, {
+      claimedBy: 'claude@local',
+      claimedAt: '2026-08-15T00:00:00Z',
+      runId: 'run-3',
+      expectedStatuses: ['修复中'],
+    });
+
+    expect(inner.claimTask).toHaveBeenCalled();
+  });
+
+  it('claims without a guard when no expected statuses are given', async () => {
+    const inner = fakeInner([record({ status: '待决策' })]);
+    const provider = new StatefulTaskProvider(inner, new MemStore());
+
+    await provider.claimTask(ref, {
+      claimedBy: 'claude@local',
+      claimedAt: '2026-08-15T00:00:00Z',
+      runId: 'run-4',
+    });
+
+    expect(inner.claimTask).toHaveBeenCalled();
+  });
+});

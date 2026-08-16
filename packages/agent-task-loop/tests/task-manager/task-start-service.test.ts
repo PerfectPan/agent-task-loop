@@ -100,6 +100,7 @@ describe('TaskStartService', () => {
       maxRounds: 5,
       promptOverride: 'Recover from the last durable state.',
       startRound: 2,
+      claimExpectedStatuses: ['执行中'],
     });
   });
 
@@ -125,6 +126,7 @@ describe('TaskStartService', () => {
       task: existingTask,
       maxRounds: 6,
       startRound: 3,
+      claimExpectedStatuses: ['已失败'],
       promptOverride: expect.stringContaining('Keep the public DTO narrow'),
     });
   });

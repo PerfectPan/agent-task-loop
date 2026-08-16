@@ -19,6 +19,12 @@ export interface ClaimTaskPayload {
   claimedBy: string;
   claimedAt: string;
   runId: string;
+  /**
+   * Compare-and-swap guard: claim fails with {@link TaskStateConflictError}
+   * when the task's current status is not one of these. Fresh starts pass
+   * `['待处理']` so two concurrent runs cannot both win the claim.
+   */
+  expectedStatuses?: TaskStatus[];
   workspacePath?: string;
   logPath?: string;
   progressSummary?: string;
@@ -149,4 +155,23 @@ export interface TaskProvider {
  */
 export interface SourceProvider extends TaskProvider {
   readonly source: string;
+}
+
+/** Stable error code for claim/write conflicts (roll-call problem backstop). */
+export const TASK_STATE_CONFLICT_CODE = 'task-state-conflict';
+
+/** Thrown when a guarded write (e.g. claim) observes an unexpected status. */
+export class TaskStateConflictError extends Error {
+  readonly code = TASK_STATE_CONFLICT_CODE;
+
+  constructor(
+    readonly taskId: string,
+    readonly expectedStatuses: TaskStatus[],
+    readonly actualStatus: TaskStatus,
+  ) {
+    super(
+      `Task state conflict for ${taskId}: expected ${expectedStatuses.join(' | ')}, but was ${actualStatus}`,
+    );
+    this.name = 'TaskStateConflictError';
+  }
 }

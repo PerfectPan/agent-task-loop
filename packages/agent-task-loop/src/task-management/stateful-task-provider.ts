@@ -23,6 +23,7 @@ const CLEANUP_CLEARED_STATE = {
   acceptanceFeedback: '',
 } as unknown as RuntimeTaskState;
 import type { TaskStateStore } from './task-state-store';
+import { TaskStateConflictError } from './task-provider';
 import type {
   ClaimTaskPayload,
   CreateTaskPayload,
@@ -113,6 +114,13 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
+    if (payload.expectedStatuses?.length) {
+      const current = await this.inner.getTaskById(task.taskId);
+      const status = current ? this.overlay(current).status : undefined;
+      if (status && !payload.expectedStatuses.includes(status)) {
+        throw new TaskStateConflictError(task.taskId, payload.expectedStatuses, status);
+      }
+    }
     // Claiming means the task is now executing; inject the implied status so a
     // low-fidelity backend (GitHub open/closed) doesn't report it back as 待处理
     // and let it be re-claimed.

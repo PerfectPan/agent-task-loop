@@ -3,6 +3,7 @@ import { claudeAdapter } from '../adapters/claude';
 import { cocoAdapter } from '../adapters/coco';
 import { codexAdapter } from '../adapters/codex';
 import { glmAdapter } from '../adapters/glm';
+import { grokAdapter } from '../adapters/grok';
 import { loadConfig } from '../config/load-config';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ExecutionService } from '../services/execution-service';
@@ -16,6 +17,7 @@ import { pickNextTask } from '../utils/priority';
 const adapters = {
   claude: claudeAdapter,
   codex: codexAdapter,
+  grok: grokAdapter,
   coco: cocoAdapter,
   glm: glmAdapter,
 };

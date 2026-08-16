@@ -6,6 +6,7 @@ import { defineCommand } from 'citty';
 import { z } from 'zod';
 import { globalConfigPath } from '../config/load-config';
 import { appConfigSchema } from '../config/schema';
+import { TARGET_AGENTS } from '../types/task';
 import {
   addFeishuSource,
   addGitHubRepo,
@@ -86,7 +87,7 @@ const addSourceSchema = z.discriminatedUnion('type', [
     repo: requiredFlag('GitHub repo is required (--repo).'),
     agent: z.preprocess(
       value => (typeof value === 'string' && value.trim() ? value.trim() : 'codex'),
-      z.enum(['claude', 'codex', 'coco', 'glm']),
+      z.enum(TARGET_AGENTS),
     ),
   }),
   z.object({

@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { TARGET_AGENTS } from '../types/task';
+
+const targetAgentSchema = z.enum(TARGET_AGENTS);
 
 export const agentConfigSchema = z.object({
-  name: z.enum(['claude', 'codex', 'coco', 'glm']),
+  name: targetAgentSchema,
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
   env: z.record(z.string()).default({}),
@@ -31,7 +34,7 @@ export const githubRepoConfigSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
   /** Per-repo override of the issues source's `defaultAgent`. */
-  defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).optional(),
+  defaultAgent: targetAgentSchema.optional(),
 });
 
 export const githubIssuesConfigSchema = z
@@ -44,7 +47,7 @@ export const githubIssuesConfigSchema = z
     /** Personal access token; falls back to GITHUB_TOKEN, then `gh auth token`. */
     token: z.string().optional(),
     /** Agent assigned to issues that carry no `agent:<name>` label. */
-    defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).default('codex'),
+    defaultAgent: targetAgentSchema.default('codex'),
   })
   .superRefine((cfg, ctx) => {
     const hasSingle = Boolean(cfg.owner) && Boolean(cfg.repo);
@@ -65,12 +68,19 @@ export const feishuConfigSchema = z.object({
   viewId: z.string().optional(),
 });
 
+export const reviewConfigSchema = z.object({
+  /** Coding agent used for review rounds. Defaults to codex for compat. */
+  reviewerAgent: targetAgentSchema.optional(),
+});
+
 export const appConfigSchema = z
   .object({
     /** Optional task source. Configure at least one of `feishu` / `githubIssues`. */
     feishu: feishuConfigSchema.optional(),
     /** Optional task source. When present alongside feishu, tasks are read from both. */
     githubIssues: githubIssuesConfigSchema.optional(),
+    /** Review loop settings (reviewer agent, …). */
+    review: reviewConfigSchema.optional(),
     projects: z.record(projectConfigSchema),
     repositories: z.record(repositoryConfigSchema),
     agents: z.record(agentConfigSchema),

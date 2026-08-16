@@ -1,5 +1,5 @@
 export const TASK_STATUSES = ['待处理', '进行中', '执行中', '待复核', '修复中', '待决策', '待发布', '待验收', '已完成', '已失败'] as const;
-export const TARGET_AGENTS = ['claude', 'codex', 'coco', 'glm'] as const;
+export const TARGET_AGENTS = ['claude', 'codex', 'grok', 'coco', 'glm'] as const;
 export const REVIEW_VERDICTS = ['通过', '驳回'] as const;
 export const ACCEPTANCE_VERDICTS = ['通过', '打回'] as const;
 

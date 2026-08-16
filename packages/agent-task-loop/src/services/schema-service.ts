@@ -28,6 +28,7 @@ const TASK_FIELD_DEFINITIONS: TaskFieldDefinition[] = [
       options: [
         { name: 'claude', hue: 'Blue', lightness: 'Lighter' },
         { name: 'codex', hue: 'Green', lightness: 'Lighter' },
+        { name: 'grok', hue: 'Red', lightness: 'Lighter' },
         { name: 'coco', hue: 'Orange', lightness: 'Lighter' },
         { name: 'glm', hue: 'Purple', lightness: 'Lighter' },
       ],

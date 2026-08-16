@@ -30,7 +30,7 @@ export interface GitHubRepoTarget {
 }
 
 const TASK_ID_MARKER = /<!--\s*task-id:\s*(\S+)\s*-->/;
-const AGENT_LABEL = /^agent:(claude|codex|coco|glm)$/;
+const AGENT_LABEL = new RegExp(`^agent:(${TARGET_AGENTS.join('|')})$`);
 const PRIORITY_LABEL = /^P([0-9])$/;
 
 interface GitHubLabel {

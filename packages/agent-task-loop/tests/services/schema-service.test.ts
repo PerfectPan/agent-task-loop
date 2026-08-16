@@ -133,6 +133,7 @@ describe('TaskTableSchemaService', () => {
                   options: [
                     { name: 'claude' },
                     { name: 'codex' },
+                    { name: 'grok' },
                     { name: 'coco' },
                     { name: 'glm' },
                   ],

@@ -5,11 +5,11 @@
 | 状态 | Draft |
 | 日期 | 2026-08-24 |
 | 作者 | PerfectPan / Rivus |
-| 类型 | Host 世界模型设计（本仓库记录方向；Host 实现在 `rivus-agent`） |
-| 后续落点 | Host 侧更新 `rivus-agent` 的 `rfcs/0002-multi-agent-host-and-capability-isolation.md`；本仓库任务挂钩保持 [RFC 0009](./0009-rivus-task-manager-plugin.md) |
+| 类型 | Room / Session 核心设计（实现在本仓库；`rivus-agent` 只做真实接入） |
+| 后续落点 | 本仓库落地纯核心（端口 + memory/sqlite 适配器）；任务挂钩保持 [RFC 0009](./0009-rivus-task-manager-plugin.md)。`rivus-agent` 作为接入 Agent 做飞书金丝雀 |
 | 非落点 | 不把 TaskRecord / Task Run / External Worker 写入 Room；不在本设计中实现 `task-start` CAS |
 
-本文件是 Host 世界模型的设计记录，落在本仓库是为了与 RFC 0009 的任务边界放在一起。它会改写 `rivus-agent` RFC 0002 中把「一个飞书 Chat」拆成 N 个互不可见世界的绑定键与群聊路由，但**不静默覆盖** RFC 0002 的能力隔离、Tool Broker、Peer Delegation、Subagent 与 Memory 边界。任务域继续作为既有 Plugin（本仓库 RFC 0009）挂在 Host 上。本仓库不实现 Room store。
+本文件定义 **Room / Agent Session / Run** 的核心逻辑，实现落在 **本仓库**，与 RFC 0009 的任务域隔离。`rivus-agent` 是可接入的真实 Agent（飞书收发、卡片、长连接），用来验证核心，**不拥有 seq 规则、不实现 Room store**。任务域继续作为既有 Plugin（RFC 0009）存在，不读写 Room seq。
 
 ---
 
@@ -23,7 +23,25 @@
 - **AgentSession**（`TenantId + AgentId + RoomId + RuntimeGenerationId`）是该 Agent 在这个世界里的连续性：seen cursor、Pi 绑定、私有 transcript、Conversation Memory、至多一个 Active Run。共享流是世界；Session 是「我在这个世界里已经想过什么」。二者不得塌缩。
 - **Run** 挂在 AgentSession 上。RFC 0004 的 intake / 卡片 / `/cancel` 映射到 Session 上的 Run，而不是映射到 Room 或 Task。
 
-Task Manager 仍是 RFC 0009 的 Plugin Profile。`task-list/get/create/start` 走 Tool Broker，**不读写 Room seq**。Task Run、workspace、External Worker 不是 Room 字段，也不是用户可 `@` 的顶层身份。先稳定 Host 基底，再挂钩任务。
+Task Manager 仍是 RFC 0009 的 Plugin Profile。`task-list/get/create/start` 走 Tool Broker，**不读写 Room seq**。Task Run、workspace、External Worker 不是 Room 字段，也不是用户可 `@` 的顶层身份。先稳定本仓库 Room 核心，再挂钩任务。
+
+### 仓库切分
+
+```text
+本仓库 agent-task-loop
+  packages/agent-room          纯核心：Room / Session / store 端口
+                               createMemoryRoomStreamStore
+                               createSqliteRoomStreamStore（可选适配器）
+                               无 node:fs 进入领域文件；无飞书
+  packages/agent-task-loop     RFC 0009 任务 Plugin；不得依赖 Room 领域类型
+
+rivus-agent（接入 Agent）
+  注入同一 RoomStreamStore
+  飞书 Endpoint / CardKit / 回声登记
+  真群 S0–S7 金丝雀
+```
+
+核心可测、与 Node / 飞书解耦。sqlite 只是适配器。`packages/agent-task-loop` 与 `packages/agent-room` 同仓不同包，避免任务状态机和 Room seq 焊在一个模块里。
 
 ---
 
@@ -33,7 +51,7 @@ Task Manager 仍是 RFC 0009 的 Plugin Profile。`task-list/get/create/start` �
 2. **一等参与者共享同一条已发布流。** 成员 Agent 看见同一条 `seq` 流；各自决定是否发言；`@` 是寻址，不是「没被提到就看不见」。See ≠ wake。
 3. **Session 强制保留。** 不得把 Room Stream 当成唯一 transcript，也不得把 Session 当成 N 个互不可见的世界。Room 赢在「已发布事实」；Session 赢在「我的推理连续性」。
 4. **Room 是抽象域概念。** 不是飞书群、不是 Issue、不是某个 IM 窗口。Chat / Issue / topic / TUI / webhook 是 Endpoint 投影。
-5. **先 Host 基底，再挂钩任务。** Core 不吸收看板、日历、私人 todo。Cumora 的产品形状不进 Core；只借鉴其 seen-cursor / HELD-ack 教训。
+5. **核心在本仓库，接入在 `rivus-agent`。** Room store / Session / HELD 是本仓库纯核心。`rivus-agent` 只做真实 Agent 接入与飞书对账。Core 不吸收看板、日历、私人 todo。Cumora 的产品形状不进 Core；只借鉴其 seen-cursor / HELD-ack 教训。先稳定 Room 核心，再挂钩任务。
 6. **Room 不是 Peer Delegation RPC。** 同伴发帖进入 Room Stream，不签发 `DelegationGrant`，不切换发送身份。Grant 仍是 `src/application/delegation/delegation-service.ts` 的 Host 边。
 7. **聊天回合不用 claim；排他交付物才可以。** 新鲜度闸门在 send/reply **写点**，不是 Prompt 规则。聊天回合并行发言以 HELD + 重读解决。
 8. **See ≠ wake。** 第一版：人类消息按成员唤醒策略唤醒；同伴 Agent 发帖入流且**默认不唤醒**。wake-on-peer-posts 预留配置旋钮、**默认关**，不是 Room 的定义，也不在 PR 2 实现。
@@ -118,8 +136,9 @@ Cumora 的 fail-open 是因为 Redis **不是**真相源。Rivus 的 seq 由 Hos
 - ContextAssembler 增加只读 Room Stream slice；发帖冲突以 Room 为权威；Compaction 仍只压一个 Instance。
 - 在 send/reply 写点实施 HELD + 重读 + 绑定 `heldUpToSeq` 的一次一用 ack。
 - 唤醒策略挂在 Room 成员上，不挂在 Endpoint 上。第一版只实现 `mention-only` 与 `all-human-messages`；同伴帖默认不唤醒。`topic-continue` 推迟到 chat 级 Room（见下方关闭后的粒度决策）。
-- 以飞书为第一 Adapter 证明：两个 Agent、一条 Room seq、两个 Session、最小只读 slice 可见、reply 可 HELD、卡片不是第二条世界正文、Delegation 仍不走飞书。
-- 第二阶段把 Task Manager Plugin 挂上新 Host，且 Room 不获得任何任务语义。
+- 本仓库用 memory（及 sqlite 适配器）证明：两个 Agent、一条 Room seq、两个 Session、最小只读 slice、reply 可 HELD。无飞书、无 Node 领域依赖。
+- `rivus-agent` 作为第一真实接入 Agent：飞书投影、回声、真群对账。它注入本仓库 `RoomStreamStore`，不复制 seq 规则。
+- 第二阶段证明 RFC 0009 Plugin 在接上 Room 核心后仍工作，且 Room 不获得任何任务语义。
 
 ### Non-Goals
 
@@ -757,9 +776,9 @@ Task Manager 可以是 Room 里的一个顶层 Profile（有 Endpoint，能被 `
 
 ## API / Interface Changes
 
-### 新 Host 端口（建议位置）
+### 新核心端口（本仓库）
 
-按 `application-boundaries.ts` 增加 `room` slice，依赖 `support`；`host` 与 `feishu` 依赖 `room`。`delegation` 不得依赖 `room`（Grant 不是帖）。本仓库不得 import `room`。
+建议包：`packages/agent-room`（与 `packages/agent-task-loop` 同仓隔离）。领域与端口纯 TS，不 import `node:fs` / 飞书 SDK。`packages/agent-task-loop` **不得**依赖 Room 领域类型。`rivus-agent` 依赖本包并注入 store。
 
 ```ts
 interface RoomStreamStore {
@@ -788,17 +807,17 @@ interface RoomWakeEvaluator {
 }
 ```
 
-`RivusAgentHost`（`src/application/host/rivus-agent-host.ts`）今日 `handleEndpoint(endpointId, input)` 直接 `runtimePool.run`。新路径：
+本仓库提供 `admit` / `replyInSerial` / `readSlice` / wake evaluator。`rivus-agent` 今日 `handleEndpoint(endpointId, input)` 直接 `runtimePool.run`。接入后的路径：
 
 ```text
-Endpoint intake
-  → RoomStreamStore.admit
+Endpoint intake（rivus-agent）
+  → RoomStreamStore.admit（本仓库核心）
   → 对每个成员 WakeEvaluator.decide
-  → 若 wake：resolve AgentSession → harness promptTurn（一个 Active Run）
+  → 若 wake：resolve AgentSession → 接入侧 harness promptTurn
   → 模型可选调用 room.reply / 业务 Tool
 ```
 
-`handleEndpoint` 不再把「Endpoint 收到的每一条」直接变成该 Agent 的 Run。`RoomStreamStore` / membership / outbound registry 由 `createRivusAgentHost`（或 Deployment daemon 根）持有，注入各 Endpoint。
+接入侧不再把「Endpoint 收到的每一条」直接变成该 Agent 的 Run。同一进程内两个 Endpoint 注入**同一份** `RoomStreamStore`。
 
 ### `room.reply` 与现有投影
 
@@ -812,12 +831,12 @@ Endpoint intake
 
 Deployment `tools.allow` 必须显式列出 `room.reply`。未列出则只读成员：可被唤醒，不能发帖。Skill 文本提到「请回复」不能授予该 Tool。
 
-### 飞书 Adapter
+### 飞书 Adapter（`rivus-agent`，不进本仓库核心）
 
 - `createFeishuConversationId` 保持，作为 Room 的 ConversationId。
 - `createFeishuSessionKey` 不再作为世界主键；保留为 Legacy Alias 生成器。
-- `shouldAcceptFeishuEndpointMessage`：删除「bot/app 一律 false」中对**本 Host enabled 成员**的部分；保留对非成员 app/bot 的拒绝。唤醒从该函数搬走。**本函数的语义变化与 RFC 0002 L799/L818 更新同 PR。**
-- 两个 Endpoint 从 Host 根注入同一 `RoomStreamStore` 与 `EndpointOutboundRegistry`。Endpoint Inbox 仍可独立去重，Admit 在其上做跨 Endpoint 幂等。
+- `shouldAcceptFeishuEndpointMessage`：删除「bot/app 一律 false」中对 **enabled 成员** 的部分；保留对非成员 app/bot 的拒绝。唤醒从该函数搬走。
+- 两个 Endpoint 注入同一 `RoomStreamStore`（来自本仓库）与 `EndpointOutboundRegistry`（接入侧）。Endpoint Inbox 仍可独立去重，Admit 在其上做跨 Endpoint 幂等。
 
 ### 不变的接口
 
@@ -998,12 +1017,11 @@ Status / 指标（按 RFC 0002 第 706–715 行的 Host 聚合风格扩展）�
 
 ## Rollout Plan
 
-1. **先落地 store / 键 / 闸门，飞书行为不变**（PR 1a–1c）。单进程测试证明 admit 幂等、HELD 串行、alias 可读。
-2. **Adapter 翻转入站**（PR 1d）与 RFC 0002 同合并。单 Bot Compatibility 仅当 `room.reply` 调用次数 == 0 时包装 `finalText`；HELD 后沉默不包装。进度卡与 posted 同一条消息。只读 Deployment 完成卡无世界正文。
-3. **双 Bot 金丝雀**：`examples/rivus.config.json` 的 agent-a / agent-b 进同一测试群。断言一 seq、两 Session、最小 slice 可见同伴 posted 正文、HELD、卡片回声不新 seq、Delegation 不走飞书。
-4. **唤醒政策**：默认 `mention-only`。`all-human-messages` 按成员打开。无 `topic-continue`。wake-on-peer-posts 旋钮预留、默认关，本列车不实现。
-5. **Legacy 只读**：旧 Session 文件经合成 alias 挂上。回滚 = 停用 Room 写路径；Room JSONL 保留不删。
-6. **任务 Plugin**：独立 PR，只跑既有 conformance。无任务语义进 Room 测试。不做 `task-start` CAS。
+1. **本仓库先落地纯核心**（PR 1a–1c）：端口、memory store、可选 sqlite 适配器、串行 HELD、最小 slice。无飞书行为。契约测试即可对外说「两 Agent、一 seq、两 Session、第二人 HELD」。
+2. **`rivus-agent` 接入**（PR 1d）：注入本仓库 store，翻飞书入站/出站。单 Bot Compatibility 仅当 `room.reply` 调用次数 == 0 时包装 `finalText`；HELD 后沉默不包装。进度卡与 posted 同一条消息。
+3. **双 Bot 金丝雀**（`rivus-agent` 真群）：agent-a / agent-b 进同一测试群。断言一 seq、两 Session、最小 slice 可见同伴 posted、HELD、卡片回声不新 seq。
+4. **唤醒政策**：核心 evaluator 在本仓库；默认 `mention-only`。`all-human-messages` 按成员打开。无 `topic-continue`。wake-on-peer-posts 旋钮预留、默认关。
+5. **任务 Plugin**：本仓库独立 PR，只跑 RFC 0009 conformance。无任务语义进 Room 测试。不做 `task-start` CAS。
 
 ---
 
@@ -1025,7 +1043,7 @@ Status / 指标（按 RFC 0002 第 706–715 行的 Host 聚合风格扩展）�
 
 ## References
 
-Host 仓库 `rivus-agent`：
+接入 Agent 仓库 `rivus-agent`（飞书 / 今日绑定键，**不实现 Room 核心**）：
 
 - `rfcs/0002-multi-agent-host-and-capability-isolation.md` — 父 RFC（草案）；本设计将改写其绑定键、群聊路由与测试 799–800 行。
 - `rfcs/0004-feishu-message-and-human-interaction-design.md` — 已实施；intake / 卡片 / 取消映射到 Session 上的 Run。
@@ -1049,9 +1067,10 @@ Host 仓库 `rivus-agent`：
 本仓库：
 
 - `CONTEXT.md` — Task / Task Run / External Worker 语言。
-- `rfcs/0009-rivus-task-manager-plugin.md` — 任务挂钩保持此 RFC。
+- `rfcs/0009-rivus-task-manager-plugin.md` — 任务挂钩；不得把 Task 写入 Room。
 - `packages/agent-task-loop/src/rivus-plugin.ts` — 四个 Tool。
 - `packages/agent-task-loop/src/task-manager/task-start-service.ts` — inspect-then-run TOCTOU，本设计不修。
+- 建议新增 `packages/agent-room/` — Room / Session 端口与 memory（及 sqlite）适配器。
 
 公开先验：
 
@@ -1061,72 +1080,66 @@ Host 仓库 `rivus-agent`：
 
 ## PR Plan
 
-每条 PR 应可独立审查与合并。任务 CAS 不在本列车。**PR 1a–1d、2、3 在 `rivus-agent` 落地**；**PR 4 在本仓库落地**。`rivus-agent` 的 PR 标题走 `type(scope): summary`，合入前跑其 `scripts/check-pr-title.sh`。飞书入站政策只改一次（PR 1d），并与 Host RFC 0002 同合并。
+每条 PR 应可独立审查与合并。任务 CAS 不在本列车。
 
-### PR 1a — `feat(host): add Room stream store and admit idempotency`
+**本仓库（核心）：PR 1a–1c、2、4。**  
+**`rivus-agent`（接入 Agent）：PR 1d、3（Assembler 接线）、真群金丝雀。**
+
+### PR 1a — `feat(room): add Room stream store port and memory adapter`（本仓库）
 
 - **依赖**：无
 - **影响文件 / 组件**：
-  - 新增 `src/domain/room.ts`、`src/application/room/`（`RoomStreamStore`、每 Room serial、admit 幂等）
-  - `application-boundaries.ts` 增加 `room` slice（`host`/`feishu` 依赖 `room`；`delegation` 不依赖）
-  - JSONL persistence
-- **说明**：无飞书行为变化。契约测试：两 fake Endpoint 同一 `message_id` → 一次 admit、同一 seq、store 引用相等。显式 membership 记录（可 `enabled: false`）。
+  - 新增 `packages/agent-room/`：领域类型、`RoomStreamStore` 端口、`createMemoryRoomStreamStore`、每 Room serial、admit 幂等
+  - 契约测试与领域文件均不 import `node:fs` / 飞书
+- **说明**：无飞书。两 fake 调用方同一 `message_id` → 一次 admit、同一 seq、store 引用相等。显式 membership（可 `enabled: false`）。
 
-### PR 1b — `feat(host): rewrite session binding keys and alias Feishu SessionNamespace`
+### PR 1b — `feat(room): add AgentSession keys and seen cursor`（本仓库）
 
 - **依赖**：PR 1a
 - **影响文件 / 组件**：
-  - `src/application/host/rivus-agent-host.ts`、`agent-instance-registry.ts`、`agent-runtime-pool.ts`、`session-scheduler.ts`：闸门下沉到 AgentSession
-  - alias 扫描：Deployment `sessionNamespace` + `json-feishu-session-store` `{ baseSessionKey, generation }`
-  - `/reset`：替换 `pi-binding.json`，保留 `seenSeq`，清 hold token，不改 `AgentSessionKey`
-- **说明**：旧 SessionKey 只读。不改 group policy。不改飞书 intake。
+  - `AgentSessionStore`：`seenSeq`、hold token、Generation
+  - `/reset` 语义：保留 `seenSeq`，清 hold token，不改 `AgentSessionKey`
+- **说明**：不改飞书。旧接入侧 SessionKey 只在 `rivus-agent` 做只读别名（随 1d）。
 
-### PR 1c — `feat(host): add room.reply with serial HELD gate`
+### PR 1c — `feat(room): add serial HELD reply and readSlice`（本仓库）
 
 - **依赖**：PR 1b
 - **影响文件 / 组件**：
-  - `src/application/room/`：`room.reply` 描述符（`id: "room.reply"`，pluginId `rivus-core`，`idempotency: "none"`）
-  - composition `hostTools` 注入（对齐 `examples/pi-feishu-deployment.bootstrap.ts` 464–475 行）。**禁止** `tool-broker.ts` import room
-  - 串行 `replyInSerial`；hold token；Outbox `{ postId, uuid }`
-  - **最小只读 slice**：把 `(seenSeq, head]` 拼进 `current-input`
-- **说明**：测试：预发 ack 忽略、ack 后 head 越过则 void、双 Run 并行第二人 HELD、同 Run 二次 posted、人类帖计入 newer、`no-endpoint` 错误。无飞书入站翻转。
+  - `replyInSerial`；hold token；最小 `readSlice`
+  - 可选 `createSqliteRoomStreamStore`（infrastructure，不进领域文件）
+- **说明**：测试：预发 ack 忽略、ack 后 head 越过则 void、双 Run 并行第二人 HELD、同 Run 二次 posted、人类帖计入 newer。memory 与 sqlite 跑同一套契约。无飞书。
 
-### PR 1d — `feat(feishu): project posted replies and register outbound echoes`
+### PR 1d — `feat(feishu): wire Room store as live agent adapter`（`rivus-agent`）
+
+- **依赖**：PR 1c（本仓库包可被接入）
+- **影响文件 / 组件**：
+  - 注入本仓库 `RoomStreamStore`
+  - `feishu-group-policy.ts`、intake、deployment endpoint、CardKit 主路径：`registerPending` → uuid → `attachMessageId`
+  - Outbound Registry；进度卡与 posted 同一条消息
+- **说明**：第一条改变飞书入站的 PR。必测：进度卡回声不新 seq；HELD 后沉默 ≠ 包装发出；control-plane 不走聊天 HELD。真群 S0–S7。不改本仓库 Task Plugin。
+
+### PR 2 — `feat(room): add all-human-messages wake policy`（本仓库）
 
 - **依赖**：PR 1c
 - **影响文件 / 组件**：
-  - `feishu-group-policy.ts`、`feishu-message-intake.ts`、`feishu-deployment-endpoint.ts`、`feishu-agent-daemon.ts`、`feishu-stream-projector.ts`
-  - **CardKit 主路径**：`feishu-cardkit-target-preparation.ts`、card rollover successor、`feishu-human-interaction-presenter.ts`、`feishu-text-reply.ts`：所有 IM reply/send 均 `registerPending` → uuid → 解析 `data.message_id` → `attachMessageId`
-  - Outbound Registry（含 `unackedEcho` 与 `attachMessageId` 原子汇合）；进度卡与 posted 同一条消息；无进度卡则新 IM
-  - `/cancel` → AgentSession Active Run
-  - RFC 0011 CoT 非世界；RFC 0017 / 0020 走 `origin: "control-plane"`
-  - **同 PR 更新 RFC 0002**（L69、L176–181、L325–331、L766、L799–800、L809、L818 及 0011/0017/0020 出站声明）
-- **说明**：第一条改变入站政策的 PR。必测：CardKit 进度卡回声不新 seq（不要只用 text reply）；HELD 后沉默 ≠ 包装发出；control-plane briefing 不走聊天 HELD、不推进 `seenSeq`；echo-then-ack / ack-then-echo；禁用成员未登记回声 reject。Host 包装谓词 `invocationCount == 0`。不改 Task Plugin。
+  - `RoomWakeEvaluator`：`mention-only` / `all-human-messages`
+- **说明**：**不**实现 `topic-continue`，**不**实现 wake-on-peer-posts。同伴帖仍入流且默认不唤醒。
 
-### PR 2 — `feat(host): add all-human-messages membership wake policy`
+### PR 3 — `feat(adapter): inject room-stream into context assembly`（`rivus-agent`）
 
-- **依赖**：PR 1d
+- **依赖**：PR 1c
 - **影响文件 / 组件**：
-  - wake evaluator：`all-human-messages`
-  - Deployment manifest：Endpoint `groupPolicy` 复制到 membership 后只读兼容
-- **说明**：**不**实现 `topic-continue`，**不**实现 wake-on-peer-posts。同伴帖仍入流且默认不唤醒。禁止 LLM 路由。wake-on-peer-posts 旋钮见本列车之后的可选 PR。
+  - 接入侧 ContextAssembler：只读 `readSlice`，独立 8 KiB / 50 seq 预算
+- **说明**：压缩仍在接入侧 Instance。slice 由本仓库提供，接线在 `rivus-agent`。
 
-### PR 3 — `feat(host): add room-stream ContextAssembler layer`
+### PR 4 — `test(plugin): prove Task Manager plugin stays isolated from Room`（本仓库）
 
-- **依赖**：PR 1c（正式层；飞书证明已有最小 slice）
+- **依赖**：PR 1a
 - **影响文件 / 组件**：
-  - `src/application/memory/context-assembler.ts`：新增 `room-stream`，位于 `transcript` 与 `current-input` 之间；独立 8 KiB 预算；层内截断
-  - Memory 设计「上下文组装」一节与 RFC 0002 L562–576 同步
-  - 群聊 Audience：slice 不泄漏 agent-private
-- **说明**：压缩仍一 Instance。不得挤掉必留层。
-
-### PR 4 — `test(plugin): prove Task Manager plugin still works on Room host`
-
-- **依赖**：PR 1d
-- **影响文件 / 组件**：
-  - 本仓库既有 `packages/agent-task-loop` 的 `rivus-plugin.test.ts`、`rivus-terminal-agent.test.ts`、conformance
-  - `rivus-agent` Fake Plugin 契约：Room 测试禁止 TaskRecord 字段
-- **说明**：只证明 Plugin 仍红acted、不碰 Room seq。**禁止** `task-start` CAS、`task-claim`、Room 存任务字段。
+  - `packages/agent-task-loop` 既有 `rivus-plugin.test.ts`、conformance
+  - `packages/agent-room` 测试禁止 TaskRecord 字段
+  - 包边界：`agent-task-loop` 不得依赖 `agent-room` 领域类型
+- **说明**：只证明 Plugin 仍红acted、不碰 Room seq。**禁止** `task-start` CAS、`task-claim`。
 
 ### 本列车之后（不并行）
 

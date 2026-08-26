@@ -1,5 +1,6 @@
-export type TaskManagerErrorCode = 'task-not-found';
+export type TaskManagerErrorCode = 'task-not-found' | 'task-already-active';
 export type TaskManagerOperationErrorCode = 'task-backend-failed' | 'task-run-failed';
+
 
 export class TaskManagerInputError extends Error {
   readonly name = 'TaskManagerInputError';

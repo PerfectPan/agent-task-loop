@@ -7,6 +7,23 @@ Callers inject the capability port for the slice they use. `rivus-agent` is the 
 
 See RFC 0010 Chapter B.
 
+## Domain model
+
+- `Room` is the aggregate root for one ordered conversation stream. It owns
+  sequence assignment, external transport idempotency, and bounded reads.
+- `RoomEvent` is an entity identified by its sequence inside a Room.
+- Only externally admitted events carry `transportMessageId`; internal agent
+  and control-plane posts use their sequence as identity and are not transport
+  deduplication candidates. `messageId` remains the compatibility/display field.
+- `AgentSessionAggregate` is a separate aggregate root for one agent runtime's
+  seen cursor and one-shot hold.
+- `replyInSerial` is the domain service that applies HELD across Room and
+  AgentSession in one serialized write.
+- `shouldWake` is a stateless domain service; persistence adapters do not decide
+  wake policy.
+
+See RFC 0012 for the repository-wide dependency rules.
+
 ## Status
 
 Internal package (`private: true`). Not published yet.

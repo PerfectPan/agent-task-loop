@@ -36,3 +36,15 @@ orch.release('task:T-1');
 A second `open` on the same key fails with `OrchestrationConflictError` (`orchestration-conflict`) while the lock holder is alive and the heartbeat is fresh.
 
 Seat names are data. The kernel does not define `Team` or `Lead`.
+
+## Domain model
+
+`Run` is the aggregate root. Seats are entities inside the Run and cannot be
+changed independently. Turn changes, command bindings (`cmd` and `args`), facts,
+mail, process state, and release all pass through Run behavior before the
+application service persists a snapshot. Binding environment variables remain
+ephemeral execution input and are omitted from snapshots and observed views.
+
+`Orchestration` coordinates occupancy IO, persistence, clocks, and process
+execution. Lock freshness is a domain policy; file stores, pid checks, and
+process runners are adapters. See RFC 0012 for the repository-wide rules.

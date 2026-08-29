@@ -2,12 +2,11 @@ import type {
   AdmitResult,
   AdmitRoomEvent,
   RoomId,
-  RoomReplyCommand,
-  RoomReplyResult,
   RoomSeq,
   RoomSlice,
   SliceBudget,
-} from './types';
+} from '../domain/model';
+import type { RoomReplyCommand, RoomReplyResult } from '../domain/reply-in-serial';
 
 export interface RoomAdmissionStore {
   admit(input: AdmitRoomEvent): Promise<AdmitResult>;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MemoryRoomStreamStore } from '../src/index';
+import {
+  AgentSessionAggregate,
+  AgentSessionValidationError,
+  MemoryRoomStreamStore,
+  sessionKey,
+} from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 const session = {
@@ -28,6 +33,28 @@ describe('AgentSession seen / hold', () => {
     expect(store.inspectSession({ ...session, runtimeGenerationId: 'gen-2' })?.seenSeq).toBe(9);
   });
 
+  it('uses collision-free session identities', () => {
+    const left = { ...session, agentId: 'bot::a', runtimeGenerationId: 'gen' };
+    const right = { ...session, agentId: 'bot', runtimeGenerationId: 'a::gen' };
+    expect(sessionKey(left)).not.toBe(sessionKey(right));
+
+    const store = new MemoryRoomStreamStore();
+    store.advanceSeen(left, 3);
+    store.advanceSeen(right, 7);
+    expect(store.inspectSession(left)?.seenSeq).toBe(3);
+    expect(store.inspectSession(right)?.seenSeq).toBe(7);
+  });
+
+  it('keeps seen and hold watermarks monotonic', () => {
+    const store = new MemoryRoomStreamStore();
+    store.advanceSeen(session, 5);
+    expect(store.advanceSeen(session, 3).seenSeq).toBe(5);
+
+    store.hold(session, 9);
+    expect(store.hold(session, 7).heldUpToSeq).toBe(9);
+    expect(store.advanceSeen(session, 9).heldUpToSeq).toBeUndefined();
+  });
+
   it('acks a hold only when the watermark matches, once', () => {
     const store = new MemoryRoomStreamStore();
     store.hold(session, 7);
@@ -46,4 +73,15 @@ describe('AgentSession seen / hold', () => {
     expect(store.ackHold(session, 3)).toBe(false);
     expect(store.inspectSession(session)).toBeUndefined();
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, 1.5, -1])(
+    'rejects invalid sequence transitions: %s',
+    invalidSeq => {
+      const aggregate = new AgentSessionAggregate(session);
+      expect(() => aggregate.advanceSeen(invalidSeq)).toThrow(AgentSessionValidationError);
+      expect(() => aggregate.hold(invalidSeq)).toThrow(AgentSessionValidationError);
+      expect(() => aggregate.ackHold(invalidSeq)).toThrow(AgentSessionValidationError);
+      expect(aggregate.snapshot()).toEqual({ id: session, seenSeq: 0 });
+    },
+  );
 });

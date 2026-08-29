@@ -9,6 +9,7 @@ import type {
   RoomSeq,
 } from '../contracts/types';
 import { roomKey, sessionKey } from '../contracts/types';
+import { AgentSessionAggregate } from '../domain/agent-session';
 import { Room } from '../domain/room';
 
 export interface MemoryRoomStreamStoreOptions {
@@ -25,7 +26,8 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
   }
 
   ensureSession(id: AgentSessionId): AgentSession {
-    return cloneSession(this.mutableSession(id));
+    const session = this.loadSession(id);
+    return this.saveSession(session);
   }
 
   inspectSession(id: AgentSessionId): AgentSession | undefined {
@@ -34,15 +36,15 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
   }
 
   advanceSeen(id: AgentSessionId, seq: RoomSeq): AgentSession {
-    const session = this.mutableSession(id);
-    session.seenSeq = seq;
-    return cloneSession(session);
+    const session = this.loadSession(id);
+    session.advanceSeen(seq);
+    return this.saveSession(session);
   }
 
   hold(id: AgentSessionId, heldUpToSeq: RoomSeq): AgentSession {
-    const session = this.mutableSession(id);
-    session.heldUpToSeq = heldUpToSeq;
-    return cloneSession(session);
+    const session = this.loadSession(id);
+    session.hold(heldUpToSeq);
+    return this.saveSession(session);
   }
 
   /**
@@ -50,13 +52,11 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
    * different hold watermark, is ignored and returns false.
    */
   ackHold(id: AgentSessionId, heldUpToSeq: RoomSeq): boolean {
-    const session = this.sessions.get(sessionKey(id));
-    if (!session || session.heldUpToSeq !== heldUpToSeq) {
-      return false;
-    }
-    session.seenSeq = Math.max(session.seenSeq, heldUpToSeq);
-    delete session.heldUpToSeq;
-    return true;
+    if (!this.sessions.has(sessionKey(id))) return false;
+    const session = this.loadSession(id);
+    const acked = session.ackHold(heldUpToSeq);
+    if (acked) this.saveSession(session);
+    return acked;
   }
 
   async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
@@ -74,15 +74,24 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
     return new Room(id, this.rooms.get(roomKey(id)) ?? []);
   }
 
-  private mutableSession(id: AgentSessionId): AgentSession {
+  private loadSession(id: AgentSessionId): AgentSessionAggregate {
     const key = sessionKey(id);
     const existing = this.sessions.get(key);
-    if (existing) {
-      return existing;
-    }
-    const created: AgentSession = { id: cloneSessionId(id), seenSeq: 0 };
-    this.sessions.set(key, created);
-    return created;
+    return new AgentSessionAggregate(
+      id,
+      existing
+        ? {
+            seenSeq: existing.seenSeq,
+            ...(existing.heldUpToSeq === undefined ? {} : { heldUpToSeq: existing.heldUpToSeq }),
+          }
+        : undefined,
+    );
+  }
+
+  private saveSession(session: AgentSessionAggregate): AgentSession {
+    const snapshot = session.snapshot();
+    this.sessions.set(sessionKey(snapshot.id), snapshot);
+    return cloneSession(snapshot);
   }
 }
 

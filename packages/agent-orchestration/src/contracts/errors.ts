@@ -31,7 +31,10 @@ export class OrchestrationNotFoundError extends Error {
 export class OrchestrationSeatError extends Error {
   readonly code = ORCHESTRATION_SEAT_CODE;
 
-  constructor(readonly key: string, message: string) {
+  constructor(
+    readonly key: string,
+    message: string,
+  ) {
     super(message);
     this.name = 'OrchestrationSeatError';
   }

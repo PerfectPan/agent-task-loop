@@ -2,90 +2,81 @@ import {
   OrchestrationConflictError,
   OrchestrationNotFoundError,
   OrchestrationSeatError,
-} from './errors';
-import { defaultBaseDir } from './paths';
-import { FileOrchestrationStore, type LockRecord, type OrchestrationStore } from './store';
-import { defaultProcessRunner } from './spawn';
-import { TemplateRegistry } from './templates';
+} from '../contracts/errors';
 import type {
-  ObservedRun,
+  Clock,
+  IntervalScheduler,
+  LockRecord,
+  OrchestrationStore,
+  ProcessIdentity,
+  ProcessLiveness,
+} from '../contracts/ports';
+import type {
   OpenRunInput,
+  ObservedRun,
   ProcessRunner,
   RunSnapshot,
   SeatBind,
   SeatState,
   SpawnResult,
-} from './types';
+} from '../contracts/types';
+import { holdsLock, isLockFresh } from '../domain/lock';
+import { observeRun, occupiedSnapshot, releasedSnapshot, requireSeat } from '../domain/run';
+import { TemplateRegistry } from '../domain/template';
 
-export interface OrchestrationOptions {
-  baseDir?: string;
-  store?: OrchestrationStore;
-  now?: () => number;
+export interface OrchestrationDependencies {
+  store: OrchestrationStore;
+  clock: Clock;
+  identity: ProcessIdentity;
+  liveness: ProcessLiveness;
+  runner: ProcessRunner;
+  scheduler: IntervalScheduler;
   staleAfterMs?: number;
   heartbeatIntervalMs?: number;
-  isProcessAlive?: (pid: number) => boolean;
-  runner?: ProcessRunner;
 }
 
 export class Orchestration {
   readonly templates = new TemplateRegistry();
   private readonly store: OrchestrationStore;
-  private readonly now: () => number;
+  private readonly clock: Clock;
+  private readonly identity: ProcessIdentity;
+  private readonly liveness: ProcessLiveness;
+  private readonly runner: ProcessRunner;
+  private readonly scheduler: IntervalScheduler;
   private readonly staleAfterMs: number;
   private readonly heartbeatIntervalMs: number;
-  private readonly isProcessAlive: (pid: number) => boolean;
-  private readonly runner: ProcessRunner;
+  private readonly envs = new Map<string, Record<string, string>>();
 
-  constructor(options: OrchestrationOptions = {}) {
-    this.store = options.store ?? new FileOrchestrationStore(options.baseDir ?? defaultBaseDir());
-    this.now = options.now ?? Date.now;
-    this.staleAfterMs = options.staleAfterMs ?? 120_000;
-    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? Math.min(15_000, Math.max(1, Math.floor(this.staleAfterMs / 4)));
-    this.isProcessAlive = options.isProcessAlive ?? defaultIsProcessAlive;
-    this.runner = options.runner ?? defaultProcessRunner;
+  constructor(dependencies: OrchestrationDependencies) {
+    this.store = dependencies.store;
+    this.clock = dependencies.clock;
+    this.identity = dependencies.identity;
+    this.liveness = dependencies.liveness;
+    this.runner = dependencies.runner;
+    this.scheduler = dependencies.scheduler;
+    this.staleAfterMs = dependencies.staleAfterMs ?? 120_000;
+    this.heartbeatIntervalMs =
+      dependencies.heartbeatIntervalMs ?? Math.min(15_000, Math.max(1, Math.floor(this.staleAfterMs / 4)));
   }
 
   async open(input: OpenRunInput): Promise<RunSnapshot> {
     const template = this.templates.get(input.template);
-    const bind = input.bind ?? {};
-    for (const seat of Object.keys(bind)) {
-      if (!template.seats.includes(seat)) {
-        throw new OrchestrationSeatError(input.key, `seat ${seat} is not in template ${template.id}`);
-      }
-    }
-
     this.acquire(input.key);
     this.clearEnvs(input.key);
 
-    const allowed = template.allow?.start ?? template.seats[0]!;
-    const seats: Record<string, SeatState> = {};
-    for (const name of template.seats) {
-      const bound = bind[name];
-      seats[name] = {
-        ...(bound?.cmd ? { cmd: bound.cmd } : {}),
-        ...(bound?.args ? { args: [...bound.args] } : {}),
-        status: 'idle',
-      };
-      if (bound?.env) {
-        this.envs.set(envKey(input.key, name), { ...bound.env });
+    const snapshot = occupiedSnapshot({
+      key: input.key,
+      template,
+      bind: input.bind,
+      context: input.context,
+      holderPid: this.identity.pid,
+      at: this.isoNow(),
+    });
+    for (const [seat, bound] of Object.entries(input.bind ?? {})) {
+      if (bound.env) {
+        this.envs.set(envKey(input.key, seat), { ...bound.env });
       }
     }
-
-    const snapshot: RunSnapshot = {
-      key: input.key,
-      template: template.id,
-      seats,
-      allowed,
-      occupied: true,
-      holderPid: process.pid,
-      heartbeatAt: this.isoNow(),
-      context: {
-        ...(input.context?.goal ? { goal: input.context.goal } : {}),
-        ...(input.context?.ref ? { ref: { ...input.context.ref } } : {}),
-        facts: [],
-        mail: [],
-      },
-    };
     this.store.writeState(snapshot);
     return snapshot;
   }
@@ -99,67 +90,34 @@ export class Orchestration {
   }
 
   observe(key: string, _seat: string): ObservedRun {
-    const snapshot = this.inspect(key);
-    const seats: ObservedRun['seats'] = {};
-    for (const [name, seat] of Object.entries(snapshot.seats)) {
-      seats[name] = { status: seat.status };
-    }
-    return {
-      key: snapshot.key,
-      template: snapshot.template,
-      allowed: snapshot.allowed,
-      seats,
-      context: {
-        ...(snapshot.context.goal ? { goal: snapshot.context.goal } : {}),
-        ...(snapshot.context.ref ? { ref: { ...snapshot.context.ref } } : {}),
-        facts: [...snapshot.context.facts],
-        mail: [...snapshot.context.mail],
-      },
-    };
+    return observeRun(this.inspect(key));
   }
 
   allow(key: string, seat: string): RunSnapshot {
     const snapshot = this.requireHolder(key);
-    if (!snapshot.seats[seat]) {
-      throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
-    }
+    requireSeat(snapshot, seat);
     snapshot.allowed = seat;
-    snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
-    this.store.writeState(snapshot);
-    return snapshot;
+    return this.touch(snapshot);
   }
 
   appendFact(key: string, seat: string, text: string): RunSnapshot {
     const snapshot = this.requireHolder(key);
-    if (!snapshot.seats[seat]) {
-      throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
-    }
+    requireSeat(snapshot, seat);
     snapshot.context.facts.push({ seat, text, at: this.isoNow() });
-    snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
-    this.store.writeState(snapshot);
-    return snapshot;
+    return this.touch(snapshot);
   }
 
   sendMail(key: string, input: { from: string; to: string; body: string }): RunSnapshot {
     const snapshot = this.requireHolder(key);
-    if (!snapshot.seats[input.from]) {
-      throw new OrchestrationSeatError(key, `unknown seat ${input.from}`);
-    }
-    if (!snapshot.seats[input.to]) {
-      throw new OrchestrationSeatError(key, `unknown seat ${input.to}`);
-    }
+    requireSeat(snapshot, input.from);
+    requireSeat(snapshot, input.to);
     snapshot.context.mail.push({
       from: input.from,
       to: input.to,
       body: input.body,
       at: this.isoNow(),
     });
-    snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
-    this.store.writeState(snapshot);
-    return snapshot;
+    return this.touch(snapshot);
   }
 
   async spawn(
@@ -171,8 +129,8 @@ export class Orchestration {
     if (snapshot.allowed !== seat) {
       throw new OrchestrationSeatError(key, `seat ${seat} is not allowed to spawn (allowed=${snapshot.allowed})`);
     }
-    const bound = snapshot.seats[seat];
-    if (!bound?.cmd) {
+    const bound = requireSeat(snapshot, seat);
+    if (!bound.cmd) {
       throw new OrchestrationSeatError(key, `seat ${seat} has no command bound`);
     }
     const env = { ...(this.envs.get(envKey(key, seat)) ?? {}), ...(input.env ?? {}) };
@@ -182,14 +140,14 @@ export class Orchestration {
       seatState.status = 'running';
     });
 
-    const timer = setInterval(() => {
+    const timer = this.scheduler.setInterval(() => {
       try {
         this.heartbeat(key);
       } catch {
         // Holder lost the lock; the interval is cleared in finally.
       }
     }, this.heartbeatIntervalMs);
-    timer.unref();
+    timer.unref?.();
 
     try {
       const result = await this.runner({
@@ -219,20 +177,17 @@ export class Orchestration {
       }
       throw error;
     } finally {
-      clearInterval(timer);
+      this.scheduler.clearInterval(timer);
     }
   }
 
   heartbeat(key: string): void {
-    const snapshot = this.requireHolder(key);
-    snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
-    this.store.writeState(snapshot);
+    this.touch(this.requireHolder(key));
   }
 
   release(key: string): void {
     const lock = this.store.readLock(key);
-    if (!lock || lock.holderPid !== process.pid) {
+    if (!lock || lock.holderPid !== this.identity.pid) {
       return;
     }
     this.store.removeLock(key);
@@ -241,10 +196,7 @@ export class Orchestration {
     if (!snapshot) {
       return;
     }
-    snapshot.occupied = false;
-    snapshot.holderPid = undefined;
-    snapshot.heartbeatAt = this.isoNow();
-    this.store.writeState(snapshot);
+    this.store.writeState(releasedSnapshot(snapshot, this.isoNow()));
   }
 
   listRuns(): RunSnapshot[] {
@@ -256,11 +208,9 @@ export class Orchestration {
 
   bind(key: string, seat: string, bind: SeatBind): RunSnapshot {
     const snapshot = this.requireHolder(key);
-    if (!snapshot.seats[seat]) {
-      throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
-    }
+    const seatState = requireSeat(snapshot, seat);
     snapshot.seats[seat] = {
-      ...snapshot.seats[seat],
+      ...seatState,
       cmd: bind.cmd,
       ...(bind.args ? { args: [...bind.args] } : {}),
     };
@@ -269,16 +219,13 @@ export class Orchestration {
     } else {
       this.envs.delete(envKey(key, seat));
     }
-    this.store.writeState(snapshot);
-    return snapshot;
+    return this.touch(snapshot);
   }
-
-  private readonly envs = new Map<string, Record<string, string>>();
 
   private acquire(key: string): void {
     const record: LockRecord = {
       key,
-      holderPid: process.pid,
+      holderPid: this.identity.pid,
       heartbeatAt: this.isoNow(),
     };
     if (this.store.tryCreateLock(key, record)) {
@@ -295,7 +242,7 @@ export class Orchestration {
       const raced = this.store.readLock(key);
       throw new OrchestrationConflictError(key, raced?.holderPid);
     }
-    if (this.isFresh(existing)) {
+    if (isLockFresh(existing, this.clock.now(), this.staleAfterMs, pid => this.liveness.isAlive(pid))) {
       throw new OrchestrationConflictError(key, existing.holderPid);
     }
     if (!this.store.tryReplaceLock(key, existing, record)) {
@@ -304,24 +251,13 @@ export class Orchestration {
     }
   }
 
-  private isFresh(lock: LockRecord): boolean {
-    if (!this.isProcessAlive(lock.holderPid)) {
-      return false;
-    }
-    const at = Date.parse(lock.heartbeatAt);
-    if (Number.isNaN(at)) {
-      return false;
-    }
-    return this.now() - at <= this.staleAfterMs;
-  }
-
   private requireHolder(key: string): RunSnapshot {
     const snapshot = this.inspect(key);
     if (!snapshot.occupied) {
       throw new OrchestrationNotFoundError(key);
     }
     const lock = this.store.readLock(key);
-    if (!lock || lock.holderPid !== process.pid || !this.isFresh(lock)) {
+    if (!holdsLock(lock, this.identity.pid, this.clock.now(), this.staleAfterMs, pid => this.liveness.isAlive(pid))) {
       throw new OrchestrationConflictError(key, lock?.holderPid);
     }
     return snapshot;
@@ -329,47 +265,35 @@ export class Orchestration {
 
   private patchSeat(key: string, seat: string, patch: (seat: SeatState) => void): void {
     const snapshot = this.requireHolder(key);
-    const seatState = snapshot.seats[seat];
-    if (!seatState) {
-      throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
-    }
-    patch(seatState);
+    patch(requireSeat(snapshot, seat));
+    this.touch(snapshot);
+  }
+
+  private touch(snapshot: RunSnapshot): RunSnapshot {
     snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
+    this.store.writeLock(snapshot.key, {
+      key: snapshot.key,
+      holderPid: this.identity.pid,
+      heartbeatAt: snapshot.heartbeatAt,
+    });
     this.store.writeState(snapshot);
+    return snapshot;
   }
 
   private clearEnvs(key: string): void {
     const prefix = `${key}::`;
-    for (const envKeyName of [...this.envs.keys()]) {
-      if (envKeyName.startsWith(prefix)) {
-        this.envs.delete(envKeyName);
+    for (const name of [...this.envs.keys()]) {
+      if (name.startsWith(prefix)) {
+        this.envs.delete(name);
       }
     }
   }
 
-  private touchLock(key: string): void {
-    this.store.writeLock(key, {
-      key,
-      holderPid: process.pid,
-      heartbeatAt: this.isoNow(),
-    });
-  }
-
   private isoNow(): string {
-    return new Date(this.now()).toISOString();
+    return new Date(this.clock.now()).toISOString();
   }
 }
 
 function envKey(runKey: string, seat: string): string {
   return `${runKey}::${seat}`;
-}
-
-function defaultIsProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
 }

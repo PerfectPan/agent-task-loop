@@ -8,10 +8,12 @@ This package does not know tasks, Feishu, GitHub, or review loops. Callers (toda
 
 Internal package (`private: true`). Not published yet.
 
+Layout: `contracts/` and `domain/` are Node-free. File lock, `homedir`, and `execa` live in `infrastructure/`.
+
 ## API
 
 ```ts
-const orch = new Orchestration({ baseDir });
+const orch = createOrchestration({ baseDir });
 orch.templates.register({
   id: 'classic-delivery',
   seats: ['impl', 'review'],

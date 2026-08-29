@@ -12,7 +12,16 @@ export type {
   SeatStatus,
   SpawnResult,
   TemplateSpec,
-} from './types';
+} from './contracts/types';
+
+export type {
+  Clock,
+  IntervalScheduler,
+  LockRecord,
+  OrchestrationStore,
+  ProcessIdentity,
+  ProcessLiveness,
+} from './contracts/ports';
 
 export {
   ORCHESTRATION_CONFLICT_CODE,
@@ -23,10 +32,19 @@ export {
   OrchestrationNotFoundError,
   OrchestrationSeatError,
   OrchestrationTemplateError,
-} from './errors';
+} from './contracts/errors';
 
-export { Orchestration, type OrchestrationOptions } from './orchestration';
-export { TemplateRegistry } from './templates';
-export { FileOrchestrationStore, type LockRecord, type OrchestrationStore } from './store';
-export { defaultBaseDir, safeSegment } from './paths';
-export { defaultProcessRunner } from './spawn';
+export { Orchestration, type OrchestrationDependencies } from './application/orchestration';
+export { TemplateRegistry } from './domain/template';
+export { FileOrchestrationStore } from './infrastructure/file-store';
+export { MemoryOrchestrationStore } from './infrastructure/memory-store';
+export {
+  createMemoryOrchestration,
+  createOrchestration,
+  type CreateOrchestrationOptions,
+} from './infrastructure/node-factory';
+export { defaultBaseDir, lockPath, safeSegment } from './infrastructure/node-paths';
+export { execaProcessRunner as defaultProcessRunner } from './infrastructure/execa-runner';
+
+/** @deprecated Use CreateOrchestrationOptions with createOrchestration(). */
+export type OrchestrationOptions = import('./infrastructure/node-factory').CreateOrchestrationOptions;

@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Summary
 
@@ -35,9 +35,14 @@ projection the shell writes after it has won `open`.
 
 ```text
 packages/agent-orchestration/    @rivus/agent-orchestration
+  contracts/     ports, types, errors (no Node)
+  domain/        occupancy rules, templates, run snapshots (no Node)
+  application/   Orchestration facade (no fs / execa / homedir)
+  infrastructure/  file + memory stores, execa runner, node clock/pid
 ```
 
-Depends on `execa` only. No `@rivus/agent-task-loop`.
+Depends on `execa` only, and only in infrastructure. No `@rivus/agent-task-loop`.
+Callers use `createOrchestration()`; tests may use `createMemoryOrchestration()`.
 
 ## API (v1)
 

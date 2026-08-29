@@ -1,5 +1,5 @@
-import { OrchestrationTemplateError } from './errors';
-import type { TemplateSpec } from './types';
+import { OrchestrationTemplateError } from '../contracts/errors';
+import type { TemplateSpec } from '../contracts/types';
 
 export class TemplateRegistry {
   private readonly templates = new Map<string, TemplateSpec>();
@@ -23,11 +23,7 @@ export class TemplateRegistry {
         `template ${spec.id} start seat ${spec.allow.start} is not in seats`,
       );
     }
-    this.templates.set(spec.id, {
-      id: spec.id,
-      seats: [...spec.seats],
-      ...(spec.allow ? { allow: { ...spec.allow } } : {}),
-    });
+    this.templates.set(spec.id, copyTemplate(spec));
   }
 
   get(id: string): TemplateSpec {
@@ -35,18 +31,18 @@ export class TemplateRegistry {
     if (!spec) {
       throw new OrchestrationTemplateError(`unknown template ${id}`);
     }
-    return {
-      id: spec.id,
-      seats: [...spec.seats],
-      ...(spec.allow ? { allow: { ...spec.allow } } : {}),
-    };
+    return copyTemplate(spec);
   }
 
   list(): TemplateSpec[] {
-    return [...this.templates.values()].map(spec => ({
-      id: spec.id,
-      seats: [...spec.seats],
-      ...(spec.allow ? { allow: { ...spec.allow } } : {}),
-    }));
+    return [...this.templates.values()].map(copyTemplate);
   }
+}
+
+function copyTemplate(spec: TemplateSpec): TemplateSpec {
+  return {
+    id: spec.id,
+    seats: [...spec.seats],
+    ...(spec.allow ? { allow: { ...spec.allow } } : {}),
+  };
 }

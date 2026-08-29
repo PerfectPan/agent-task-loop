@@ -1,9 +1,7 @@
 export interface TemplateSpec {
   id: string;
-  /** Named seats on this run. The kernel does not interpret the names. */
   seats: string[];
   allow?: {
-    /** Seat allowed to spawn after open. Defaults to the first seat. */
     start?: string;
   };
 }
@@ -16,7 +14,6 @@ export interface SeatBind {
 
 export interface RunContextInput {
   goal?: string;
-  /** Opaque caller reference (e.g. a task id). The kernel does not interpret it. */
   ref?: Record<string, string>;
 }
 
@@ -65,7 +62,6 @@ export interface RunSnapshot {
   };
 }
 
-/** Seat-facing view: no env, no host pid details beyond occupancy. */
 export interface ObservedRun {
   key: string;
   template: string;

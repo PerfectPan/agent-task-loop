@@ -1,7 +1,7 @@
 import { execa } from 'execa';
-import type { ProcessRunner } from './types';
+import type { ProcessRunner } from '../contracts/types';
 
-export const defaultProcessRunner: ProcessRunner = async input => {
+export const execaProcessRunner: ProcessRunner = async input => {
   const subprocess = execa(input.cmd, input.args, {
     cwd: input.cwd,
     env: { ...process.env, ...input.env },

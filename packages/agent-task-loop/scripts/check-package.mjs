@@ -89,6 +89,8 @@ try {
     'dist/cli.js',
     'dist/rivus-plugin.js',
     'dist/rivus-plugin.d.ts',
+    'dist/task-delivery.js',
+    'dist/task-delivery.d.ts',
     'docs/rivus-plugin.md',
   ]) {
     if (!existsSync(path.join(installedPackageDirectory, requiredPath))) {
@@ -100,6 +102,10 @@ try {
     path.join(pluginConsumerDirectory, 'smoke.mjs'),
     `import { assertRivusPluginConforms } from '@rivus/agent/testing';
 import plugin, { TASK_MANAGER_PROFILE_ID, TASK_MANAGER_TOOL_IDS } from '@rivus/agent-task-loop/rivus-plugin';
+import { TaskDelivery } from '@rivus/agent-task-loop/task-delivery';
+
+const task = TaskDelivery.start({ taskId: 'smoke-1', title: 'Package smoke', maxRounds: 1 });
+if (task.snapshot().status !== 'executing') throw new Error('Task Delivery entrypoint failed');
 
 const result = await assertRivusPluginConforms({
   deployment: {

@@ -26,6 +26,9 @@ describe('shouldWake', () => {
       true,
     );
     expect(shouldWake({ event: mentioned, agentId: 'bot-b', policy: 'mention-only' })).toBe(false);
+    expect(shouldWake({ event: mentioned, agentId: 'bot-b', policy: 'all-human-messages' })).toBe(
+      true,
+    );
   });
 
   it('wakes on unmentioned human posts only for all-human-messages', () => {
@@ -50,6 +53,27 @@ describe('shouldWake', () => {
         event: event({
           kind: 'posted',
           author: { kind: 'agent', id: 'bot-a' },
+        }),
+        agentId: 'bot-a',
+        policy: 'all-human-messages',
+      }),
+    ).toBe(false);
+    expect(
+      shouldWake({
+        event: event({
+          kind: 'posted',
+          author: { kind: 'agent', id: 'bot-b' },
+        }),
+        agentId: 'bot-a',
+        policy: 'all-human-messages',
+      }),
+    ).toBe(false);
+    expect(
+      shouldWake({
+        event: event({
+          kind: 'companion',
+          author: { kind: 'agent', id: 'bot-b' },
+          addressedTo: ['bot-a'],
         }),
         agentId: 'bot-a',
         policy: 'all-human-messages',

@@ -19,6 +19,12 @@ Internal package (`private: true`). Not published yet.
 - `head` returns the last posted seq (0 if empty)
 - broader stream capabilities land in later slices
 
+**1b — AgentSession seen / hold**
+- `ensureSession` / `inspectSession`
+- `advanceSeen`
+- `hold` + one-shot `ackHold` bound to `heldUpToSeq`
+- preemptive ack is ignored
+
 ## Non-mixing
 
 Occupancy `allow(seat)` is not a chat reservation. Room HELD is not `task-start`

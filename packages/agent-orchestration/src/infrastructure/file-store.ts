@@ -14,6 +14,12 @@ import type { LockRecord, OrchestrationStore } from '../contracts/ports';
 import type { RunSnapshot } from '../contracts/types';
 import { sameLock } from '../domain/lock';
 import { lockPath, runDir, statePath } from './node-paths';
+import { nodeLiveness } from './node-liveness';
+
+interface GuardOwner {
+  pid: number;
+  id: string;
+}
 
 export class FileOrchestrationStore implements OrchestrationStore {
   constructor(private readonly baseDir: string) {}
@@ -90,16 +96,15 @@ export class FileOrchestrationStore implements OrchestrationStore {
   private withLockGuard(key: string, operation: () => boolean): boolean {
     const guard = `${lockPath(this.baseDir, key)}.guard`;
     mkdirSync(path.dirname(guard), { recursive: true });
-    try {
-      mkdirSync(guard);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-      throw error;
-    }
+    const owner: GuardOwner = {
+      pid: process.pid,
+      id: randomBytes(16).toString('hex'),
+    };
+    if (!tryAcquireGuard(guard, owner)) return false;
     try {
       return operation();
     } finally {
-      rmSync(guard, { recursive: true, force: true });
+      releaseGuard(guard, owner);
     }
   }
 }
@@ -121,4 +126,47 @@ function readJson<T>(file: string): T | undefined {
   } catch {
     return undefined;
   }
+}
+
+function tryAcquireGuard(guard: string, owner: GuardOwner): boolean {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const candidate = `${guard}.${owner.pid}.${owner.id}.tmp`;
+    mkdirSync(candidate);
+    try {
+      writeJsonAtomically(path.join(candidate, 'owner.json'), owner);
+      try {
+        renameSync(candidate, guard);
+        return true;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== 'EEXIST' && code !== 'ENOTEMPTY') throw error;
+      }
+    } finally {
+      rmSync(candidate, { recursive: true, force: true });
+    }
+    if (!reclaimAbandonedGuard(guard)) return false;
+  }
+  return false;
+}
+
+function reclaimAbandonedGuard(guard: string): boolean {
+  const owner = readJson<GuardOwner>(path.join(guard, 'owner.json'));
+  if (owner && Number.isSafeInteger(owner.pid) && owner.pid > 0 && nodeLiveness.isAlive(owner.pid)) {
+    return false;
+  }
+  const abandoned = `${guard}.${process.pid}.${randomBytes(16).toString('hex')}.abandoned`;
+  try {
+    renameSync(guard, abandoned);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    throw error;
+  }
+  rmSync(abandoned, { recursive: true, force: true });
+  return true;
+}
+
+function releaseGuard(guard: string, owner: GuardOwner): void {
+  const current = readJson<GuardOwner>(path.join(guard, 'owner.json'));
+  if (current?.pid !== owner.pid || current.id !== owner.id) return;
+  rmSync(guard, { recursive: true, force: true });
 }

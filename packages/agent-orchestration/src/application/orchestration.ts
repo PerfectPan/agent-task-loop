@@ -40,7 +40,7 @@ export class Orchestration {
   private readonly scheduler: IntervalScheduler;
   private readonly staleAfterMs: number;
   private readonly heartbeatIntervalMs: number;
-  private readonly envs = new Map<string, Record<string, string>>();
+  private readonly envs = new Map<string, Map<string, Record<string, string>>>();
 
   constructor(dependencies: OrchestrationDependencies) {
     this.store = dependencies.store;
@@ -68,7 +68,7 @@ export class Orchestration {
     this.acquire(input.key);
     this.clearEnvs(input.key);
     for (const [seat, bound] of Object.entries(input.bind ?? {})) {
-      if (bound.env) this.envs.set(envKey(input.key, seat), { ...bound.env });
+      if (bound.env) this.setEnv(input.key, seat, bound.env);
     }
     const snapshot = run.snapshot();
     this.store.writeState(snapshot);
@@ -111,7 +111,7 @@ export class Orchestration {
     const bound = this.requireHolder(key).run.requireAllowedSeat(seat);
     if (!bound.cmd) throw new OrchestrationSeatError(key, `seat ${seat} has no command bound`);
     const env = {
-      ...(this.envs.get(envKey(key, seat)) ?? {}),
+      ...(this.envs.get(key)?.get(seat) ?? {}),
       ...(input.env ?? {}),
     };
     const args = [...(bound.args ?? []), ...(input.extraArgs ?? [])];
@@ -178,8 +178,8 @@ export class Orchestration {
   bind(key: string, seat: string, bind: SeatBind): RunSnapshot {
     const held = this.requireHolder(key);
     held.run.bind(seat, bind);
-    if (bind.env) this.envs.set(envKey(key, seat), { ...bind.env });
-    else this.envs.delete(envKey(key, seat));
+    if (bind.env) this.setEnv(key, seat, bind.env);
+    else this.deleteEnv(key, seat);
     return this.touch(held);
   }
 
@@ -247,17 +247,23 @@ export class Orchestration {
   }
 
   private clearEnvs(key: string): void {
-    const prefix = `${key}::`;
-    for (const name of [...this.envs.keys()]) {
-      if (name.startsWith(prefix)) this.envs.delete(name);
-    }
+    this.envs.delete(key);
+  }
+
+  private setEnv(key: string, seat: string, env: Record<string, string>): void {
+    const bySeat = this.envs.get(key) ?? new Map<string, Record<string, string>>();
+    bySeat.set(seat, { ...env });
+    this.envs.set(key, bySeat);
+  }
+
+  private deleteEnv(key: string, seat: string): void {
+    const bySeat = this.envs.get(key);
+    if (!bySeat) return;
+    bySeat.delete(seat);
+    if (bySeat.size === 0) this.envs.delete(key);
   }
 
   private isoNow(): string {
     return new Date(this.clock.now()).toISOString();
   }
-}
-
-function envKey(runKey: string, seat: string): string {
-  return `${runKey}::${seat}`;
 }

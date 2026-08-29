@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -210,6 +210,28 @@ describe('Orchestration open / occupy', () => {
     expect(store.readLock(expected.key)).toEqual(nextA);
   });
 
+  it('recovers a file guard left behind by a crashed process', () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const store = new FileOrchestrationStore(dir);
+    const expected: LockRecord = {
+      key: 'task:T-1',
+      holderPid: 1,
+      holderId: 'holder-a',
+      heartbeatAt: new Date(1_000).toISOString(),
+    };
+    const next: LockRecord = {
+      ...expected,
+      holderPid: 2,
+      holderId: 'holder-b',
+    };
+    expect(store.tryCreateLock(expected.key, expected)).toBe(true);
+    mkdirSync(`${lockPath(dir, expected.key)}.guard`);
+
+    expect(store.tryReplaceLock(expected.key, expected, next)).toBe(true);
+    expect(store.readLock(expected.key)).toEqual(next);
+  });
+
   it('allows a new open after release', async () => {
     const instance = orch();
     await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
@@ -263,6 +285,30 @@ describe('Orchestration open / occupy', () => {
     });
     await instance.spawn('task:T-1', 'impl', { cwd: dir });
     expect(spawnedEnv?.TOKEN).toBeUndefined();
+  });
+
+  it('does not clear another run env when run keys share a prefix', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    let spawnedEnv: Record<string, string> | undefined;
+    const instance = createOrchestration({
+      baseDir: dir,
+      runner: async (input) => {
+        spawnedEnv = input.env;
+        return { stdout: '', stderr: '', exitCode: 0 };
+      },
+    });
+    classic(instance);
+    await instance.open({ key: 'a', template: 'classic-delivery' });
+    await instance.open({
+      key: 'a::b',
+      template: 'classic-delivery',
+      bind: { impl: { cmd: 'grok', env: { TOKEN: 'keep' } } },
+    });
+
+    instance.release('a');
+    await instance.spawn('a::b', 'impl', { cwd: dir });
+    expect(spawnedEnv?.TOKEN).toBe('keep');
   });
 
   it('redacts commands from observe', async () => {

@@ -38,12 +38,12 @@ export class MemoryRoomStreamStore implements RoomStreamStore {
     const room = this.rooms.get(key) ?? emptyRoom();
     const existing = room.byMessageId.get(input.messageId);
     if (existing) {
-      return { outcome: 'duplicate', seq: existing.seq, event: existing };
+      return { outcome: 'duplicate', seq: existing.seq, event: cloneEvent(existing) };
     }
 
     const event: RoomEvent = {
       seq: room.events.length + 1,
-      roomId: input.roomId,
+      roomId: { ...input.roomId },
       messageId: input.messageId,
       author: { ...input.author },
       kind: input.kind,
@@ -55,7 +55,7 @@ export class MemoryRoomStreamStore implements RoomStreamStore {
     room.events.push(event);
     room.byMessageId.set(event.messageId, event);
     this.rooms.set(key, room);
-    return { outcome: 'admitted', seq: event.seq, event };
+    return { outcome: 'admitted', seq: event.seq, event: cloneEvent(event) };
   }
 
   async head(roomId: RoomId): Promise<RoomSeq> {
@@ -84,4 +84,13 @@ export function createMemoryRoomStreamStore(
 
 function emptyRoom(): RoomState {
   return { events: [], byMessageId: new Map() };
+}
+
+function cloneEvent(event: RoomEvent): RoomEvent {
+  return {
+    ...event,
+    roomId: { ...event.roomId },
+    author: { ...event.author },
+    addressedTo: [...event.addressedTo],
+  };
 }

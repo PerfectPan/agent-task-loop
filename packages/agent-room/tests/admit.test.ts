@@ -72,6 +72,31 @@ describe('memory admit', () => {
     expect(await store.head({ tenantId: 't2', conversationId: 'c1' })).toBe(1);
   });
 
+  it('snapshots roomId so later mutation cannot rewrite the stream', async () => {
+    const store = createMemoryRoomStreamStore();
+    const roomId = { tenantId: 't1', conversationId: 'c1' };
+    const admitted = await store.admit({
+      roomId,
+      messageId: 'm1',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'hello',
+    });
+    roomId.conversationId = 'mutated';
+    if (admitted.outcome === 'admitted') {
+      admitted.event.body = 'changed';
+    }
+    expect(await store.head({ tenantId: 't1', conversationId: 'c1' })).toBe(1);
+    const again = await store.admit({
+      roomId: { tenantId: 't1', conversationId: 'c1' },
+      messageId: 'm1',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'hello',
+    });
+    expect(again.event.body).toBe('hello');
+  });
+
   it('records control-plane origin without mixing rooms', async () => {
     const store = createMemoryRoomStreamStore();
     const result = await store.admit({

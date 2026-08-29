@@ -5,7 +5,7 @@ export class RoomNotImplementedError extends Error {
   readonly code = ROOM_NOT_IMPLEMENTED_CODE;
 
   constructor(method: string) {
-    super(`RoomStreamStore.${method} is not implemented in this slice`);
+    super(`RoomStreamStore.${method} is not implemented`);
     this.name = 'RoomNotImplementedError';
   }
 }

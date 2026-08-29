@@ -1,5 +1,14 @@
 import { RoomValidationError } from '../contracts/errors';
-import type { AdmitResult, AdmitRoomEvent, RoomEvent, RoomId, RoomSeq } from '../contracts/types';
+import type {
+  AdmitResult,
+  AdmitRoomEvent,
+  PostRoomEvent,
+  RoomEvent,
+  RoomId,
+  RoomSeq,
+  RoomSlice,
+  SliceBudget,
+} from '../contracts/types';
 
 /** Aggregate root for one tenant conversation's ordered event stream. */
 export class Room {
@@ -38,25 +47,77 @@ export class Room {
       return { outcome: 'duplicate', seq: existing.seq, event: cloneRoomEvent(existing) };
     }
 
-    const event: RoomEvent = {
-      seq: this.head + 1,
-      roomId: { ...this.roomId },
-      messageId: input.messageId,
-      transportMessageId: input.messageId,
-      author: { ...input.author },
-      kind: input.kind,
-      body: input.body,
-      origin: input.origin ?? (input.kind === 'control-plane' ? 'control-plane' : 'endpoint'),
-      addressedTo: [...(input.addressedTo ?? [])],
+    const event = this.append(
+      {
+        messageId: input.messageId,
+        transportMessageId: input.messageId,
+        author: input.author,
+        kind: input.kind,
+        body: input.body,
+        origin: input.origin ?? (input.kind === 'control-plane' ? 'control-plane' : 'endpoint'),
+        addressedTo: input.addressedTo ?? [],
+      },
       at,
-    };
-    this.events.push(event);
-    this.byTransportMessageId.set(input.messageId, event);
+    );
     return { outcome: 'admitted', seq: event.seq, event: cloneRoomEvent(event) };
+  }
+
+  post(input: PostRoomEvent, at: string): RoomEvent {
+    return this.append(input, at);
+  }
+
+  eventsAfter(seq: RoomSeq, excludingAuthorId?: string): RoomEvent[] {
+    return this.events
+      .filter(event => event.seq > seq && event.author.id !== excludingAuthorId)
+      .map(cloneRoomEvent);
+  }
+
+  readSlice(afterSeq: RoomSeq, budget: SliceBudget): RoomSlice {
+    assertSeq(afterSeq, 'slice cursor');
+    if (!Number.isSafeInteger(budget.maxEvents) || budget.maxEvents < 0) {
+      throw new RoomValidationError('maxEvents must be a non-negative integer');
+    }
+    if (
+      budget.maxChars !== undefined &&
+      (!Number.isSafeInteger(budget.maxChars) || budget.maxChars < 0)
+    ) {
+      throw new RoomValidationError('maxChars must be a non-negative integer');
+    }
+    const events: RoomEvent[] = [];
+    let chars = 0;
+    for (const event of this.events) {
+      if (event.seq <= afterSeq) continue;
+      if (events.length >= budget.maxEvents) break;
+      if (budget.maxChars !== undefined && chars + event.body.length > budget.maxChars) break;
+      events.push(cloneRoomEvent(event));
+      chars += event.body.length;
+    }
+    return { events, head: this.head };
   }
 
   snapshot(): RoomEvent[] {
     return this.events.map(cloneRoomEvent);
+  }
+
+  private append(input: PostRoomEvent & { transportMessageId?: string }, at: string): RoomEvent {
+    if (!input.messageId.trim()) {
+      throw new RoomValidationError('room event messageId cannot be blank');
+    }
+    const event: RoomEvent = {
+      seq: this.head + 1,
+      roomId: { ...this.roomId },
+      messageId: input.messageId,
+      ...(input.transportMessageId ? { transportMessageId: input.transportMessageId } : {}),
+      author: { ...input.author },
+      kind: input.kind,
+      body: input.body,
+      origin: input.origin,
+      addressedTo: [...input.addressedTo],
+      at,
+    };
+    this.events.push(event);
+    if (event.transportMessageId) this.byTransportMessageId.set(event.transportMessageId, event);
+    return cloneRoomEvent(event);
   }
 }
 
@@ -84,6 +145,12 @@ function validateState(id: RoomId, events: RoomEvent[]): void {
       );
     }
     if (event.transportMessageId) transportMessageIds.add(event.transportMessageId);
+  }
+}
+
+function assertSeq(seq: RoomSeq, label: string): void {
+  if (!Number.isSafeInteger(seq) || seq < 0) {
+    throw new RoomValidationError(`${label} must be a non-negative integer`);
   }
 }
 

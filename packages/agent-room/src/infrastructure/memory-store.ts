@@ -1,4 +1,4 @@
-import type { RoomAdmissionStore } from '../contracts/store';
+import type { RoomStreamStore } from '../contracts/store';
 import type {
   AdmitResult,
   AdmitRoomEvent,
@@ -6,23 +6,31 @@ import type {
   AgentSessionId,
   RoomEvent,
   RoomId,
+  RoomReplyCommand,
+  RoomReplyResult,
   RoomSeq,
+  RoomSlice,
+  SliceBudget,
 } from '../contracts/types';
 import { roomKey, sessionKey } from '../contracts/types';
 import { AgentSessionAggregate } from '../domain/agent-session';
+import { replyInSerial } from '../domain/reply-in-serial';
 import { Room } from '../domain/room';
 
 export interface MemoryRoomStreamStoreOptions {
   now?: () => number;
+  beforeCommit?: () => void;
 }
 
-export class MemoryRoomStreamStore implements RoomAdmissionStore {
+export class MemoryRoomStreamStore implements RoomStreamStore {
   private readonly rooms = new Map<string, RoomEvent[]>();
   private readonly sessions = new Map<string, AgentSession>();
   private readonly now: () => number;
+  private readonly beforeCommit: (() => void) | undefined;
 
   constructor(options: MemoryRoomStreamStoreOptions = {}) {
     this.now = options.now ?? Date.now;
+    this.beforeCommit = options.beforeCommit;
   }
 
   ensureSession(id: AgentSessionId): AgentSession {
@@ -47,10 +55,6 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
     return this.saveSession(session);
   }
 
-  /**
-   * One-shot ack bound to `heldUpToSeq`. A preemptive ack, or an ack for a
-   * different hold watermark, is ignored and returns false.
-   */
   ackHold(id: AgentSessionId, heldUpToSeq: RoomSeq): boolean {
     if (!this.sessions.has(sessionKey(id))) return false;
     const session = this.loadSession(id);
@@ -60,14 +64,31 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
   }
 
   async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
-    const room = this.load(input.roomId);
-    const result = room.admit(input, new Date(this.now()).toISOString());
-    this.rooms.set(roomKey(input.roomId), room.snapshot());
-    return result;
+    return this.withRoom(input.roomId, room => room.admit(input, this.isoNow()));
   }
 
   async head(roomId: RoomId): Promise<RoomSeq> {
     return this.load(roomId).head;
+  }
+
+  async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
+    return this.load(roomId).readSlice(afterSeq, budget);
+  }
+
+  async replyInSerial(input: RoomReplyCommand): Promise<RoomReplyResult> {
+    if (input.origin === 'control-plane') {
+      return this.withRoom(input.session.roomId, room =>
+        replyInSerial({
+          room,
+          session: new AgentSessionAggregate(input.session),
+          command: input,
+          at: this.isoNow(),
+        }),
+      );
+    }
+    return this.withRoomAndSession(input.session, (room, session) =>
+      replyInSerial({ room, session, command: input, at: this.isoNow() }),
+    );
   }
 
   private load(id: RoomId): Room {
@@ -93,20 +114,43 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
     this.sessions.set(sessionKey(snapshot.id), snapshot);
     return cloneSession(snapshot);
   }
+
+  private withRoom<T>(id: RoomId, work: (room: Room) => T): T {
+    const room = this.load(id);
+    const result = work(room);
+    this.beforeCommit?.();
+    this.rooms.set(roomKey(id), room.snapshot());
+    return result;
+  }
+
+  private withRoomAndSession<T>(
+    id: AgentSessionId,
+    work: (room: Room, session: AgentSessionAggregate) => T,
+  ): T {
+    const room = this.load(id.roomId);
+    const session = this.loadSession(id);
+    const result = work(room, session);
+    const roomSnapshot = room.snapshot();
+    const sessionSnapshot = session.snapshot();
+    this.beforeCommit?.();
+    this.rooms.set(roomKey(id.roomId), roomSnapshot);
+    this.sessions.set(sessionKey(id), sessionSnapshot);
+    return result;
+  }
+
+  private isoNow(): string {
+    return new Date(this.now()).toISOString();
+  }
 }
 
 export function createMemoryRoomStreamStore(
   options: MemoryRoomStreamStoreOptions = {},
-): RoomAdmissionStore {
+): RoomStreamStore {
   return new MemoryRoomStreamStore(options);
 }
+
 function cloneSessionId(id: AgentSessionId): AgentSessionId {
-  return {
-    tenantId: id.tenantId,
-    agentId: id.agentId,
-    roomId: { ...id.roomId },
-    runtimeGenerationId: id.runtimeGenerationId,
-  };
+  return { ...id, roomId: { ...id.roomId } };
 }
 
 function cloneSession(session: AgentSession): AgentSession {

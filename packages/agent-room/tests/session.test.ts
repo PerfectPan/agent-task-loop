@@ -73,6 +73,7 @@ describe('AgentSession seen / hold', () => {
 
     expect(store.ackHold(session, 7)).toBe(true);
     expect(store.inspectSession(session)?.heldUpToSeq).toBeUndefined();
+    expect(store.inspectSession(session)?.seenSeq).toBe(7);
 
     expect(store.ackHold(session, 7)).toBe(false);
   });

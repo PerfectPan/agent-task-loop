@@ -25,6 +25,11 @@ Internal package (`private: true`). Not published yet.
 - `hold` + one-shot `ackHold` bound to `heldUpToSeq`
 - preemptive ack is ignored
 
+**1c — `replyInSerial` HELD + `readSlice`**
+- one critical section: read seen, compute newer (`author ≠ self`), HELD or append `head+1`
+- `origin: "control-plane"` takes a seq, skips chat HELD, does not `advanceSeen`
+- memory store is the proof; sqlite is a later adapter
+
 ## Non-mixing
 
 Occupancy `allow(seat)` is not a chat reservation. Room HELD is not `task-start`

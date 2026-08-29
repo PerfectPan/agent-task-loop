@@ -6,7 +6,6 @@ export function defaultBaseDir(): string {
   return path.join(os.homedir(), '.agent-orchestration', 'runs');
 }
 
-/** Filesystem-safe, collision-free path segment. */
 export function safeSegment(id: string): string {
   const readable = id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 60);
   const hash = createHash('sha1').update(id).digest('hex').slice(0, 8);

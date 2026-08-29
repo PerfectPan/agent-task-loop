@@ -10,26 +10,10 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import type { RunSnapshot } from './types';
-import { lockPath, runDir, statePath } from './paths';
-
-export interface LockRecord {
-  key: string;
-  holderPid: number;
-  heartbeatAt: string;
-}
-
-export interface OrchestrationStore {
-  tryCreateLock(key: string, record: LockRecord): boolean;
-  tryReplaceLock(key: string, expected: LockRecord, next: LockRecord): boolean;
-  lockExists(key: string): boolean;
-  readLock(key: string): LockRecord | undefined;
-  writeLock(key: string, record: LockRecord): void;
-  removeLock(key: string): void;
-  writeState(snapshot: RunSnapshot): void;
-  readState(key: string): RunSnapshot | undefined;
-  listKeys(): string[];
-}
+import type { LockRecord, OrchestrationStore } from '../contracts/ports';
+import type { RunSnapshot } from '../contracts/types';
+import { sameLock } from '../domain/lock';
+import { lockPath, runDir, statePath } from './node-paths';
 
 export class FileOrchestrationStore implements OrchestrationStore {
   constructor(private readonly baseDir: string) {}
@@ -93,7 +77,7 @@ export class FileOrchestrationStore implements OrchestrationStore {
   writeState(snapshot: RunSnapshot): void {
     const file = statePath(this.baseDir, snapshot.key);
     mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
+    const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
     writeFileSync(tmp, JSON.stringify(snapshot), 'utf8');
     renameSync(tmp, file);
   }
@@ -118,7 +102,6 @@ export class FileOrchestrationStore implements OrchestrationStore {
   }
 }
 
-/** Test helper: wipe a run directory. */
 export function removeRunDir(baseDir: string, key: string): void {
   rmSync(runDir(baseDir, key), { recursive: true, force: true });
 }
@@ -129,8 +112,4 @@ function readJson<T>(file: string): T | undefined {
   } catch {
     return undefined;
   }
-}
-
-export function sameLock(a: LockRecord, b: LockRecord): boolean {
-  return a.key === b.key && a.holderPid === b.holderPid && a.heartbeatAt === b.heartbeatAt;
 }

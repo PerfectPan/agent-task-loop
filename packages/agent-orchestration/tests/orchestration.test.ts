@@ -3,12 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  Orchestration,
+  createMemoryOrchestration,
+  createOrchestration,
+  type Orchestration,
   OrchestrationConflictError,
   OrchestrationSeatError,
   OrchestrationTemplateError,
 } from '../src/index';
-import { lockPath } from '../src/paths';
+import { lockPath } from '../src/infrastructure/node-paths';
 
 function tempDir(): string {
   return mkdtempSync(path.join(os.tmpdir(), 'agent-orch-'));
@@ -24,13 +26,13 @@ function classic(orch: Orchestration): void {
 
 describe('TemplateRegistry', () => {
   it('rejects a duplicate template id', () => {
-    const orch = new Orchestration({ baseDir: tempDir() });
+    const orch = createOrchestration({ baseDir: tempDir() });
     classic(orch);
     expect(() => classic(orch)).toThrow(OrchestrationTemplateError);
   });
 
   it('returns a copy from get so callers cannot mutate the registry', () => {
-    const orch = new Orchestration({ baseDir: tempDir() });
+    const orch = createOrchestration({ baseDir: tempDir() });
     classic(orch);
     const spec = orch.templates.get('classic-delivery');
     spec.seats.push('lead');
@@ -38,7 +40,7 @@ describe('TemplateRegistry', () => {
   });
 
   it('rejects a start seat that is not in the roster', () => {
-    const orch = new Orchestration({ baseDir: tempDir() });
+    const orch = createOrchestration({ baseDir: tempDir() });
     expect(() =>
       orch.templates.register({
         id: 'bad',
@@ -61,7 +63,7 @@ describe('Orchestration open / occupy', () => {
   function orch(): Orchestration {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({ baseDir: dir });
+    const instance = createOrchestration({ baseDir: dir });
     classic(instance);
     return instance;
   }
@@ -86,8 +88,8 @@ describe('Orchestration open / occupy', () => {
   it('rejects a second open on the same key while the lock is fresh', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const a = new Orchestration({ baseDir: dir });
-    const b = new Orchestration({ baseDir: dir });
+    const a = createOrchestration({ baseDir: dir });
+    const b = createOrchestration({ baseDir: dir });
     classic(a);
     classic(b);
     await a.open({ key: 'task:T-1', template: 'classic-delivery' });
@@ -105,7 +107,7 @@ describe('Orchestration open / occupy', () => {
     let now = 1_000;
     const dir = tempDir();
     dirs.push(dir);
-    const a = new Orchestration({
+    const a = createOrchestration({
       baseDir: dir,
       now: () => now,
       staleAfterMs: 100,
@@ -115,7 +117,7 @@ describe('Orchestration open / occupy', () => {
     await a.open({ key: 'task:T-1', template: 'classic-delivery' });
 
     now = 10_000;
-    const b = new Orchestration({
+    const b = createOrchestration({
       baseDir: dir,
       now: () => now,
       staleAfterMs: 100,
@@ -139,12 +141,12 @@ describe('Orchestration open / occupy', () => {
   it('treats an unreadable lock as a conflict, not as stealable', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({ baseDir: dir });
+    const instance = createOrchestration({ baseDir: dir });
     classic(instance);
     await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
     writeFileSync(lockPath(dir, 'task:T-1'), '{', 'utf8');
 
-    const other = new Orchestration({ baseDir: dir });
+    const other = createOrchestration({ baseDir: dir });
     classic(other);
     await expect(other.open({ key: 'task:T-1', template: 'classic-delivery' })).rejects.toBeInstanceOf(
       OrchestrationConflictError,
@@ -155,7 +157,7 @@ describe('Orchestration open / occupy', () => {
     const dir = tempDir();
     dirs.push(dir);
     let spawnedEnv: Record<string, string> | undefined;
-    const instance = new Orchestration({
+    const instance = createOrchestration({
       baseDir: dir,
       runner: async input => {
         spawnedEnv = input.env;
@@ -204,7 +206,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
   it('refuses spawn unless the seat is allowed', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({
+    const instance = createOrchestration({
       baseDir: dir,
       runner: async () => ({ stdout: 'ok', stderr: '', exitCode: 0 }),
     });
@@ -228,7 +230,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
   it('appends facts and mail onto the run context', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({ baseDir: dir });
+    const instance = createOrchestration({ baseDir: dir });
     classic(instance);
     await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
 
@@ -246,7 +248,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
   it('marks the seat exited when the runner throws', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({
+    const instance = createOrchestration({
       baseDir: dir,
       runner: async () => {
         throw new Error('child crashed');
@@ -265,7 +267,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
   it('refuses mutating APIs unless this process holds a fresh lock', async () => {
     const dir = tempDir();
     dirs.push(dir);
-    const instance = new Orchestration({ baseDir: dir });
+    const instance = createOrchestration({ baseDir: dir });
     classic(instance);
     await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
     writeFileSync(
@@ -281,7 +283,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
   });
 
   it('lists opened runs', async () => {
-    const instance = new Orchestration({ baseDir: tempDir() });
+    const instance = createOrchestration({ baseDir: tempDir() });
     classic(instance);
     await instance.open({ key: 'task:A', template: 'classic-delivery' });
     await instance.open({ key: 'task:B', template: 'classic-delivery' });
@@ -294,5 +296,17 @@ describe('OrchestrationConflictError', () => {
     const error = new OrchestrationConflictError('task:T-1', 42);
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe('orchestration-conflict');
+  });
+});
+
+describe('memory store', () => {
+  it('occupies without touching the filesystem', async () => {
+    const instance = createMemoryOrchestration();
+    classic(instance);
+    const snapshot = await instance.open({ key: 'task:mem', template: 'classic-delivery' });
+    expect(snapshot.occupied).toBe(true);
+    await expect(instance.open({ key: 'task:mem', template: 'classic-delivery' })).rejects.toBeInstanceOf(
+      OrchestrationConflictError,
+    );
   });
 });

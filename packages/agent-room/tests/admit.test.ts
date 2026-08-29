@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  RoomNotImplementedError,
   RoomValidationError,
   createMemoryRoomStreamStore,
+  roomKey,
 } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
@@ -72,6 +72,31 @@ describe('memory admit', () => {
     expect(await store.head({ tenantId: 't2', conversationId: 'c1' })).toBe(1);
   });
 
+  it('uses collision-free room identities', async () => {
+    const store = createMemoryRoomStreamStore();
+    const left = { tenantId: 'a::b', conversationId: 'c' };
+    const right = { tenantId: 'a', conversationId: 'b::c' };
+    expect(roomKey(left)).not.toBe(roomKey(right));
+
+    await store.admit({
+      roomId: left,
+      messageId: 'same',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'left',
+    });
+    await store.admit({
+      roomId: right,
+      messageId: 'same',
+      author: { kind: 'human', id: 'bob' },
+      kind: 'human',
+      body: 'right',
+    });
+
+    expect(await store.head(left)).toBe(1);
+    expect(await store.head(right)).toBe(1);
+  });
+
   it('snapshots roomId so later mutation cannot rewrite the stream', async () => {
     const store = createMemoryRoomStreamStore();
     const roomId = { tenantId: 't1', conversationId: 'c1' };
@@ -125,21 +150,4 @@ describe('memory admit', () => {
     ).rejects.toBeInstanceOf(RoomValidationError);
   });
 
-  it('leaves readSlice and replyInSerial for later slices', async () => {
-    const store = createMemoryRoomStreamStore();
-    await expect(store.readSlice(room, 0, { maxEvents: 10 })).rejects.toBeInstanceOf(
-      RoomNotImplementedError,
-    );
-    await expect(
-      store.replyInSerial({
-        session: {
-          tenantId: 't1',
-          agentId: 'bot',
-          roomId: room,
-          runtimeGenerationId: 'g1',
-        },
-        body: 'hi',
-      }),
-    ).rejects.toBeInstanceOf(RoomNotImplementedError);
-  });
 });

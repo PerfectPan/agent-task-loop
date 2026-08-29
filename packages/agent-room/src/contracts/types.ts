@@ -13,7 +13,7 @@ export interface RoomId {
 }
 
 export function roomKey(id: RoomId): string {
-  return `${id.tenantId}::${id.conversationId}`;
+  return JSON.stringify([id.tenantId, id.conversationId]);
 }
 
 export type RoomEventKind = 'human' | 'posted' | 'companion' | 'control-plane';
@@ -68,12 +68,13 @@ export interface AgentSessionId {
 }
 
 export function sessionKey(id: AgentSessionId): string {
-  return [
+  return JSON.stringify([
     id.tenantId,
     id.agentId,
-    roomKey(id.roomId),
+    id.roomId.tenantId,
+    id.roomId.conversationId,
     id.runtimeGenerationId,
-  ].join('::');
+  ]);
 }
 
 export interface AgentSession {

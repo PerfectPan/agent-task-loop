@@ -3,7 +3,7 @@
 Shared **posted stream**, per-agent session, and write-point HELD.
 
 This package does not know tasks, occupancy seats, Feishu, or ReviewLoop.
-Callers inject a `RoomStreamStore`. `rivus-agent` is the first live adapter.
+Callers inject the capability port for the slice they use. `rivus-agent` is the first live adapter.
 
 See RFC 0010 Chapter B.
 
@@ -12,11 +12,12 @@ See RFC 0010 Chapter B.
 Internal package (`private: true`). Not published yet.
 
 **1a — port + memory `admit`**
-- `RoomStreamStore` port
+- `RoomAdmissionStore` port (`admit` + `head` only)
+- `Room` aggregate owns identity, sequence, idempotency, and hydration rules
 - `createMemoryRoomStreamStore()`
 - `admit` is idempotent on transport `message_id`
 - `head` returns the last posted seq (0 if empty)
-- `readSlice` / `replyInSerial` land in later slices
+- broader stream capabilities land in later slices
 
 ## Non-mixing
 

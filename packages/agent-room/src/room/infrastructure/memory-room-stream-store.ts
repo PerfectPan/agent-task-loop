@@ -78,6 +78,10 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
 
   constructor(private readonly beforeCommit?: () => void) {}
 
+  readRoom<T>(id: RoomId, query: (room: Room) => T): T {
+    return query(this.loadRoom(id));
+  }
+
   withRoom<T>(id: RoomId, work: (room: Room) => T): T {
     const room = this.loadRoom(id);
     const result = work(room);

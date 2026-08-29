@@ -22,11 +22,11 @@ export class RoomStreamService implements RoomStreamStore {
   }
 
   async head(roomId: RoomId): Promise<RoomSeq> {
-    return this.unitOfWork.withRoom(roomId, room => room.head);
+    return this.unitOfWork.readRoom(roomId, room => room.head);
   }
 
   async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
-    return this.unitOfWork.withRoom(roomId, room => room.readSlice(afterSeq, budget));
+    return this.unitOfWork.readRoom(roomId, room => room.readSlice(afterSeq, budget));
   }
 
   async replyInSerial(input: RoomReplyCommand): Promise<RoomReplyResult> {

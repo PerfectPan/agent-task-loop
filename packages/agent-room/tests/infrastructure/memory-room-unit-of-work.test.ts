@@ -9,6 +9,19 @@ const sessionId = {
 };
 
 describe('MemoryRoomUnitOfWork', () => {
+  it('keeps room queries outside the commit path', () => {
+    const unitOfWork = new MemoryRoomUnitOfWork(() => {
+      throw new Error('commit hook');
+    });
+
+    expect(unitOfWork.readRoom(sessionId.roomId, room => room.head)).toBe(0);
+    expect(
+      unitOfWork.readRoom(sessionId.roomId, room =>
+        room.readSlice(0, { maxEvents: 10, maxChars: 100 }),
+      ),
+    ).toEqual({ events: [], head: 0 });
+  });
+
   it('commits neither aggregate when work throws', () => {
     const unitOfWork = new MemoryRoomUnitOfWork();
 

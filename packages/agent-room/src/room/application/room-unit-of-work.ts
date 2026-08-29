@@ -4,6 +4,7 @@ import type { RoomId } from '../domain/model';
 import type { Room } from '../domain/room';
 
 export interface RoomUnitOfWork {
+  readRoom<T>(id: RoomId, query: (room: Room) => T): T;
   withRoom<T>(id: RoomId, work: (room: Room) => T): T;
   withRoomAndSession<T>(
     id: AgentSessionId,

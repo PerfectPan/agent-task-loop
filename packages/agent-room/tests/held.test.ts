@@ -167,6 +167,22 @@ describe('replyInSerial HELD', () => {
 });
 
 describe('readSlice', () => {
+  it('does not invoke the commit hook for head or slice queries', async () => {
+    let commits = 0;
+    const store = new MemoryRoomStreamStore({
+      beforeCommit: () => {
+        commits += 1;
+      },
+    });
+
+    await expect(store.head(room)).resolves.toBe(0);
+    await expect(store.readSlice(room, 0, { maxEvents: 10 })).resolves.toEqual({
+      events: [],
+      head: 0,
+    });
+    expect(commits).toBe(0);
+  });
+
   it('returns events after seq within the event and char budgets', async () => {
     const store = createMemoryRoomStreamStore();
     await store.admit({

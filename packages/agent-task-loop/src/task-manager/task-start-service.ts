@@ -18,6 +18,7 @@ type TaskOrchestration = {
     bind?: Record<string, { cmd: string }>;
     context?: { goal?: string; ref?: Record<string, string> };
   }): Promise<unknown>;
+  heartbeat(key: string): void;
   release(key: string): void;
 };
 
@@ -26,6 +27,7 @@ export interface TaskStartServiceDependencies {
   runner: TaskRunWorkflow;
   livenessService: TaskRunnerLiveness;
   orchestration?: TaskOrchestration;
+  occupancyHeartbeatMs?: number;
   onRecovery?: (inspection: TaskRunnerInspection) => void;
 }
 
@@ -67,9 +69,19 @@ export class TaskStartService {
       throw error;
     }
 
+    const heartbeatMs = this.dependencies.occupancyHeartbeatMs ?? 15_000;
+    const timer = setInterval(() => {
+      try {
+        this.orchestration.heartbeat(key);
+      } catch {
+        // Holder lost the lock; release still runs in finally.
+      }
+    }, heartbeatMs);
+    timer.unref();
     try {
       return await this.runOccupied(input, task);
     } finally {
+      clearInterval(timer);
       this.orchestration.release(key);
     }
   }

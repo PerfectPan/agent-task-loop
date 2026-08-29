@@ -6,6 +6,7 @@ import type { TaskRecord } from '../../src/types/task';
 function mockOrchestration() {
   return {
     open: vi.fn().mockResolvedValue({ occupied: true }),
+    heartbeat: vi.fn(),
     release: vi.fn(),
   };
 }
@@ -72,14 +73,16 @@ describe('TaskStartService', () => {
 
   it('refuses to start when orchestration occupy loses', async () => {
     const run = vi.fn();
+    const inspect = vi.fn();
     const orchestration = {
       open: vi.fn().mockRejectedValue(new OrchestrationConflictError('task:TASK-25', 99)),
+      heartbeat: vi.fn(),
       release: vi.fn(),
     };
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-25' })) },
       runner: { run, resumeReview: vi.fn() },
-      livenessService: { inspect: vi.fn() },
+      livenessService: { inspect },
       orchestration,
     });
 
@@ -87,7 +90,32 @@ describe('TaskStartService', () => {
       'Task TASK-25 already has an active orchestration (pid 99)',
     );
     expect(run).not.toHaveBeenCalled();
+    expect(inspect).not.toHaveBeenCalled();
     expect(orchestration.release).not.toHaveBeenCalled();
+  });
+
+  it('heartbeats occupancy while the review loop is running', async () => {
+    const orchestration = mockOrchestration();
+    let finish: () => void = () => undefined;
+    const run = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+    const service = new TaskStartService({
+      taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-27' })) },
+      runner: { run, resumeReview: vi.fn() },
+      livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
+      orchestration,
+      occupancyHeartbeatMs: 10,
+    });
+
+    const started = service.startTask({ taskId: 'TASK-27', maxRounds: 4 });
+    await vi.waitFor(() => expect(orchestration.heartbeat).toHaveBeenCalledWith('task:TASK-27'));
+    finish();
+    await started;
+    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-27');
   });
 
   it('releases occupancy when the review-loop runner throws', async () => {

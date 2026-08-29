@@ -52,10 +52,6 @@ export class TaskStartService {
       await this.orchestration.open({
         key,
         template: 'classic-delivery',
-        bind: {
-          impl: { cmd: task.targetAgent },
-          review: { cmd: 'codex' },
-        },
         context: {
           goal: task.title || task.description,
           ref: { taskId: task.taskId },

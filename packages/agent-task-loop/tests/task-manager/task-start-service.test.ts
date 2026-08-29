@@ -46,7 +46,6 @@ describe('TaskStartService', () => {
     expect(orchestration.open).toHaveBeenCalledWith({
       key: 'task:TASK-20',
       template: 'classic-delivery',
-      bind: { impl: { cmd: 'claude' }, review: { cmd: 'codex' } },
       context: { goal: 'Task', ref: { taskId: 'TASK-20' } },
     });
     expect(orchestration.release).toHaveBeenCalledWith('task:TASK-20');
@@ -89,6 +88,21 @@ describe('TaskStartService', () => {
     );
     expect(run).not.toHaveBeenCalled();
     expect(orchestration.release).not.toHaveBeenCalled();
+  });
+
+  it('releases occupancy when the review-loop runner throws', async () => {
+    const orchestration = mockOrchestration();
+    const service = new TaskStartService({
+      taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-26' })) },
+      runner: { run: vi.fn().mockRejectedValue(new Error('runner exploded')), resumeReview: vi.fn() },
+      livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
+      orchestration,
+    });
+
+    await expect(service.startTask({ taskId: 'TASK-26', maxRounds: 4 })).rejects.toThrow(
+      'runner exploded',
+    );
+    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-26');
   });
 
   it('resumes a stale review round with the remaining round budget', async () => {

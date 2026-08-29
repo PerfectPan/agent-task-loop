@@ -63,7 +63,13 @@ function assertSessionSeq(seq: RoomSeq, label: string): void {
 }
 
 function validateSession(id: AgentSessionId, state?: Omit<AgentSession, 'id'>): void {
-  if (!id.tenantId.trim() || !id.agentId.trim() || !id.runtimeGenerationId.trim()) {
+  if (
+    !id.tenantId.trim() ||
+    !id.agentId.trim() ||
+    !id.roomId.tenantId.trim() ||
+    !id.roomId.conversationId.trim() ||
+    !id.runtimeGenerationId.trim()
+  ) {
     throw new AgentSessionValidationError('agent session identity is incomplete');
   }
   if (id.tenantId !== id.roomId.tenantId) {

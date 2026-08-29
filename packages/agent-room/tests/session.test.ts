@@ -22,6 +22,15 @@ describe('AgentSession seen / hold', () => {
     expect(store.inspectSession(session)).toEqual({ id: session, seenSeq: 0 });
   });
 
+  it('rejects a session without a valid room identity', () => {
+    const invalid = { ...session, roomId: { ...room, conversationId: ' ' } };
+    const store = new MemoryRoomStreamStore();
+
+    expect(() => new AgentSessionAggregate(invalid)).toThrow(AgentSessionValidationError);
+    expect(() => store.ensureSession(invalid)).toThrow(AgentSessionValidationError);
+    expect(store.inspectSession(invalid)).toBeUndefined();
+  });
+
   it('isolates sessions by agent and runtime generation', () => {
     const store = new MemoryRoomStreamStore();
     store.advanceSeen(session, 4);

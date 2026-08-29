@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMemoryRoomStreamStore } from '../src/index';
+import { MemoryRoomStreamStore, createMemoryRoomStreamStore } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 const botA = {
@@ -84,6 +84,64 @@ describe('replyInSerial HELD', () => {
     expect(slice.events.map(event => event.kind)).toEqual(['human', 'control-plane']);
     expect(slice.head).toBe(2);
   });
+
+  it('does not deduplicate internal posts against transport ids', async () => {
+    const store = createMemoryRoomStreamStore();
+    const posted = await store.replyInSerial({ session: botA, body: 'internal' });
+    expect(posted.outcome).toBe('posted');
+    if (posted.outcome !== 'posted') return;
+
+    const admitted = await store.admit({
+      roomId: room,
+      messageId: posted.event.messageId,
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'external with the same display id',
+    });
+    const duplicate = await store.admit({
+      roomId: room,
+      messageId: posted.event.messageId,
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'duplicate transport delivery',
+    });
+
+    expect(admitted).toMatchObject({ outcome: 'admitted', seq: 2 });
+    expect(duplicate).toMatchObject({ outcome: 'duplicate', seq: 2 });
+  });
+
+  it('rolls back hold acknowledgement and append together when commit fails', async () => {
+    let failCommit = false;
+    const store = new MemoryRoomStreamStore({
+      beforeCommit: () => {
+        if (failCommit) throw new Error('commit failed');
+      },
+    });
+    await store.replyInSerial({ session: botA, body: 'alpha' });
+    const held = await store.replyInSerial({ session: botB, body: 'beta' });
+    expect(held.outcome).toBe('held');
+    if (held.outcome !== 'held') return;
+
+    failCommit = true;
+    await expect(
+      store.replyInSerial({
+        session: botB,
+        body: 'beta after catch-up',
+        ackHeldUpToSeq: held.heldUpToSeq,
+      }),
+    ).rejects.toThrow('commit failed');
+    failCommit = false;
+
+    expect(await store.head(room)).toBe(1);
+    expect(store.inspectSession(botB)).toMatchObject({ seenSeq: 0, heldUpToSeq: 1 });
+    await expect(
+      store.replyInSerial({
+        session: botB,
+        body: 'beta after retry',
+        ackHeldUpToSeq: held.heldUpToSeq,
+      }),
+    ).resolves.toMatchObject({ outcome: 'posted', seq: 2 });
+  });
 });
 
 describe('readSlice', () => {
@@ -114,5 +172,21 @@ describe('readSlice', () => {
     const sliced = await store.readSlice(room, 1, { maxEvents: 2, maxChars: 5 });
     expect(sliced.head).toBe(3);
     expect(sliced.events.map(event => event.body)).toEqual(['bbbb']);
+  });
+
+  it('does not exceed maxChars for an oversized first event', async () => {
+    const store = createMemoryRoomStreamStore();
+    await store.admit({
+      roomId: room,
+      messageId: 'oversized',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'too long',
+    });
+
+    await expect(store.readSlice(room, 0, { maxEvents: 10, maxChars: 3 })).resolves.toEqual({
+      events: [],
+      head: 1,
+    });
   });
 });

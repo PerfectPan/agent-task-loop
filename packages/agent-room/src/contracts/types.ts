@@ -39,6 +39,8 @@ export interface RoomEvent {
   at: string;
 }
 
+export type PostRoomEvent = Omit<RoomEvent, 'seq' | 'at' | 'roomId' | 'transportMessageId'>;
+
 export interface AdmitRoomEvent {
   roomId: RoomId;
   messageId: TransportMessageId;

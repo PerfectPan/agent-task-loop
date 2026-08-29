@@ -30,6 +30,11 @@ Internal package (`private: true`). Not published yet.
 - `origin: "control-plane"` takes a seq, skips chat HELD, does not `advanceSeen`
 - memory store is the proof; sqlite is a later adapter
 
+**2 — wake evaluator**
+- `mention-only` | `all-human-messages`
+- companion posts default do not wake
+- see ≠ wake
+
 ## Non-mixing
 
 Occupancy `allow(seat)` is not a chat reservation. Room HELD is not `task-start`

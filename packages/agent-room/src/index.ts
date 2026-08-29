@@ -38,3 +38,5 @@ export {
   createMemoryRoomStreamStore,
   type MemoryRoomStreamStoreOptions,
 } from './infrastructure/memory-store';
+
+export { shouldWake, type WakePolicy } from './domain/wake';

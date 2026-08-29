@@ -18,6 +18,17 @@ function walk(dir: string): string[] {
 }
 
 describe('package boundary', () => {
+  it('keeps domain files free of node: and adapters', () => {
+    const domainRoot = path.join(srcRoot, 'domain');
+    const files = walk(domainRoot);
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8');
+      expect(text, path.basename(file)).not.toContain('node:');
+      expect(text, path.basename(file)).not.toContain('node:fs');
+    }
+  });
+
   it('does not import occupancy, task-loop, or Feishu types', () => {
     const banned = [
       '@rivus/agent-orchestration',

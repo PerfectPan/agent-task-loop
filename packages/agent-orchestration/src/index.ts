@@ -18,6 +18,8 @@ export type {
 export type {
   Clock,
   IntervalScheduler,
+  FencedResult,
+  FencingToken,
   LockRecord,
   OrchestrationStore,
   ProcessIdentity,

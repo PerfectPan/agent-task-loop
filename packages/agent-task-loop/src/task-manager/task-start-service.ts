@@ -1,27 +1,21 @@
-import { OrchestrationConflictError } from '@rivus/agent-orchestration';
-import { createTaskOrchestration, taskOrchestrationKey } from '../orchestration/task-orchestration';
 import type { ReviewLoopRunner } from '../services/review-loop-runner';
 import { buildReworkPrompt } from '../services/rework-prompt-service';
 import type { TaskRunnerInspection, TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import type { TaskService } from '../services/task-service';
+import type { TaskMutationFence } from '../services/task-service';
 import type { TaskRecord } from '../types/task';
 import type { StartTaskInput } from './task-manager-application';
 import { TaskManagerInputError } from './task-manager-error';
+import { TaskOccupancyService, type TaskOrchestration } from './task-occupancy-service';
 
-type TaskRunWorkflow = Pick<ReviewLoopRunner, 'run' | 'resumeReview'>;
+type TaskRunInput = Parameters<ReviewLoopRunner['run']>[0];
+type TaskResumeInput = Parameters<ReviewLoopRunner['resumeReview']>[0];
+type TaskRunWorkflow = {
+  run(input: TaskRunInput): Promise<void>;
+  resumeReview(input: TaskResumeInput): Promise<void>;
+};
 type TaskReader = Pick<TaskService, 'getTaskById'>;
 type TaskRunnerLiveness = Pick<TaskRunnerLivenessService, 'inspect'>;
-type TaskOrchestration = {
-  open(input: {
-    key: string;
-    template: string;
-    bind?: Record<string, { cmd: string }>;
-    context?: { goal?: string; ref?: Record<string, string> };
-  }): Promise<unknown>;
-  heartbeat(key: string): void;
-  release(key: string): void;
-};
-
 export interface TaskStartServiceDependencies {
   taskService: TaskReader;
   runner: TaskRunWorkflow;
@@ -32,10 +26,13 @@ export interface TaskStartServiceDependencies {
 }
 
 export class TaskStartService {
-  private readonly orchestration: TaskOrchestration;
+  private readonly occupancy: TaskOccupancyService;
 
   constructor(private readonly dependencies: TaskStartServiceDependencies) {
-    this.orchestration = dependencies.orchestration ?? createTaskOrchestration();
+    this.occupancy = new TaskOccupancyService(
+      dependencies.orchestration,
+      dependencies.occupancyHeartbeatMs,
+    );
   }
 
   async startTask(input: StartTaskInput): Promise<TaskRecord> {
@@ -44,54 +41,24 @@ export class TaskStartService {
       throw new TaskManagerInputError('task-not-found', `Task ${input.taskId} not found`);
     }
 
-    const key = taskOrchestrationKey(task.taskId);
-    try {
-      await this.orchestration.open({
-        key,
-        template: 'classic-delivery',
-        context: {
-          goal: task.title || task.description,
-          ref: { taskId: task.taskId },
-        },
-      });
-    } catch (error) {
-      if (error instanceof OrchestrationConflictError) {
-        throw new Error(
-          `Task ${task.taskId} already has an active orchestration` +
-            (error.holderPid !== undefined ? ` (pid ${error.holderPid})` : ''),
-        );
-      }
-      throw error;
-    }
-
-    if (input.targetAgent) {
-      task.targetAgent = input.targetAgent;
-      task.currentOwner = input.targetAgent;
-    }
-
-    const heartbeatMs = this.dependencies.occupancyHeartbeatMs ?? 15_000;
-    const controller = new AbortController();
-    let leaseError: unknown;
-    const timer = setInterval(() => {
-      try {
-        this.orchestration.heartbeat(key);
-      } catch (error) {
-        leaseError ??= error;
-        controller.abort(error);
-      }
-    }, heartbeatMs);
-    timer.unref();
-    try {
-      const result = await this.runOccupied(input, task, controller.signal);
-      if (leaseError) throw leaseError;
-      return result;
-    } finally {
-      clearInterval(timer);
-      this.orchestration.release(key);
-    }
+    return this.occupancy.run(
+      { taskId: task.taskId, goal: task.title || task.description },
+      ({ signal, mutationFence }) => {
+        if (input.targetAgent) {
+          task.targetAgent = input.targetAgent;
+          task.currentOwner = input.targetAgent;
+        }
+        return this.runOccupied(input, task, signal, mutationFence);
+      },
+    );
   }
 
-  private async runOccupied(input: StartTaskInput, task: TaskRecord, signal: AbortSignal): Promise<TaskRecord> {
+  private async runOccupied(
+    input: StartTaskInput,
+    task: TaskRecord,
+    signal: AbortSignal,
+    mutationFence: TaskMutationFence,
+  ): Promise<TaskRecord> {
     const inspection = await this.dependencies.livenessService.inspect(task);
     if (inspection.state === 'active') {
       throw new Error(`Task ${task.taskId} already has an active ${inspection.mode} runner`);
@@ -107,6 +74,7 @@ export class TaskStartService {
           workspacePath: task.workspacePath ?? '',
           resultSummary: task.resultSummary,
           signal,
+          mutationFence,
         });
       } else {
         await this.dependencies.runner.run({
@@ -115,6 +83,7 @@ export class TaskStartService {
           promptOverride: inspection.promptOverride,
           startRound: inspection.round,
           signal,
+          mutationFence,
         });
       }
       return task;
@@ -134,6 +103,7 @@ export class TaskStartService {
         }),
       } : {}),
       signal,
+      mutationFence,
     });
     return task;
   }

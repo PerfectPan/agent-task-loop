@@ -4,6 +4,7 @@ import { assertRuntimeConfig } from '../config/runtime-guard';
 import { RejectService } from '../services/reject-service';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskService } from '../services/task-service';
+import { TaskOccupancyService } from '../task-manager/task-occupancy-service';
 
 export const rejectCommand = defineCommand({
   meta: {
@@ -38,18 +39,21 @@ export const rejectCommand = defineCommand({
     const taskService = new TaskService(config);
     const runner = new ReviewLoopRunner({ config, taskService });
     const configuredMaxRounds = Number(args.maxRounds ?? 5);
-    const service = new RejectService({
-      taskService,
-      runLoop: input =>
-        runner.run({
-          ...input,
-          maxRounds: Math.max(configuredMaxRounds, input.startRound + configuredMaxRounds - 1),
-        }),
-    });
+    const taskId = String(args.task);
+    await new TaskOccupancyService().run({ taskId }, async ({ signal, mutationFence }) => {
+      const fencedTaskService = taskService.withMutationFence(mutationFence);
+      const service = new RejectService({
+        taskService: fencedTaskService,
+        runLoop: input =>
+          runner.run({
+            ...input,
+            maxRounds: Math.max(configuredMaxRounds, input.startRound + configuredMaxRounds - 1),
+            signal,
+            mutationFence,
+          }),
+      });
 
-    await service.reject({
-      taskId: String(args.task),
-      reason,
+      await service.reject({ taskId, reason });
     });
     console.log(`Task: ${String(args.task)}`);
     console.log('Status: 修复中');

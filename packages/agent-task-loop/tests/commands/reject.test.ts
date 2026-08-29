@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const rejectSpy = vi.fn();
 const runnerRunSpy = vi.fn();
+const occupancySignal = new AbortController().signal;
+const mutationFence = { run: <T>(mutation: () => Promise<T>) => mutation() };
 let capturedRunLoop: ((input: { task: unknown; promptOverride: string; startRound: number }) => Promise<void>) | undefined;
 
 vi.mock('../../src/config/load-config', () => ({
@@ -21,7 +23,18 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: vi.fn().mockImplementation(() => ({})),
+  TaskService: vi.fn().mockImplementation(() => ({
+    withMutationFence: vi.fn().mockReturnValue({}),
+  })),
+}));
+
+vi.mock('../../src/task-manager/task-occupancy-service', () => ({
+  TaskOccupancyService: vi.fn().mockImplementation(() => ({
+    run: vi.fn((_input, workflow) => workflow({
+      signal: occupancySignal,
+      mutationFence,
+    })),
+  })),
 }));
 
 vi.mock('../../src/services/review-loop-runner', () => ({
@@ -92,6 +105,8 @@ describe('rejectCommand', () => {
       promptOverride: 'prompt',
       startRound: 6,
       maxRounds: 10,
+      signal: occupancySignal,
+      mutationFence,
     });
     logSpy.mockRestore();
   });

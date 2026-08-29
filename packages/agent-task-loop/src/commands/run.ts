@@ -12,6 +12,7 @@ import { ensureWorkspace } from '../services/workspace-service';
 import { TaskService } from '../services/task-service';
 import type { TargetAgent } from '../types/task';
 import { pickNextTask } from '../utils/priority';
+import { TaskOccupancyService } from '../task-manager/task-occupancy-service';
 
 const adapters = {
   claude: claudeAdapter,
@@ -53,35 +54,42 @@ export const runCommand = defineCommand({
       return;
     }
 
-    const { project, repositoryKey, repository } = resolveTaskExecutionContext(config, task);
-    const workspacePath = await ensureWorkspace({
-      workspaceRoot: project.workspaceRoot,
-      taskId: task.taskId,
-      agent,
-      existingWorkspacePath: task.workspacePath,
-      strategy: repository.workspaceStrategy,
-      repositoryPath: repository.localPath,
-      defaultBranch: repository.defaultBranch,
-    });
-    const prompt = buildTaskPrompt({
-      task,
-      projectName: project.name,
-      repositoryKey,
-      workspacePath,
-      taskTemplatePrompt: project.taskTemplatePrompt,
-    });
+    await new TaskOccupancyService().run(
+      { taskId: task.taskId, goal: task.title || task.description },
+      async ({ signal, mutationFence }) => {
+        const { project, repositoryKey, repository } = resolveTaskExecutionContext(config, task);
+        const workspacePath = await ensureWorkspace({
+          workspaceRoot: project.workspaceRoot,
+          taskId: task.taskId,
+          agent,
+          existingWorkspacePath: task.workspacePath,
+          strategy: repository.workspaceStrategy,
+          repositoryPath: repository.localPath,
+          defaultBranch: repository.defaultBranch,
+        });
+        signal.throwIfAborted();
+        const prompt = buildTaskPrompt({
+          task,
+          projectName: project.name,
+          repositoryKey,
+          workspacePath,
+          taskTemplatePrompt: project.taskTemplatePrompt,
+        });
 
-    const executionService = new ExecutionService({
-      taskService,
-      adapter: adapters[agent],
-      adapterCommand: {
-        ...config.agents[agent],
-        cwd: workspacePath,
-        prompt,
+        const executionService = new ExecutionService({
+          taskService,
+          adapter: adapters[agent],
+          adapterCommand: {
+            ...config.agents[agent],
+            cwd: workspacePath,
+            prompt,
+          },
+          mutationFence,
+        });
+
+        const execution = await executionService.executeTask(task, workspacePath, 1, signal);
+        console.log(`Executed task ${task.taskId} log=${execution.logPath}`);
       },
-    });
-
-    const execution = await executionService.executeTask(task, workspacePath);
-    console.log(`Executed task ${task.taskId} log=${execution.logPath}`);
+    );
   },
 });

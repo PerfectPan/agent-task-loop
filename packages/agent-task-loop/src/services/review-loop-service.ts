@@ -6,6 +6,7 @@ import {
   formatFailureMessage,
   type FailureMessageFormatter,
 } from './failure-message';
+import type { TaskMutationFence } from './task-service';
 
 export class ReviewLoopService {
   constructor(
@@ -42,6 +43,7 @@ export class ReviewLoopService {
       ) => Promise<{ branch: string; commit: string }>;
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
+      mutationFence: TaskMutationFence;
       maxRounds: number;
       signal?: AbortSignal;
       formatFailure?: FailureMessageFormatter;
@@ -91,14 +93,14 @@ export class ReviewLoopService {
     }
 
     this.assertActive();
-    await this.deps.updateReviewState(input.task, {
+    await this.persist(() => this.deps.updateReviewState(input.task, {
       status: '已失败',
       currentOwner: '董事长',
       reviewRound: this.deps.maxRounds,
       lastError: `Review loop exceeded ${this.deps.maxRounds} rounds`,
       sessionHistory: input.task.sessionHistory,
       progressSummary: '自动 review loop 超出最大轮次',
-    });
+    }));
     this.assertActive();
   }
 
@@ -149,7 +151,7 @@ export class ReviewLoopService {
       });
     } catch (error) {
       this.assertActive();
-      await this.deps.updateReviewState(input.task, {
+      await this.persist(() => this.deps.updateReviewState(input.task, {
         status: '已失败',
         currentOwner: '董事长',
         reviewRound: input.round,
@@ -166,7 +168,7 @@ export class ReviewLoopService {
         ),
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
       this.assertActive();
       return { done: true };
     }
@@ -204,17 +206,17 @@ export class ReviewLoopService {
           this.assertActive();
           acceptanceProgressSummary = '分支已推送，等待创建或更新 Pull Request';
           this.assertActive();
-          await this.deps.updatePublishResult(input.task, {
+          await this.persist(() => this.deps.updatePublishResult(input.task, {
             publishBranch: publish.branch,
             publishCommit: publish.commit,
             progressSummary: acceptanceProgressSummary,
             resultSummary: input.task.resultSummary,
             sessionHistory: input.task.sessionHistory,
-          });
+          }));
           this.assertActive();
         } catch (error) {
           this.assertActive();
-          await this.deps.updateReviewState(input.task, {
+          await this.persist(() => this.deps.updateReviewState(input.task, {
             status: '待发布',
             currentOwner: '董事长',
             reviewRound: input.round,
@@ -233,13 +235,13 @@ export class ReviewLoopService {
             ),
             runnerKind: '',
             runnerAgent: '',
-          });
+          }));
           this.assertActive();
           return { done: true };
         }
       }
       this.assertActive();
-      await this.deps.updateReviewState(input.task, {
+      await this.persist(() => this.deps.updateReviewState(input.task, {
         status: isDeliverable ? '待发布' : '待决策',
         currentOwner: '董事长',
         reviewRound: input.round,
@@ -253,13 +255,13 @@ export class ReviewLoopService {
         progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待董事长确定修复方向',
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
       this.assertActive();
       return { done: true };
     }
 
     this.assertActive();
-    await this.deps.updateReviewState(input.task, {
+    await this.persist(() => this.deps.updateReviewState(input.task, {
       status: '修复中',
       currentOwner: input.task.targetAgent,
       reviewRound: input.round,
@@ -273,7 +275,7 @@ export class ReviewLoopService {
       progressSummary: `${reviewerAgent} 复核未通过，正在回到 ${input.task.targetAgent} 修复`,
       runnerKind: '',
       runnerAgent: '',
-    });
+    }));
     this.assertActive();
 
     return {
@@ -288,5 +290,10 @@ export class ReviewLoopService {
 
   private assertActive(): void {
     this.deps.signal?.throwIfAborted();
+  }
+
+  private async persist(mutation: () => Promise<void>): Promise<void> {
+    this.assertActive();
+    await this.deps.mutationFence.run(mutation);
   }
 }

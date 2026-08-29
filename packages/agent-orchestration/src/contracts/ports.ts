@@ -7,6 +7,17 @@ export interface LockRecord {
   heartbeatAt: string;
 }
 
+/**
+ * Stable ownership token used to serialize writes to resources outside the
+ * orchestration store. `heartbeatAt` is deliberately excluded: heartbeats may
+ * advance while one fenced write is in flight without changing its owner.
+ */
+export type FencingToken = Pick<LockRecord, 'key' | 'holderPid' | 'holderId'>;
+
+export type FencedResult<T> =
+  | { executed: true; value: T }
+  | { executed: false };
+
 export interface OrchestrationStore {
   tryCreateLock(key: string, record: LockRecord): boolean;
   tryReplaceLock(key: string, expected: LockRecord, next: LockRecord): boolean;
@@ -17,6 +28,11 @@ export interface OrchestrationStore {
   writeState(snapshot: RunSnapshot): void;
   readState(key: string): RunSnapshot | undefined;
   listKeys(): string[];
+  runFenced<T>(
+    token: FencingToken,
+    operation: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<FencedResult<T>>;
 }
 
 export interface Clock {

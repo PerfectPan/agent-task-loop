@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionService } from '../../src/services/execution-service';
+
+const immediateMutationFence = {
+  run: <T>(mutation: () => Promise<T>) => mutation(),
+};
 import type { TaskRecord } from '../../src/types/task';
 
 describe('ExecutionService', () => {
@@ -34,6 +38,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute,
       },
@@ -114,6 +119,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockResolvedValue({
           status: 'failure',
@@ -171,6 +177,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockResolvedValue({
           status: 'success',
@@ -225,6 +232,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockRejectedValue(new Error('adapter crashed')),
       },
@@ -279,6 +287,7 @@ describe('ExecutionService', () => {
     try {
       const executionService = new ExecutionService({
         taskService: taskService as never,
+        mutationFence: immediateMutationFence,
         adapter: { execute: vi.fn() },
         adapterCommand: {
           command: 'codex',
@@ -335,6 +344,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute,
       },
@@ -389,6 +399,7 @@ describe('ExecutionService', () => {
     const execute = vi.fn();
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: { execute },
       adapterCommand: {
         command: 'codex',

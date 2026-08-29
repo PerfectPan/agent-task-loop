@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentAdapter } from '../adapters/base';
 import type { TaskRecord } from '../types/task';
-import type { TaskService } from './task-service';
+import type { TaskMutationFence, TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
 import {
   formatFailureMessage,
@@ -34,6 +34,7 @@ export class ExecutionService {
       };
       onHeartbeatError?: (error: unknown) => void;
       formatFailure?: FailureMessageFormatter;
+      mutationFence: TaskMutationFence;
     },
   ) {}
 
@@ -73,13 +74,13 @@ export class ExecutionService {
       latestHeartbeatAt = new Date(now).toISOString();
       lastHeartbeatPersistedAt = now;
       try {
-        await this.deps.taskService.updateRunnerState(task, {
+        await this.persist(() => this.deps.taskService.updateRunnerState(task, {
           runnerPid: latestRunnerPid,
           runnerKind: 'execute',
           runnerAgent: task.targetAgent,
           runnerRound: round,
           lastHeartbeatAt: latestHeartbeatAt,
-        });
+        }));
       } catch (error) {
         signal?.throwIfAborted();
         if (this.deps.onHeartbeatError) {
@@ -98,7 +99,7 @@ export class ExecutionService {
 
       signal?.throwIfAborted();
       latestProgressSummary = summary;
-      await this.deps.taskService.updateTaskProgress(task, {
+      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
         progressSummary: summary,
         workspacePath,
         logPath,
@@ -110,7 +111,7 @@ export class ExecutionService {
         runnerAgent: task.targetAgent,
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
-      });
+      }));
       signal?.throwIfAborted();
     };
     const writeSession = async (payload: { sessionId?: string; sessionName?: string }) => {
@@ -139,7 +140,7 @@ export class ExecutionService {
       }
       latestSessionId = nextSessionId;
       signal?.throwIfAborted();
-      await this.deps.taskService.updateTaskProgress(task, {
+      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
         progressSummary: latestProgressSummary,
         workspacePath,
         logPath,
@@ -151,7 +152,7 @@ export class ExecutionService {
         runnerAgent: task.targetAgent,
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
-      });
+      }));
       signal?.throwIfAborted();
     };
 
@@ -160,7 +161,7 @@ export class ExecutionService {
     writeLog(`[agent-task-loop] logPath=${logPath}\n`);
 
     signal?.throwIfAborted();
-    await this.deps.taskService.claimTask(task, {
+    await this.persist(() => this.deps.taskService.claimTask(task, {
       claimedBy: `${task.targetAgent}@local`,
       claimedAt: new Date().toISOString(),
       runId,
@@ -175,7 +176,7 @@ export class ExecutionService {
       runnerAgent: task.targetAgent,
       runnerRound: round,
       lastHeartbeatAt: latestHeartbeatAt,
-    });
+    }));
     signal?.throwIfAborted();
 
     try {
@@ -205,7 +206,7 @@ export class ExecutionService {
 
       if (result.status === 'success') {
         signal?.throwIfAborted();
-        await this.deps.taskService.updateReviewState(task, {
+        await this.persist(() => this.deps.taskService.updateReviewState(task, {
           status: '待复核',
           currentOwner: 'codex',
           reviewRound: round,
@@ -218,7 +219,7 @@ export class ExecutionService {
           sessionHistory: latestSessionHistory,
           runnerKind: '',
           runnerAgent: '',
-        });
+        }));
         signal?.throwIfAborted();
         writeLog('\n[agent-task-loop] status=待复核\n');
         return {
@@ -233,7 +234,7 @@ export class ExecutionService {
       }
 
       signal?.throwIfAborted();
-      await this.deps.taskService.updateReviewState(task, {
+      await this.persist(() => this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
         lastError: formatFailureMessage(
@@ -249,7 +250,7 @@ export class ExecutionService {
         sessionHistory: latestSessionHistory,
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
       signal?.throwIfAborted();
       writeLog('\n[agent-task-loop] status=已失败\n');
       return {
@@ -268,7 +269,7 @@ export class ExecutionService {
         error,
         'Task execution failed',
       );
-      await this.deps.taskService.updateReviewState(task, {
+      await this.persist(() => this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
         lastError: message,
@@ -280,7 +281,7 @@ export class ExecutionService {
         sessionHistory: latestSessionHistory,
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
       writeLog(`\n[agent-task-loop] status=已失败\n[agent-task-loop] error=${message}\n`);
       return {
         runId,
@@ -293,5 +294,9 @@ export class ExecutionService {
     } finally {
       stream.end();
     }
+  }
+
+  private async persist(mutation: () => Promise<void>): Promise<void> {
+    await this.deps.mutationFence.run(mutation);
   }
 }

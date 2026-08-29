@@ -8,6 +8,7 @@ function mockOrchestration() {
     open: vi.fn().mockResolvedValue({ occupied: true }),
     heartbeat: vi.fn(),
     release: vi.fn(),
+    fence: <T>(_key: string, operation: () => Promise<T>) => operation(),
   };
 }
 
@@ -45,6 +46,7 @@ describe('TaskStartService', () => {
       task: existingTask,
       maxRounds: 4,
       signal: expect.any(AbortSignal),
+      mutationFence: expect.objectContaining({ run: expect.any(Function) }),
     });
     expect(existingTask).toMatchObject({ targetAgent: 'claude', currentOwner: 'claude' });
     expect(result).toBe(existingTask);
@@ -83,6 +85,7 @@ describe('TaskStartService', () => {
       open: vi.fn().mockRejectedValue(new OrchestrationConflictError('task:TASK-25', 99)),
       heartbeat: vi.fn(),
       release: vi.fn(),
+      fence: <T>(_key: string, operation: () => Promise<T>) => operation(),
     };
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
@@ -197,6 +200,7 @@ describe('TaskStartService', () => {
       workspacePath: '/workspace/task-22',
       resultSummary: 'Implementation ready',
       signal: expect.any(AbortSignal),
+      mutationFence: expect.objectContaining({ run: expect.any(Function) }),
     });
   });
 
@@ -225,6 +229,7 @@ describe('TaskStartService', () => {
       promptOverride: 'Recover from the last durable state.',
       startRound: 2,
       signal: expect.any(AbortSignal),
+      mutationFence: expect.objectContaining({ run: expect.any(Function) }),
     });
   });
 
@@ -253,6 +258,7 @@ describe('TaskStartService', () => {
       startRound: 3,
       promptOverride: expect.stringContaining('Keep the public DTO narrow'),
       signal: expect.any(AbortSignal),
+      mutationFence: expect.objectContaining({ run: expect.any(Function) }),
     });
   });
 });

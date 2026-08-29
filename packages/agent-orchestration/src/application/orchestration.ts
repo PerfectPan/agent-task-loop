@@ -2,6 +2,7 @@ import { OrchestrationConflictError, OrchestrationNotFoundError, OrchestrationSe
 import type {
   Clock,
   IntervalScheduler,
+  FencingToken,
   LockRecord,
   OrchestrationStore,
   ProcessIdentity,
@@ -155,6 +156,33 @@ export class Orchestration {
 
   heartbeat(key: string): void {
     this.touch(this.requireHolder(key));
+  }
+
+  /**
+   * Linearize one external write against every holder of this run.
+   *
+   * A holder that loses its lease during an already-started write may finish
+   * that write, but the store keeps the fence until it finishes. A successor
+   * holder therefore cannot start a newer write that the old write could later
+   * overwrite. A holder that is already stale never enters the operation.
+   */
+  async fence<T>(
+    key: string,
+    operation: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    signal?.throwIfAborted();
+    const held = this.requireHolder(key);
+    const token: FencingToken = {
+      key,
+      holderPid: held.lock.holderPid,
+      holderId: held.lock.holderId,
+    };
+    const result = await this.store.runFenced(token, operation, signal);
+    if (!result.executed) {
+      throw new OrchestrationConflictError(key, this.store.readLock(key)?.holderPid);
+    }
+    return result.value;
   }
 
   release(key: string): void {

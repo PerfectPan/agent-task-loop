@@ -12,7 +12,7 @@ import { PublishContextService } from './publish-context-service';
 import { ReviewLoopService } from './review-loop-service';
 import { ReviewService } from './review-service';
 import { resolveTaskExecutionContext } from './task-context-service';
-import type { TaskService } from './task-service';
+import type { TaskMutationFence, TaskService } from './task-service';
 import { ensureWorkspace } from './workspace-service';
 import type { TargetAgent, TaskRecord } from '../types/task';
 import type { FailureMessageFormatter } from './failure-message';
@@ -54,8 +54,9 @@ export class ReviewLoopRunner {
     promptOverride?: string;
     startRound?: number;
     signal?: AbortSignal;
+    mutationFence: TaskMutationFence;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds, input.signal);
+    const loop = this.createLoop(input.maxRounds, input.signal, input.mutationFence);
     await loop.start({
       task: input.task,
       promptOverride: input.promptOverride,
@@ -70,8 +71,9 @@ export class ReviewLoopRunner {
     workspacePath: string;
     resultSummary?: string;
     signal?: AbortSignal;
+    mutationFence: TaskMutationFence;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds, input.signal);
+    const loop = this.createLoop(input.maxRounds, input.signal, input.mutationFence);
     await loop.resumeFromReview({
       task: input.task,
       round: input.round,
@@ -80,7 +82,11 @@ export class ReviewLoopRunner {
     });
   }
 
-  private createLoop(maxRounds: number, signal?: AbortSignal): ReviewLoopService {
+  private createLoop(
+    maxRounds: number,
+    signal: AbortSignal | undefined,
+    mutationFence: TaskMutationFence,
+  ): ReviewLoopService {
     const executeRound = async (roundInput: { task: TaskRecord; promptOverride?: string; round: number }) => {
       const agent = roundInput.task.targetAgent as TargetAgent;
       const { project, repositoryKey, repository } = resolveTaskExecutionContext(this.deps.config, roundInput.task);
@@ -113,6 +119,7 @@ export class ReviewLoopRunner {
         },
         onHeartbeatError: this.deps.onBackgroundError,
         formatFailure: this.deps.formatFailure,
+        mutationFence,
       });
       const result = await executionService.executeTask(
         roundInput.task,
@@ -159,7 +166,7 @@ export class ReviewLoopRunner {
           latestHeartbeatAt = new Date(now).toISOString();
           lastHeartbeatPersistedAt = now;
           try {
-            await this.deps.taskService.updateRunnerState(
+            await mutationFence.run(() => this.deps.taskService.updateRunnerState(
               input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
               {
                 runnerPid: latestRunnerPid,
@@ -168,7 +175,7 @@ export class ReviewLoopRunner {
                 runnerRound: input.reviewRound,
                 lastHeartbeatAt: latestHeartbeatAt,
               },
-            );
+            ));
           } catch (error) {
             signal?.throwIfAborted();
             if (this.deps.onBackgroundError) {
@@ -182,7 +189,7 @@ export class ReviewLoopRunner {
         };
 
         signal?.throwIfAborted();
-        await this.deps.taskService.updateRunnerState(
+        await mutationFence.run(() => this.deps.taskService.updateRunnerState(
           input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
           {
             runnerKind: 'review',
@@ -190,7 +197,7 @@ export class ReviewLoopRunner {
             runnerRound: input.reviewRound,
             lastHeartbeatAt: latestHeartbeatAt,
           },
-        );
+        ));
         signal?.throwIfAborted();
 
         return reviewService.review({
@@ -223,6 +230,7 @@ export class ReviewLoopRunner {
         autoPublishService.publish(task, workspacePath, publishSignal),
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
+      mutationFence,
       maxRounds,
       signal,
       formatFailure: this.deps.formatFailure,

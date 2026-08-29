@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ReviewLoopService } from '../../src/services/review-loop-service';
 
+const immediateMutationFence = {
+  run: <T>(mutation: () => Promise<T>) => mutation(),
+};
+
 describe('ReviewLoopService', () => {
   it('re-enters execution when review rejects and exits when review passes', async () => {
     const executeRound = vi
@@ -19,6 +23,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -77,6 +82,7 @@ describe('ReviewLoopService', () => {
     const updatePublishResult = vi.fn();
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(false),
@@ -131,6 +137,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -194,6 +201,7 @@ describe('ReviewLoopService', () => {
     const publishForAcceptance = vi.fn().mockRejectedValue(new Error('push failed'));
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -247,6 +255,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -298,6 +307,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -349,6 +359,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -404,6 +415,7 @@ describe('ReviewLoopService', () => {
     const updatePublishResult = vi.fn();
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -440,6 +452,7 @@ describe('ReviewLoopService', () => {
     const sensitiveMessage = 'review provider leaked credential=sensitive-test-value';
     const updateReviewState = vi.fn();
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound: vi.fn().mockResolvedValue({
         resultSummary: 'done',
         workspacePath: '/tmp/TASK-209-codex',
@@ -477,6 +490,7 @@ describe('ReviewLoopService', () => {
     const controller = new AbortController();
     const updateReviewState = vi.fn();
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound: vi.fn(),
       review: vi.fn().mockImplementation(async () => {
         controller.abort(leaseError);
@@ -514,6 +528,7 @@ describe('ReviewLoopService', () => {
     const publishForAcceptance = vi.fn();
     const updateReviewState = vi.fn();
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound: vi.fn(),
       review: vi.fn().mockResolvedValue({ verdict: '通过', findings: '' }),
       isTaskDeliverable: vi.fn().mockImplementation(async () => {
@@ -552,6 +567,7 @@ describe('ReviewLoopService', () => {
     const updatePublishResult = vi.fn();
     const updateReviewState = vi.fn();
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound: vi.fn(),
       review: vi.fn().mockResolvedValue({ verdict: '通过', findings: '' }),
       isTaskDeliverable: vi.fn().mockResolvedValue(true),

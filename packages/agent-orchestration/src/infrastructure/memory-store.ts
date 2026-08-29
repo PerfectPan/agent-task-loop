@@ -1,10 +1,16 @@
-import type { LockRecord, OrchestrationStore } from '../contracts/ports';
+import type {
+  FencedResult,
+  FencingToken,
+  LockRecord,
+  OrchestrationStore,
+} from '../contracts/ports';
 import type { RunSnapshot } from '../contracts/types';
 import { sameLock } from '../domain/lock';
 
 export class MemoryOrchestrationStore implements OrchestrationStore {
   private readonly locks = new Map<string, LockRecord>();
   private readonly states = new Map<string, RunSnapshot>();
+  private readonly fenceTails = new Map<string, Promise<void>>();
 
   tryCreateLock(key: string, record: LockRecord): boolean {
     if (this.locks.has(key)) {
@@ -63,5 +69,37 @@ export class MemoryOrchestrationStore implements OrchestrationStore {
 
   listKeys(): string[] {
     return [...this.states.keys()];
+  }
+
+  async runFenced<T>(
+    token: FencingToken,
+    operation: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<FencedResult<T>> {
+    const previous = this.fenceTails.get(token.key) ?? Promise.resolve();
+    let unlock: () => void = () => undefined;
+    const slot = new Promise<void>(resolve => {
+      unlock = resolve;
+    });
+    const tail = previous.then(() => slot);
+    this.fenceTails.set(token.key, tail);
+    try {
+      await previous;
+      signal?.throwIfAborted();
+      const current = this.locks.get(token.key);
+      if (
+        !current ||
+        current.holderPid !== token.holderPid ||
+        current.holderId !== token.holderId
+      ) {
+        return { executed: false };
+      }
+      return { executed: true, value: await operation() };
+    } finally {
+      unlock();
+      if (this.fenceTails.get(token.key) === tail) {
+        this.fenceTails.delete(token.key);
+      }
+    }
   }
 }

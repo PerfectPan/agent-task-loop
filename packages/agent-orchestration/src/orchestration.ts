@@ -22,6 +22,7 @@ export interface OrchestrationOptions {
   store?: OrchestrationStore;
   now?: () => number;
   staleAfterMs?: number;
+  heartbeatIntervalMs?: number;
   isProcessAlive?: (pid: number) => boolean;
   runner?: ProcessRunner;
 }
@@ -31,6 +32,7 @@ export class Orchestration {
   private readonly store: OrchestrationStore;
   private readonly now: () => number;
   private readonly staleAfterMs: number;
+  private readonly heartbeatIntervalMs: number;
   private readonly isProcessAlive: (pid: number) => boolean;
   private readonly runner: ProcessRunner;
 
@@ -38,6 +40,7 @@ export class Orchestration {
     this.store = options.store ?? new FileOrchestrationStore(options.baseDir ?? defaultBaseDir());
     this.now = options.now ?? Date.now;
     this.staleAfterMs = options.staleAfterMs ?? 120_000;
+    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? Math.min(15_000, Math.max(1, Math.floor(this.staleAfterMs / 4)));
     this.isProcessAlive = options.isProcessAlive ?? defaultIsProcessAlive;
     this.runner = options.runner ?? defaultProcessRunner;
   }
@@ -52,6 +55,7 @@ export class Orchestration {
     }
 
     this.acquire(input.key);
+    this.clearEnvs(input.key);
 
     const allowed = template.allow?.start ?? template.seats[0]!;
     const seats: Record<string, SeatState> = {};
@@ -115,7 +119,7 @@ export class Orchestration {
   }
 
   allow(key: string, seat: string): RunSnapshot {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     if (!snapshot.seats[seat]) {
       throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
     }
@@ -127,7 +131,7 @@ export class Orchestration {
   }
 
   appendFact(key: string, seat: string, text: string): RunSnapshot {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     if (!snapshot.seats[seat]) {
       throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
     }
@@ -139,7 +143,7 @@ export class Orchestration {
   }
 
   sendMail(key: string, input: { from: string; to: string; body: string }): RunSnapshot {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     if (!snapshot.seats[input.from]) {
       throw new OrchestrationSeatError(key, `unknown seat ${input.from}`);
     }
@@ -163,7 +167,7 @@ export class Orchestration {
     seat: string,
     input: { cwd: string; extraArgs?: string[]; env?: Record<string, string> },
   ): Promise<SpawnResult> {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     if (snapshot.allowed !== seat) {
       throw new OrchestrationSeatError(key, `seat ${seat} is not allowed to spawn (allowed=${snapshot.allowed})`);
     }
@@ -174,40 +178,66 @@ export class Orchestration {
     const env = { ...(this.envs.get(envKey(key, seat)) ?? {}), ...(input.env ?? {}) };
     const args = [...(bound.args ?? []), ...(input.extraArgs ?? [])];
 
-    bound.status = 'running';
-    snapshot.heartbeatAt = this.isoNow();
-    this.store.writeState(snapshot);
-
-    const result = await this.runner({
-      cmd: bound.cmd,
-      args,
-      cwd: input.cwd,
-      env,
-      onSpawn: pid => {
-        bound.pid = pid;
-        snapshot.heartbeatAt = this.isoNow();
-        this.touchLock(key);
-        this.store.writeState(snapshot);
-      },
+    this.patchSeat(key, seat, seatState => {
+      seatState.status = 'running';
     });
 
-    bound.status = 'exited';
-    snapshot.heartbeatAt = this.isoNow();
-    this.touchLock(key);
-    this.store.writeState(snapshot);
-    return result;
+    const timer = setInterval(() => {
+      try {
+        this.heartbeat(key);
+      } catch {
+        // Holder lost the lock; the interval is cleared in finally.
+      }
+    }, this.heartbeatIntervalMs);
+    timer.unref();
+
+    try {
+      const result = await this.runner({
+        cmd: bound.cmd,
+        args,
+        cwd: input.cwd,
+        env,
+        onSpawn: pid => {
+          this.patchSeat(key, seat, seatState => {
+            seatState.pid = pid;
+          });
+        },
+      });
+      this.patchSeat(key, seat, seatState => {
+        seatState.status = 'exited';
+        delete seatState.pid;
+      });
+      return result;
+    } catch (error) {
+      try {
+        this.patchSeat(key, seat, seatState => {
+          seatState.status = 'exited';
+          delete seatState.pid;
+        });
+      } catch {
+        // Lock was stolen or released while the child ran.
+      }
+      throw error;
+    } finally {
+      clearInterval(timer);
+    }
   }
 
   heartbeat(key: string): void {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     snapshot.heartbeatAt = this.isoNow();
     this.touchLock(key);
     this.store.writeState(snapshot);
   }
 
   release(key: string): void {
-    const snapshot = this.store.readState(key);
+    const lock = this.store.readLock(key);
+    if (!lock || lock.holderPid !== process.pid) {
+      return;
+    }
     this.store.removeLock(key);
+    this.clearEnvs(key);
+    const snapshot = this.store.readState(key);
     if (!snapshot) {
       return;
     }
@@ -224,9 +254,8 @@ export class Orchestration {
     });
   }
 
-  /** Bind or replace a seat command after open (caller-owned; not an agent write). */
   bind(key: string, seat: string, bind: SeatBind): RunSnapshot {
-    const snapshot = this.requireOccupied(key);
+    const snapshot = this.requireHolder(key);
     if (!snapshot.seats[seat]) {
       throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
     }
@@ -237,6 +266,8 @@ export class Orchestration {
     };
     if (bind.env) {
       this.envs.set(envKey(key, seat), { ...bind.env });
+    } else {
+      this.envs.delete(envKey(key, seat));
     }
     this.store.writeState(snapshot);
     return snapshot;
@@ -254,11 +285,20 @@ export class Orchestration {
       return;
     }
     const existing = this.store.readLock(key);
-    if (existing && this.isFresh(existing)) {
+    if (!existing) {
+      if (this.store.lockExists(key)) {
+        throw new OrchestrationConflictError(key);
+      }
+      if (this.store.tryCreateLock(key, record)) {
+        return;
+      }
+      const raced = this.store.readLock(key);
+      throw new OrchestrationConflictError(key, raced?.holderPid);
+    }
+    if (this.isFresh(existing)) {
       throw new OrchestrationConflictError(key, existing.holderPid);
     }
-    this.store.removeLock(key);
-    if (!this.store.tryCreateLock(key, record)) {
+    if (!this.store.tryReplaceLock(key, existing, record)) {
       const raced = this.store.readLock(key);
       throw new OrchestrationConflictError(key, raced?.holderPid);
     }
@@ -275,12 +315,37 @@ export class Orchestration {
     return this.now() - at <= this.staleAfterMs;
   }
 
-  private requireOccupied(key: string): RunSnapshot {
+  private requireHolder(key: string): RunSnapshot {
     const snapshot = this.inspect(key);
     if (!snapshot.occupied) {
       throw new OrchestrationNotFoundError(key);
     }
+    const lock = this.store.readLock(key);
+    if (!lock || lock.holderPid !== process.pid || !this.isFresh(lock)) {
+      throw new OrchestrationConflictError(key, lock?.holderPid);
+    }
     return snapshot;
+  }
+
+  private patchSeat(key: string, seat: string, patch: (seat: SeatState) => void): void {
+    const snapshot = this.requireHolder(key);
+    const seatState = snapshot.seats[seat];
+    if (!seatState) {
+      throw new OrchestrationSeatError(key, `unknown seat ${seat}`);
+    }
+    patch(seatState);
+    snapshot.heartbeatAt = this.isoNow();
+    this.touchLock(key);
+    this.store.writeState(snapshot);
+  }
+
+  private clearEnvs(key: string): void {
+    const prefix = `${key}::`;
+    for (const envKeyName of [...this.envs.keys()]) {
+      if (envKeyName.startsWith(prefix)) {
+        this.envs.delete(envKeyName);
+      }
+    }
   }
 
   private touchLock(key: string): void {
@@ -304,7 +369,7 @@ function defaultIsProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
   }
 }

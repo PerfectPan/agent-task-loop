@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -8,6 +8,7 @@ import {
   OrchestrationSeatError,
   OrchestrationTemplateError,
 } from '../src/index';
+import { lockPath } from '../src/paths';
 
 function tempDir(): string {
   return mkdtempSync(path.join(os.tmpdir(), 'agent-orch-'));
@@ -26,6 +27,14 @@ describe('TemplateRegistry', () => {
     const orch = new Orchestration({ baseDir: tempDir() });
     classic(orch);
     expect(() => classic(orch)).toThrow(OrchestrationTemplateError);
+  });
+
+  it('returns a copy from get so callers cannot mutate the registry', () => {
+    const orch = new Orchestration({ baseDir: tempDir() });
+    classic(orch);
+    const spec = orch.templates.get('classic-delivery');
+    spec.seats.push('lead');
+    expect(orch.templates.get('classic-delivery').seats).toEqual(['impl', 'review']);
   });
 
   it('rejects a start seat that is not in the roster', () => {
@@ -127,6 +136,48 @@ describe('Orchestration open / occupy', () => {
     expect(again.occupied).toBe(true);
   });
 
+  it('treats an unreadable lock as a conflict, not as stealable', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const instance = new Orchestration({ baseDir: dir });
+    classic(instance);
+    await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
+    writeFileSync(lockPath(dir, 'task:T-1'), '{', 'utf8');
+
+    const other = new Orchestration({ baseDir: dir });
+    classic(other);
+    await expect(other.open({ key: 'task:T-1', template: 'classic-delivery' })).rejects.toBeInstanceOf(
+      OrchestrationConflictError,
+    );
+  });
+
+  it('clears bound env when the same key is reopened after release', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    let spawnedEnv: Record<string, string> | undefined;
+    const instance = new Orchestration({
+      baseDir: dir,
+      runner: async input => {
+        spawnedEnv = input.env;
+        return { stdout: '', stderr: '', exitCode: 0 };
+      },
+    });
+    classic(instance);
+    await instance.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+      bind: { impl: { cmd: 'grok', env: { TOKEN: 'secret' } } },
+    });
+    instance.release('task:T-1');
+    await instance.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+      bind: { impl: { cmd: 'grok' } },
+    });
+    await instance.spawn('task:T-1', 'impl', { cwd: dir });
+    expect(spawnedEnv?.TOKEN).toBeUndefined();
+  });
+
   it('redacts commands from observe', async () => {
     const instance = orch();
     await instance.open({
@@ -190,6 +241,43 @@ describe('Orchestration allow / facts / mail / spawn', () => {
     expect(snapshot.context.mail).toEqual([
       expect.objectContaining({ from: 'impl', to: 'review', body: 'please look' }),
     ]);
+  });
+
+  it('marks the seat exited when the runner throws', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const instance = new Orchestration({
+      baseDir: dir,
+      runner: async () => {
+        throw new Error('child crashed');
+      },
+    });
+    classic(instance);
+    await instance.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+      bind: { impl: { cmd: 'grok' } },
+    });
+    await expect(instance.spawn('task:T-1', 'impl', { cwd: dir })).rejects.toThrow('child crashed');
+    expect(instance.inspect('task:T-1').seats.impl?.status).toBe('exited');
+  });
+
+  it('refuses mutating APIs unless this process holds a fresh lock', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const instance = new Orchestration({ baseDir: dir });
+    classic(instance);
+    await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
+    writeFileSync(
+      lockPath(dir, 'task:T-1'),
+      JSON.stringify({
+        key: 'task:T-1',
+        holderPid: process.pid + 1,
+        heartbeatAt: new Date().toISOString(),
+      }),
+      'utf8',
+    );
+    expect(() => instance.allow('task:T-1', 'review')).toThrow(OrchestrationConflictError);
   });
 
   it('lists opened runs', async () => {

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -20,6 +21,8 @@ export interface LockRecord {
 
 export interface OrchestrationStore {
   tryCreateLock(key: string, record: LockRecord): boolean;
+  tryReplaceLock(key: string, expected: LockRecord, next: LockRecord): boolean;
+  lockExists(key: string): boolean;
   readLock(key: string): LockRecord | undefined;
   writeLock(key: string, record: LockRecord): void;
   removeLock(key: string): void;
@@ -45,13 +48,35 @@ export class FileOrchestrationStore implements OrchestrationStore {
     }
   }
 
+  tryReplaceLock(key: string, expected: LockRecord, next: LockRecord): boolean {
+    const current = this.readLock(key);
+    if (!current || !sameLock(current, expected)) {
+      return false;
+    }
+    try {
+      unlinkSync(lockPath(this.baseDir, key));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      throw error;
+    }
+    return this.tryCreateLock(key, next);
+  }
+
+  lockExists(key: string): boolean {
+    return existsSync(lockPath(this.baseDir, key));
+  }
+
   readLock(key: string): LockRecord | undefined {
     return readJson(lockPath(this.baseDir, key));
   }
 
   writeLock(key: string, record: LockRecord): void {
     const file = lockPath(this.baseDir, key);
-    mkdirSync(path.dirname(file), { recursive: true });
+    if (!existsSync(file)) {
+      return;
+    }
     writeFileSync(file, JSON.stringify(record), 'utf8');
   }
 
@@ -68,7 +93,7 @@ export class FileOrchestrationStore implements OrchestrationStore {
   writeState(snapshot: RunSnapshot): void {
     const file = statePath(this.baseDir, snapshot.key);
     mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = `${file}.${process.pid}.tmp`;
+    const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
     writeFileSync(tmp, JSON.stringify(snapshot), 'utf8');
     renameSync(tmp, file);
   }
@@ -104,4 +129,8 @@ function readJson<T>(file: string): T | undefined {
   } catch {
     return undefined;
   }
+}
+
+export function sameLock(a: LockRecord, b: LockRecord): boolean {
+  return a.key === b.key && a.holderPid === b.holderPid && a.heartbeatAt === b.heartbeatAt;
 }

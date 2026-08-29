@@ -35,7 +35,11 @@ export class TemplateRegistry {
     if (!spec) {
       throw new OrchestrationTemplateError(`unknown template ${id}`);
     }
-    return spec;
+    return {
+      id: spec.id,
+      seats: [...spec.seats],
+      ...(spec.allow ? { allow: { ...spec.allow } } : {}),
+    };
   }
 
   list(): TemplateSpec[] {

@@ -4,14 +4,18 @@ import type { AdmitResult, AdmitRoomEvent, RoomEvent, RoomId, RoomSeq } from '..
 /** Aggregate root for one tenant conversation's ordered event stream. */
 export class Room {
   private readonly events: RoomEvent[];
-  private readonly byMessageId: Map<string, RoomEvent>;
+  private readonly byTransportMessageId: Map<string, RoomEvent>;
   private readonly roomId: RoomId;
 
   constructor(id: RoomId, events: RoomEvent[] = []) {
     validateState(id, events);
     this.roomId = { ...id };
     this.events = events.map(cloneRoomEvent);
-    this.byMessageId = new Map(this.events.map(event => [event.messageId, event]));
+    this.byTransportMessageId = new Map(
+      this.events.flatMap(event =>
+        event.transportMessageId ? [[event.transportMessageId, event] as const] : [],
+      ),
+    );
   }
 
   get id(): RoomId {
@@ -29,7 +33,7 @@ export class Room {
     if (!input.messageId.trim()) {
       throw new RoomValidationError('admit requires a transport messageId');
     }
-    const existing = this.byMessageId.get(input.messageId);
+    const existing = this.byTransportMessageId.get(input.messageId);
     if (existing) {
       return { outcome: 'duplicate', seq: existing.seq, event: cloneRoomEvent(existing) };
     }
@@ -38,6 +42,7 @@ export class Room {
       seq: this.head + 1,
       roomId: { ...this.roomId },
       messageId: input.messageId,
+      transportMessageId: input.messageId,
       author: { ...input.author },
       kind: input.kind,
       body: input.body,
@@ -46,7 +51,7 @@ export class Room {
       at,
     };
     this.events.push(event);
-    this.byMessageId.set(event.messageId, event);
+    this.byTransportMessageId.set(input.messageId, event);
     return { outcome: 'admitted', seq: event.seq, event: cloneRoomEvent(event) };
   }
 
@@ -59,7 +64,7 @@ function validateState(id: RoomId, events: RoomEvent[]): void {
   if (!id.tenantId.trim() || !id.conversationId.trim()) {
     throw new RoomValidationError('room identity is incomplete');
   }
-  const messageIds = new Set<string>();
+  const transportMessageIds = new Set<string>();
   for (const [index, event] of events.entries()) {
     if (!sameRoom(event.roomId, id)) {
       throw new RoomValidationError('restored event belongs to a different room');
@@ -67,10 +72,18 @@ function validateState(id: RoomId, events: RoomEvent[]): void {
     if (event.seq !== index + 1) {
       throw new RoomValidationError('restored room sequence is not contiguous');
     }
-    if (!event.messageId.trim() || messageIds.has(event.messageId)) {
-      throw new RoomValidationError('restored room contains an invalid or duplicate messageId');
+    if (!event.messageId.trim()) {
+      throw new RoomValidationError('restored room contains a blank messageId');
     }
-    messageIds.add(event.messageId);
+    if (
+      event.transportMessageId !== undefined &&
+      (!event.transportMessageId.trim() || transportMessageIds.has(event.transportMessageId))
+    ) {
+      throw new RoomValidationError(
+        'restored room contains an invalid or duplicate transport messageId',
+      );
+    }
+    if (event.transportMessageId) transportMessageIds.add(event.transportMessageId);
   }
 }
 

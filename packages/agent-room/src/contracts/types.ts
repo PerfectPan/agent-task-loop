@@ -27,7 +27,10 @@ export interface RoomAuthor {
 export interface RoomEvent {
   seq: RoomSeq;
   roomId: RoomId;
-  messageId: TransportMessageId;
+  /** Display identifier. Entity identity inside the Room is seq. */
+  messageId: string;
+  /** Present only for externally admitted events and used for transport deduplication. */
+  transportMessageId?: TransportMessageId;
   author: RoomAuthor;
   kind: RoomEventKind;
   body: string;

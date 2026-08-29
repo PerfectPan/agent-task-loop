@@ -37,4 +37,36 @@ describe('Room aggregate', () => {
 
     expect(() => new Room(roomId, [{ ...admitted.event, seq: 2 }])).toThrow(RoomValidationError);
   });
+
+  it('keeps transport idempotency separate from domain event identity', () => {
+    const internalEvent = {
+      seq: 1,
+      roomId,
+      messageId: 'same-display-id',
+      author: { kind: 'agent' as const, id: 'bot' },
+      kind: 'posted' as const,
+      body: 'not projected yet',
+      origin: 'endpoint' as const,
+      addressedTo: [],
+      at: '2026-08-29T00:00:00.000Z',
+    };
+    const room = new Room(roomId, [internalEvent]);
+
+    const admitted = room.admit(
+      {
+        roomId,
+        messageId: 'same-display-id',
+        author: { kind: 'human', id: 'alice' },
+        kind: 'human',
+        body: 'external delivery',
+      },
+      '2026-08-29T00:01:00.000Z',
+    );
+
+    expect(admitted).toMatchObject({
+      outcome: 'admitted',
+      seq: 2,
+      event: { transportMessageId: 'same-display-id' },
+    });
+  });
 });

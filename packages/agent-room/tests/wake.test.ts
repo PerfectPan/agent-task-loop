@@ -90,5 +90,32 @@ describe('shouldWake', () => {
         policy: 'all-human-messages',
       }),
     ).toBe(false);
+    expect(
+      shouldWake({
+        event: event({
+          author: { kind: 'control-plane', id: 'host' },
+          addressedTo: ['bot-a'],
+        }),
+        agentId: 'bot-a',
+        policy: 'all-human-messages',
+      }),
+    ).toBe(false);
+  });
+
+  it('does not wake for inconsistent author and event classifications', () => {
+    expect(
+      shouldWake({
+        event: event({ kind: 'posted', addressedTo: ['bot-a'] }),
+        agentId: 'bot-a',
+        policy: 'all-human-messages',
+      }),
+    ).toBe(false);
+    expect(
+      shouldWake({
+        event: event({ author: { kind: 'agent', id: 'bot-b' }, addressedTo: ['bot-a'] }),
+        agentId: 'bot-a',
+        policy: 'all-human-messages',
+      }),
+    ).toBe(false);
   });
 });

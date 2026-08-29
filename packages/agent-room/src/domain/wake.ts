@@ -12,7 +12,11 @@ export function shouldWake(input: {
   policy: WakePolicy;
 }): boolean {
   const { event, agentId, policy } = input;
-  if (event.origin === 'control-plane' || event.kind === 'control-plane') {
+  if (
+    event.origin === 'control-plane' ||
+    event.kind === 'control-plane' ||
+    event.author.kind === 'control-plane'
+  ) {
     return false;
   }
   if (event.author.id === agentId) {
@@ -21,7 +25,7 @@ export function shouldWake(input: {
   if (event.kind === 'companion' || event.author.kind === 'agent') {
     return false;
   }
-  if (event.author.kind !== 'human' && event.kind !== 'human') {
+  if (event.author.kind !== 'human' || event.kind !== 'human') {
     return false;
   }
   if (event.addressedTo.includes(agentId)) {

@@ -74,6 +74,7 @@ export class ReviewService {
     reviewRound: number;
     reviewerAgent: TargetAgent;
     acceptanceFeedback?: string;
+    signal?: AbortSignal;
     onSpawn?: (payload: { pid?: number }) => void;
     onHeartbeat?: () => void;
     onSession?: (payload: { sessionId?: string; sessionName?: string }) => void;
@@ -111,6 +112,7 @@ export class ReviewService {
       args: this.deps.command.args,
       env: this.deps.command.env,
       sessionName,
+      signal: input.signal,
       onSpawn: input.onSpawn,
       onHeartbeat: input.onHeartbeat,
       onSession: payload => {

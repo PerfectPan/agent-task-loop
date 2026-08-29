@@ -55,6 +55,7 @@ describe('claudeAdapter', () => {
       undefined,
       undefined,
       expect.any(Function),
+      undefined,
     );
     expect(onSession).toHaveBeenCalledWith({
       sessionId: 'sess-123',

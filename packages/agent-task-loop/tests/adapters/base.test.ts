@@ -31,4 +31,20 @@ describe('runAgentCommand', () => {
     expect(output).toContain('step-1');
     expect(output).toContain('warn-1');
   });
+
+  it('cancels the child process when its owner aborts', async () => {
+    const controller = new AbortController();
+    const running = runAgentCommand(
+      process.execPath,
+      ['-e', 'setInterval(() => undefined, 1000)'],
+      {},
+      process.cwd(),
+      () => controller.abort(new Error('occupancy lost')),
+      undefined,
+      undefined,
+      controller.signal,
+    );
+
+    await expect(running).resolves.toMatchObject({ exitCode: 1 });
+  });
 });

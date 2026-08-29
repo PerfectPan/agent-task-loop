@@ -44,11 +44,6 @@ export class TaskStartService {
       throw new TaskManagerInputError('task-not-found', `Task ${input.taskId} not found`);
     }
 
-    if (input.targetAgent) {
-      task.targetAgent = input.targetAgent;
-      task.currentOwner = input.targetAgent;
-    }
-
     const key = taskOrchestrationKey(task.taskId);
     try {
       await this.orchestration.open({
@@ -69,24 +64,34 @@ export class TaskStartService {
       throw error;
     }
 
+    if (input.targetAgent) {
+      task.targetAgent = input.targetAgent;
+      task.currentOwner = input.targetAgent;
+    }
+
     const heartbeatMs = this.dependencies.occupancyHeartbeatMs ?? 15_000;
+    const controller = new AbortController();
+    let leaseError: unknown;
     const timer = setInterval(() => {
       try {
         this.orchestration.heartbeat(key);
-      } catch {
-        // Holder lost the lock; release still runs in finally.
+      } catch (error) {
+        leaseError ??= error;
+        controller.abort(error);
       }
     }, heartbeatMs);
     timer.unref();
     try {
-      return await this.runOccupied(input, task);
+      const result = await this.runOccupied(input, task, controller.signal);
+      if (leaseError) throw leaseError;
+      return result;
     } finally {
       clearInterval(timer);
       this.orchestration.release(key);
     }
   }
 
-  private async runOccupied(input: StartTaskInput, task: TaskRecord): Promise<TaskRecord> {
+  private async runOccupied(input: StartTaskInput, task: TaskRecord, signal: AbortSignal): Promise<TaskRecord> {
     const inspection = await this.dependencies.livenessService.inspect(task);
     if (inspection.state === 'active') {
       throw new Error(`Task ${task.taskId} already has an active ${inspection.mode} runner`);
@@ -101,6 +106,7 @@ export class TaskStartService {
           round: inspection.round ?? task.reviewRound ?? 1,
           workspacePath: task.workspacePath ?? '',
           resultSummary: task.resultSummary,
+          signal,
         });
       } else {
         await this.dependencies.runner.run({
@@ -108,6 +114,7 @@ export class TaskStartService {
           maxRounds,
           promptOverride: inspection.promptOverride,
           startRound: inspection.round,
+          signal,
         });
       }
       return task;
@@ -126,6 +133,7 @@ export class TaskStartService {
           acceptanceFeedback: task.acceptanceFeedback,
         }),
       } : {}),
+      signal,
     });
     return task;
   }

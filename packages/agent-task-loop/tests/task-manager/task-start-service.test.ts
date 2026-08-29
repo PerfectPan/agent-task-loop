@@ -41,7 +41,11 @@ describe('TaskStartService', () => {
     const result = await service.startTask({ taskId: 'TASK-20', maxRounds: 4, targetAgent: 'claude' });
 
     expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith({ task: existingTask, maxRounds: 4 });
+    expect(run).toHaveBeenCalledWith({
+      task: existingTask,
+      maxRounds: 4,
+      signal: expect.any(AbortSignal),
+    });
     expect(existingTask).toMatchObject({ targetAgent: 'claude', currentOwner: 'claude' });
     expect(result).toBe(existingTask);
     expect(orchestration.open).toHaveBeenCalledWith({
@@ -72,6 +76,7 @@ describe('TaskStartService', () => {
   });
 
   it('refuses to start when orchestration occupy loses', async () => {
+    const existingTask = task({ taskId: 'TASK-25' });
     const run = vi.fn();
     const inspect = vi.fn();
     const orchestration = {
@@ -80,15 +85,19 @@ describe('TaskStartService', () => {
       release: vi.fn(),
     };
     const service = new TaskStartService({
-      taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-25' })) },
+      taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect },
       orchestration,
     });
 
-    await expect(service.startTask({ taskId: 'TASK-25', maxRounds: 5 })).rejects.toThrow(
+    await expect(
+      service.startTask({ taskId: 'TASK-25', maxRounds: 5, targetAgent: 'claude' }),
+    ).rejects.toThrow(
       'Task TASK-25 already has an active orchestration (pid 99)',
     );
+    expect(existingTask.targetAgent).toBe('codex');
+    expect(existingTask.currentOwner).toBeUndefined();
     expect(run).not.toHaveBeenCalled();
     expect(inspect).not.toHaveBeenCalled();
     expect(orchestration.release).not.toHaveBeenCalled();
@@ -116,6 +125,33 @@ describe('TaskStartService', () => {
     finish();
     await started;
     expect(orchestration.release).toHaveBeenCalledWith('task:TASK-27');
+  });
+
+  it('aborts the review loop and surfaces a lost occupancy lease', async () => {
+    const leaseError = new OrchestrationConflictError('task:TASK-28', 99);
+    const orchestration = mockOrchestration();
+    orchestration.heartbeat.mockImplementation(() => {
+      throw leaseError;
+    });
+    let runnerSignal: AbortSignal | undefined;
+    const run = vi.fn().mockImplementation(
+      (input: { signal?: AbortSignal }) =>
+        new Promise<void>((_resolve, reject) => {
+          runnerSignal = input.signal;
+          input.signal?.addEventListener('abort', () => reject(input.signal?.reason), { once: true });
+        }),
+    );
+    const service = new TaskStartService({
+      taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-28' })) },
+      runner: { run, resumeReview: vi.fn() },
+      livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
+      orchestration,
+      occupancyHeartbeatMs: 5,
+    });
+
+    await expect(service.startTask({ taskId: 'TASK-28', maxRounds: 4 })).rejects.toBe(leaseError);
+    expect(runnerSignal?.aborted).toBe(true);
+    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-28');
   });
 
   it('releases occupancy when the review-loop runner throws', async () => {
@@ -160,6 +196,7 @@ describe('TaskStartService', () => {
       round: 3,
       workspacePath: '/workspace/task-22',
       resultSummary: 'Implementation ready',
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -187,6 +224,7 @@ describe('TaskStartService', () => {
       maxRounds: 5,
       promptOverride: 'Recover from the last durable state.',
       startRound: 2,
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -214,6 +252,7 @@ describe('TaskStartService', () => {
       maxRounds: 6,
       startRound: 3,
       promptOverride: expect.stringContaining('Keep the public DTO narrow'),
+      signal: expect.any(AbortSignal),
     });
   });
 });

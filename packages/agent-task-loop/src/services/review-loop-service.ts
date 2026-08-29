@@ -39,6 +39,7 @@ export class ReviewLoopService {
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
       maxRounds: number;
+      signal?: AbortSignal;
       formatFailure?: FailureMessageFormatter;
     },
   ) {}
@@ -48,6 +49,7 @@ export class ReviewLoopService {
     let promptOverride = input.promptOverride;
 
     while (round <= this.deps.maxRounds) {
+      this.deps.signal?.throwIfAborted();
       const execution = await this.deps.executeRound({
         task: input.task,
         promptOverride,
@@ -64,6 +66,7 @@ export class ReviewLoopService {
         input.task.executionSessionName = execution.sessionName;
       }
       if (execution.status === '已失败') {
+        this.deps.signal?.throwIfAborted();
         return;
       }
 
@@ -98,6 +101,7 @@ export class ReviewLoopService {
     workspacePath: string;
     resultSummary?: string;
   }): Promise<void> {
+    this.deps.signal?.throwIfAborted();
     const reviewOutcome = await this.runReviewRound({
       task: input.task,
       round: input.round,
@@ -122,6 +126,7 @@ export class ReviewLoopService {
     resultSummary?: string;
     workspacePath: string;
   }): Promise<{ done: boolean; nextPromptOverride?: string }> {
+    this.deps.signal?.throwIfAborted();
     const reviewerAgent = 'codex' as TargetAgent;
     let review: Awaited<ReturnType<typeof this.deps.review>>;
     try {

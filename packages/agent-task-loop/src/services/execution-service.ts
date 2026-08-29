@@ -37,7 +37,7 @@ export class ExecutionService {
     },
   ) {}
 
-  async executeTask(task: TaskRecord, workspacePath: string, round = 1): Promise<{
+  async executeTask(task: TaskRecord, workspacePath: string, round = 1, signal?: AbortSignal): Promise<{
     runId: string;
     logPath: string;
     workspacePath: string;
@@ -106,6 +106,7 @@ export class ExecutionService {
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
       });
+      signal?.throwIfAborted();
     };
     const writeSession = async (payload: { sessionId?: string; sessionName?: string }) => {
       const nextSessionId = payload.sessionId ?? latestSessionId;
@@ -178,6 +179,7 @@ export class ExecutionService {
         args: this.deps.adapterCommand.args,
         env: this.deps.adapterCommand.env,
         sessionName,
+        signal,
         onSpawn: async payload => {
           latestRunnerPid = payload.pid;
           await persistHeartbeat(true);
@@ -189,6 +191,7 @@ export class ExecutionService {
         onProgress: writeProgress,
         onSession: writeSession,
       });
+      signal?.throwIfAborted();
 
       if (result.status === 'success') {
         await this.deps.taskService.updateReviewState(task, {
@@ -245,6 +248,7 @@ export class ExecutionService {
         status: '已失败',
       };
     } catch (error) {
+      signal?.throwIfAborted();
       const message = formatFailureMessage(
         this.deps.formatFailure,
         error,

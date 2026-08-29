@@ -53,8 +53,9 @@ export class ReviewLoopRunner {
     maxRounds: number;
     promptOverride?: string;
     startRound?: number;
+    signal?: AbortSignal;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, input.signal);
     await loop.start({
       task: input.task,
       promptOverride: input.promptOverride,
@@ -68,8 +69,9 @@ export class ReviewLoopRunner {
     round: number;
     workspacePath: string;
     resultSummary?: string;
+    signal?: AbortSignal;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, input.signal);
     await loop.resumeFromReview({
       task: input.task,
       round: input.round,
@@ -78,7 +80,7 @@ export class ReviewLoopRunner {
     });
   }
 
-  private createLoop(maxRounds: number): ReviewLoopService {
+  private createLoop(maxRounds: number, signal?: AbortSignal): ReviewLoopService {
     const executeRound = async (roundInput: { task: TaskRecord; promptOverride?: string; round: number }) => {
       const agent = roundInput.task.targetAgent as TargetAgent;
       const { project, repositoryKey, repository } = resolveTaskExecutionContext(this.deps.config, roundInput.task);
@@ -111,7 +113,12 @@ export class ReviewLoopRunner {
         onHeartbeatError: this.deps.onBackgroundError,
         formatFailure: this.deps.formatFailure,
       });
-      const result = await executionService.executeTask(roundInput.task, workspacePath, roundInput.round);
+      const result = await executionService.executeTask(
+        roundInput.task,
+        workspacePath,
+        roundInput.round,
+        signal,
+      );
 
       return {
         resultSummary: result.resultSummary,
@@ -183,6 +190,7 @@ export class ReviewLoopRunner {
         return reviewService.review({
           ...input,
           reviewerAgent,
+          signal,
           onSpawn: async payload => {
             latestRunnerPid = payload.pid;
             await persistHeartbeat(true);
@@ -206,6 +214,7 @@ export class ReviewLoopRunner {
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
       maxRounds,
+      signal,
       formatFailure: this.deps.formatFailure,
     });
   }

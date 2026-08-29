@@ -70,13 +70,14 @@ The kernel owns **one occupied run**:
 - `allow(key, seat)`
 - `appendFact` / `sendMail`
 - `spawn(key, seat, { cwd })` — only if `allowed === seat`
+- `fence(key, mutation, signal?)` — serialize an external write under the current holder token
 - `heartbeat` / `release` / `listRuns`
 
 Conflict: `orchestration-conflict`. Stale lock (dead pid or heartbeat older than `staleAfterMs`) may be taken over.
 
 The kernel does not import `@rivus/agent-task-loop`. It does not interpret `context.ref` (a task id is opaque). Template `classic-delivery` (`impl`, `review`) is registered by ATL, not by the kernel.
 
-**PR 96** is the first ATL wiring, not a second kernel: `TaskStartService.startTask` calls `open('task:' + taskId)` before liveness / ReviewLoop, and `release` in `finally`. Two concurrent starts: one wins `open`; the other never claims the Task Backend.
+**PR 96** is the first ATL wiring, not a second kernel: `TaskStartService.startTask` calls `open('task:' + taskId)` before liveness / ReviewLoop, and `release` in `finally`. Two concurrent starts: one wins `open`; the other never claims the Task Backend. Every Task lifecycle write in an occupied run enters `fence` first. A stale holder cannot begin a write; when a holder is replaced during an already-started write, the successor waits for that write before starting its own, so a predecessor cannot overwrite newer Task state with a late completion.
 
 Later: ReviewLoop may call `spawn` instead of `execa`. Occupancy still must not become Room.
 
@@ -138,6 +139,7 @@ RFC 0009 stands: four tools, redacted DTOs, no ambient Shell/fs/Endpoint/Memory.
 ATL:
 
 - **May** call occupancy `open` / `release` around start (PR 96).
+- **Must** route Task lifecycle writes from `start`, `run`, and rejection rework through the occupancy mutation fence.
 - **Must not** import Room types into TaskRecord, ReviewLoop status, or plugin DTOs.
 - **Must not** treat occupancy facts/mail as the Feishu/group world.
 

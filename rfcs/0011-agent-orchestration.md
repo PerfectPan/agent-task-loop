@@ -52,6 +52,7 @@ Callers use `createOrchestration()`; tests may use `createMemoryOrchestration()`
 - `allow(key, seat)`
 - `appendFact` / `sendMail`
 - `spawn(key, seat, { cwd })` — only if `allowed === seat`
+- `fence(key, mutation, signal?)` — serialize an external write under the current holder token
 - `heartbeat` / `release` / `listRuns`
 
 Conflict: `OrchestrationConflictError` code `orchestration-conflict`.
@@ -63,6 +64,12 @@ Stale lock (dead pid or heartbeat older than `staleAfterMs`) may be taken over.
 `TaskStartService.startTask` calls `open('task:' + taskId)` before the existing
 liveness / ReviewLoop path, and `release` in `finally`. Two concurrent starts:
 one wins `open`, the other never claims the task backend.
+
+Task lifecycle writes run inside `fence`. The store validates the stable
+`(key, holderPid, holderId)` token after acquiring a per-run mutation guard. A
+stale holder cannot enter; a successor holder waits behind an already-started
+predecessor write before writing newer state. Heartbeat timestamps are excluded
+from the token because they may advance without changing ownership.
 
 Template `classic-delivery` (`impl`, `review`) is registered by ATL, not by the
 kernel.

@@ -162,6 +162,7 @@ export const claudeAdapter: AgentAdapter = {
           newlineIndex = buffer.indexOf('\n');
         }
       },
+      input.signal,
     );
 
     if (result.exitCode !== 0) {

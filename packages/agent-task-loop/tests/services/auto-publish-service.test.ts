@@ -131,4 +131,52 @@ describe('AutoPublishService', () => {
       ),
     ).rejects.toThrow('refusing to use default branch master as task publish branch');
   });
+
+  it('propagates the occupancy cancellation signal through the publish pipeline', async () => {
+    const controller = new AbortController();
+    const load = vi.fn().mockResolvedValue({
+      branch: 'task/task-303-claude',
+      headCommit: 'abc123',
+      isDirty: false,
+      diffStat: '',
+      diff: '',
+      status: '',
+      workspacePath: '/tmp/worktree',
+    });
+    const pushBranch = vi.fn();
+    const getRemoteBranchHead = vi.fn().mockResolvedValue('abc123');
+    const service = new AutoPublishService({
+      config,
+      publishContextService: { load } as never,
+      gitPublishService: {
+        commitAll: vi.fn(),
+        pushBranch,
+        getRemoteBranchHead,
+      } as never,
+      generateCommitMessage: vi.fn(),
+    });
+
+    await service.publish(
+      {
+        taskId: 'TASK-303',
+        title: 'signal propagation',
+        description: 'desc',
+        project: 'demo',
+        repository: 'demo',
+        targetAgent: 'claude',
+        priority: 1,
+        status: '待复核',
+      } as never,
+      '/tmp/worktree',
+      controller.signal,
+    );
+
+    expect(load).toHaveBeenCalledWith('/tmp/worktree', controller.signal);
+    expect(pushBranch).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: controller.signal }),
+    );
+    expect(getRemoteBranchHead).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
 });

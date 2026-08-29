@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createMemoryOrchestration,
   createOrchestration,
@@ -309,6 +309,87 @@ describe('Orchestration open / occupy', () => {
     instance.release('a');
     await instance.spawn('a::b', 'impl', { cwd: dir });
     expect(spawnedEnv?.TOKEN).toBe('keep');
+  });
+
+  it('serializes a successor holder behind an in-flight fenced write', async () => {
+    let now = 1_000;
+    let firstHolderAlive = true;
+    const dir = tempDir();
+    dirs.push(dir);
+    const a = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-a',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => firstHolderAlive,
+    });
+    const b = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-b',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => true,
+    });
+    classic(a);
+    classic(b);
+    await a.open({ key: 'task:T-1', template: 'classic-delivery' });
+
+    const order: string[] = [];
+    let finishOld: () => void = () => undefined;
+    const oldWrite = a.fence('task:T-1', async () => {
+      order.push('old:start');
+      await new Promise<void>(resolve => {
+        finishOld = resolve;
+      });
+      order.push('old:end');
+    });
+    await vi.waitFor(() => expect(order).toEqual(['old:start']));
+
+    now = 10_000;
+    firstHolderAlive = false;
+    await b.open({ key: 'task:T-1', template: 'classic-delivery' });
+    const newWrite = b.fence('task:T-1', async () => {
+      order.push('new');
+    });
+    await new Promise(resolve => setTimeout(resolve, 15));
+    expect(order).toEqual(['old:start']);
+
+    finishOld();
+    await Promise.all([oldWrite, newWrite]);
+    expect(order).toEqual(['old:start', 'old:end', 'new']);
+  });
+
+  it('rejects a stale holder before a fenced write starts', async () => {
+    let now = 1_000;
+    let firstHolderAlive = true;
+    const dir = tempDir();
+    dirs.push(dir);
+    const a = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-a',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => firstHolderAlive,
+    });
+    const b = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-b',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => true,
+    });
+    classic(a);
+    classic(b);
+    await a.open({ key: 'task:T-1', template: 'classic-delivery' });
+    now = 10_000;
+    firstHolderAlive = false;
+    await b.open({ key: 'task:T-1', template: 'classic-delivery' });
+    const mutation = vi.fn();
+
+    await expect(a.fence('task:T-1', mutation)).rejects.toBeInstanceOf(
+      OrchestrationConflictError,
+    );
+    expect(mutation).not.toHaveBeenCalled();
   });
 
   it('redacts commands from observe', async () => {

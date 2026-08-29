@@ -21,8 +21,14 @@ export class AutoPublishService {
     },
   ) {}
 
-  async publish(task: TaskRecord, workspacePath: string): Promise<{ branch: string; commit: string }> {
-    let context = await this.deps.publishContextService.load(workspacePath);
+  async publish(
+    task: TaskRecord,
+    workspacePath: string,
+    signal?: AbortSignal,
+  ): Promise<{ branch: string; commit: string }> {
+    signal?.throwIfAborted();
+    let context = await this.deps.publishContextService.load(workspacePath, signal);
+    signal?.throwIfAborted();
     const { repository } = resolveTaskExecutionContext(this.deps.config, task);
 
     if (repository.defaultBranch === context.branch) {
@@ -30,6 +36,7 @@ export class AutoPublishService {
     }
 
     if (context.isDirty) {
+      signal?.throwIfAborted();
       const message = await this.deps.generateCommitMessage({
         taskId: task.taskId,
         taskTitle: task.title,
@@ -38,23 +45,31 @@ export class AutoPublishService {
         diffStat: context.diffStat,
         diff: context.diff,
       });
+      signal?.throwIfAborted();
 
       await this.deps.gitPublishService.commitAll({
         workspacePath,
         message,
+        signal,
       });
-      context = await this.deps.publishContextService.load(workspacePath);
+      signal?.throwIfAborted();
+      context = await this.deps.publishContextService.load(workspacePath, signal);
+      signal?.throwIfAborted();
     }
 
     await this.deps.gitPublishService.pushBranch({
       workspacePath,
       branch: context.branch,
+      signal,
     });
+    signal?.throwIfAborted();
 
     const remoteHead = await this.deps.gitPublishService.getRemoteBranchHead({
       workspacePath,
       branch: context.branch,
+      signal,
     });
+    signal?.throwIfAborted();
 
     if (!remoteHead || remoteHead !== context.headCommit) {
       throw new Error(`push verification failed for branch ${context.branch}`);

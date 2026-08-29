@@ -10,7 +10,13 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import type { LockRecord, OrchestrationStore } from '../contracts/ports';
+import { setTimeout as delay } from 'node:timers/promises';
+import type {
+  FencedResult,
+  FencingToken,
+  LockRecord,
+  OrchestrationStore,
+} from '../contracts/ports';
 import type { RunSnapshot } from '../contracts/types';
 import { sameLock } from '../domain/lock';
 import { lockPath, runDir, statePath } from './node-paths';
@@ -93,6 +99,32 @@ export class FileOrchestrationStore implements OrchestrationStore {
     return keys;
   }
 
+  async runFenced<T>(
+    token: FencingToken,
+    operation: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<FencedResult<T>> {
+    const guard = `${lockPath(this.baseDir, token.key)}.mutation-guard`;
+    mkdirSync(path.dirname(guard), { recursive: true });
+    const owner: GuardOwner = {
+      pid: process.pid,
+      id: randomBytes(16).toString('hex'),
+    };
+    while (!tryAcquireGuard(guard, owner)) {
+      signal?.throwIfAborted();
+      await delay(5, undefined, signal ? { signal } : undefined);
+    }
+    try {
+      const current = readJson<LockRecord>(lockPath(this.baseDir, token.key));
+      if (!current || !sameHolder(current, token)) {
+        return { executed: false };
+      }
+      return { executed: true, value: await operation() };
+    } finally {
+      releaseGuard(guard, owner);
+    }
+  }
+
   private withLockGuard(key: string, operation: () => boolean): boolean {
     const guard = `${lockPath(this.baseDir, key)}.guard`;
     mkdirSync(path.dirname(guard), { recursive: true });
@@ -107,6 +139,12 @@ export class FileOrchestrationStore implements OrchestrationStore {
       releaseGuard(guard, owner);
     }
   }
+}
+
+function sameHolder(current: LockRecord, token: FencingToken): boolean {
+  return current.key === token.key &&
+    current.holderPid === token.holderPid &&
+    current.holderId === token.holderId;
 }
 
 export function removeRunDir(baseDir: string, key: string): void {

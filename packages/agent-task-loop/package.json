@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@rivus/agent": "0.1.1",
+    "@rivus/agent-orchestration": "workspace:*",
     "@rivus/agent-sessions": "workspace:*",
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",

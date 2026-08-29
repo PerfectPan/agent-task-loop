@@ -19,6 +19,7 @@ export interface AgentAdapter {
     args: string[];
     env: Record<string, string>;
     sessionName?: string;
+    signal?: AbortSignal;
     onSpawn?: (payload: { pid?: number }) => void;
     onHeartbeat?: () => void;
     onOutput?: (chunk: string) => void;
@@ -35,12 +36,14 @@ export async function runAgentCommand(
   onSpawn?: (payload: { pid?: number }) => void,
   onHeartbeat?: () => void,
   onOutput?: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const subprocess = execa(command, args, {
     cwd,
     env: { ...process.env, ...env },
     reject: false,
     all: true,
+    cancelSignal: signal,
     stdin: 'ignore',
   });
   onSpawn?.({ pid: subprocess.pid });

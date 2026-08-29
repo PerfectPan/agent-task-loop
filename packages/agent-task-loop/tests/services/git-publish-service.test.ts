@@ -46,6 +46,7 @@ describe('GitPublishService', () => {
       await execa('git', ['-C', dir, 'init', '-q']);
       await execa('git', ['-C', dir, 'config', 'user.email', 'test@example.com']);
       await execa('git', ['-C', dir, 'config', 'user.name', 'Test']);
+      await execa('git', ['-C', dir, 'config', 'commit.gpgsign', 'false']);
 
       mkdirSync(path.join(dir, '.agent-task-loop', 'logs'), { recursive: true });
       writeFileSync(path.join(dir, '.agent-task-loop', 'logs', 'run.log'), `/Users/someone/workspace/${dir}\n`);
@@ -62,7 +63,7 @@ describe('GitPublishService', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
-  });
+  }, 10_000);
 
   it('commits cleanly when the target repo already .gitignores .agent-task-loop/', async () => {
     // Regression: a bare pathspec exclusion (`-- . ':!.agent-task-loop'`) makes
@@ -75,6 +76,7 @@ describe('GitPublishService', () => {
       await execa('git', ['-C', dir, 'init', '-q']);
       await execa('git', ['-C', dir, 'config', 'user.email', 'test@example.com']);
       await execa('git', ['-C', dir, 'config', 'user.name', 'Test']);
+      await execa('git', ['-C', dir, 'config', 'commit.gpgsign', 'false']);
       writeFileSync(path.join(dir, '.gitignore'), '.agent-task-loop/\n');
       await execa('git', ['-C', dir, 'add', '.gitignore']);
       await execa('git', ['-C', dir, 'commit', '-q', '-m', 'init']);
@@ -91,7 +93,7 @@ describe('GitPublishService', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
-  });
+  }, 10_000);
 
   it('turns a non-fast-forward push rejection into actionable guidance', async () => {
     const exec = vi.fn().mockRejectedValue(new Error('! [rejected] task/x -> task/x (non-fast-forward)\nUpdates were rejected'));

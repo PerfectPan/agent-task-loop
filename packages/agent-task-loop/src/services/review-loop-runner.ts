@@ -12,7 +12,7 @@ import { PublishContextService } from './publish-context-service';
 import { ReviewLoopService } from './review-loop-service';
 import { ReviewService } from './review-service';
 import { resolveTaskExecutionContext } from './task-context-service';
-import type { TaskService } from './task-service';
+import type { TaskMutationFence, TaskService } from './task-service';
 import { ensureWorkspace } from './workspace-service';
 import type { TargetAgent, TaskRecord } from '../types/task';
 import type { FailureMessageFormatter } from './failure-message';
@@ -53,8 +53,10 @@ export class ReviewLoopRunner {
     maxRounds: number;
     promptOverride?: string;
     startRound?: number;
+    signal?: AbortSignal;
+    mutationFence: TaskMutationFence;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, input.signal, input.mutationFence);
     await loop.start({
       task: input.task,
       promptOverride: input.promptOverride,
@@ -68,8 +70,10 @@ export class ReviewLoopRunner {
     round: number;
     workspacePath: string;
     resultSummary?: string;
+    signal?: AbortSignal;
+    mutationFence: TaskMutationFence;
   }): Promise<void> {
-    const loop = this.createLoop(input.maxRounds);
+    const loop = this.createLoop(input.maxRounds, input.signal, input.mutationFence);
     await loop.resumeFromReview({
       task: input.task,
       round: input.round,
@@ -78,7 +82,11 @@ export class ReviewLoopRunner {
     });
   }
 
-  private createLoop(maxRounds: number): ReviewLoopService {
+  private createLoop(
+    maxRounds: number,
+    signal: AbortSignal | undefined,
+    mutationFence: TaskMutationFence,
+  ): ReviewLoopService {
     const executeRound = async (roundInput: { task: TaskRecord; promptOverride?: string; round: number }) => {
       const agent = roundInput.task.targetAgent as TargetAgent;
       const { project, repositoryKey, repository } = resolveTaskExecutionContext(this.deps.config, roundInput.task);
@@ -91,6 +99,7 @@ export class ReviewLoopRunner {
         repositoryPath: repository.localPath,
         defaultBranch: repository.defaultBranch,
       });
+      signal?.throwIfAborted();
       const prompt = buildTaskPrompt({
         task: roundInput.task,
         projectName: project.name,
@@ -110,8 +119,14 @@ export class ReviewLoopRunner {
         },
         onHeartbeatError: this.deps.onBackgroundError,
         formatFailure: this.deps.formatFailure,
+        mutationFence,
       });
-      const result = await executionService.executeTask(roundInput.task, workspacePath, roundInput.round);
+      const result = await executionService.executeTask(
+        roundInput.task,
+        workspacePath,
+        roundInput.round,
+        signal,
+      );
 
       return {
         resultSummary: result.resultSummary,
@@ -142,6 +157,7 @@ export class ReviewLoopRunner {
         let latestHeartbeatAt = new Date().toISOString();
         let lastHeartbeatPersistedAt = 0;
         const persistHeartbeat = async (force = false) => {
+          signal?.throwIfAborted();
           const now = Date.now();
           if (!force && now - lastHeartbeatPersistedAt < 15_000) {
             return;
@@ -150,7 +166,7 @@ export class ReviewLoopRunner {
           latestHeartbeatAt = new Date(now).toISOString();
           lastHeartbeatPersistedAt = now;
           try {
-            await this.deps.taskService.updateRunnerState(
+            await mutationFence.run(() => this.deps.taskService.updateRunnerState(
               input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
               {
                 runnerPid: latestRunnerPid,
@@ -159,8 +175,9 @@ export class ReviewLoopRunner {
                 runnerRound: input.reviewRound,
                 lastHeartbeatAt: latestHeartbeatAt,
               },
-            );
+            ));
           } catch (error) {
+            signal?.throwIfAborted();
             if (this.deps.onBackgroundError) {
               this.deps.onBackgroundError(error);
             } else {
@@ -168,9 +185,11 @@ export class ReviewLoopRunner {
               console.warn(`[agent-task-loop] review heartbeat update failed: ${message}`);
             }
           }
+          signal?.throwIfAborted();
         };
 
-        await this.deps.taskService.updateRunnerState(
+        signal?.throwIfAborted();
+        await mutationFence.run(() => this.deps.taskService.updateRunnerState(
           input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
           {
             runnerKind: 'review',
@@ -178,11 +197,13 @@ export class ReviewLoopRunner {
             runnerRound: input.reviewRound,
             lastHeartbeatAt: latestHeartbeatAt,
           },
-        );
+        ));
+        signal?.throwIfAborted();
 
         return reviewService.review({
           ...input,
           reviewerAgent,
+          signal,
           onSpawn: async payload => {
             latestRunnerPid = payload.pid;
             await persistHeartbeat(true);
@@ -193,19 +214,25 @@ export class ReviewLoopRunner {
         });
       },
       isTaskDeliverable: async deliveryInput => {
+        signal?.throwIfAborted();
         const { repository } = resolveTaskExecutionContext(this.deps.config, deliveryInput.task);
         const check = await deliveryCheckService.check({
           workspacePath: deliveryInput.workspacePath,
           baseRef: repository.defaultBranch,
           publishCommit: deliveryInput.task.publishCommit,
           prLink: deliveryInput.task.prLink,
+          signal,
         });
+        signal?.throwIfAborted();
         return check.isDeliverable;
       },
-      publishForAcceptance: autoPublishService.publish.bind(autoPublishService),
+      publishForAcceptance: (task, workspacePath, publishSignal) =>
+        autoPublishService.publish(task, workspacePath, publishSignal),
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
+      mutationFence,
       maxRounds,
+      signal,
       formatFailure: this.deps.formatFailure,
     });
   }

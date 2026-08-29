@@ -18,14 +18,14 @@ function walk(dir: string): string[] {
 }
 
 describe('package boundary', () => {
-  it('keeps domain files free of node: and adapters', () => {
-    const domainRoot = path.join(srcRoot, 'domain');
-    const files = walk(domainRoot);
+  it('keeps domain files free of application, infrastructure, and Node imports', () => {
+    const files = walk(srcRoot).filter(file => file.includes(`${path.sep}domain${path.sep}`));
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       const text = readFileSync(file, 'utf8');
       expect(text, path.basename(file)).not.toContain('node:');
-      expect(text, path.basename(file)).not.toContain('node:fs');
+      expect(text, path.basename(file)).not.toMatch(/from ['"].*application/);
+      expect(text, path.basename(file)).not.toMatch(/from ['"].*infrastructure/);
     }
   });
 

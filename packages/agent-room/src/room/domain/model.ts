@@ -16,6 +16,10 @@ export function roomKey(id: RoomId): string {
   return JSON.stringify([id.tenantId, id.conversationId]);
 }
 
+export function sameRoomId(left: RoomId, right: RoomId): boolean {
+  return left.tenantId === right.tenantId && left.conversationId === right.conversationId;
+}
+
 export type RoomEventKind = 'human' | 'posted' | 'companion' | 'control-plane';
 export type RoomOrigin = 'endpoint' | 'control-plane';
 
@@ -64,37 +68,3 @@ export interface RoomSlice {
   events: RoomEvent[];
   head: RoomSeq;
 }
-
-export interface AgentSessionId {
-  tenantId: TenantId;
-  agentId: AgentId;
-  roomId: RoomId;
-  runtimeGenerationId: RuntimeGenerationId;
-}
-
-export function sessionKey(id: AgentSessionId): string {
-  return JSON.stringify([
-    id.tenantId,
-    id.agentId,
-    id.roomId.tenantId,
-    id.roomId.conversationId,
-    id.runtimeGenerationId,
-  ]);
-}
-
-export interface AgentSession {
-  id: AgentSessionId;
-  seenSeq: RoomSeq;
-  heldUpToSeq?: RoomSeq;
-}
-
-export interface RoomReplyCommand {
-  session: AgentSessionId;
-  body: string;
-  origin?: 'agent' | 'control-plane';
-  ackHeldUpToSeq?: RoomSeq;
-}
-
-export type RoomReplyResult =
-  | { outcome: 'posted'; seq: RoomSeq; event: RoomEvent }
-  | { outcome: 'held'; heldUpToSeq: RoomSeq; newer: RoomEvent[] };

@@ -1,5 +1,6 @@
-import { AgentSessionValidationError } from '../contracts/errors';
-import type { AgentSession, AgentSessionId, RoomSeq } from '../contracts/types';
+import type { RoomSeq } from '../../room/domain/model';
+import type { AgentSession as AgentSessionState, AgentSessionId } from './model';
+import { AgentSessionValidationError } from './errors';
 
 /** Aggregate root for one agent runtime generation's cursor and hold state. */
 export class AgentSessionAggregate {
@@ -7,7 +8,7 @@ export class AgentSessionAggregate {
   private held?: RoomSeq;
   private readonly sessionId: AgentSessionId;
 
-  constructor(id: AgentSessionId, state?: Omit<AgentSession, 'id'>) {
+  constructor(id: AgentSessionId, state?: Omit<AgentSessionState, 'id'>) {
     validateSession(id, state);
     this.sessionId = cloneSessionId(id);
     this.seen = state?.seenSeq ?? 0;
@@ -38,6 +39,7 @@ export class AgentSessionAggregate {
     assertSessionSeq(upToSeq, 'hold acknowledgement sequence');
     if (this.held !== upToSeq) return false;
     this.advanceSeen(upToSeq);
+    this.held = undefined;
     return true;
   }
 
@@ -47,7 +49,7 @@ export class AgentSessionAggregate {
     this.held = undefined;
   }
 
-  snapshot(): AgentSession {
+  snapshot(): AgentSessionState {
     return {
       id: cloneSessionId(this.sessionId),
       seenSeq: this.seen,
@@ -62,7 +64,7 @@ function assertSessionSeq(seq: RoomSeq, label: string): void {
   }
 }
 
-function validateSession(id: AgentSessionId, state?: Omit<AgentSession, 'id'>): void {
+function validateSession(id: AgentSessionId, state?: Omit<AgentSessionState, 'id'>): void {
   if (
     !id.tenantId.trim() ||
     !id.agentId.trim() ||
@@ -85,5 +87,10 @@ function validateSession(id: AgentSessionId, state?: Omit<AgentSession, 'id'>): 
 }
 
 function cloneSessionId(id: AgentSessionId): AgentSessionId {
-  return { ...id, roomId: { ...id.roomId } };
+  return {
+    tenantId: id.tenantId,
+    agentId: id.agentId,
+    roomId: { ...id.roomId },
+    runtimeGenerationId: id.runtimeGenerationId,
+  };
 }

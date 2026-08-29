@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MemoryRoomStreamStore, createMemoryRoomStreamStore } from '../src/index';
+import { MemoryRoomStreamStore, createMemoryRoomStreamStore, sessionKey } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 const botA = {
@@ -46,6 +46,27 @@ describe('replyInSerial HELD', () => {
     expect(posted).toMatchObject({ outcome: 'posted', seq: 2 });
   });
 
+  it('keeps transport idempotency separate from internal event identity', async () => {
+    const store = new MemoryRoomStreamStore();
+    await store.admit({
+      roomId: room,
+      messageId: `posted:${sessionKey(botA)}:2`,
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'same text as an internal naming convention',
+    });
+    const held = await store.replyInSerial({ session: botA, body: 'reply' });
+    expect(held).toMatchObject({ outcome: 'held', heldUpToSeq: 1 });
+
+    const posted = await store.replyInSerial({
+      session: botA,
+      body: 'reply',
+      ackHeldUpToSeq: 1,
+    });
+    expect(posted).toMatchObject({ outcome: 'posted', seq: 2 });
+    expect(store.inspectSession(botA)).toEqual({ id: botA, seenSeq: 2 });
+  });
+
   it('holds when a human post is newer than seen', async () => {
     const store = createMemoryRoomStreamStore();
     await store.admit({
@@ -63,7 +84,7 @@ describe('replyInSerial HELD', () => {
   });
 
   it('does not hold or advance seen for control-plane origin', async () => {
-    const store = createMemoryRoomStreamStore();
+    const store = new MemoryRoomStreamStore();
     await store.admit({
       roomId: room,
       messageId: 'h1',
@@ -83,6 +104,7 @@ describe('replyInSerial HELD', () => {
     const slice = await store.readSlice(room, 0, { maxEvents: 10 });
     expect(slice.events.map(event => event.kind)).toEqual(['human', 'control-plane']);
     expect(slice.head).toBe(2);
+    expect(store.inspectSession(botA)).toBeUndefined();
   });
 
   it('does not deduplicate internal posts against transport ids', async () => {

@@ -8,6 +8,7 @@ function event(overrides: Partial<RoomEvent>): RoomEvent {
     seq: 1,
     roomId: room,
     messageId: 'm1',
+    transportMessageId: 'm1',
     author: { kind: 'human', id: 'alice' },
     kind: 'human',
     body: 'hello',

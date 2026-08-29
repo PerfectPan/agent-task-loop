@@ -1,4 +1,4 @@
-import { RoomValidationError } from '../contracts/errors';
+import { RoomValidationError } from './errors';
 import type {
   AdmitResult,
   AdmitRoomEvent,
@@ -8,16 +8,17 @@ import type {
   RoomSeq,
   RoomSlice,
   SliceBudget,
-} from '../contracts/types';
+} from './model';
+import { sameRoomId } from './model';
 
-/** Aggregate root for one tenant conversation's ordered event stream. */
+/** Aggregate root for one tenant conversation's ordered posted stream. */
 export class Room {
   private readonly events: RoomEvent[];
   private readonly byTransportMessageId: Map<string, RoomEvent>;
   private readonly roomId: RoomId;
 
   constructor(id: RoomId, events: RoomEvent[] = []) {
-    validateState(id, events);
+    validateRoomState(id, events);
     this.roomId = { ...id };
     this.events = events.map(cloneRoomEvent);
     this.byTransportMessageId = new Map(
@@ -36,7 +37,7 @@ export class Room {
   }
 
   admit(input: AdmitRoomEvent, at: string): AdmitResult {
-    if (!sameRoom(input.roomId, this.roomId)) {
+    if (!sameRoomId(input.roomId, this.roomId)) {
       throw new RoomValidationError('admitted event belongs to a different room');
     }
     if (!input.messageId.trim()) {
@@ -46,7 +47,6 @@ export class Room {
     if (existing) {
       return { outcome: 'duplicate', seq: existing.seq, event: cloneRoomEvent(existing) };
     }
-
     const event = this.append(
       {
         messageId: input.messageId,
@@ -59,11 +59,39 @@ export class Room {
       },
       at,
     );
-    return { outcome: 'admitted', seq: event.seq, event: cloneRoomEvent(event) };
+    return { outcome: 'admitted', seq: event.seq, event };
   }
 
   post(input: PostRoomEvent, at: string): RoomEvent {
     return this.append(input, at);
+  }
+
+  private append(
+    input: PostRoomEvent & { transportMessageId?: string },
+    at: string,
+  ): RoomEvent {
+    if (!input.messageId.trim()) {
+      throw new RoomValidationError('room event messageId cannot be blank');
+    }
+    const event: RoomEvent = {
+      seq: this.head + 1,
+      roomId: { ...this.roomId },
+      messageId: input.messageId,
+      ...(input.transportMessageId
+        ? { transportMessageId: input.transportMessageId }
+        : {}),
+      author: { ...input.author },
+      kind: input.kind,
+      body: input.body,
+      origin: input.origin,
+      addressedTo: [...input.addressedTo],
+      at,
+    };
+    this.events.push(event);
+    if (event.transportMessageId) {
+      this.byTransportMessageId.set(event.transportMessageId, event);
+    }
+    return cloneRoomEvent(event);
   }
 
   eventsAfter(seq: RoomSeq, excludingAuthorId?: string): RoomEvent[] {
@@ -98,36 +126,15 @@ export class Room {
   snapshot(): RoomEvent[] {
     return this.events.map(cloneRoomEvent);
   }
-
-  private append(input: PostRoomEvent & { transportMessageId?: string }, at: string): RoomEvent {
-    if (!input.messageId.trim()) {
-      throw new RoomValidationError('room event messageId cannot be blank');
-    }
-    const event: RoomEvent = {
-      seq: this.head + 1,
-      roomId: { ...this.roomId },
-      messageId: input.messageId,
-      ...(input.transportMessageId ? { transportMessageId: input.transportMessageId } : {}),
-      author: { ...input.author },
-      kind: input.kind,
-      body: input.body,
-      origin: input.origin,
-      addressedTo: [...input.addressedTo],
-      at,
-    };
-    this.events.push(event);
-    if (event.transportMessageId) this.byTransportMessageId.set(event.transportMessageId, event);
-    return cloneRoomEvent(event);
-  }
 }
 
-function validateState(id: RoomId, events: RoomEvent[]): void {
+function validateRoomState(id: RoomId, events: RoomEvent[]): void {
   if (!id.tenantId.trim() || !id.conversationId.trim()) {
     throw new RoomValidationError('room identity is incomplete');
   }
   const transportMessageIds = new Set<string>();
   for (const [index, event] of events.entries()) {
-    if (!sameRoom(event.roomId, id)) {
+    if (!sameRoomId(event.roomId, id)) {
       throw new RoomValidationError('restored event belongs to a different room');
     }
     if (event.seq !== index + 1) {
@@ -154,11 +161,7 @@ function assertSeq(seq: RoomSeq, label: string): void {
   }
 }
 
-function sameRoom(left: RoomId, right: RoomId): boolean {
-  return left.tenantId === right.tenantId && left.conversationId === right.conversationId;
-}
-
-function cloneRoomEvent(event: RoomEvent): RoomEvent {
+export function cloneRoomEvent(event: RoomEvent): RoomEvent {
   return {
     ...event,
     roomId: { ...event.roomId },

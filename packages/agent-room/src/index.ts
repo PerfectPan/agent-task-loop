@@ -21,7 +21,7 @@ export type {
 } from './contracts/types';
 export { roomKey, sessionKey } from './contracts/types';
 
-export type { RoomAdmissionStore } from './contracts/store';
+export type { RoomAdmissionStore, RoomStreamStore } from './contracts/store';
 
 export {
   AGENT_SESSION_VALIDATION_CODE,

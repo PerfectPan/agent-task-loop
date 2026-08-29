@@ -1,4 +1,4 @@
-import type { RoomAdmissionStore } from '../contracts/store';
+import type { RoomStreamStore } from '../contracts/store';
 import type {
   AdmitResult,
   AdmitRoomEvent,
@@ -6,7 +6,11 @@ import type {
   AgentSessionId,
   RoomEvent,
   RoomId,
+  RoomReplyCommand,
+  RoomReplyResult,
   RoomSeq,
+  RoomSlice,
+  SliceBudget,
 } from '../contracts/types';
 import { roomKey, sessionKey } from '../contracts/types';
 import { AgentSessionAggregate } from '../domain/agent-session';
@@ -16,7 +20,7 @@ export interface MemoryRoomStreamStoreOptions {
   now?: () => number;
 }
 
-export class MemoryRoomStreamStore implements RoomAdmissionStore {
+export class MemoryRoomStreamStore implements RoomStreamStore {
   private readonly rooms = new Map<string, RoomEvent[]>();
   private readonly sessions = new Map<string, AgentSession>();
   private readonly now: () => number;
@@ -47,10 +51,6 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
     return this.saveSession(session);
   }
 
-  /**
-   * One-shot ack bound to `heldUpToSeq`. A preemptive ack, or an ack for a
-   * different hold watermark, is ignored and returns false.
-   */
   ackHold(id: AgentSessionId, heldUpToSeq: RoomSeq): boolean {
     if (!this.sessions.has(sessionKey(id))) return false;
     const session = this.loadSession(id);
@@ -61,13 +61,66 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
 
   async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
     const room = this.load(input.roomId);
-    const result = room.admit(input, new Date(this.now()).toISOString());
+    const result = room.admit(input, this.isoNow());
     this.rooms.set(roomKey(input.roomId), room.snapshot());
     return result;
   }
 
   async head(roomId: RoomId): Promise<RoomSeq> {
     return this.load(roomId).head;
+  }
+
+  async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
+    const events: RoomEvent[] = [];
+    let chars = 0;
+    for (const event of this.roomEvents(roomId)) {
+      if (event.seq <= afterSeq) continue;
+      if (events.length >= budget.maxEvents) break;
+      if (budget.maxChars !== undefined && chars + event.body.length > budget.maxChars && events.length > 0) {
+        break;
+      }
+      events.push(cloneEvent(event));
+      chars += event.body.length;
+    }
+    return { events, head: await this.head(roomId) };
+  }
+
+  async replyInSerial(input: RoomReplyCommand): Promise<RoomReplyResult> {
+    if (input.origin === 'control-plane') {
+      const event = this.appendEvent(input.session.roomId, {
+        messageId: controlPlaneMessageId(input.session, this.roomEvents(input.session.roomId).length + 1),
+        author: { kind: 'control-plane', id: input.session.agentId },
+        kind: 'control-plane',
+        body: input.body,
+        origin: 'control-plane',
+        addressedTo: [],
+      });
+      return { outcome: 'posted', seq: event.seq, event };
+    }
+
+    if (input.ackHeldUpToSeq !== undefined) this.ackHold(input.session, input.ackHeldUpToSeq);
+    const session = this.loadSession(input.session);
+    const newer = this.roomEvents(input.session.roomId).filter(
+      event => event.seq > session.seenSeq && event.author.id !== input.session.agentId,
+    );
+    if (newer.length > 0) {
+      const heldUpToSeq = newer.at(-1)!.seq;
+      session.hold(heldUpToSeq);
+      this.saveSession(session);
+      return { outcome: 'held', heldUpToSeq, newer: newer.map(cloneEvent) };
+    }
+
+    const event = this.appendEvent(input.session.roomId, {
+      messageId: postedMessageId(input.session, this.roomEvents(input.session.roomId).length + 1),
+      author: { kind: 'agent', id: input.session.agentId },
+      kind: 'posted',
+      body: input.body,
+      origin: 'endpoint',
+      addressedTo: [],
+    });
+    session.recordPost(event.seq);
+    this.saveSession(session);
+    return { outcome: 'posted', seq: event.seq, event };
   }
 
   private load(id: RoomId): Room {
@@ -93,20 +146,31 @@ export class MemoryRoomStreamStore implements RoomAdmissionStore {
     this.sessions.set(sessionKey(snapshot.id), snapshot);
     return cloneSession(snapshot);
   }
+
+  private roomEvents(roomId: RoomId): RoomEvent[] {
+    return this.load(roomId).snapshot();
+  }
+
+  private appendEvent(roomId: RoomId, input: Omit<AdmitRoomEvent, 'roomId'>): RoomEvent {
+    const room = this.load(roomId);
+    const result = room.admit({ ...input, roomId }, this.isoNow());
+    this.rooms.set(roomKey(roomId), room.snapshot());
+    return result.event;
+  }
+
+  private isoNow(): string {
+    return new Date(this.now()).toISOString();
+  }
 }
 
 export function createMemoryRoomStreamStore(
   options: MemoryRoomStreamStoreOptions = {},
-): RoomAdmissionStore {
+): RoomStreamStore {
   return new MemoryRoomStreamStore(options);
 }
+
 function cloneSessionId(id: AgentSessionId): AgentSessionId {
-  return {
-    tenantId: id.tenantId,
-    agentId: id.agentId,
-    roomId: { ...id.roomId },
-    runtimeGenerationId: id.runtimeGenerationId,
-  };
+  return { ...id, roomId: { ...id.roomId } };
 }
 
 function cloneSession(session: AgentSession): AgentSession {
@@ -115,4 +179,21 @@ function cloneSession(session: AgentSession): AgentSession {
     seenSeq: session.seenSeq,
     ...(session.heldUpToSeq === undefined ? {} : { heldUpToSeq: session.heldUpToSeq }),
   };
+}
+
+function cloneEvent(event: RoomEvent): RoomEvent {
+  return {
+    ...event,
+    roomId: { ...event.roomId },
+    author: { ...event.author },
+    addressedTo: [...event.addressedTo],
+  };
+}
+
+function postedMessageId(session: AgentSessionId, seq: RoomSeq): string {
+  return `posted:${sessionKey(session)}:${seq}`;
+}
+
+function controlPlaneMessageId(session: AgentSessionId, seq: RoomSeq): string {
+  return `control:${sessionKey(session)}:${seq}`;
 }

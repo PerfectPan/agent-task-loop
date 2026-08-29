@@ -1,4 +1,9 @@
-import { Orchestration, type OrchestrationOptions, type TemplateSpec } from '@rivus/agent-orchestration';
+import {
+  createOrchestration,
+  type CreateOrchestrationOptions,
+  type Orchestration,
+  type TemplateSpec,
+} from '@rivus/agent-orchestration';
 
 export const CLASSIC_DELIVERY_TEMPLATE: TemplateSpec = {
   id: 'classic-delivery',
@@ -6,8 +11,8 @@ export const CLASSIC_DELIVERY_TEMPLATE: TemplateSpec = {
   allow: { start: 'impl' },
 };
 
-export function createTaskOrchestration(options: OrchestrationOptions = {}): Orchestration {
-  const orchestration = new Orchestration(options);
+export function createTaskOrchestration(options: CreateOrchestrationOptions = {}): Orchestration {
+  const orchestration = createOrchestration(options);
   orchestration.templates.register(CLASSIC_DELIVERY_TEMPLATE);
   return orchestration;
 }

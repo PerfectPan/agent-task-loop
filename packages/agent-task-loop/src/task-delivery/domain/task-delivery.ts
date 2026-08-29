@@ -54,11 +54,12 @@ export class TaskDelivery {
     if (this.state.status !== 'reviewing') {
       throw new TaskDeliveryTransitionError(`cannot record review while task is ${this.state.status}`);
     }
+    const reviewVerdict = requireReviewVerdict(verdict);
     const reviewFindings = requireOutput(findings, 'review findings');
     this.state = {
       ...this.state,
-      status: verdict === 'PASS' ? 'passed' : 'changes-requested',
-      verdict,
+      status: reviewVerdict === 'PASS' ? 'passed' : 'changes-requested',
+      verdict: reviewVerdict,
       findings: reviewFindings,
     };
   }
@@ -103,6 +104,15 @@ function requireOutput(value: string, label: string): string {
   const output = value.trim();
   if (!output) throw new TaskDeliveryValidationError(`${label} is required`);
   return output;
+}
+
+function requireReviewVerdict(value: unknown): TaskReviewVerdict {
+  if (value !== 'PASS' && value !== 'CHANGES_REQUESTED') {
+    throw new TaskDeliveryValidationError(
+      'review verdict must be PASS or CHANGES_REQUESTED',
+    );
+  }
+  return value;
 }
 
 function cloneSnapshot(snapshot: TaskDeliverySnapshot): TaskDeliverySnapshot {

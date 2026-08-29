@@ -154,7 +154,11 @@ export class TaskDeliveryApplication {
   }
 
   private notify(task: TaskDelivery): void {
-    this.options.onUpdate?.({ ...task.snapshot(), ...this.runtimeView(task.snapshot().taskId) });
+    try {
+      this.options.onUpdate?.({ ...task.snapshot(), ...this.runtimeView(task.snapshot().taskId) });
+    } catch {
+      // An observer/read-model projection is never allowed to decide Task success.
+    }
   }
 
   private runtimeView(taskId: string): TaskDeliveryRuntimeView {

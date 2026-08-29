@@ -6,6 +6,7 @@ import {
   TaskDelivery,
   TaskDeliveryApplication,
   TaskDeliveryTransitionError,
+  TaskDeliveryValidationError,
   parseTaskReviewVerdict,
   type TaskDeliveryEvent,
   type TaskDeliveryRuntime,
@@ -31,6 +32,15 @@ describe('TaskDelivery aggregate', () => {
     expect(parseTaskReviewVerdict('VERDICT: PASS\nLooks good')).toBe('PASS');
     expect(parseTaskReviewVerdict('Looks good\nVERDICT: PASS')).toBe('CHANGES_REQUESTED');
     expect(parseTaskReviewVerdict('VERDICT: PASS with caveats')).toBe('CHANGES_REQUESTED');
+  });
+
+  it('rejects an invalid runtime verdict without corrupting aggregate state', () => {
+    const task = TaskDelivery.start({ taskId: 'WEB-INVALID', title: 'Guard verdicts', maxRounds: 1 });
+    task.recordImplementation('answer');
+
+    expect(() => task.recordReview('UNKNOWN' as never, 'review'))
+      .toThrow(TaskDeliveryValidationError);
+    expect(task.snapshot()).toMatchObject({ status: 'reviewing', verdict: undefined });
   });
 });
 
@@ -78,6 +88,20 @@ describe('TaskDeliveryApplication', () => {
 
     await expect(application.start({ taskId: 'WEB-002', title: 'Independent Task', maxRounds: 1 }))
       .resolves.toMatchObject({ status: 'passed', occupied: false });
+  });
+
+  it('does not let a failed update observer change the Task verdict', async () => {
+    const runtime = new FakeRuntime(['answer', 'VERDICT: PASS\nApproved.']);
+    const repository = new MemoryTaskDeliveryRepository();
+    const application = new TaskDeliveryApplication({
+      repository,
+      runtime,
+      onUpdate: () => { throw new Error('read model unavailable'); },
+    });
+
+    await expect(application.start({ taskId: 'WEB-UPDATE', title: 'Observer failure', maxRounds: 1 }))
+      .resolves.toMatchObject({ status: 'passed', occupied: false });
+    expect(repository.get('WEB-UPDATE')).toMatchObject({ status: 'passed', verdict: 'PASS' });
   });
 
   it('acquires occupancy before creating and never overwrites a concurrent aggregate', async () => {

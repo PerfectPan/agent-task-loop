@@ -1,5 +1,13 @@
 # @rivus/agent-task-loop
 
+## 0.11.0
+
+### Minor Changes
+
+- 766b5f3: Start occupies `@rivus/agent-orchestration` (`task:<id>`) before the review loop. A second concurrent start loses with a stable conflict and does not claim the task backend.
+- ed9045a: Expose the Task Delivery bounded context with its aggregate, independent review
+  gate, fenced repository writes, and orchestration-backed local runtime.
+
 ## 0.10.0
 
 ### Minor Changes

@@ -13,7 +13,8 @@ export default defineConfig({
   source: {
     entry: {
       cli: "src/cli.ts",
-      "rivus-plugin": "src/rivus-plugin.ts"
+      "rivus-plugin": "src/rivus-plugin.ts",
+      "task-manager": "src/task-manager/index.ts"
     }
   },
   tools: {

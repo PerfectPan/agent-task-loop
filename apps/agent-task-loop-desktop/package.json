@@ -1,0 +1,31 @@
+{
+  "name": "@rivus/agent-task-loop-desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first desktop console for agent-task-loop (RFC 0010). Loopback HTTP + SSE + Bearer token, Electron shell.",
+  "license": "GPL-3.0-only",
+  "main": "dist/src/electron/main.js",
+  "scripts": {
+    "dev": "tsx src/cli.ts serve",
+    "dev:electron": "tsc -b && cp -r src/ui dist/src/ui && electron dist/src/electron/main.js",
+    "build": "tsc -b && cp -r src/ui dist/src/ui",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@rivus/agent-task-loop": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "electron": "^31.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -29,6 +29,10 @@
     "./rivus-plugin": {
       "types": "./dist/rivus-plugin.d.ts",
       "import": "./dist/rivus-plugin.js"
+    },
+    "./task-manager": {
+      "types": "./dist/task-manager.d.ts",
+      "import": "./dist/task-manager.js"
     }
   },
   "files": [

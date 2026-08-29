@@ -23,9 +23,13 @@ describe('RFC 0009 plugin isolation from Room', () => {
     const packageJson = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
     };
     expect(packageJson.dependencies?.['@rivus/agent-room']).toBeUndefined();
     expect(packageJson.devDependencies?.['@rivus/agent-room']).toBeUndefined();
+    expect(packageJson.peerDependencies?.['@rivus/agent-room']).toBeUndefined();
+    expect(packageJson.optionalDependencies?.['@rivus/agent-room']).toBeUndefined();
   });
 
   it('does not import Room domain types into Task Manager or the Rivus plugin', () => {

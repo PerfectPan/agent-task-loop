@@ -19,33 +19,46 @@ export class FileOrchestrationStore implements OrchestrationStore {
   constructor(private readonly baseDir: string) {}
 
   tryCreateLock(key: string, record: LockRecord): boolean {
-    const file = lockPath(this.baseDir, key);
-    mkdirSync(path.dirname(file), { recursive: true });
-    try {
-      writeFileSync(file, JSON.stringify(record), { encoding: 'utf8', flag: 'wx' });
+    return this.withLockGuard(key, () => {
+      const file = lockPath(this.baseDir, key);
+      if (existsSync(file)) return false;
+      writeJsonAtomically(file, record);
       return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        return false;
-      }
-      throw error;
-    }
+    });
   }
 
   tryReplaceLock(key: string, expected: LockRecord, next: LockRecord): boolean {
-    const current = this.readLock(key);
-    if (!current || !sameLock(current, expected)) {
-      return false;
-    }
-    try {
-      unlinkSync(lockPath(this.baseDir, key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    return this.withLockGuard(key, () => {
+      const file = lockPath(this.baseDir, key);
+      const current = readJson<LockRecord>(file);
+      if (!current || !sameLock(current, expected) || next.key !== key) return false;
+      writeJsonAtomically(file, next);
+      return true;
+    });
+  }
+
+  tryCommitRun(expected: LockRecord, next: LockRecord, snapshot: RunSnapshot): boolean {
+    return this.withLockGuard(expected.key, () => {
+      const file = lockPath(this.baseDir, expected.key);
+      const current = readJson<LockRecord>(file);
+      if (!current || !sameLock(current, expected) || next.key !== expected.key || snapshot.key !== expected.key) {
         return false;
       }
-      throw error;
-    }
-    return this.tryCreateLock(key, next);
+      writeJsonAtomically(statePath(this.baseDir, snapshot.key), snapshot);
+      writeJsonAtomically(file, next);
+      return true;
+    });
+  }
+
+  tryReleaseRun(expected: LockRecord, snapshot: RunSnapshot): boolean {
+    return this.withLockGuard(expected.key, () => {
+      const file = lockPath(this.baseDir, expected.key);
+      const current = readJson<LockRecord>(file);
+      if (!current || !sameLock(current, expected) || snapshot.key !== expected.key) return false;
+      writeJsonAtomically(statePath(this.baseDir, snapshot.key), snapshot);
+      unlinkSync(file);
+      return true;
+    });
   }
 
   lockExists(key: string): boolean {
@@ -56,30 +69,8 @@ export class FileOrchestrationStore implements OrchestrationStore {
     return readJson(lockPath(this.baseDir, key));
   }
 
-  writeLock(key: string, record: LockRecord): void {
-    const file = lockPath(this.baseDir, key);
-    if (!existsSync(file)) {
-      return;
-    }
-    writeFileSync(file, JSON.stringify(record), 'utf8');
-  }
-
-  removeLock(key: string): void {
-    try {
-      unlinkSync(lockPath(this.baseDir, key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
-  }
-
   writeState(snapshot: RunSnapshot): void {
-    const file = statePath(this.baseDir, snapshot.key);
-    mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
-    writeFileSync(tmp, JSON.stringify(snapshot), 'utf8');
-    renameSync(tmp, file);
+    writeJsonAtomically(statePath(this.baseDir, snapshot.key), snapshot);
   }
 
   readState(key: string): RunSnapshot | undefined {
@@ -87,23 +78,41 @@ export class FileOrchestrationStore implements OrchestrationStore {
   }
 
   listKeys(): string[] {
-    if (!existsSync(this.baseDir)) {
-      return [];
-    }
+    if (!existsSync(this.baseDir)) return [];
     const keys: string[] = [];
     for (const name of readdirSync(this.baseDir)) {
-      const file = path.join(this.baseDir, name, 'state.json');
-      const snapshot = readJson<RunSnapshot>(file);
-      if (snapshot?.key) {
-        keys.push(snapshot.key);
-      }
+      const snapshot = readJson<RunSnapshot>(path.join(this.baseDir, name, 'state.json'));
+      if (snapshot?.key) keys.push(snapshot.key);
     }
     return keys;
+  }
+
+  private withLockGuard(key: string, operation: () => boolean): boolean {
+    const guard = `${lockPath(this.baseDir, key)}.guard`;
+    mkdirSync(path.dirname(guard), { recursive: true });
+    try {
+      mkdirSync(guard);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
+      throw error;
+    }
+    try {
+      return operation();
+    } finally {
+      rmSync(guard, { recursive: true, force: true });
+    }
   }
 }
 
 export function removeRunDir(baseDir: string, key: string): void {
   rmSync(runDir(baseDir, key), { recursive: true, force: true });
+}
+
+function writeJsonAtomically(file: string, value: unknown): void {
+  mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
+  writeFileSync(tmp, JSON.stringify(value), 'utf8');
+  renameSync(tmp, file);
 }
 
 function readJson<T>(file: string): T | undefined {

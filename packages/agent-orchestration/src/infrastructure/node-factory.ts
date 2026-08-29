@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { OrchestrationStore, ProcessLiveness, ProcessIdentity } from '../contracts/ports';
 import type { ProcessRunner } from '../contracts/types';
 import { Orchestration } from '../application/orchestration';
@@ -15,6 +16,7 @@ export interface CreateOrchestrationOptions {
   store?: OrchestrationStore;
   now?: () => number;
   pid?: number;
+  holderId?: string;
   staleAfterMs?: number;
   heartbeatIntervalMs?: number;
   isProcessAlive?: (pid: number) => boolean;
@@ -23,13 +25,12 @@ export interface CreateOrchestrationOptions {
 
 export function createOrchestration(options: CreateOrchestrationOptions = {}): Orchestration {
   const identity: ProcessIdentity = options.pid === undefined ? nodeIdentity() : { pid: options.pid };
-  const liveness: ProcessLiveness = options.isProcessAlive
-    ? { isAlive: options.isProcessAlive }
-    : nodeLiveness;
+  const liveness: ProcessLiveness = options.isProcessAlive ? { isAlive: options.isProcessAlive } : nodeLiveness;
   return new Orchestration({
     store: options.store ?? new FileOrchestrationStore(options.baseDir ?? defaultBaseDir()),
     clock: options.now ? { now: options.now } : nodeClock,
     identity,
+    holderId: options.holderId ?? randomUUID(),
     liveness,
     runner: options.runner ?? execaProcessRunner,
     scheduler: nodeScheduler,
@@ -38,7 +39,9 @@ export function createOrchestration(options: CreateOrchestrationOptions = {}): O
   });
 }
 
-export function createMemoryOrchestration(options: Omit<CreateOrchestrationOptions, 'baseDir' | 'store'> = {}): Orchestration {
+export function createMemoryOrchestration(
+  options: Omit<CreateOrchestrationOptions, 'baseDir' | 'store'> = {},
+): Orchestration {
   return createOrchestration({
     ...options,
     store: new MemoryOrchestrationStore(),

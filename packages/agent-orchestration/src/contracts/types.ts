@@ -6,9 +6,13 @@ export interface TemplateSpec {
   };
 }
 
-export interface SeatBind {
+export interface SeatBinding {
   cmd: string;
   args?: string[];
+}
+
+/** Application input. env is ephemeral and never enters a Run snapshot. */
+export interface SeatBind extends SeatBinding {
   env?: Record<string, string>;
 }
 
@@ -53,6 +57,7 @@ export interface RunSnapshot {
   allowed: string;
   occupied: boolean;
   holderPid?: number;
+  holderId?: string;
   heartbeatAt?: string;
   context: {
     goal?: string;
@@ -86,6 +91,7 @@ export interface ProcessRunnerInput {
   args: string[];
   cwd: string;
   env: Record<string, string>;
+  signal?: AbortSignal;
   onSpawn?: (pid?: number) => void;
 }
 

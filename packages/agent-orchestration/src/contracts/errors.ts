@@ -2,14 +2,12 @@ export const ORCHESTRATION_CONFLICT_CODE = 'orchestration-conflict';
 export const ORCHESTRATION_NOT_FOUND_CODE = 'orchestration-not-found';
 export const ORCHESTRATION_SEAT_CODE = 'orchestration-seat';
 export const ORCHESTRATION_TEMPLATE_CODE = 'orchestration-template';
+export const ORCHESTRATION_RUN_CODE = 'orchestration-run';
 
 export class OrchestrationConflictError extends Error {
   readonly code = ORCHESTRATION_CONFLICT_CODE;
 
-  constructor(
-    readonly key: string,
-    readonly holderPid?: number,
-  ) {
+  constructor(readonly key: string, readonly holderPid?: number) {
     super(
       holderPid === undefined
         ? `Orchestration ${key} is already occupied`
@@ -31,10 +29,7 @@ export class OrchestrationNotFoundError extends Error {
 export class OrchestrationSeatError extends Error {
   readonly code = ORCHESTRATION_SEAT_CODE;
 
-  constructor(
-    readonly key: string,
-    message: string,
-  ) {
+  constructor(readonly key: string, message: string) {
     super(message);
     this.name = 'OrchestrationSeatError';
   }
@@ -46,5 +41,14 @@ export class OrchestrationTemplateError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'OrchestrationTemplateError';
+  }
+}
+
+export class OrchestrationRunError extends Error {
+  readonly code = ORCHESTRATION_RUN_CODE;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'OrchestrationRunError';
   }
 }

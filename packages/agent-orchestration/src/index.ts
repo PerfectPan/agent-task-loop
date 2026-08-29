@@ -8,6 +8,7 @@ export type {
   RunContextInput,
   RunSnapshot,
   SeatBind,
+  SeatBinding,
   SeatState,
   SeatStatus,
   SpawnResult,
@@ -28,14 +29,17 @@ export {
   ORCHESTRATION_NOT_FOUND_CODE,
   ORCHESTRATION_SEAT_CODE,
   ORCHESTRATION_TEMPLATE_CODE,
+  ORCHESTRATION_RUN_CODE,
   OrchestrationConflictError,
   OrchestrationNotFoundError,
   OrchestrationSeatError,
   OrchestrationTemplateError,
+  OrchestrationRunError,
 } from './contracts/errors';
 
 export { Orchestration, type OrchestrationDependencies } from './application/orchestration';
 export { TemplateRegistry } from './domain/template';
+export { Run } from './domain/run';
 export { FileOrchestrationStore } from './infrastructure/file-store';
 export { MemoryOrchestrationStore } from './infrastructure/memory-store';
 export {

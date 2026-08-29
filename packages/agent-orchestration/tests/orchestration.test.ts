@@ -1,10 +1,12 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createMemoryOrchestration,
   createOrchestration,
+  FileOrchestrationStore,
+  type LockRecord,
   type Orchestration,
   OrchestrationConflictError,
   OrchestrationSeatError,
@@ -85,6 +87,22 @@ describe('Orchestration open / occupy', () => {
     expect(instance.inspect('task:T-1').key).toBe('task:T-1');
   });
 
+  it('validates the aggregate before acquiring its lock', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const instance = createOrchestration({ baseDir: dir });
+    classic(instance);
+
+    await expect(
+      instance.open({
+        key: 'task:invalid',
+        template: 'classic-delivery',
+        bind: { lead: { cmd: 'codex' } },
+      }),
+    ).rejects.toBeInstanceOf(OrchestrationSeatError);
+    expect(existsSync(lockPath(dir, 'task:invalid'))).toBe(false);
+  });
+
   it('rejects a second open on the same key while the lock is fresh', async () => {
     const dir = tempDir();
     dirs.push(dir);
@@ -124,8 +142,72 @@ describe('Orchestration open / occupy', () => {
       isProcessAlive: () => false,
     });
     classic(b);
-    const snapshot = await b.open({ key: 'task:T-1', template: 'classic-delivery' });
+    const snapshot = await b.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+    });
     expect(snapshot.occupied).toBe(true);
+  });
+
+  it('distinguishes holders that share one process id', async () => {
+    let now = 1_000;
+    const dir = tempDir();
+    dirs.push(dir);
+    const a = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-a',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => true,
+    });
+    const b = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-b',
+      now: () => now,
+      staleAfterMs: 100,
+      isProcessAlive: () => true,
+    });
+    classic(a);
+    classic(b);
+    await a.open({ key: 'task:T-1', template: 'classic-delivery' });
+
+    now = 10_000;
+    await b.open({ key: 'task:T-1', template: 'classic-delivery' });
+    a.release('task:T-1');
+
+    expect(b.inspect('task:T-1')).toMatchObject({
+      occupied: true,
+      holderId: 'holder-b',
+    });
+    expect(() => a.allow('task:T-1', 'review')).toThrow(OrchestrationConflictError);
+    expect(b.allow('task:T-1', 'review').allowed).toBe('review');
+  });
+
+  it('replaces a stale file lock with compare-and-swap semantics', () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    const store = new FileOrchestrationStore(dir);
+    const expected: LockRecord = {
+      key: 'task:T-1',
+      holderPid: 1,
+      holderId: 'holder-a',
+      heartbeatAt: new Date(1_000).toISOString(),
+    };
+    const nextA: LockRecord = {
+      ...expected,
+      holderPid: 2,
+      holderId: 'holder-b',
+    };
+    const nextB: LockRecord = {
+      ...expected,
+      holderPid: 3,
+      holderId: 'holder-c',
+    };
+
+    expect(store.tryCreateLock(expected.key, expected)).toBe(true);
+    expect(store.tryReplaceLock(expected.key, expected, nextA)).toBe(true);
+    expect(store.tryReplaceLock(expected.key, expected, nextB)).toBe(false);
+    expect(store.readLock(expected.key)).toEqual(nextA);
   });
 
   it('allows a new open after release', async () => {
@@ -134,7 +216,10 @@ describe('Orchestration open / occupy', () => {
     instance.release('task:T-1');
     expect(instance.inspect('task:T-1').occupied).toBe(false);
 
-    const again = await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
+    const again = await instance.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+    });
     expect(again.occupied).toBe(true);
   });
 
@@ -159,7 +244,7 @@ describe('Orchestration open / occupy', () => {
     let spawnedEnv: Record<string, string> | undefined;
     const instance = createOrchestration({
       baseDir: dir,
-      runner: async input => {
+      runner: async (input) => {
         spawnedEnv = input.env;
         return { stdout: '', stderr: '', exitCode: 0 };
       },
@@ -217,9 +302,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
       bind: { impl: { cmd: 'grok' }, review: { cmd: 'codex' } },
     });
 
-    await expect(instance.spawn('task:T-1', 'review', { cwd: dir })).rejects.toBeInstanceOf(
-      OrchestrationSeatError,
-    );
+    await expect(instance.spawn('task:T-1', 'review', { cwd: dir })).rejects.toBeInstanceOf(OrchestrationSeatError);
 
     instance.allow('task:T-1', 'review');
     const result = await instance.spawn('task:T-1', 'review', { cwd: dir });
@@ -235,13 +318,21 @@ describe('Orchestration allow / facts / mail / spawn', () => {
     await instance.open({ key: 'task:T-1', template: 'classic-delivery' });
 
     instance.appendFact('task:T-1', 'impl', 'implemented the fix');
-    instance.sendMail('task:T-1', { from: 'impl', to: 'review', body: 'please look' });
+    instance.sendMail('task:T-1', {
+      from: 'impl',
+      to: 'review',
+      body: 'please look',
+    });
 
     const snapshot = instance.inspect('task:T-1');
     expect(snapshot.context.facts).toHaveLength(1);
     expect(snapshot.context.facts[0]?.text).toBe('implemented the fix');
     expect(snapshot.context.mail).toEqual([
-      expect.objectContaining({ from: 'impl', to: 'review', body: 'please look' }),
+      expect.objectContaining({
+        from: 'impl',
+        to: 'review',
+        body: 'please look',
+      }),
     ]);
   });
 
@@ -275,6 +366,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
       JSON.stringify({
         key: 'task:T-1',
         holderPid: process.pid + 1,
+        holderId: 'other-holder',
         heartbeatAt: new Date().toISOString(),
       }),
       'utf8',
@@ -287,7 +379,51 @@ describe('Orchestration allow / facts / mail / spawn', () => {
     classic(instance);
     await instance.open({ key: 'task:A', template: 'classic-delivery' });
     await instance.open({ key: 'task:B', template: 'classic-delivery' });
-    expect(instance.listRuns().map(run => run.key).sort()).toEqual(['task:A', 'task:B']);
+    expect(
+      instance
+        .listRuns()
+        .map((run) => run.key)
+        .sort(),
+    ).toEqual(['task:A', 'task:B']);
+  });
+
+  it('aborts a spawned process after losing its lease', async () => {
+    const dir = tempDir();
+    dirs.push(dir);
+    let signal: AbortSignal | undefined;
+    const a = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-a',
+      heartbeatIntervalMs: 5,
+      isProcessAlive: () => true,
+      runner: (input) =>
+        new Promise((_resolve, reject) => {
+          signal = input.signal;
+          input.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+        }),
+    });
+    const b = createOrchestration({
+      baseDir: dir,
+      holderId: 'holder-b',
+      isProcessAlive: () => false,
+    });
+    classic(a);
+    classic(b);
+    await a.open({
+      key: 'task:T-1',
+      template: 'classic-delivery',
+      bind: { impl: { cmd: 'codex' } },
+    });
+
+    const spawned = a.spawn('task:T-1', 'impl', { cwd: dir });
+    await b.open({ key: 'task:T-1', template: 'classic-delivery' });
+
+    await expect(spawned).rejects.toBeInstanceOf(OrchestrationConflictError);
+    expect(signal?.aborted).toBe(true);
+    expect(b.inspect('task:T-1')).toMatchObject({
+      occupied: true,
+      holderId: 'holder-b',
+    });
   });
 });
 
@@ -303,7 +439,10 @@ describe('memory store', () => {
   it('occupies without touching the filesystem', async () => {
     const instance = createMemoryOrchestration();
     classic(instance);
-    const snapshot = await instance.open({ key: 'task:mem', template: 'classic-delivery' });
+    const snapshot = await instance.open({
+      key: 'task:mem',
+      template: 'classic-delivery',
+    });
     expect(snapshot.occupied).toBe(true);
     await expect(instance.open({ key: 'task:mem', template: 'classic-delivery' })).rejects.toBeInstanceOf(
       OrchestrationConflictError,

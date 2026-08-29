@@ -23,6 +23,26 @@ export class MemoryOrchestrationStore implements OrchestrationStore {
     return true;
   }
 
+  tryCommitRun(expected: LockRecord, next: LockRecord, snapshot: RunSnapshot): boolean {
+    const current = this.locks.get(expected.key);
+    if (!current || !sameLock(current, expected) || next.key !== expected.key || snapshot.key !== expected.key) {
+      return false;
+    }
+    this.states.set(snapshot.key, structuredClone(snapshot));
+    this.locks.set(next.key, { ...next });
+    return true;
+  }
+
+  tryReleaseRun(expected: LockRecord, snapshot: RunSnapshot): boolean {
+    const current = this.locks.get(expected.key);
+    if (!current || !sameLock(current, expected) || snapshot.key !== expected.key) {
+      return false;
+    }
+    this.states.set(snapshot.key, structuredClone(snapshot));
+    this.locks.delete(expected.key);
+    return true;
+  }
+
   lockExists(key: string): boolean {
     return this.locks.has(key);
   }
@@ -30,17 +50,6 @@ export class MemoryOrchestrationStore implements OrchestrationStore {
   readLock(key: string): LockRecord | undefined {
     const lock = this.locks.get(key);
     return lock ? { ...lock } : undefined;
-  }
-
-  writeLock(key: string, record: LockRecord): void {
-    if (!this.locks.has(key)) {
-      return;
-    }
-    this.locks.set(key, { ...record });
-  }
-
-  removeLock(key: string): void {
-    this.locks.delete(key);
   }
 
   writeState(snapshot: RunSnapshot): void {

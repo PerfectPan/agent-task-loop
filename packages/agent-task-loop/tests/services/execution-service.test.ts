@@ -373,4 +373,51 @@ describe('ExecutionService', () => {
       }),
     );
   });
+
+  it('does not claim or execute a task when its occupancy lease is already lost', async () => {
+    const leaseError = new Error('occupancy lost');
+    const controller = new AbortController();
+    controller.abort(leaseError);
+    const taskService = {
+      claimTask: vi.fn(),
+      updateTaskProgress: vi.fn(),
+      updateRunnerState: vi.fn(),
+      updateReviewState: vi.fn(),
+      markTaskSucceeded: vi.fn(),
+      markTaskFailed: vi.fn(),
+    };
+    const execute = vi.fn();
+    const executionService = new ExecutionService({
+      taskService: taskService as never,
+      adapter: { execute },
+      adapterCommand: {
+        command: 'codex',
+        args: [],
+        env: {},
+        cwd: '/tmp/TASK-LEASE-codex',
+        prompt: 'do the task',
+      },
+    });
+
+    await expect(
+      executionService.executeTask(
+        {
+          taskId: 'TASK-LEASE',
+          title: 'Lease lost',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 5,
+          status: '待处理',
+        },
+        '/tmp/TASK-LEASE-codex',
+        1,
+        controller.signal,
+      ),
+    ).rejects.toBe(leaseError);
+    expect(taskService.claimTask).not.toHaveBeenCalled();
+    expect(taskService.updateTaskProgress).not.toHaveBeenCalled();
+    expect(taskService.updateReviewState).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

@@ -35,7 +35,11 @@ export class ReviewLoopService {
         onSession?: (payload: { sessionId?: string; sessionName?: string }) => void;
       }) => Promise<{ verdict: '通过' | '驳回'; findings: string; sessionId?: string; sessionName?: string }>;
       isTaskDeliverable: (input: { task: TaskRecord; workspacePath: string }) => Promise<boolean>;
-      publishForAcceptance: (task: TaskRecord, workspacePath: string) => Promise<{ branch: string; commit: string }>;
+      publishForAcceptance: (
+        task: TaskRecord,
+        workspacePath: string,
+        signal?: AbortSignal,
+      ) => Promise<{ branch: string; commit: string }>;
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
       maxRounds: number;
@@ -55,6 +59,7 @@ export class ReviewLoopService {
         promptOverride,
         round,
       });
+      this.assertActive();
 
       if (execution.workspacePath) {
         input.task.workspacePath = execution.workspacePath;
@@ -85,6 +90,7 @@ export class ReviewLoopService {
       round += 1;
     }
 
+    this.assertActive();
     await this.deps.updateReviewState(input.task, {
       status: '已失败',
       currentOwner: '董事长',
@@ -93,6 +99,7 @@ export class ReviewLoopService {
       sessionHistory: input.task.sessionHistory,
       progressSummary: '自动 review loop 超出最大轮次',
     });
+    this.assertActive();
   }
 
   async resumeFromReview(input: {
@@ -141,6 +148,7 @@ export class ReviewLoopService {
         acceptanceFeedback: input.task.acceptanceVerdict === '打回' ? input.task.acceptanceFeedback : undefined,
       });
     } catch (error) {
+      this.assertActive();
       await this.deps.updateReviewState(input.task, {
         status: '已失败',
         currentOwner: '董事长',
@@ -159,9 +167,11 @@ export class ReviewLoopService {
         runnerKind: '',
         runnerAgent: '',
       });
+      this.assertActive();
       return { done: true };
     }
 
+    this.assertActive();
     input.task.sessionHistory = appendSessionHistory(
       input.task.sessionHistory,
       formatSessionHistoryEntry({
@@ -175,15 +185,25 @@ export class ReviewLoopService {
     );
 
     if (review.verdict === '通过') {
+      this.assertActive();
       const isDeliverable = await this.deps.isTaskDeliverable({
         task: input.task,
         workspacePath: input.workspacePath,
       });
+      this.assertActive();
       let acceptanceProgressSummary = `${reviewerAgent} review 已通过，等待验收`;
       if (isDeliverable) {
         try {
-          const publish = await this.deps.publishForAcceptance(input.task, input.workspacePath);
+          const publish = this.deps.signal
+            ? await this.deps.publishForAcceptance(
+                input.task,
+                input.workspacePath,
+                this.deps.signal,
+              )
+            : await this.deps.publishForAcceptance(input.task, input.workspacePath);
+          this.assertActive();
           acceptanceProgressSummary = '分支已推送，等待创建或更新 Pull Request';
+          this.assertActive();
           await this.deps.updatePublishResult(input.task, {
             publishBranch: publish.branch,
             publishCommit: publish.commit,
@@ -191,7 +211,9 @@ export class ReviewLoopService {
             resultSummary: input.task.resultSummary,
             sessionHistory: input.task.sessionHistory,
           });
+          this.assertActive();
         } catch (error) {
+          this.assertActive();
           await this.deps.updateReviewState(input.task, {
             status: '待发布',
             currentOwner: '董事长',
@@ -212,9 +234,11 @@ export class ReviewLoopService {
             runnerKind: '',
             runnerAgent: '',
           });
+          this.assertActive();
           return { done: true };
         }
       }
+      this.assertActive();
       await this.deps.updateReviewState(input.task, {
         status: isDeliverable ? '待发布' : '待决策',
         currentOwner: '董事长',
@@ -230,9 +254,11 @@ export class ReviewLoopService {
         runnerKind: '',
         runnerAgent: '',
       });
+      this.assertActive();
       return { done: true };
     }
 
+    this.assertActive();
     await this.deps.updateReviewState(input.task, {
       status: '修复中',
       currentOwner: input.task.targetAgent,
@@ -248,6 +274,7 @@ export class ReviewLoopService {
       runnerKind: '',
       runnerAgent: '',
     });
+    this.assertActive();
 
     return {
       done: false,
@@ -257,5 +284,9 @@ export class ReviewLoopService {
         reviewFindings: review.findings,
       }),
     };
+  }
+
+  private assertActive(): void {
+    this.deps.signal?.throwIfAborted();
   }
 }

@@ -93,6 +93,7 @@ export class ReviewLoopRunner {
         repositoryPath: repository.localPath,
         defaultBranch: repository.defaultBranch,
       });
+      signal?.throwIfAborted();
       const prompt = buildTaskPrompt({
         task: roundInput.task,
         projectName: project.name,
@@ -149,6 +150,7 @@ export class ReviewLoopRunner {
         let latestHeartbeatAt = new Date().toISOString();
         let lastHeartbeatPersistedAt = 0;
         const persistHeartbeat = async (force = false) => {
+          signal?.throwIfAborted();
           const now = Date.now();
           if (!force && now - lastHeartbeatPersistedAt < 15_000) {
             return;
@@ -168,6 +170,7 @@ export class ReviewLoopRunner {
               },
             );
           } catch (error) {
+            signal?.throwIfAborted();
             if (this.deps.onBackgroundError) {
               this.deps.onBackgroundError(error);
             } else {
@@ -175,8 +178,10 @@ export class ReviewLoopRunner {
               console.warn(`[agent-task-loop] review heartbeat update failed: ${message}`);
             }
           }
+          signal?.throwIfAborted();
         };
 
+        signal?.throwIfAborted();
         await this.deps.taskService.updateRunnerState(
           input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
           {
@@ -186,6 +191,7 @@ export class ReviewLoopRunner {
             lastHeartbeatAt: latestHeartbeatAt,
           },
         );
+        signal?.throwIfAborted();
 
         return reviewService.review({
           ...input,
@@ -201,16 +207,20 @@ export class ReviewLoopRunner {
         });
       },
       isTaskDeliverable: async deliveryInput => {
+        signal?.throwIfAborted();
         const { repository } = resolveTaskExecutionContext(this.deps.config, deliveryInput.task);
         const check = await deliveryCheckService.check({
           workspacePath: deliveryInput.workspacePath,
           baseRef: repository.defaultBranch,
           publishCommit: deliveryInput.task.publishCommit,
           prLink: deliveryInput.task.prLink,
+          signal,
         });
+        signal?.throwIfAborted();
         return check.isDeliverable;
       },
-      publishForAcceptance: autoPublishService.publish.bind(autoPublishService),
+      publishForAcceptance: (task, workspacePath, publishSignal) =>
+        autoPublishService.publish(task, workspacePath, publishSignal),
       updatePublishResult: this.deps.taskService.updatePublishResult.bind(this.deps.taskService),
       updateReviewState: this.deps.taskService.updateReviewState.bind(this.deps.taskService),
       maxRounds,

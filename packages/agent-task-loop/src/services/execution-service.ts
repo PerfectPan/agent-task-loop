@@ -46,6 +46,7 @@ export class ExecutionService {
     executionSessionName: string;
     status: '待复核' | '已失败';
   }> {
+    signal?.throwIfAborted();
     const runId = crypto.randomUUID();
     const logPath = path.join(workspacePath, '.agent-task-loop', 'logs', `${runId}.log`);
     const sessionName = buildSessionName(task);
@@ -63,6 +64,7 @@ export class ExecutionService {
     let lastRecordedSessionKey: string | undefined;
     let lastHeartbeatPersistedAt = 0;
     const persistHeartbeat = async (force = false) => {
+      signal?.throwIfAborted();
       const now = Date.now();
       if (!force && now - lastHeartbeatPersistedAt < 15_000) {
         return;
@@ -79,6 +81,7 @@ export class ExecutionService {
           lastHeartbeatAt: latestHeartbeatAt,
         });
       } catch (error) {
+        signal?.throwIfAborted();
         if (this.deps.onHeartbeatError) {
           this.deps.onHeartbeatError(error);
         } else {
@@ -86,12 +89,14 @@ export class ExecutionService {
           writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
         }
       }
+      signal?.throwIfAborted();
     };
     const writeProgress = async (summary: string) => {
       if (!summary || summary === latestProgressSummary) {
         return;
       }
 
+      signal?.throwIfAborted();
       latestProgressSummary = summary;
       await this.deps.taskService.updateTaskProgress(task, {
         progressSummary: summary,
@@ -109,6 +114,7 @@ export class ExecutionService {
       signal?.throwIfAborted();
     };
     const writeSession = async (payload: { sessionId?: string; sessionName?: string }) => {
+      signal?.throwIfAborted();
       const nextSessionId = payload.sessionId ?? latestSessionId;
       const nextSessionName = payload.sessionName ?? sessionName;
       if (!nextSessionId && !nextSessionName) {
@@ -132,6 +138,7 @@ export class ExecutionService {
         lastRecordedSessionKey = sessionKey;
       }
       latestSessionId = nextSessionId;
+      signal?.throwIfAborted();
       await this.deps.taskService.updateTaskProgress(task, {
         progressSummary: latestProgressSummary,
         workspacePath,
@@ -145,12 +152,14 @@ export class ExecutionService {
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
       });
+      signal?.throwIfAborted();
     };
 
     writeLog(`[agent-task-loop] runId=${runId}\n`);
     writeLog(`[agent-task-loop] workspace=${workspacePath}\n`);
     writeLog(`[agent-task-loop] logPath=${logPath}\n`);
 
+    signal?.throwIfAborted();
     await this.deps.taskService.claimTask(task, {
       claimedBy: `${task.targetAgent}@local`,
       claimedAt: new Date().toISOString(),
@@ -167,6 +176,7 @@ export class ExecutionService {
       runnerRound: round,
       lastHeartbeatAt: latestHeartbeatAt,
     });
+    signal?.throwIfAborted();
 
     try {
       await writeProgress(`正在使用 ${task.targetAgent} 执行任务`);
@@ -194,6 +204,7 @@ export class ExecutionService {
       signal?.throwIfAborted();
 
       if (result.status === 'success') {
+        signal?.throwIfAborted();
         await this.deps.taskService.updateReviewState(task, {
           status: '待复核',
           currentOwner: 'codex',
@@ -208,6 +219,7 @@ export class ExecutionService {
           runnerKind: '',
           runnerAgent: '',
         });
+        signal?.throwIfAborted();
         writeLog('\n[agent-task-loop] status=待复核\n');
         return {
           runId,
@@ -220,6 +232,7 @@ export class ExecutionService {
         };
       }
 
+      signal?.throwIfAborted();
       await this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
@@ -237,6 +250,7 @@ export class ExecutionService {
         runnerKind: '',
         runnerAgent: '',
       });
+      signal?.throwIfAborted();
       writeLog('\n[agent-task-loop] status=已失败\n');
       return {
         runId,

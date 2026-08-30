@@ -7,7 +7,7 @@ import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server'
 import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
 
 describe('RoomLabService', () => {
-  it('posts the first concurrent answer and holds the other five stale drafts', async () => {
+  it('posts the first concurrent answer and holds the other four stale drafts', async () => {
     const runner: AgentRunner = async agentId => {
       if (agentId !== 'codex') await delay(15);
       return {
@@ -17,13 +17,13 @@ describe('RoomLabService', () => {
     };
     const service = createService(runner);
 
-    const state = await service.sendMessage('How should six agents share a Room?');
+    const state = await service.sendMessage('How should five agents share a Room?');
 
     expect(state.events.map(event => [event.seq, event.author.id, event.body])).toEqual([
-      [1, 'director', 'How should six agents share a Room?'],
+      [1, 'director', 'How should five agents share a Room?'],
       [2, 'codex', 'Codex public answer'],
     ]);
-    expect(state.agents.filter(agent => agent.status === 'held')).toHaveLength(5);
+    expect(state.agents.filter(agent => agent.status === 'held')).toHaveLength(4);
     expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
       status: 'held',
       seenSeq: 1,
@@ -39,24 +39,42 @@ describe('RoomLabService', () => {
       return { text: 'A focused challenge', latencyMs: 1 };
     });
 
-    const state = await service.sendMessage('@grok 请挑战这个写作提纲');
+    const state = await service.sendMessage('@dsh 请挑战这个写作提纲');
 
-    expect(calls).toEqual(['grok']);
+    expect(calls).toEqual(['dsh']);
     expect(state.events[0]).toMatchObject({
       author: { id: 'director' },
-      addressedTo: ['grok'],
+      addressedTo: ['dsh'],
     });
-    expect(state.events[1]).toMatchObject({ author: { id: 'grok' } });
+    expect(state.events[1]).toMatchObject({ author: { id: 'dsh' } });
   });
 
-  it('runs a six-seat count-off through one monotonic Room stream', async () => {
+  it('rejects removed or unknown explicit mentions instead of broadcasting', async () => {
+    const calls: string[] = [];
+    const service = createService(async agentId => {
+      calls.push(agentId);
+      return { text: 'should not run', latencyMs: 1 };
+    });
+
+    await expect(service.sendMessage('@grok 请评论')).rejects.toThrow(
+      'Unknown Room mention: @grok',
+    );
+
+    expect(calls).toEqual([]);
+    await expect(service.snapshot()).resolves.toMatchObject({
+      head: 0,
+      events: [],
+      busy: false,
+    });
+  });
+
+  it('runs a five-seat count-off through one monotonic Room stream', async () => {
     const numberByAgent = new Map([
       ['claude-relay', '1'],
       ['claude', '2'],
-      ['grok', '3'],
-      ['codex', '4'],
-      ['opencode', '5'],
-      ['dsh', '6'],
+      ['codex', '3'],
+      ['opencode', '4'],
+      ['dsh', '5'],
     ]);
     const service = createService(async agentId => ({
       text: numberByAgent.get(agentId) ?? 'unexpected',
@@ -68,24 +86,22 @@ describe('RoomLabService', () => {
     expect(state.countOff).toMatchObject({
       runId: 'COUNT-001',
       status: 'completed',
-      total: 6,
+      total: 5,
       reports: [
         { agentId: 'claude-relay', number: 1, seq: 2 },
         { agentId: 'claude', number: 2, seq: 3 },
-        { agentId: 'grok', number: 3, seq: 4 },
-        { agentId: 'codex', number: 4, seq: 5 },
-        { agentId: 'opencode', number: 5, seq: 6 },
-        { agentId: 'dsh', number: 6, seq: 7 },
+        { agentId: 'codex', number: 3, seq: 4 },
+        { agentId: 'opencode', number: 4, seq: 5 },
+        { agentId: 'dsh', number: 5, seq: 6 },
       ],
     });
     expect(state.events.map(event => event.body)).toEqual([
-      '@all 报数开始：请按席位顺序只回复自己的数字（1–6）。',
+      '@all 报数开始：请按席位顺序只回复自己的数字（1–5）。',
       '1',
       '2',
       '3',
       '4',
       '5',
-      '6',
     ]);
     expect(state.agents.every(agent => agent.status === 'posted')).toBe(true);
   });
@@ -106,7 +122,7 @@ describe('RoomLabService', () => {
       return { text: `${agentId} stale draft`, latencyMs: 15 };
     });
 
-    await service.sendMessage('Create one public answer and five HELD drafts');
+    await service.sendMessage('Create one public answer and four HELD drafts');
     const state = await service.runCountOff();
 
     expect(state.countOff).toMatchObject({
@@ -136,15 +152,14 @@ describe('RoomLabService', () => {
       });
     });
 
-    const pending = service.sendMessage('Start all six agents', controller.signal);
-    await waitUntil(() => started.size === 6);
+    const pending = service.sendMessage('Start all five agents', controller.signal);
+    await waitUntil(() => started.size === 5);
     controller.abort(new Error('browser disconnected'));
     const state = await pending;
 
     expect(started).toEqual(new Set([
       'claude-relay',
       'claude',
-      'grok',
       'codex',
       'opencode',
       'dsh',

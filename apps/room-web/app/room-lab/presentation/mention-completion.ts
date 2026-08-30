@@ -1,4 +1,4 @@
-import { ROOM_AGENT_ROSTER } from '../domain/agent-roster';
+import { ROOM_AGENT_COUNT, ROOM_AGENT_ROSTER } from '../domain/agent-roster';
 
 export interface MentionOption {
   id: 'all' | (typeof ROOM_AGENT_ROSTER)[number]['id'];
@@ -13,7 +13,7 @@ interface MentionQuery {
 }
 
 const options: MentionOption[] = [
-  { id: 'all', label: 'All six agents', description: '广播给全部席位' },
+  { id: 'all', label: `All ${ROOM_AGENT_COUNT} agents`, description: '广播给全部席位' },
   ...ROOM_AGENT_ROSTER.map(agent => ({
     id: agent.id,
     label: agent.label,

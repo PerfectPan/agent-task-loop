@@ -11,10 +11,12 @@ const MENTION_PATTERN = /(?<![a-z0-9._%+-])@(all|[a-z][a-z-]*)(?=\s|$|[,.!?;:，
 export interface RoomMessage {
   body: string;
   addressedTo: RoomLabAgentId[];
+  unknownMentions: string[];
 }
 
 export function parseRoomMessage(body: string): RoomMessage {
   const addressedTo = new Set<RoomLabAgentId>();
+  const unknownMentions = new Set<string>();
   for (const match of body.matchAll(MENTION_PATTERN)) {
     const mention = match[1]?.toLowerCase();
     if (!mention) continue;
@@ -24,6 +26,11 @@ export function parseRoomMessage(body: string): RoomMessage {
     }
     const agentId = KNOWN_MENTIONS.get(mention);
     if (agentId) addressedTo.add(agentId);
+    else unknownMentions.add(mention);
   }
-  return { body, addressedTo: [...addressedTo] };
+  return {
+    body,
+    addressedTo: [...addressedTo],
+    unknownMentions: [...unknownMentions],
+  };
 }

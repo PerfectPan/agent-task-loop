@@ -10,7 +10,6 @@ describe('agentSeatBinding', () => {
   it('maps every Room seat to a headless local entry point', () => {
     expect(agentSeatBinding('claude-relay')).toMatchObject({ cmd: 'zsh' });
     expect(agentSeatBinding('claude')).toMatchObject({ cmd: 'claude' });
-    expect(agentSeatBinding('grok')).toMatchObject({ cmd: 'grok' });
     expect(agentSeatBinding('codex')).toMatchObject({ cmd: 'codex' });
     expect(agentSeatBinding('opencode')).toMatchObject({ cmd: 'opencode' });
     expect(agentSeatBinding('dsh')).toMatchObject({ cmd: 'dsh' });

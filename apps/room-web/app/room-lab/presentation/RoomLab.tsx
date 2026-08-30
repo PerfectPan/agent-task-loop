@@ -103,8 +103,8 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
 
       <section className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>SIX LOCAL AGENTS / ONE SHARED WORLD</span>
-          <h1>六个声音，<br />只写进一个世界。</h1>
+          <span className={styles.eyebrow}>FIVE LOCAL AGENTS / ONE SHARED WORLD</span>
+          <h1>五个声音，<br />只写进一个世界。</h1>
         </div>
         <div className={styles.heroReadout}>
           <span>ROOM</span>
@@ -130,7 +130,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
 
       <div className={styles.flightDeck}>
         <div className={styles.agentColumn}>
-          {agents.slice(0, 3).map(agent => (
+          {agents.slice(0, 2).map(agent => (
             <AgentPanel
               key={agent.id}
               agent={agent}
@@ -141,7 +141,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
         </div>
         <RoomTimeline events={state.events} head={state.head} />
         <div className={styles.agentColumn}>
-          {agents.slice(3).map(agent => (
+          {agents.slice(2).map(agent => (
             <AgentPanel
               key={agent.id}
               agent={agent}
@@ -153,7 +153,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       </div>
 
       <footer className={styles.labFooter}>
-        <p>Room owns six-seat seq / addressedTo / seen / HELD. Task Delivery owns rounds / seats / review verdict.</p>
+        <p>Room owns five-seat seq / addressedTo / seen / HELD. Task Delivery owns rounds / seats / review verdict.</p>
         <button type="button" disabled={disabled} onClick={() => runAction({ action: 'reset' })}>
           Reset local world
         </button>

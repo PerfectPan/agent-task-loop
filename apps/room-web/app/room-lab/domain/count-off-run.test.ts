@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CountOffRun } from './count-off-run';
 
 describe('CountOffRun', () => {
-  it('accepts the six-agent roster in deterministic order', () => {
+  it('accepts the five-agent roster in deterministic order', () => {
     const run = new CountOffRun('COUNT-001');
-    const agents = ['claude-relay', 'claude', 'grok', 'codex', 'opencode', 'dsh'] as const;
+    const agents = ['claude-relay', 'claude', 'codex', 'opencode', 'dsh'] as const;
 
     agents.forEach((agentId, index) => {
       expect(run.next()).toEqual({ agentId, number: index + 1 });
@@ -13,7 +13,7 @@ describe('CountOffRun', () => {
 
     expect(run.snapshot()).toMatchObject({
       status: 'completed',
-      total: 6,
+      total: 5,
       reports: agents.map((agentId, index) => ({
         agentId,
         number: index + 1,

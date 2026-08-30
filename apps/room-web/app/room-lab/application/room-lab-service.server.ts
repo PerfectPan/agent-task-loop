@@ -17,6 +17,7 @@ import type {
 } from '../read-model';
 import { CountOffRun } from '../domain/count-off-run';
 import {
+  ROOM_AGENT_COUNT,
   ROOM_AGENT_ROSTER,
   type RoomLabAgentId,
 } from '../domain/agent-roster';
@@ -74,6 +75,10 @@ export class RoomLabService {
       signal?.throwIfAborted();
       const message = validateText(body, 'Message');
       const parsed = parseRoomMessage(message);
+      if (parsed.unknownMentions.length > 0) {
+        const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
+        throw new RoomLabInputError(`Unknown Room mention: ${mentions}`);
+      }
       const event = await this.mutateConversation(() =>
         this.options.conversation.admitHuman({
           messageId: `web:${++this.messageCounter}`,
@@ -100,7 +105,7 @@ export class RoomLabService {
       await this.mutateConversation(() =>
         this.options.conversation.admitHuman({
           messageId: `web:${++this.messageCounter}`,
-          body: '@all 报数开始：请按席位顺序只回复自己的数字（1–6）。',
+          body: `@all 报数开始：请按席位顺序只回复自己的数字（1–${ROOM_AGENT_COUNT}）。`,
           addressedTo: ROOM_AGENT_ROSTER.map(agent => agent.id),
         }),
       );
@@ -440,7 +445,7 @@ function createInitialAgentState(): Map<RoomLabAgentId, AgentRuntimeState> {
 function buildChatPrompt(agentId: RoomLabAgentId, events: RoomEvent[]): string {
   const agent = ROOM_AGENT_ROSTER.find(candidate => candidate.id === agentId);
   const role = agent?.role ?? 'Independent room participant';
-  return `You are ${agent?.label ?? agentId}, the ${role} in a six-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+  return `You are ${agent?.label ?? agentId}, the ${role} in a ${ROOM_AGENT_COUNT}-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
 }
 
 function buildCountOffPrompt(
@@ -448,7 +453,7 @@ function buildCountOffPrompt(
   number: number,
   events: RoomEvent[],
 ): string {
-  return `You are ${agentId} in a six-agent Room count-off. Read the public events to confirm the sequence, then reply with exactly the ASCII digits ${number} and no other characters. Do not use tools.\n\nRoom events:\n${formatEvents(events)}`;
+  return `You are ${agentId} in a ${ROOM_AGENT_COUNT}-agent Room count-off. Read the public events to confirm the sequence, then reply with exactly the ASCII digits ${number} and no other characters. Do not use tools.\n\nRoom events:\n${formatEvents(events)}`;
 }
 
 function buildRetryPrompt(agentId: RoomLabAgentId, draft: string, newer: RoomEvent[]): string {

@@ -12,7 +12,7 @@ export function CountOffStrip({ run }: { run: CountOffSnapshot }) {
         <span className={styles.eyebrow}>MONOTONIC ROOM PROOF</span>
         <strong>{run.runId}</strong>
         <small>{run.status === 'completed'
-          ? '六席已按序进入同一世界'
+          ? '五席已按序进入同一世界'
           : run.status === 'failed'
             ? `停在第 ${run.nextNumber} 席`
             : `等待第 ${run.nextNumber} 席`}</small>

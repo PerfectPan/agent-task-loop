@@ -5,7 +5,6 @@ import styles from './RoomLab.module.css';
 const AGENT_ACCENTS: Record<RoomLabAgentView['id'], string> = {
   'claude-relay': '#7447d8',
   claude: '#e45d19',
-  grok: '#bd327c',
   codex: '#1463ff',
   opencode: '#16825b',
   dsh: '#9a7200',

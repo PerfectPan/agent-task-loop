@@ -123,7 +123,7 @@ export function RoomComposer({
               ? `room-mention-${mentionOptions[activeMentionIndex]?.id}`
               : undefined}
             placeholder={mode === 'room'
-              ? '输入 @ 选择一个席位，或直接广播给六个 Agent'
+              ? '输入 @ 选择一个席位，或直接广播给五个 Agent'
               : '例如：用三条验收标准定义一个可靠的 Room 实现'}
             onBlur={() => setMentionQuery(undefined)}
             onKeyDown={handleKeyDown}
@@ -164,14 +164,14 @@ export function RoomComposer({
               disabled={disabled}
               onClick={onCountOff}
             >
-              六席报数
+              五席报数
             </button>
           )}
         </div>
       </div>
       <p>
         {mode === 'room'
-          ? '无 @ 时六席并发；显式 @ 只唤醒被点名的席位。并发草稿仍受 Room HELD 写点约束。'
+          ? '无 @ 时五席并发；显式 @ 只唤醒被点名的席位。并发草稿仍受 Room HELD 写点约束。'
           : 'Occupancy 先开放 impl，再开放 review；只有独立 reviewer 给出 PASS，Task 才通过。'}
       </p>
     </form>

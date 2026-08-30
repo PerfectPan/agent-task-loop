@@ -10,11 +10,6 @@ export const ROOM_AGENT_ROSTER = [
     role: 'Critical reviewer',
   },
   {
-    id: 'grok',
-    label: 'Grok',
-    role: 'Contrarian explorer',
-  },
-  {
     id: 'codex',
     label: 'Codex',
     role: 'Implementation lead',
@@ -30,6 +25,8 @@ export const ROOM_AGENT_ROSTER = [
     role: 'DeepSeek analyst',
   },
 ] as const;
+
+export const ROOM_AGENT_COUNT = ROOM_AGENT_ROSTER.length;
 
 export type RoomLabAgentId = (typeof ROOM_AGENT_ROSTER)[number]['id'];
 

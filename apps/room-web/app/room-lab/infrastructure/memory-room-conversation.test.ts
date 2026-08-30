@@ -14,10 +14,10 @@ describe('MemoryRoomConversation', () => {
 
     const directed = await conversation.admitHuman({
       messageId: 'directed',
-      body: '@grok 请挑战这个结论',
-      addressedTo: ['grok'],
+      body: '@dsh 请挑战这个结论',
+      addressedTo: ['dsh'],
     });
-    expect(conversation.shouldWake(directed, 'grok')).toBe(true);
+    expect(conversation.shouldWake(directed, 'dsh')).toBe(true);
     expect(conversation.shouldWake(directed, 'codex')).toBe(false);
   });
 

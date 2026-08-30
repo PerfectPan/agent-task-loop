@@ -17,7 +17,7 @@ export const meta: MetaFunction = () => [
   { title: 'Room flight deck — Rivus local canary' },
   {
     name: 'description',
-    content: 'Run six local agents through one addressed Room stream and Task review gate.',
+    content: 'Run five local agents through one addressed Room stream and Task review gate.',
   },
 ];
 

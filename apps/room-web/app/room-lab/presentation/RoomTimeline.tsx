@@ -7,7 +7,7 @@ export function RoomTimeline({ events, head }: { events: RoomLabEventView[]; hea
       <div className={styles.timelineHeading}>
         <span className={styles.eyebrow}>AUTHORITATIVE WORLD</span>
         <h2>Room event stream</h2>
-        <p>只有这里出现的正文，才算对六个 Agent 都成立的公开事实。</p>
+        <p>只有这里出现的正文，才算对五个 Agent 都成立的公开事实。</p>
         <span className={styles.srOnly} role="status" aria-live="polite">
           Room head is now sequence {head}; {events.length} events are visible.
         </span>
@@ -17,7 +17,7 @@ export function RoomTimeline({ events, head }: { events: RoomLabEventView[]; hea
         <div className={styles.emptyTimeline}>
           <span>SEQ 000</span>
           <strong>等待第一条消息进入共享世界</strong>
-          <p>自由聊天会并发唤醒六席；Task 模式会依次开放实施席和审核席。</p>
+          <p>自由聊天会并发唤醒五席；Task 模式会依次开放实施席和审核席。</p>
         </div>
       ) : (
         <ol className={styles.timeline}>

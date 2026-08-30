@@ -33,23 +33,6 @@ export function agentSeatBinding(agentId: RoomLabAgentId): SeatBind {
           'text',
         ],
       };
-    case 'grok':
-      return {
-        cmd: 'grok',
-        args: [
-          '--no-subagents',
-          '--disable-web-search',
-          '--no-memory',
-          '--permission-mode',
-          'plan',
-          '--sandbox',
-          'read-only',
-          '--output-format',
-          'plain',
-          '--single',
-        ],
-        env: { NO_COLOR: '1' },
-      };
     case 'codex':
       return {
         cmd: 'codex',

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { RoomEvent } from '@rivus/agent-room';
 import type { TaskDeliveryView } from '@rivus/agent-task-loop/task-delivery';
 import type {
@@ -8,18 +9,18 @@ import type {
   RoomLabTextPresenterPort,
 } from './ports';
 import type {
-  RoomLabAgentId,
   RoomLabAgentStatus,
   RoomLabAgentView,
   RoomLabEventView,
   RoomLabState,
   RoomLabTaskView,
 } from '../read-model';
-
-const AGENTS: ReadonlyArray<{ id: RoomLabAgentId; label: string; role: string }> = [
-  { id: 'codex', label: 'Codex', role: 'Implementation lead' },
-  { id: 'claude', label: 'Claude', role: 'Critical reviewer' },
-];
+import { CountOffRun } from '../domain/count-off-run';
+import {
+  ROOM_AGENT_ROSTER,
+  type RoomLabAgentId,
+} from '../domain/agent-roster';
+import { parseRoomMessage } from '../domain/room-message';
 
 interface AgentRuntimeState {
   status: RoomLabAgentStatus;
@@ -37,11 +38,14 @@ export interface RoomLabServiceOptions {
 }
 
 export class RoomLabService {
+  private readonly epoch = randomUUID();
   private agentState = createInitialAgentState();
+  private countOff?: CountOffRun;
   private task?: RoomLabTaskView;
   private busy = false;
   private revision = 0;
   private messageCounter = 0;
+  private countOffCounter = 0;
   private taskCounter = 0;
 
   constructor(private readonly options: RoomLabServiceOptions) {}
@@ -52,36 +56,123 @@ export class RoomLabService {
       const slice = await this.options.conversation.snapshot();
       const state: RoomLabState = {
         roomId: this.options.conversation.displayId,
+        epoch: this.epoch,
         head: slice.head,
         revision,
         busy: this.busy,
         events: slice.events.map(event => this.eventView(event)),
-        agents: AGENTS.map(agent => this.agentView(agent.id, agent.label, agent.role)),
+        agents: ROOM_AGENT_ROSTER.map(agent => this.agentView(agent.id, agent.label, agent.role)),
+        ...(this.countOff ? { countOff: this.countOff.snapshot() } : {}),
         ...(this.task ? { task: { ...this.task } } : {}),
       };
       if (revision === this.revision) return state;
     }
   }
 
-  async sendMessage(body: string): Promise<RoomLabState> {
+  async sendMessage(body: string, signal?: AbortSignal): Promise<RoomLabState> {
     await this.exclusive(async () => {
+      signal?.throwIfAborted();
       const message = validateText(body, 'Message');
+      const parsed = parseRoomMessage(message);
       const event = await this.mutateConversation(() =>
         this.options.conversation.admitHuman({
           messageId: `web:${++this.messageCounter}`,
-          body: message,
+          body: parsed.body,
+          addressedTo: parsed.addressedTo,
         }),
       );
-      const wakingAgents = AGENTS.filter(agent =>
+      const wakingAgents = ROOM_AGENT_ROSTER.filter(agent =>
         this.options.conversation.shouldWake(event, agent.id),
       );
-      await Promise.allSettled(wakingAgents.map(agent => this.runChatAgent(agent.id)));
+      await Promise.allSettled(wakingAgents.map(agent => this.runChatAgent(agent.id, signal)));
     });
     return this.snapshot();
   }
 
-  async retryHeld(agentId: RoomLabAgentId): Promise<RoomLabState> {
+  async runCountOff(signal?: AbortSignal): Promise<RoomLabState> {
     await this.exclusive(async () => {
+      signal?.throwIfAborted();
+      const countOff = new CountOffRun(
+        `COUNT-${String(++this.countOffCounter).padStart(3, '0')}`,
+      );
+      this.countOff = countOff;
+      this.touch();
+      await this.mutateConversation(() =>
+        this.options.conversation.admitHuman({
+          messageId: `web:${++this.messageCounter}`,
+          body: '@all 报数开始：请按席位顺序只回复自己的数字（1–6）。',
+          addressedTo: ROOM_AGENT_ROSTER.map(agent => agent.id),
+        }),
+      );
+
+      while (true) {
+        const assignment = countOff.next();
+        if (!assignment) break;
+        const current = this.agentState.get(assignment.agentId) ?? { status: 'idle' };
+        try {
+          signal?.throwIfAborted();
+          if (
+            current.heldUpToSeq !== undefined &&
+            !this.mutateConversationSync(() =>
+              this.options.conversation.ackHeld(assignment.agentId, current.heldUpToSeq!),
+            )
+          ) {
+            throw new Error('The Room rejected the superseded held draft');
+          }
+          this.setAgentState(assignment.agentId, { status: 'running' });
+          const context = await this.mutateConversation(() =>
+            this.options.conversation.prepareTurn(assignment.agentId),
+          );
+          const generated = await this.options.agentRunner(
+            assignment.agentId,
+            buildCountOffPrompt(assignment.agentId, assignment.number, context),
+            signal,
+          );
+          countOff.validateReply({
+            agentId: assignment.agentId,
+            reply: generated.text,
+          });
+          const result = await this.mutateConversation(() =>
+            this.options.conversation.reply({
+              agentId: assignment.agentId,
+              body: generated.text.trim(),
+            }),
+          );
+          this.captureReply(
+            assignment.agentId,
+            generated.text.trim(),
+            generated.latencyMs,
+            result,
+          );
+          if (result.outcome !== 'posted') {
+            throw new Error(`Room held the sequential report at SEQ ${result.heldUpToSeq}`);
+          }
+          countOff.accept({
+            agentId: assignment.agentId,
+            reply: generated.text,
+            seq: result.seq,
+          });
+          this.touch();
+        } catch (error) {
+          const message = this.options.textPresenter.error(error);
+          countOff.fail(message);
+          this.touch();
+          const failed = this.agentState.get(assignment.agentId) ?? current;
+          this.setAgentState(assignment.agentId, {
+            ...failed,
+            status: 'error',
+            error: message,
+          });
+          break;
+        }
+      }
+    });
+    return this.snapshot();
+  }
+
+  async retryHeld(agentId: RoomLabAgentId, signal?: AbortSignal): Promise<RoomLabState> {
+    await this.exclusive(async () => {
+      signal?.throwIfAborted();
       const held = this.agentState.get(agentId);
       if (!held?.heldUpToSeq || !held.lastDraft) {
         throw new RoomLabInputError(`${agentId} has no held draft`);
@@ -96,6 +187,7 @@ export class RoomLabService {
         const generated = await this.options.agentRunner(
           agentId,
           prompt,
+          signal,
         );
         this.mutateConversationSync(() =>
           this.options.conversation.advanceHeldRetry(agentId, catchUp.consumedUpToSeq),
@@ -198,20 +290,27 @@ export class RoomLabService {
     this.options.conversation.reset();
     this.options.taskDelivery.reset();
     this.agentState = createInitialAgentState();
+    this.countOff = undefined;
     this.task = undefined;
     this.messageCounter = 0;
+    this.countOffCounter = 0;
     this.taskCounter = 0;
     this.touch();
     return this.snapshot();
   }
 
-  private async runChatAgent(agentId: RoomLabAgentId): Promise<void> {
+  private async runChatAgent(agentId: RoomLabAgentId, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     this.setAgentState(agentId, { status: 'running' });
     try {
       const context = await this.mutateConversation(() =>
         this.options.conversation.prepareTurn(agentId),
       );
-      const generated = await this.options.agentRunner(agentId, buildChatPrompt(agentId, context));
+      const generated = await this.options.agentRunner(
+        agentId,
+        buildChatPrompt(agentId, context),
+        signal,
+      );
       const result = await this.mutateConversation(() =>
         this.options.conversation.reply({ agentId, body: generated.text }),
       );
@@ -294,6 +393,7 @@ export class RoomLabService {
       author: { ...event.author },
       kind: event.kind,
       body: this.options.textPresenter.text(event.body),
+      addressedTo: [...event.addressedTo],
       at: event.at,
     };
   }
@@ -334,14 +434,21 @@ export class RoomLabService {
 }
 
 function createInitialAgentState(): Map<RoomLabAgentId, AgentRuntimeState> {
-  return new Map(AGENTS.map(agent => [agent.id, { status: 'idle' }]));
+  return new Map(ROOM_AGENT_ROSTER.map(agent => [agent.id, { status: 'idle' }]));
 }
 
 function buildChatPrompt(agentId: RoomLabAgentId, events: RoomEvent[]): string {
-  const role = agentId === 'codex'
-    ? 'You are the implementation-minded member. Give a concrete, concise answer.'
-    : 'You are the critical reviewer. Look for gaps and add an independent useful perspective.';
-  return `${role}\nYou are speaking in a shared Room with another agent. Answer in Chinese. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+  const agent = ROOM_AGENT_ROSTER.find(candidate => candidate.id === agentId);
+  const role = agent?.role ?? 'Independent room participant';
+  return `You are ${agent?.label ?? agentId}, the ${role} in a six-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+}
+
+function buildCountOffPrompt(
+  agentId: RoomLabAgentId,
+  number: number,
+  events: RoomEvent[],
+): string {
+  return `You are ${agentId} in a six-agent Room count-off. Read the public events to confirm the sequence, then reply with exactly the ASCII digits ${number} and no other characters. Do not use tools.\n\nRoom events:\n${formatEvents(events)}`;
 }
 
 function buildRetryPrompt(agentId: RoomLabAgentId, draft: string, newer: RoomEvent[]): string {

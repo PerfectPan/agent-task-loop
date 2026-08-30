@@ -7,34 +7,161 @@ import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server'
 import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
 
 describe('RoomLabService', () => {
-  it('posts the first concurrent answer and holds the stale second draft', async () => {
+  it('posts the first concurrent answer and holds the other five stale drafts', async () => {
     const runner: AgentRunner = async agentId => {
-      if (agentId === 'claude') await delay(15);
+      if (agentId !== 'codex') await delay(15);
       return {
-        text: agentId === 'codex' ? 'Codex public answer' : 'Claude stale answer',
+        text: agentId === 'codex' ? 'Codex public answer' : `${agentId} stale answer`,
         latencyMs: agentId === 'codex' ? 2 : 15,
       };
     };
     const service = createService(runner);
 
-    const state = await service.sendMessage('How should two agents share a Room?');
+    const state = await service.sendMessage('How should six agents share a Room?');
 
     expect(state.events.map(event => [event.seq, event.author.id, event.body])).toEqual([
-      [1, 'director', 'How should two agents share a Room?'],
+      [1, 'director', 'How should six agents share a Room?'],
       [2, 'codex', 'Codex public answer'],
     ]);
-    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+    expect(state.agents.filter(agent => agent.status === 'held')).toHaveLength(5);
+    expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
       status: 'held',
       seenSeq: 1,
       heldUpToSeq: 2,
-      lastDraft: 'Claude stale answer',
+      lastDraft: 'claude-relay stale answer',
     });
+  });
+
+  it('wakes only explicitly mentioned agents and preserves addressedTo', async () => {
+    const calls: string[] = [];
+    const service = createService(async agentId => {
+      calls.push(agentId);
+      return { text: 'A focused challenge', latencyMs: 1 };
+    });
+
+    const state = await service.sendMessage('@grok 请挑战这个写作提纲');
+
+    expect(calls).toEqual(['grok']);
+    expect(state.events[0]).toMatchObject({
+      author: { id: 'director' },
+      addressedTo: ['grok'],
+    });
+    expect(state.events[1]).toMatchObject({ author: { id: 'grok' } });
+  });
+
+  it('runs a six-seat count-off through one monotonic Room stream', async () => {
+    const numberByAgent = new Map([
+      ['claude-relay', '1'],
+      ['claude', '2'],
+      ['grok', '3'],
+      ['codex', '4'],
+      ['opencode', '5'],
+      ['dsh', '6'],
+    ]);
+    const service = createService(async agentId => ({
+      text: numberByAgent.get(agentId) ?? 'unexpected',
+      latencyMs: 1,
+    }));
+
+    const state = await service.runCountOff();
+
+    expect(state.countOff).toMatchObject({
+      runId: 'COUNT-001',
+      status: 'completed',
+      total: 6,
+      reports: [
+        { agentId: 'claude-relay', number: 1, seq: 2 },
+        { agentId: 'claude', number: 2, seq: 3 },
+        { agentId: 'grok', number: 3, seq: 4 },
+        { agentId: 'codex', number: 4, seq: 5 },
+        { agentId: 'opencode', number: 5, seq: 6 },
+        { agentId: 'dsh', number: 6, seq: 7 },
+      ],
+    });
+    expect(state.events.map(event => event.body)).toEqual([
+      '@all 报数开始：请按席位顺序只回复自己的数字（1–6）。',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ]);
+    expect(state.agents.every(agent => agent.status === 'posted')).toBe(true);
+  });
+
+  it('does not resurrect a superseded HELD draft when count-off generation fails', async () => {
+    let relayCalls = 0;
+    const service = createService(async agentId => {
+      if (agentId === 'codex') return { text: 'Codex public answer', latencyMs: 1 };
+      if (agentId === 'claude-relay') {
+        relayCalls += 1;
+        if (relayCalls === 1) {
+          await delay(10);
+          return { text: 'Relay stale draft', latencyMs: 10 };
+        }
+        throw new Error('relay unavailable during count-off');
+      }
+      await delay(15);
+      return { text: `${agentId} stale draft`, latencyMs: 15 };
+    });
+
+    await service.sendMessage('Create one public answer and five HELD drafts');
+    const state = await service.runCountOff();
+
+    expect(state.countOff).toMatchObject({
+      status: 'failed',
+      failedAgentId: 'claude-relay',
+      reports: [],
+    });
+    expect(state.agents.find(agent => agent.id === 'claude-relay')).toEqual({
+      id: 'claude-relay',
+      label: 'Claude Relay',
+      role: 'Long-form synthesizer',
+      status: 'error',
+      seenSeq: 3,
+      error: 'relay unavailable during count-off',
+    });
+    await expect(service.retryHeld('claude-relay')).rejects.toThrow('has no held draft');
+  });
+
+  it('cancels all broadcast agents and releases busy when the request disconnects', async () => {
+    const started = new Set<string>();
+    const controller = new AbortController();
+    const service = createService(async (agentId, _prompt, signal) => {
+      started.add(agentId);
+      signal?.throwIfAborted();
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+      });
+    });
+
+    const pending = service.sendMessage('Start all six agents', controller.signal);
+    await waitUntil(() => started.size === 6);
+    controller.abort(new Error('browser disconnected'));
+    const state = await pending;
+
+    expect(started).toEqual(new Set([
+      'claude-relay',
+      'claude',
+      'grok',
+      'codex',
+      'opencode',
+      'dsh',
+    ]));
+    expect(state.busy).toBe(false);
+    expect(state.agents.every(agent => agent.status === 'error')).toBe(true);
+    expect(state.agents.every(agent => agent.error === 'browser disconnected')).toBe(true);
   });
 
   it('keeps HELD context after a failed retry and allows another retry', async () => {
     let claudeCalls = 0;
     const runner: AgentRunner = async agentId => {
       if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
       claudeCalls += 1;
       if (claudeCalls === 1) {
         await delay(10);
@@ -185,4 +312,12 @@ class ProjectionFailingConversation extends MemoryRoomConversation {
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitUntil(predicate: () => boolean): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (predicate()) return;
+    await delay(1);
+  }
+  throw new Error('condition was not reached');
 }

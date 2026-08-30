@@ -9,11 +9,13 @@ declare global {
 }
 
 export function getRoomLabService(): RoomLabService {
-  globalThis.__rivusRoomLabService ??= new RoomLabService({
-    conversation: new MemoryRoomConversation(),
-    agentRunner: runLocalAgent,
-    taskDelivery: new LocalTaskDelivery(),
-    textPresenter: new LocalTextPresenter(),
-  });
+  if (!(globalThis.__rivusRoomLabService instanceof RoomLabService)) {
+    globalThis.__rivusRoomLabService = new RoomLabService({
+      conversation: new MemoryRoomConversation(),
+      agentRunner: runLocalAgent,
+      taskDelivery: new LocalTaskDelivery(),
+      textPresenter: new LocalTextPresenter(),
+    });
+  }
   return globalThis.__rivusRoomLabService;
 }

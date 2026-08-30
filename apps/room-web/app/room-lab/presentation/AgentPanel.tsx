@@ -1,5 +1,15 @@
+import type { CSSProperties } from 'react';
 import type { RoomLabAgentView } from '../read-model';
 import styles from './RoomLab.module.css';
+
+const AGENT_ACCENTS: Record<RoomLabAgentView['id'], string> = {
+  'claude-relay': '#7447d8',
+  claude: '#e45d19',
+  grok: '#bd327c',
+  codex: '#1463ff',
+  opencode: '#16825b',
+  dsh: '#9a7200',
+};
 
 export function AgentPanel({
   agent,
@@ -12,7 +22,11 @@ export function AgentPanel({
 }) {
   const hasHeldDraft = agent.heldUpToSeq !== undefined;
   return (
-    <section className={`${styles.agentPanel} ${styles[agent.id]}`} aria-label={`${agent.label} status`}>
+    <section
+      className={styles.agentPanel}
+      style={{ '--agent-color': AGENT_ACCENTS[agent.id] } as CSSProperties}
+      aria-label={`${agent.label} status`}
+    >
       <div className={styles.agentHeading}>
         <div>
           <span className={styles.eyebrow}>LOCAL AGENT / {agent.id.toUpperCase()}</span>

@@ -7,7 +7,10 @@ import {
 } from '@rivus/agent-room';
 import type { TaskDeliveryEvent } from '@rivus/agent-task-loop/task-delivery';
 import type { RoomConversationPort } from '../application/ports';
-import type { RoomLabAgentId } from '../read-model';
+import {
+  ROOM_AGENT_ROSTER,
+  type RoomLabAgentId,
+} from '../domain/agent-roster';
 
 const ROOM_ID: RoomId = { tenantId: 'local', conversationId: 'web-room' };
 const TURN_BUDGET = { maxEvents: 50, maxChars: 48_000 } as const;
@@ -21,19 +24,28 @@ export class MemoryRoomConversation implements RoomConversationPort {
     this.ensureSessions();
   }
 
-  async admitHuman(input: { messageId: string; body: string }): Promise<RoomEvent> {
+  async admitHuman(input: {
+    messageId: string;
+    body: string;
+    addressedTo: RoomLabAgentId[];
+  }): Promise<RoomEvent> {
     const admitted = await this.store.admit({
       roomId: ROOM_ID,
       messageId: input.messageId,
       author: { kind: 'human', id: 'director' },
       kind: 'human',
       body: input.body,
+      addressedTo: input.addressedTo,
     });
     return admitted.event;
   }
 
   shouldWake(event: RoomEvent, agentId: RoomLabAgentId): boolean {
-    return shouldWake({ event, agentId, policy: 'all-human-messages' });
+    return shouldWake({
+      event,
+      agentId,
+      policy: event.addressedTo.length > 0 ? 'mention-only' : 'all-human-messages',
+    });
   }
 
   async prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]> {
@@ -138,8 +150,9 @@ export class MemoryRoomConversation implements RoomConversationPort {
   }
 
   private ensureSessions(): void {
-    this.store.ensureSession(this.sessionId('codex'));
-    this.store.ensureSession(this.sessionId('claude'));
+    for (const agent of ROOM_AGENT_ROSTER) {
+      this.store.ensureSession(this.sessionId(agent.id));
+    }
   }
 }
 

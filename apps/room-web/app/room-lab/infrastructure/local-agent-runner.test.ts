@@ -1,6 +1,31 @@
 import os from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { runProcess } from './local-agent-runner.server';
+import {
+  agentSeatBinding,
+  normalizeAgentOutput,
+  runProcess,
+} from './local-agent-runner.server';
+
+describe('agentSeatBinding', () => {
+  it('maps every Room seat to a headless local entry point', () => {
+    expect(agentSeatBinding('claude-relay')).toMatchObject({ cmd: 'zsh' });
+    expect(agentSeatBinding('claude')).toMatchObject({ cmd: 'claude' });
+    expect(agentSeatBinding('grok')).toMatchObject({ cmd: 'grok' });
+    expect(agentSeatBinding('codex')).toMatchObject({ cmd: 'codex' });
+    expect(agentSeatBinding('opencode')).toMatchObject({ cmd: 'opencode' });
+    expect(agentSeatBinding('dsh')).toMatchObject({ cmd: 'dsh' });
+    expect(JSON.stringify(agentSeatBinding('claude-relay'))).not.toMatch(
+      /AUTH_TOKEN|API_KEY|https:\/\//,
+    );
+  });
+
+  it('removes the OpenCode model banner from the public Room reply', () => {
+    expect(normalizeAgentOutput(
+      'opencode',
+      '\u001b[0m\n> build · ling-3.0-flash-fin-free\n\u001b[0m\n5\n',
+    )).toBe('5');
+  });
+});
 
 describe('runProcess', () => {
   it('rejects an already aborted run before spawning', async () => {
@@ -14,6 +39,27 @@ describe('runProcess', () => {
       env: {},
       signal: controller.signal,
     })).rejects.toThrow('cancelled before spawn');
+  });
+
+  it('terminates a running child process when the request is aborted', async () => {
+    const controller = new AbortController();
+    let childPid: number | undefined;
+    const pending = runProcess({
+      command: process.execPath,
+      args: ['-e', 'setInterval(() => {}, 1000)'],
+      cwd: os.tmpdir(),
+      env: {},
+      signal: controller.signal,
+      terminationGraceMs: 50,
+      onSpawn: pid => {
+        childPid = pid;
+      },
+    });
+
+    controller.abort(new Error('browser disconnected'));
+    await expect(pending).rejects.toThrow('browser disconnected');
+    expect(childPid).toBeDefined();
+    expect(() => process.kill(childPid!, 0)).toThrow();
   });
 
   it('hard-caps output and terminates the process tree', async () => {

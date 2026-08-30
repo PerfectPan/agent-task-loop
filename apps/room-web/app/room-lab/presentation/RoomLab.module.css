@@ -218,6 +218,7 @@
 }
 
 .composer,
+.countOffStrip,
 .taskStrip,
 .flightDeck,
 .errorBanner,
@@ -276,8 +277,13 @@
 
 .commandRow {
   display: grid;
-  grid-template-columns: 1fr 142px;
+  grid-template-columns: minmax(0, 1fr) 156px;
   gap: 10px;
+}
+
+.commandInput {
+  position: relative;
+  min-width: 0;
 }
 
 .commandRow textarea {
@@ -298,7 +304,7 @@
   box-shadow: 0 0 0 3px rgba(20, 99, 255, 0.16);
 }
 
-.commandRow > button,
+.commandActions button,
 .heldBox button,
 .labFooter button {
   border: 0;
@@ -311,13 +317,14 @@
   letter-spacing: 0.04em;
 }
 
-.commandRow > button:hover:not(:disabled),
+.commandActions button:hover:not(:disabled),
 .heldBox button:hover:not(:disabled),
 .labFooter button:hover:not(:disabled) {
   background: var(--deck-blue);
 }
 
-.commandRow > button:focus-visible,
+.commandActions button:focus-visible,
+.mentionMenu button:focus-visible,
 .heldBox button:focus-visible,
 .labFooter button:focus-visible,
 .modeSwitch button:focus-visible,
@@ -326,12 +333,107 @@
   outline-offset: 2px;
 }
 
-.commandRow > button:disabled,
+.commandActions button:disabled,
 .heldBox button:disabled,
 .labFooter button:disabled,
 .modeSwitch button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
+}
+
+.commandActions {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 8px;
+}
+
+.commandActions .countOffButton {
+  min-height: 38px;
+  background: transparent;
+  color: #8b2d00;
+  border: 1px solid var(--deck-orange);
+}
+
+.commandActions .countOffButton:hover:not(:disabled) {
+  background: var(--deck-orange);
+  color: #fff;
+}
+
+.mentionHint {
+  display: block;
+  margin-top: 6px;
+  color: #63737b;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+}
+
+.mentionMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% - 17px);
+  left: 12px;
+  width: min(520px, calc(100% - 24px));
+  max-height: 310px;
+  overflow-y: auto;
+  padding: 5px;
+  background: #101820;
+  border: 1px solid #526671;
+  box-shadow: 7px 7px 0 rgba(16, 24, 32, 0.2);
+}
+
+.mentionMenu > p {
+  margin: 0;
+  padding: 12px;
+  color: #dbe4e8;
+  font-size: 12px;
+}
+
+.mentionMenu button {
+  display: grid;
+  grid-template-columns: 130px 120px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  background: transparent;
+  color: #dbe4e8;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mentionMenu button + button {
+  border-top: 1px solid #30434e;
+}
+
+.mentionMenu button:hover,
+.mentionMenu .activeMention {
+  background: #1c3341;
+}
+
+.mentionMenu strong,
+.mentionMenu small {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.mentionMenu strong {
+  color: #73a2ff;
+  font-size: 11px;
+}
+
+.mentionMenu span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mentionMenu small {
+  overflow: hidden;
+  color: #91a3ad;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .composer > p {
@@ -348,6 +450,116 @@
   color: #6d1f18;
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
+}
+
+.countOffStrip {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  background: #eef2f3;
+  border: 1px solid #7f9098;
+  border-left: 6px solid var(--deck-blue);
+}
+
+.countOffHeading {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+
+.countOffHeading strong {
+  color: var(--deck-blue);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 19px;
+}
+
+.countOffHeading small {
+  color: #52636c;
+  font-size: 10px;
+}
+
+.countOffStrip ol {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.countOffStrip li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 7px;
+  align-content: center;
+  min-height: 54px;
+  padding: 7px 8px;
+  background: #dce4e8;
+  border-top: 3px solid #9eabb1;
+}
+
+.countOffStrip li > span {
+  grid-row: 1 / 3;
+  align-self: center;
+  color: #8a989f;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.countOffStrip li strong,
+.countOffStrip li small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countOffStrip li strong {
+  align-self: end;
+  font-size: 10px;
+}
+
+.countOffStrip li small {
+  color: #65767f;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
+.countOffStrip .reported {
+  background: #dff3e9;
+  border-top-color: var(--deck-green);
+}
+
+.countOffStrip .reported > span {
+  color: var(--deck-green);
+}
+
+.countOffStrip .reporting {
+  background: #fff0cf;
+  border-top-color: var(--deck-orange);
+  animation: beacon 1s steps(2, end) infinite;
+}
+
+.countOffStrip .reportFailed {
+  background: #ffe2de;
+  border-top-color: var(--deck-red);
+}
+
+.countOffStrip .reportFailed > span {
+  color: var(--deck-red);
+}
+
+.countOffError {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 10px;
+  background: #ffe2de;
+  color: #7b2119;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
 }
 
 .taskStrip {
@@ -421,10 +633,25 @@
 
 .flightDeck {
   display: grid;
-  grid-template-columns: minmax(240px, 0.72fr) minmax(390px, 1.35fr) minmax(240px, 0.72fr);
-  grid-template-areas: "codex timeline claude";
+  grid-template-columns: minmax(230px, 0.72fr) minmax(390px, 1.35fr) minmax(230px, 0.72fr);
+  grid-template-areas: "left timeline right";
   gap: 12px;
   align-items: start;
+}
+
+.agentColumn {
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: 16px;
+}
+
+.agentColumn:first-child {
+  grid-area: left;
+}
+
+.agentColumn:last-child {
+  grid-area: right;
 }
 
 .agentPanel,
@@ -435,21 +662,9 @@
 }
 
 .agentPanel {
-  position: sticky;
-  top: 16px;
-  min-height: 350px;
+  min-height: 230px;
   padding: 18px;
   border-top: 6px solid var(--agent-color);
-}
-
-.agentPanel.codex {
-  --agent-color: var(--deck-blue);
-  grid-area: codex;
-}
-
-.agentPanel.claude {
-  --agent-color: var(--deck-orange);
-  grid-area: claude;
 }
 
 .agentHeading {
@@ -571,7 +786,7 @@
 }
 
 .draft p {
-  max-height: 210px;
+  max-height: 150px;
   overflow: auto;
   margin: 7px 0 0;
   padding: 11px;
@@ -758,6 +973,22 @@
   overflow-wrap: anywhere;
 }
 
+.eventMentions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.eventMentions span {
+  padding: 2px 5px;
+  background: #dbe7ff;
+  color: #104ab9;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  font-weight: 800;
+}
+
 .labFooter {
   display: flex;
   justify-content: space-between;
@@ -797,6 +1028,7 @@
   }
 
   .composer,
+  .countOffStrip,
   .taskStrip,
   .flightDeck,
   .errorBanner,
@@ -807,7 +1039,7 @@
   .flightDeck {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "codex claude"
+      "left right"
       "timeline timeline";
   }
 
@@ -815,8 +1047,16 @@
     grid-column: auto;
   }
 
-  .agentPanel {
+  .agentColumn {
     position: static;
+  }
+
+  .countOffStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .countOffStrip ol {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .taskStrip {
@@ -862,19 +1102,42 @@
 
   .commandRow,
   .flightDeck,
+  .countOffStrip,
   .taskStrip {
     grid-template-columns: 1fr;
   }
 
   .flightDeck {
     grid-template-areas:
-      "codex"
-      "claude"
+      "left"
+      "right"
       "timeline";
   }
 
-  .commandRow > button {
+  .commandActions {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+  }
+
+  .commandActions button {
     min-height: 48px;
+  }
+
+  .mentionMenu {
+    left: 0;
+    width: 100%;
+  }
+
+  .mentionMenu button {
+    grid-template-columns: 110px 1fr;
+  }
+
+  .mentionMenu small {
+    display: none;
+  }
+
+  .countOffStrip ol {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .taskStrip dl {
@@ -901,7 +1164,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .busyDot,
-  .radar span {
+  .radar span,
+  .countOffStrip .reporting {
     animation: none;
   }
 }

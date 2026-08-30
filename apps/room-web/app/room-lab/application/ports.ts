@@ -6,11 +6,15 @@ import type {
   TaskDeliveryEvent,
   TaskDeliveryView,
 } from '@rivus/agent-task-loop/task-delivery';
-import type { RoomLabAgentId } from '../read-model';
+import type { RoomLabAgentId } from '../domain/agent-roster';
 
 export interface RoomConversationPort {
   readonly displayId: string;
-  admitHuman(input: { messageId: string; body: string }): Promise<RoomEvent>;
+  admitHuman(input: {
+    messageId: string;
+    body: string;
+    addressedTo: RoomLabAgentId[];
+  }): Promise<RoomEvent>;
   shouldWake(event: RoomEvent, agentId: RoomLabAgentId): boolean;
   prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]>;
   prepareHeldRetry(

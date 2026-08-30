@@ -33,6 +33,7 @@ export interface RoomLabAgentView {
   heldUpToSeq?: number;
   lastDraft?: string;
   latencyMs?: number;
+  retryAttempt?: number;
   error?: string;
 }
 

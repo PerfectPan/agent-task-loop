@@ -749,6 +749,19 @@
   font-weight: 800;
 }
 
+.retryProgress {
+  width: fit-content;
+  margin: 14px 0 0;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--agent-color) 12%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--agent-color) 42%, #ffffff);
+  color: var(--agent-color);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
 .radar {
   display: flex;
   align-items: center;

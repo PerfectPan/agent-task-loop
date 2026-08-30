@@ -27,6 +27,10 @@ export interface RoomConversationPort {
     body: string;
     ackHeldUpToSeq?: number;
   }): Promise<RoomConversationReplyResult>;
+  completeSilently(
+    agentId: RoomLabAgentId,
+    ackHeldUpToSeq: number,
+  ): Promise<RoomConversationSilentResult>;
   ackHeld(agentId: RoomLabAgentId, heldUpToSeq: number): boolean;
   inspectAgent(agentId: RoomLabAgentId): { seenSeq: number };
   snapshot(): Promise<RoomSlice>;
@@ -36,6 +40,10 @@ export interface RoomConversationPort {
 
 export type RoomConversationReplyResult =
   | { outcome: 'posted'; seq: number; event: RoomEvent }
+  | { outcome: 'held'; heldUpToSeq: number };
+
+export type RoomConversationSilentResult =
+  | { outcome: 'silent' }
   | { outcome: 'held'; heldUpToSeq: number };
 
 export interface RoomLabTextPresenterPort {

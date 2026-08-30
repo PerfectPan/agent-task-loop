@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { RoomLabAgentView } from '../read-model';
+import { HELD_RETRY_LIMIT } from '../domain/held-retry';
 import styles from './RoomLab.module.css';
 
 const AGENT_ACCENTS: Record<RoomLabAgentView['id'], string> = {
@@ -51,6 +52,13 @@ export function AgentPanel({
           <dd>{agent.latencyMs ? `${(agent.latencyMs / 1000).toFixed(1)}s` : '—'}</dd>
         </div>
       </dl>
+
+      {agent.retryAttempt !== undefined &&
+        (agent.status === 'running' || agent.status === 'held' || agent.status === 'error') && (
+          <p className={styles.retryProgress} role="status">
+            追平 {agent.retryAttempt}/{HELD_RETRY_LIMIT}
+          </p>
+        )}
 
       {agent.status === 'running' && (
         <div className={styles.radar}>

@@ -16,6 +16,7 @@ import type {
   RoomLabTaskView,
 } from '../read-model';
 import { CountOffRun } from '../domain/count-off-run';
+import { HELD_RETRY_LIMIT } from '../domain/held-retry';
 import {
   ROOM_AGENT_COUNT,
   ROOM_AGENT_ROSTER,
@@ -28,6 +29,7 @@ interface AgentRuntimeState {
   lastDraft?: string;
   heldUpToSeq?: number;
   latencyMs?: number;
+  retryAttempt?: number;
   error?: string;
 }
 
@@ -182,59 +184,88 @@ export class RoomLabService {
       if (!held?.heldUpToSeq || !held.lastDraft) {
         throw new RoomLabInputError(`${agentId} has no held draft`);
       }
-      this.setAgentState(agentId, { ...held, status: 'running', error: undefined });
-      try {
-        const catchUp = await this.options.conversation.prepareHeldRetry(
-          agentId,
-          held.heldUpToSeq,
-        );
-        const prompt = buildRetryPrompt(agentId, held.lastDraft, catchUp.events);
-        const generated = await this.options.agentRunner(
-          agentId,
-          prompt,
-          signal,
-        );
-        this.mutateConversationSync(() =>
-          this.options.conversation.advanceHeldRetry(agentId, catchUp.consumedUpToSeq),
-        );
-        if (!catchUp.caughtUp) {
-          this.setAgentState(agentId, {
-            ...held,
-            status: 'held',
-            lastDraft: generated.text,
-            latencyMs: generated.latencyMs,
-            error: undefined,
-          });
-          return;
-        }
-        if (isSilent(generated.text)) {
-          if (!this.mutateConversationSync(() =>
-            this.options.conversation.ackHeld(agentId, held.heldUpToSeq!),
-          )) {
-            throw new Error('The Room rejected the held-draft acknowledgement');
-          }
-          this.setAgentState(agentId, {
-            status: 'silent',
-            lastDraft: generated.text,
-            latencyMs: generated.latencyMs,
-          });
-          return;
-        }
-        const result = await this.mutateConversation(() =>
-          this.options.conversation.reply({
-            agentId,
-            body: generated.text,
-            ackHeldUpToSeq: held.heldUpToSeq,
-          }),
-        );
-        this.captureReply(agentId, generated.text, generated.latencyMs, result);
-      } catch (error) {
+      let latestHeldUpToSeq = held.heldUpToSeq;
+      let lastDraft = held.lastDraft;
+      let latencyMs = held.latencyMs;
+
+      for (let attempt = 1; attempt <= HELD_RETRY_LIMIT; attempt += 1) {
         this.setAgentState(agentId, {
-          ...held,
-          status: 'error',
-          error: this.options.textPresenter.error(error),
+          status: 'running',
+          heldUpToSeq: latestHeldUpToSeq,
+          lastDraft,
+          ...(latencyMs === undefined ? {} : { latencyMs }),
+          retryAttempt: attempt,
         });
+        try {
+          signal?.throwIfAborted();
+          const catchUp = await this.options.conversation.prepareHeldRetry(
+            agentId,
+            latestHeldUpToSeq,
+          );
+          const prompt = buildRetryPrompt(agentId, lastDraft, catchUp.events);
+          const generated = await this.options.agentRunner(agentId, prompt, signal);
+          lastDraft = generated.text;
+          latencyMs = generated.latencyMs;
+          this.mutateConversationSync(() =>
+            this.options.conversation.advanceHeldRetry(agentId, catchUp.consumedUpToSeq),
+          );
+          if (!catchUp.caughtUp) continue;
+
+          if (isSilent(lastDraft)) {
+            const result = await this.mutateConversation(() =>
+              this.options.conversation.completeSilently(agentId, latestHeldUpToSeq),
+            );
+            if (result.outcome === 'held') {
+              latestHeldUpToSeq = result.heldUpToSeq;
+              continue;
+            }
+            this.setAgentState(agentId, {
+              status: 'silent',
+              lastDraft,
+              latencyMs,
+              retryAttempt: attempt,
+            });
+            return;
+          }
+
+          const result = await this.mutateConversation(() =>
+            this.options.conversation.reply({
+              agentId,
+              body: lastDraft,
+              ackHeldUpToSeq: latestHeldUpToSeq,
+            }),
+          );
+          if (result.outcome === 'posted') {
+            this.setAgentState(agentId, {
+              status: 'posted',
+              lastDraft,
+              latencyMs,
+              retryAttempt: attempt,
+            });
+            return;
+          }
+          latestHeldUpToSeq = result.heldUpToSeq;
+        } catch (error) {
+          this.setAgentState(agentId, {
+            status: 'error',
+            heldUpToSeq: latestHeldUpToSeq,
+            lastDraft,
+            ...(latencyMs === undefined ? {} : { latencyMs }),
+            retryAttempt: attempt,
+            error: this.options.textPresenter.error(error),
+          });
+          return;
+        }
       }
+
+      this.setAgentState(agentId, {
+        status: 'error',
+        heldUpToSeq: latestHeldUpToSeq,
+        lastDraft,
+        ...(latencyMs === undefined ? {} : { latencyMs }),
+        retryAttempt: HELD_RETRY_LIMIT,
+        error: `Room still changed after ${HELD_RETRY_LIMIT} catch-up attempts`,
+      });
     });
     return this.snapshot();
   }
@@ -252,7 +283,9 @@ export class RoomLabService {
           },
           onSeatStart: seat => {
             const agentId = agentForSeat(seat);
-            const current = this.agentState.get(agentId) ?? { status: 'idle' };
+            const current = withoutRetryProgress(
+              this.agentState.get(agentId) ?? { status: 'idle' },
+            );
             this.setAgentState(agentId, { ...current, status: 'running', error: undefined });
           },
           onSeatSuccess: (seat, output) => {
@@ -361,6 +394,7 @@ export class RoomLabService {
         ? { lastDraft: this.options.textPresenter.text(runtime.lastDraft) }
         : {}),
       ...(runtime.latencyMs === undefined ? {} : { latencyMs: runtime.latencyMs }),
+      ...(runtime.retryAttempt === undefined ? {} : { retryAttempt: runtime.retryAttempt }),
       ...(runtime.error ? { error: runtime.error } : {}),
     };
   }
@@ -440,6 +474,12 @@ export class RoomLabService {
 
 function createInitialAgentState(): Map<RoomLabAgentId, AgentRuntimeState> {
   return new Map(ROOM_AGENT_ROSTER.map(agent => [agent.id, { status: 'idle' }]));
+}
+
+function withoutRetryProgress(state: AgentRuntimeState): AgentRuntimeState {
+  const current = { ...state };
+  delete current.retryAttempt;
+  return current;
 }
 
 function buildChatPrompt(agentId: RoomLabAgentId, events: RoomEvent[]): string {

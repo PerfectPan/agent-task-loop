@@ -209,6 +209,210 @@ describe('RoomLabService', () => {
     });
   });
 
+  it('catches up again in one click when the first retry is held by a newer write', async () => {
+    const conversation = new MemoryRoomConversation();
+    const retryPrompts: string[] = [];
+    let claudeCalls = 0;
+    const service = createService(async (agentId, prompt) => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      retryPrompts.push(prompt);
+      if (claudeCalls === 2) {
+        await conversation.admitHuman({
+          messageId: 'external:one-more-write',
+          body: 'A newer fact arrived while Claude was revising',
+          addressedTo: [],
+        });
+        return { text: 'Claude first revision', latencyMs: 2 };
+      }
+      return { text: 'Claude converged answer', latencyMs: 3 };
+    }, conversation);
+    await service.sendMessage('Coordinate this answer');
+
+    const state = await service.retryHeld('claude');
+
+    expect(claudeCalls).toBe(3);
+    expect(retryPrompts).toHaveLength(2);
+    expect(retryPrompts[1]).toContain('A newer fact arrived while Claude was revising');
+    expect(state.events.at(-1)).toMatchObject({
+      seq: 4,
+      author: { id: 'claude' },
+      body: 'Claude converged answer',
+    });
+    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'posted',
+      seenSeq: 4,
+      lastDraft: 'Claude converged answer',
+      latencyMs: 3,
+      retryAttempt: 2,
+    });
+  });
+
+  it('stops after three held retries and preserves the latest retry context', async () => {
+    const conversation = new MemoryRoomConversation();
+    let claudeCalls = 0;
+    const service = createService(async agentId => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      const retryAttempt = claudeCalls - 1;
+      await conversation.admitHuman({
+        messageId: `external:retry:${retryAttempt}`,
+        body: `New write during retry ${retryAttempt}`,
+        addressedTo: [],
+      });
+      return {
+        text: `Claude retry ${retryAttempt}`,
+        latencyMs: retryAttempt,
+      };
+    }, conversation);
+    await service.sendMessage('Keep changing while Claude replies');
+
+    const state = await service.retryHeld('claude');
+
+    expect(claudeCalls).toBe(4);
+    expect(state.head).toBe(5);
+    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'error',
+      seenSeq: 4,
+      heldUpToSeq: 5,
+      lastDraft: 'Claude retry 3',
+      latencyMs: 3,
+      retryAttempt: 3,
+      error: 'Room still changed after 3 catch-up attempts',
+    });
+  });
+
+  it('acknowledges a caught-up silent retry without posting a Room event', async () => {
+    let claudeCalls = 0;
+    const service = createService(async agentId => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      return { text: '[SILENT]', latencyMs: 2 };
+    });
+    await service.sendMessage('Coordinate this answer');
+
+    const state = await service.retryHeld('claude');
+
+    expect(state.head).toBe(2);
+    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'silent',
+      seenSeq: 2,
+      lastDraft: '[SILENT]',
+      retryAttempt: 1,
+    });
+    expect(state.agents.find(agent => agent.id === 'claude')?.heldUpToSeq).toBeUndefined();
+  });
+
+  it('keeps catching up when a newer write races with a silent retry', async () => {
+    const conversation = new MemoryRoomConversation();
+    let claudeCalls = 0;
+    const service = createService(async agentId => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      if (claudeCalls === 2) {
+        await conversation.admitHuman({
+          messageId: 'external:during-silent-generation',
+          body: 'A fact arrived before silence could be committed',
+          addressedTo: [],
+        });
+      }
+      return { text: '[SILENT]', latencyMs: claudeCalls };
+    }, conversation);
+    await service.sendMessage('Coordinate this answer');
+
+    const state = await service.retryHeld('claude');
+
+    expect(claudeCalls).toBe(3);
+    expect(state.head).toBe(3);
+    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'silent',
+      seenSeq: 3,
+      lastDraft: '[SILENT]',
+      retryAttempt: 2,
+    });
+    expect(state.agents.find(agent => agent.id === 'claude')?.heldUpToSeq).toBeUndefined();
+  });
+
+  it('preserves the latest held context when a later automatic retry is aborted', async () => {
+    const conversation = new MemoryRoomConversation();
+    const controller = new AbortController();
+    let claudeCalls = 0;
+    let secondRetryStarted = false;
+    const service = createService(async (agentId, _prompt, signal) => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      if (claudeCalls === 2) {
+        await conversation.admitHuman({
+          messageId: 'external:before-abort',
+          body: 'A newer fact forces another retry',
+          addressedTo: [],
+        });
+        return { text: 'Claude first revision', latencyMs: 2 };
+      }
+      secondRetryStarted = true;
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+      });
+    }, conversation);
+    await service.sendMessage('Coordinate this answer');
+
+    const retry = service.retryHeld('claude', controller.signal);
+    await waitUntil(() => secondRetryStarted);
+    controller.abort(new Error('retry cancelled'));
+    const state = await retry;
+
+    expect(claudeCalls).toBe(3);
+    expect(state.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'error',
+      seenSeq: 2,
+      heldUpToSeq: 3,
+      lastDraft: 'Claude first revision',
+      latencyMs: 2,
+      retryAttempt: 2,
+      error: 'retry cancelled',
+    });
+  });
+
   it('runs the Task Delivery application and projects its results into Room', async () => {
     let reviewRound = 0;
     const processRunner: ProcessRunner = async input => {
@@ -256,6 +460,62 @@ describe('RoomLabService', () => {
       'task-control',
     ]);
     expect(state.events.at(-1)?.body).toContain('passed independent review in round 2');
+  });
+
+  it('does not leak completed retry progress into a later Task seat', async () => {
+    const conversation = new MemoryRoomConversation();
+    let claudeCalls = 0;
+    const agentRunner: AgentRunner = async agentId => {
+      if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
+      if (agentId !== 'claude') {
+        await delay(20);
+        return { text: `${agentId} stale draft`, latencyMs: 20 };
+      }
+      claudeCalls += 1;
+      if (claudeCalls === 1) {
+        await delay(10);
+        return { text: 'Claude stale draft', latencyMs: 10 };
+      }
+      return { text: 'Claude caught-up answer', latencyMs: 2 };
+    };
+    let reviewStarted = false;
+    let releaseReview = () => {};
+    const reviewGate = new Promise<void>(resolve => {
+      releaseReview = resolve;
+    });
+    const processRunner: ProcessRunner = async input => {
+      if (input.cmd === 'codex') {
+        return { stdout: 'Implementation result.', stderr: '', exitCode: 0 };
+      }
+      reviewStarted = true;
+      await reviewGate;
+      return { stdout: 'VERDICT: PASS\nReviewed.', stderr: '', exitCode: 0 };
+    };
+    const service = new RoomLabService({
+      conversation,
+      agentRunner,
+      taskDelivery: new LocalTaskDelivery(processRunner),
+      textPresenter: new LocalTextPresenter(),
+    });
+    await service.sendMessage('Coordinate this answer');
+    const retried = await service.retryHeld('claude');
+    expect(retried.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'posted',
+      retryAttempt: 1,
+    });
+
+    const task = service.runTask('Review retry progress isolation');
+    await waitUntil(() => reviewStarted);
+    const reviewing = await service.snapshot();
+
+    expect(reviewing.agents.find(agent => agent.id === 'claude')).toMatchObject({
+      status: 'running',
+    });
+    expect(
+      reviewing.agents.find(agent => agent.id === 'claude')?.retryAttempt,
+    ).toBeUndefined();
+    releaseReview();
+    await task;
   });
 
   it('marks the active Task agent as error when its seat process fails', async () => {
@@ -309,10 +569,13 @@ describe('RoomLabService', () => {
   });
 });
 
-function createService(agentRunner: AgentRunner): RoomLabService {
+function createService(
+  agentRunner: AgentRunner,
+  conversation = new MemoryRoomConversation(),
+): RoomLabService {
   const noTaskProcess: ProcessRunner = async () => ({ stdout: '', stderr: '', exitCode: 1 });
   return new RoomLabService({
-    conversation: new MemoryRoomConversation(),
+    conversation,
     agentRunner,
     taskDelivery: new LocalTaskDelivery(noTaskProcess),
     textPresenter: new LocalTextPresenter(),

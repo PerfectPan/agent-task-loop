@@ -105,6 +105,15 @@ export class MemoryRoomConversation implements RoomConversationPort {
       : { outcome: 'held' as const, heldUpToSeq: result.heldUpToSeq });
   }
 
+  completeSilently(agentId: RoomLabAgentId, ackHeldUpToSeq: number) {
+    return this.store.completeSilentlyInSerial({
+      session: this.sessionId(agentId),
+      ackHeldUpToSeq,
+    }).then(result => result.outcome === 'silent'
+      ? result
+      : { outcome: 'held' as const, heldUpToSeq: result.heldUpToSeq });
+  }
+
   ackHeld(agentId: RoomLabAgentId, heldUpToSeq: number): boolean {
     const current = this.store.inspectSession(this.sessionId(agentId));
     if (current && current.seenSeq >= heldUpToSeq) return true;

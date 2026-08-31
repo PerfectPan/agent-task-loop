@@ -6,11 +6,15 @@ import type {
   TaskDeliveryEvent,
   TaskDeliveryView,
 } from '@rivus/agent-task-loop/task-delivery';
-import type { RoomLabAgentId } from '../read-model';
+import type { RoomLabAgentId } from '../domain/agent-roster';
 
 export interface RoomConversationPort {
   readonly displayId: string;
-  admitHuman(input: { messageId: string; body: string }): Promise<RoomEvent>;
+  admitHuman(input: {
+    messageId: string;
+    body: string;
+    addressedTo: RoomLabAgentId[];
+  }): Promise<RoomEvent>;
   shouldWake(event: RoomEvent, agentId: RoomLabAgentId): boolean;
   prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]>;
   prepareHeldRetry(
@@ -23,6 +27,10 @@ export interface RoomConversationPort {
     body: string;
     ackHeldUpToSeq?: number;
   }): Promise<RoomConversationReplyResult>;
+  completeSilently(
+    agentId: RoomLabAgentId,
+    ackHeldUpToSeq: number,
+  ): Promise<RoomConversationSilentResult>;
   ackHeld(agentId: RoomLabAgentId, heldUpToSeq: number): boolean;
   inspectAgent(agentId: RoomLabAgentId): { seenSeq: number };
   snapshot(): Promise<RoomSlice>;
@@ -32,6 +40,10 @@ export interface RoomConversationPort {
 
 export type RoomConversationReplyResult =
   | { outcome: 'posted'; seq: number; event: RoomEvent }
+  | { outcome: 'held'; heldUpToSeq: number };
+
+export type RoomConversationSilentResult =
+  | { outcome: 'silent' }
   | { outcome: 'held'; heldUpToSeq: number };
 
 export interface RoomLabTextPresenterPort {

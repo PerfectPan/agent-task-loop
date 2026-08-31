@@ -1,13 +1,21 @@
 import type { RoomLabEventView } from '../read-model';
 import styles from './RoomLab.module.css';
 
-export function RoomTimeline({ events, head }: { events: RoomLabEventView[]; head: number }) {
+export function RoomTimeline({
+  events,
+  head,
+  activeCount,
+}: {
+  events: RoomLabEventView[];
+  head: number;
+  activeCount: number;
+}) {
   return (
     <section className={styles.timelinePanel} aria-label="Shared Room event stream">
       <div className={styles.timelineHeading}>
-        <span className={styles.eyebrow}>AUTHORITATIVE WORLD</span>
+        <span className={styles.kicker}>AUTHORITATIVE WORLD</span>
         <h2>Room event stream</h2>
-        <p>只有这里出现的正文，才算对两个 Agent 都成立的公开事实。</p>
+        <p>只有这里出现的正文，才算对当前 {activeCount} 个 Agent 都成立的公开事实。</p>
         <span className={styles.srOnly} role="status" aria-live="polite">
           Room head is now sequence {head}; {events.length} events are visible.
         </span>
@@ -17,7 +25,7 @@ export function RoomTimeline({ events, head }: { events: RoomLabEventView[]; hea
         <div className={styles.emptyTimeline}>
           <span>SEQ 000</span>
           <strong>等待第一条消息进入共享世界</strong>
-          <p>自由聊天会并发唤醒两端；Task 模式会依次开放实施席和审核席。</p>
+          <p>自由聊天会并发唤醒当前组合；Task 模式会依次开放实施席和审核席。</p>
         </div>
       ) : (
         <ol className={styles.timeline}>
@@ -35,6 +43,11 @@ export function RoomTimeline({ events, head }: { events: RoomLabEventView[]; hea
                     })}
                   </time>
                 </header>
+                {event.addressedTo.length > 0 && (
+                  <div className={styles.eventMentions} aria-label="Addressed agents">
+                    {event.addressedTo.map(agentId => <span key={agentId}>@{agentId}</span>)}
+                  </div>
+                )}
                 <p>{event.body}</p>
               </article>
             </li>

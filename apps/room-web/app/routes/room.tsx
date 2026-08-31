@@ -14,6 +14,7 @@ import type {
   RoomLabAction,
   RoomLabActionResponse,
 } from '../room-lab/read-model';
+import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
 import styles from '../room-lab/presentation/RoomLab.module.css';
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' };
@@ -45,10 +46,16 @@ export async function action({ request }: ActionFunctionArgs) {
     let state;
     switch (input.action) {
       case 'message':
-        state = await service.sendMessage(input.body);
+        state = await service.sendMessage(input.body, request.signal);
+        break;
+      case 'compose':
+        state = await service.compose(input.agentIds);
+        break;
+      case 'count-off':
+        state = await service.runCountOff(request.signal);
         break;
       case 'retry':
-        state = await service.retryHeld(input.agentId);
+        state = await service.retryHeld(input.agentId, request.signal);
         break;
       case 'task':
         state = await service.runTask(input.title);
@@ -136,11 +143,21 @@ function parseRoomAction(value: unknown): RoomLabAction {
     case 'message':
       if (typeof input.body === 'string') return { action: 'message', body: input.body };
       break;
+    case 'compose':
+      if (
+        Array.isArray(input.agentIds) &&
+        input.agentIds.every(isRoomLabAgentId)
+      ) {
+        return { action: 'compose', agentIds: input.agentIds };
+      }
+      break;
     case 'retry':
-      if (input.agentId === 'codex' || input.agentId === 'claude') {
+      if (isRoomLabAgentId(input.agentId)) {
         return { action: 'retry', agentId: input.agentId };
       }
       break;
+    case 'count-off':
+      return { action: 'count-off' };
     case 'task':
       if (typeof input.title === 'string') return { action: 'task', title: input.title };
       break;

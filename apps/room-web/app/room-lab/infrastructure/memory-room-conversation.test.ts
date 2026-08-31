@@ -2,6 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { MemoryRoomConversation } from './memory-room-conversation.server';
 
 describe('MemoryRoomConversation', () => {
+  it('broadcasts unmentioned messages and makes explicit mentions exclusive', async () => {
+    const conversation = new MemoryRoomConversation();
+    const broadcast = await conversation.admitHuman({
+      messageId: 'broadcast',
+      body: '大家一起讨论',
+      addressedTo: [],
+    });
+    expect(conversation.shouldWake(broadcast, 'codex')).toBe(true);
+    expect(conversation.shouldWake(broadcast, 'dsh')).toBe(true);
+
+    const directed = await conversation.admitHuman({
+      messageId: 'directed',
+      body: '@dsh 请挑战这个结论',
+      addressedTo: ['dsh'],
+    });
+    expect(conversation.shouldWake(directed, 'dsh')).toBe(true);
+    expect(conversation.shouldWake(directed, 'codex')).toBe(false);
+  });
+
   it('never advances the session beyond events that fit the context budget', async () => {
     const conversation = new MemoryRoomConversation();
     await conversation.project({

@@ -41,4 +41,8 @@ export {
 } from './room/infrastructure/memory-room-stream-store';
 
 export type { RoomReplyCommand, RoomReplyResult } from './room/domain/reply-in-serial';
+export type {
+  CompleteSilentlyCommand,
+  CompleteSilentlyResult,
+} from './room/domain/complete-silently-in-serial';
 export { shouldWake, type WakePolicy } from './wake/domain/wake-policy';

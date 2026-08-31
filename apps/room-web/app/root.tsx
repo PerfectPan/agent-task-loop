@@ -14,10 +14,10 @@ export const links: LinksFunction = () => [
 ];
 
 export const meta: MetaFunction = () => [
-  { title: 'Room flight deck — Rivus local canary' },
+  { title: 'Rivus Room — Compose local agents into one shared workspace' },
   {
     name: 'description',
-    content: 'Run Codex and Claude through a shared Room stream and Task review gate.',
+    content: 'Compose local coding agents, chat in one ordered Room, verify them with count-off, and add an independent Task review gate.',
   },
 ];
 

@@ -7,6 +7,10 @@ import type {
   SliceBudget,
 } from '../domain/model';
 import type { RoomReplyCommand, RoomReplyResult } from '../domain/reply-in-serial';
+import type {
+  CompleteSilentlyCommand,
+  CompleteSilentlyResult,
+} from '../domain/complete-silently-in-serial';
 
 export interface RoomAdmissionStore {
   admit(input: AdmitRoomEvent): Promise<AdmitResult>;
@@ -16,4 +20,5 @@ export interface RoomAdmissionStore {
 export interface RoomStreamStore extends RoomAdmissionStore {
   readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice>;
   replyInSerial(input: RoomReplyCommand): Promise<RoomReplyResult>;
+  completeSilentlyInSerial(input: CompleteSilentlyCommand): Promise<CompleteSilentlyResult>;
 }

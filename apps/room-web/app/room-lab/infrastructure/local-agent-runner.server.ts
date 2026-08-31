@@ -4,41 +4,68 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ProcessRunner, SeatBind } from '@rivus/agent-orchestration';
 import type { AgentRunner } from '../application/ports';
-import type { RoomLabAgentId } from '../read-model';
+import type { RoomLabAgentId } from '../domain/agent-roster';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_OUTPUT_CHARS = 12_000;
 const TERMINATION_GRACE_MS = 2_000;
 
 export function agentSeatBinding(agentId: RoomLabAgentId): SeatBind {
-  if (agentId === 'codex') {
-    return {
-      cmd: 'codex',
-      args: [
-        'exec',
-        '--ignore-user-config',
-        '--ephemeral',
-        '--sandbox',
-        'read-only',
-        '--skip-git-repo-check',
-        '--ignore-rules',
-        '--color',
-        'never',
-      ],
-    };
+  switch (agentId) {
+    case 'claude-relay':
+      return {
+        cmd: 'zsh',
+        args: [
+          '-lic',
+          'claude-relay -p --no-session-persistence --output-format text "$1"',
+          'rivus-room',
+        ],
+      };
+    case 'claude':
+      return {
+        cmd: 'claude',
+        args: [
+          '-p',
+          '--safe-mode',
+          '--restricted',
+          '--no-session-persistence',
+          '--output-format',
+          'text',
+        ],
+      };
+    case 'codex':
+      return {
+        cmd: 'codex',
+        args: [
+          'exec',
+          '--ignore-user-config',
+          '--ephemeral',
+          '--sandbox',
+          'read-only',
+          '--skip-git-repo-check',
+          '--ignore-rules',
+          '--color',
+          'never',
+        ],
+      };
+    case 'opencode':
+      return {
+        cmd: 'opencode',
+        args: [
+          'run',
+          '--pure',
+          '--model',
+          'opencode/ling-3.0-flash-fin-free',
+        ],
+        env: { NO_COLOR: '1' },
+      };
+    case 'dsh':
+      return {
+        cmd: 'dsh',
+        args: ['--profile', 'headless'],
+        env: { NO_COLOR: '1' },
+      };
   }
-
-  return {
-    cmd: 'claude',
-    args: [
-      '-p',
-      '--safe-mode',
-      '--restricted',
-      '--no-session-persistence',
-      '--output-format',
-      'text',
-    ],
-  };
 }
 
 export const localAgentProcessRunner: ProcessRunner = input => runProcess({
@@ -63,9 +90,12 @@ export const runLocalAgent: AgentRunner = async (agentId, prompt, signal) => {
       signal,
     });
     if (result.exitCode !== 0) {
-      throw new AgentRunError(agentId, `CLI exited with code ${result.exitCode}`);
+      throw new AgentRunError(
+        agentId,
+        processFailureMessage(result.exitCode, result.stderr),
+      );
     }
-    const text = normalizeAgentOutput(result.stdout);
+    const text = normalizeAgentOutput(agentId, result.stdout);
     if (!text) throw new AgentRunError(agentId, 'CLI returned an empty response');
     return { text, latencyMs: Date.now() - startedAt };
   } finally {
@@ -197,8 +227,26 @@ function abortError(command: string, reason: unknown): Error {
   return reason instanceof Error ? reason : new Error(`${command} was aborted`);
 }
 
-function normalizeAgentOutput(output: string): string {
-  return output.trim().replace(/^```(?:text|markdown)?\s*/i, '').replace(/\s*```$/, '').trim();
+export function normalizeAgentOutput(agentId: RoomLabAgentId, output: string): string {
+  const plain = output.replace(/\u001b\[[0-9;]*m/g, '').trim();
+  const providerText = agentId === 'opencode'
+    ? plain.split('\n').filter(line => !/^>\s+build\s+·/i.test(line.trim())).join('\n').trim()
+    : plain;
+  return providerText
+    .replace(/^```(?:text|markdown)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+}
+
+function processFailureMessage(exitCode: number, stderr: string): string {
+  const plain = stderr.replace(/\u001b\[[0-9;]*m/g, ' ');
+  if (/usage balance exhausted|payment required|run out of credits|spending-limit/i.test(plain)) {
+    return 'CLI usage balance is exhausted';
+  }
+  if (/authentication|unauthorized|not logged in|login required/i.test(plain)) {
+    return 'CLI authentication is unavailable';
+  }
+  return `CLI exited with code ${exitCode}`;
 }
 
 export class AgentRunError extends Error {

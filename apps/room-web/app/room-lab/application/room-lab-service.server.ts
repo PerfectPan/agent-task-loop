@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { RoomEvent } from '@rivus/agent-room';
 import type { TaskDeliveryView } from '@rivus/agent-task-loop/task-delivery';
 import type {
@@ -8,24 +9,30 @@ import type {
   RoomLabTextPresenterPort,
 } from './ports';
 import type {
-  RoomLabAgentId,
   RoomLabAgentStatus,
   RoomLabAgentView,
   RoomLabEventView,
   RoomLabState,
   RoomLabTaskView,
 } from '../read-model';
-
-const AGENTS: ReadonlyArray<{ id: RoomLabAgentId; label: string; role: string }> = [
-  { id: 'codex', label: 'Codex', role: 'Implementation lead' },
-  { id: 'claude', label: 'Claude', role: 'Critical reviewer' },
-];
+import { CountOffRun } from '../domain/count-off-run';
+import { HELD_RETRY_LIMIT } from '../domain/held-retry';
+import {
+  ROOM_AGENT_ROSTER,
+  type RoomLabAgentId,
+} from '../domain/agent-roster';
+import { parseRoomMessage } from '../domain/room-message';
+import {
+  RoomComposition,
+  RoomCompositionInvariantError,
+} from '../domain/room-composition';
 
 interface AgentRuntimeState {
   status: RoomLabAgentStatus;
   lastDraft?: string;
   heldUpToSeq?: number;
   latencyMs?: number;
+  retryAttempt?: number;
   error?: string;
 }
 
@@ -37,11 +44,15 @@ export interface RoomLabServiceOptions {
 }
 
 export class RoomLabService {
+  private readonly epoch = randomUUID();
+  private readonly composition = new RoomComposition();
   private agentState = createInitialAgentState();
+  private countOff?: CountOffRun;
   private task?: RoomLabTaskView;
   private busy = false;
   private revision = 0;
   private messageCounter = 0;
+  private countOffCounter = 0;
   private taskCounter = 0;
 
   constructor(private readonly options: RoomLabServiceOptions) {}
@@ -50,100 +61,272 @@ export class RoomLabService {
     while (true) {
       const revision = this.revision;
       const slice = await this.options.conversation.snapshot();
+      const activeAgentIds = this.composition.snapshot();
       const state: RoomLabState = {
         roomId: this.options.conversation.displayId,
+        epoch: this.epoch,
         head: slice.head,
         revision,
         busy: this.busy,
+        activeAgentIds,
         events: slice.events.map(event => this.eventView(event)),
-        agents: AGENTS.map(agent => this.agentView(agent.id, agent.label, agent.role)),
+        agents: ROOM_AGENT_ROSTER.map(agent => this.agentView(
+          agent.id,
+          agent.label,
+          agent.role,
+          this.composition.includes(agent.id),
+        )),
+        ...(this.countOff ? { countOff: this.countOff.snapshot() } : {}),
         ...(this.task ? { task: { ...this.task } } : {}),
       };
       if (revision === this.revision) return state;
     }
   }
 
-  async sendMessage(body: string): Promise<RoomLabState> {
+  async sendMessage(body: string, signal?: AbortSignal): Promise<RoomLabState> {
     await this.exclusive(async () => {
+      signal?.throwIfAborted();
       const message = validateText(body, 'Message');
+      const activeAgentIds = this.composition.snapshot();
+      const parsed = parseRoomMessage(message, activeAgentIds);
+      if (parsed.unknownMentions.length > 0) {
+        const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
+        throw new RoomLabInputError(`Unknown Room mention: ${mentions}`);
+      }
+      if (parsed.inactiveMentions.length > 0) {
+        const mentions = parsed.inactiveMentions.map(mention => `@${mention}`).join(', ');
+        throw new RoomLabInputError(`Add these agents to the Room before mentioning them: ${mentions}`);
+      }
       const event = await this.mutateConversation(() =>
         this.options.conversation.admitHuman({
           messageId: `web:${++this.messageCounter}`,
-          body: message,
+          body: parsed.body,
+          addressedTo: parsed.addressedTo,
         }),
       );
-      const wakingAgents = AGENTS.filter(agent =>
-        this.options.conversation.shouldWake(event, agent.id),
+      const wakingAgents = activeAgentIds.filter(agentId =>
+        this.options.conversation.shouldWake(event, agentId),
       );
-      await Promise.allSettled(wakingAgents.map(agent => this.runChatAgent(agent.id)));
+      await Promise.allSettled(wakingAgents.map(agentId => this.runChatAgent(
+        agentId,
+        activeAgentIds.length,
+        signal,
+      )));
     });
     return this.snapshot();
   }
 
-  async retryHeld(agentId: RoomLabAgentId): Promise<RoomLabState> {
+  async compose(agentIds: readonly RoomLabAgentId[]): Promise<RoomLabState> {
     await this.exclusive(async () => {
+      try {
+        this.composition.replace(agentIds);
+      } catch (error) {
+        if (error instanceof RoomCompositionInvariantError) {
+          throw new RoomLabInputError(error.message);
+        }
+        throw error;
+      }
+      // Inspector runs describe the current composition. Their admitted Room
+      // events remain in the timeline as history, but stale run summaries must
+      // not be presented as proof for a newly composed crew.
+      this.countOff = undefined;
+      this.task = undefined;
+      this.touch();
+    });
+    return this.snapshot();
+  }
+
+  async runCountOff(signal?: AbortSignal): Promise<RoomLabState> {
+    await this.exclusive(async () => {
+      signal?.throwIfAborted();
+      const activeAgentIds = this.composition.snapshot();
+      const countOff = new CountOffRun(
+        `COUNT-${String(++this.countOffCounter).padStart(3, '0')}`,
+        activeAgentIds,
+      );
+      this.countOff = countOff;
+      this.touch();
+      await this.mutateConversation(() =>
+        this.options.conversation.admitHuman({
+          messageId: `web:${++this.messageCounter}`,
+          body: `@all 报数开始：请按席位顺序只回复自己的数字（1–${activeAgentIds.length}）。`,
+          addressedTo: activeAgentIds,
+        }),
+      );
+
+      while (true) {
+        const assignment = countOff.next();
+        if (!assignment) break;
+        const current = this.agentState.get(assignment.agentId) ?? { status: 'idle' };
+        try {
+          signal?.throwIfAborted();
+          if (
+            current.heldUpToSeq !== undefined &&
+            !this.mutateConversationSync(() =>
+              this.options.conversation.ackHeld(assignment.agentId, current.heldUpToSeq!),
+            )
+          ) {
+            throw new Error('The Room rejected the superseded held draft');
+          }
+          this.setAgentState(assignment.agentId, { status: 'running' });
+          const context = await this.mutateConversation(() =>
+            this.options.conversation.prepareTurn(assignment.agentId),
+          );
+          const generated = await this.options.agentRunner(
+            assignment.agentId,
+            buildCountOffPrompt(
+              assignment.agentId,
+              assignment.number,
+              activeAgentIds.length,
+              context,
+            ),
+            signal,
+          );
+          countOff.validateReply({
+            agentId: assignment.agentId,
+            reply: generated.text,
+          });
+          const result = await this.mutateConversation(() =>
+            this.options.conversation.reply({
+              agentId: assignment.agentId,
+              body: generated.text.trim(),
+            }),
+          );
+          this.captureReply(
+            assignment.agentId,
+            generated.text.trim(),
+            generated.latencyMs,
+            result,
+          );
+          if (result.outcome !== 'posted') {
+            throw new Error(`Room held the sequential report at SEQ ${result.heldUpToSeq}`);
+          }
+          countOff.accept({
+            agentId: assignment.agentId,
+            reply: generated.text,
+            seq: result.seq,
+          });
+          this.touch();
+        } catch (error) {
+          const message = this.options.textPresenter.error(error);
+          countOff.fail(message);
+          this.touch();
+          const failed = this.agentState.get(assignment.agentId) ?? current;
+          this.setAgentState(assignment.agentId, {
+            ...failed,
+            status: 'error',
+            error: message,
+          });
+          break;
+        }
+      }
+    });
+    return this.snapshot();
+  }
+
+  async retryHeld(agentId: RoomLabAgentId, signal?: AbortSignal): Promise<RoomLabState> {
+    await this.exclusive(async () => {
+      signal?.throwIfAborted();
+      if (!this.composition.includes(agentId)) {
+        throw new RoomLabInputError(`Add ${agentId} to the Room before retrying its held draft`);
+      }
       const held = this.agentState.get(agentId);
       if (!held?.heldUpToSeq || !held.lastDraft) {
         throw new RoomLabInputError(`${agentId} has no held draft`);
       }
-      this.setAgentState(agentId, { ...held, status: 'running', error: undefined });
-      try {
-        const catchUp = await this.options.conversation.prepareHeldRetry(
-          agentId,
-          held.heldUpToSeq,
-        );
-        const prompt = buildRetryPrompt(agentId, held.lastDraft, catchUp.events);
-        const generated = await this.options.agentRunner(
-          agentId,
-          prompt,
-        );
-        this.mutateConversationSync(() =>
-          this.options.conversation.advanceHeldRetry(agentId, catchUp.consumedUpToSeq),
-        );
-        if (!catchUp.caughtUp) {
-          this.setAgentState(agentId, {
-            ...held,
-            status: 'held',
-            lastDraft: generated.text,
-            latencyMs: generated.latencyMs,
-            error: undefined,
-          });
-          return;
-        }
-        if (isSilent(generated.text)) {
-          if (!this.mutateConversationSync(() =>
-            this.options.conversation.ackHeld(agentId, held.heldUpToSeq!),
-          )) {
-            throw new Error('The Room rejected the held-draft acknowledgement');
-          }
-          this.setAgentState(agentId, {
-            status: 'silent',
-            lastDraft: generated.text,
-            latencyMs: generated.latencyMs,
-          });
-          return;
-        }
-        const result = await this.mutateConversation(() =>
-          this.options.conversation.reply({
-            agentId,
-            body: generated.text,
-            ackHeldUpToSeq: held.heldUpToSeq,
-          }),
-        );
-        this.captureReply(agentId, generated.text, generated.latencyMs, result);
-      } catch (error) {
+      let latestHeldUpToSeq = held.heldUpToSeq;
+      let lastDraft = held.lastDraft;
+      let latencyMs = held.latencyMs;
+
+      for (let attempt = 1; attempt <= HELD_RETRY_LIMIT; attempt += 1) {
         this.setAgentState(agentId, {
-          ...held,
-          status: 'error',
-          error: this.options.textPresenter.error(error),
+          status: 'running',
+          heldUpToSeq: latestHeldUpToSeq,
+          lastDraft,
+          ...(latencyMs === undefined ? {} : { latencyMs }),
+          retryAttempt: attempt,
         });
+        try {
+          signal?.throwIfAborted();
+          const catchUp = await this.options.conversation.prepareHeldRetry(
+            agentId,
+            latestHeldUpToSeq,
+          );
+          const prompt = buildRetryPrompt(agentId, lastDraft, catchUp.events);
+          const generated = await this.options.agentRunner(agentId, prompt, signal);
+          lastDraft = generated.text;
+          latencyMs = generated.latencyMs;
+          this.mutateConversationSync(() =>
+            this.options.conversation.advanceHeldRetry(agentId, catchUp.consumedUpToSeq),
+          );
+          if (!catchUp.caughtUp) continue;
+
+          if (isSilent(lastDraft)) {
+            const result = await this.mutateConversation(() =>
+              this.options.conversation.completeSilently(agentId, latestHeldUpToSeq),
+            );
+            if (result.outcome === 'held') {
+              latestHeldUpToSeq = result.heldUpToSeq;
+              continue;
+            }
+            this.setAgentState(agentId, {
+              status: 'silent',
+              lastDraft,
+              latencyMs,
+              retryAttempt: attempt,
+            });
+            return;
+          }
+
+          const result = await this.mutateConversation(() =>
+            this.options.conversation.reply({
+              agentId,
+              body: lastDraft,
+              ackHeldUpToSeq: latestHeldUpToSeq,
+            }),
+          );
+          if (result.outcome === 'posted') {
+            this.setAgentState(agentId, {
+              status: 'posted',
+              lastDraft,
+              latencyMs,
+              retryAttempt: attempt,
+            });
+            return;
+          }
+          latestHeldUpToSeq = result.heldUpToSeq;
+        } catch (error) {
+          this.setAgentState(agentId, {
+            status: 'error',
+            heldUpToSeq: latestHeldUpToSeq,
+            lastDraft,
+            ...(latencyMs === undefined ? {} : { latencyMs }),
+            retryAttempt: attempt,
+            error: this.options.textPresenter.error(error),
+          });
+          return;
+        }
       }
+
+      this.setAgentState(agentId, {
+        status: 'error',
+        heldUpToSeq: latestHeldUpToSeq,
+        lastDraft,
+        ...(latencyMs === undefined ? {} : { latencyMs }),
+        retryAttempt: HELD_RETRY_LIMIT,
+        error: `Room still changed after ${HELD_RETRY_LIMIT} catch-up attempts`,
+      });
     });
     return this.snapshot();
   }
 
   async runTask(title: string): Promise<RoomLabState> {
     await this.exclusive(async () => {
+      if (!this.composition.supportsTaskGate()) {
+        throw new RoomLabInputError(
+          'Task gate requires Codex for implementation and Claude for independent review',
+        );
+      }
       const taskTitle = validateText(title, 'Task title');
       const taskId = `WEB-${String(++this.taskCounter).padStart(3, '0')}`;
       await this.options.taskDelivery.run(
@@ -155,7 +338,9 @@ export class RoomLabService {
           },
           onSeatStart: seat => {
             const agentId = agentForSeat(seat);
-            const current = this.agentState.get(agentId) ?? { status: 'idle' };
+            const current = withoutRetryProgress(
+              this.agentState.get(agentId) ?? { status: 'idle' },
+            );
             this.setAgentState(agentId, { ...current, status: 'running', error: undefined });
           },
           onSeatSuccess: (seat, output) => {
@@ -198,20 +383,31 @@ export class RoomLabService {
     this.options.conversation.reset();
     this.options.taskDelivery.reset();
     this.agentState = createInitialAgentState();
+    this.countOff = undefined;
     this.task = undefined;
     this.messageCounter = 0;
+    this.countOffCounter = 0;
     this.taskCounter = 0;
     this.touch();
     return this.snapshot();
   }
 
-  private async runChatAgent(agentId: RoomLabAgentId): Promise<void> {
+  private async runChatAgent(
+    agentId: RoomLabAgentId,
+    roomSize: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     this.setAgentState(agentId, { status: 'running' });
     try {
       const context = await this.mutateConversation(() =>
         this.options.conversation.prepareTurn(agentId),
       );
-      const generated = await this.options.agentRunner(agentId, buildChatPrompt(agentId, context));
+      const generated = await this.options.agentRunner(
+        agentId,
+        buildChatPrompt(agentId, roomSize, context),
+        signal,
+      );
       const result = await this.mutateConversation(() =>
         this.options.conversation.reply({ agentId, body: generated.text }),
       );
@@ -243,13 +439,19 @@ export class RoomLabService {
     });
   }
 
-  private agentView(id: RoomLabAgentId, label: string, role: string): RoomLabAgentView {
+  private agentView(
+    id: RoomLabAgentId,
+    label: string,
+    role: string,
+    active: boolean,
+  ): RoomLabAgentView {
     const runtime = this.agentState.get(id) ?? { status: 'idle' as const };
     const session = this.options.conversation.inspectAgent(id);
     return {
       id,
       label,
       role,
+      active,
       status: runtime.status,
       seenSeq: session.seenSeq,
       ...(runtime.heldUpToSeq === undefined ? {} : { heldUpToSeq: runtime.heldUpToSeq }),
@@ -257,6 +459,7 @@ export class RoomLabService {
         ? { lastDraft: this.options.textPresenter.text(runtime.lastDraft) }
         : {}),
       ...(runtime.latencyMs === undefined ? {} : { latencyMs: runtime.latencyMs }),
+      ...(runtime.retryAttempt === undefined ? {} : { retryAttempt: runtime.retryAttempt }),
       ...(runtime.error ? { error: runtime.error } : {}),
     };
   }
@@ -294,6 +497,7 @@ export class RoomLabService {
       author: { ...event.author },
       kind: event.kind,
       body: this.options.textPresenter.text(event.body),
+      addressedTo: [...event.addressedTo],
       at: event.at,
     };
   }
@@ -334,14 +538,32 @@ export class RoomLabService {
 }
 
 function createInitialAgentState(): Map<RoomLabAgentId, AgentRuntimeState> {
-  return new Map(AGENTS.map(agent => [agent.id, { status: 'idle' }]));
+  return new Map(ROOM_AGENT_ROSTER.map(agent => [agent.id, { status: 'idle' }]));
 }
 
-function buildChatPrompt(agentId: RoomLabAgentId, events: RoomEvent[]): string {
-  const role = agentId === 'codex'
-    ? 'You are the implementation-minded member. Give a concrete, concise answer.'
-    : 'You are the critical reviewer. Look for gaps and add an independent useful perspective.';
-  return `${role}\nYou are speaking in a shared Room with another agent. Answer in Chinese. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+function withoutRetryProgress(state: AgentRuntimeState): AgentRuntimeState {
+  const current = { ...state };
+  delete current.retryAttempt;
+  return current;
+}
+
+function buildChatPrompt(
+  agentId: RoomLabAgentId,
+  roomSize: number,
+  events: RoomEvent[],
+): string {
+  const agent = ROOM_AGENT_ROSTER.find(candidate => candidate.id === agentId);
+  const role = agent?.role ?? 'Independent room participant';
+  return `You are ${agent?.label ?? agentId}, the ${role} in a ${roomSize}-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+}
+
+function buildCountOffPrompt(
+  agentId: RoomLabAgentId,
+  number: number,
+  roomSize: number,
+  events: RoomEvent[],
+): string {
+  return `You are ${agentId} in a ${roomSize}-agent Room count-off. Read the public events to confirm the sequence, then reply with exactly the ASCII digits ${number} and no other characters. Do not use tools.\n\nRoom events:\n${formatEvents(events)}`;
 }
 
 function buildRetryPrompt(agentId: RoomLabAgentId, draft: string, newer: RoomEvent[]): string {

@@ -48,6 +48,9 @@ export async function action({ request }: ActionFunctionArgs) {
       case 'message':
         state = await service.sendMessage(input.body, request.signal);
         break;
+      case 'compose':
+        state = await service.compose(input.agentIds);
+        break;
       case 'count-off':
         state = await service.runCountOff(request.signal);
         break;
@@ -139,6 +142,14 @@ function parseRoomAction(value: unknown): RoomLabAction {
   switch (input.action) {
     case 'message':
       if (typeof input.body === 'string') return { action: 'message', body: input.body };
+      break;
+    case 'compose':
+      if (
+        Array.isArray(input.agentIds) &&
+        input.agentIds.every(isRoomLabAgentId)
+      ) {
+        return { action: 'compose', agentIds: input.agentIds };
+      }
       break;
     case 'retry':
       if (isRoomLabAgentId(input.agentId)) {

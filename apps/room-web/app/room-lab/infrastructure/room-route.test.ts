@@ -50,6 +50,23 @@ describe('Room action boundary', () => {
     });
   });
 
+  it('rejects an empty Room composition at the domain boundary', async () => {
+    const response = await action(args(new Request('http://127.0.0.1:3210/room', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://127.0.0.1:3210',
+      },
+      body: JSON.stringify({ action: 'compose', agentIds: [] }),
+    })));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: 'A Room needs at least one active agent',
+    });
+  });
+
   it('returns an explicit 403 response when the loader is not local', async () => {
     const previous = process.env.VERCEL;
     process.env.VERCEL = '1';

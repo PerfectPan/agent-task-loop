@@ -28,6 +28,7 @@ export interface RoomLabAgentView {
   id: RoomLabAgentId;
   label: string;
   role: string;
+  active: boolean;
   status: RoomLabAgentStatus;
   seenSeq: number;
   heldUpToSeq?: number;
@@ -63,6 +64,7 @@ export interface RoomLabState {
   head: number;
   revision: number;
   busy: boolean;
+  activeAgentIds: RoomLabAgentId[];
   events: RoomLabEventView[];
   agents: RoomLabAgentView[];
   countOff?: CountOffSnapshot;
@@ -71,6 +73,7 @@ export interface RoomLabState {
 
 export type RoomLabAction =
   | { action: 'message'; body: string }
+  | { action: 'compose'; agentIds: RoomLabAgentId[] }
   | { action: 'count-off' }
   | { action: 'retry'; agentId: RoomLabAgentId }
   | { action: 'task'; title: string }

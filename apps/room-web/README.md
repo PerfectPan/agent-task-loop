@@ -1,8 +1,8 @@
-# @rivus/room-web — local Room flight deck
+# @rivus/room-web — composable local agent workspace
 
-A local-only Remix application for proving the Agent Room and Task Delivery
-domains with five locally authenticated CLI seats: Claude Relay, Claude, Codex,
-OpenCode, and DSH.
+A local-only Remix application for composing authenticated coding agents into
+one shared Room. The catalog currently includes Claude Relay, Claude, Codex,
+OpenCode, and DSH; a Room may use any non-empty subset in any order.
 
 ## Run
 
@@ -12,15 +12,21 @@ pnpm --filter @rivus/room-web dev
 
 Open <http://127.0.0.1:3210/room>.
 
-- **Room chat** broadcasts unmentioned messages to all five CLIs. `@agent`
-  targets one or more seats, while `@all` explicitly addresses the full roster.
+- **Compose the Room** adds, removes, and reorders supported agents. The selected
+  order is a domain invariant, not presentation-only state.
+- **Room chat** broadcasts unmentioned messages to the active composition.
+  `@agent` targets an active seat, while `@all` explicitly addresses the current
+  Room. A mention to a known but inactive agent is rejected instead of silently
+  broadcasting.
   Concurrent drafts still pass through the same `seenSeq` and `HELD` write
   point before they become public facts.
-- **Five-seat count-off** calls the roster in a fixed order. Every number is a
-  real agent reply committed to the same monotonic Room stream, so the UI can
-  show the exact sequence that each seat observed and extended.
+- **Composable count-off** calls only the active agents, in the configured
+  order. Every number is a real agent reply committed to the same monotonic
+  Room stream, so the UI can show the exact sequence that each seat observed
+  and extended.
 - **Task gate** invokes the Task Delivery application: Codex occupies `impl`,
   Claude occupies `review`, and rejected work returns through one rework round.
+  The gate remains unavailable unless both required seats are active.
   Task state is persisted before it is projected into Room, so a Room failure
   cannot change the Task verdict.
 - State is memory-only and resets with the server. Set

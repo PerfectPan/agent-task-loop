@@ -1,4 +1,7 @@
-import { ROOM_AGENT_COUNT, ROOM_AGENT_ROSTER } from '../domain/agent-roster';
+import {
+  ROOM_AGENT_ROSTER,
+  type RoomLabAgentId,
+} from '../domain/agent-roster';
 
 export interface MentionOption {
   id: 'all' | (typeof ROOM_AGENT_ROSTER)[number]['id'];
@@ -12,17 +15,29 @@ interface MentionQuery {
   query: string;
 }
 
-const options: MentionOption[] = [
-  { id: 'all', label: `All ${ROOM_AGENT_COUNT} agents`, description: '广播给全部席位' },
-  ...ROOM_AGENT_ROSTER.map(agent => ({
-    id: agent.id,
-    label: agent.label,
-    description: agent.role,
-  })),
-];
+export function buildMentionOptions(activeAgentIds: readonly RoomLabAgentId[]): MentionOption[] {
+  const activeAgents = new Set(activeAgentIds);
+  return [
+    {
+      id: 'all',
+      label: `All ${activeAgentIds.length} active agents`,
+      description: '广播给当前 Room 的全部席位',
+    },
+    ...ROOM_AGENT_ROSTER
+      .filter(agent => activeAgents.has(agent.id))
+      .sort((left, right) => activeAgentIds.indexOf(left.id) - activeAgentIds.indexOf(right.id))
+      .map(agent => ({
+        id: agent.id,
+        label: agent.label,
+        description: agent.role,
+      })),
+  ];
+}
+
+const defaultOptions = buildMentionOptions(ROOM_AGENT_ROSTER.map(agent => agent.id));
 
 export const mentionCompletion = {
-  options,
+  options: defaultOptions,
   find(value: string, cursor: number): MentionQuery | undefined {
     const beforeCursor = value.slice(0, cursor);
     const match = beforeCursor.match(/(^|[\s,.!?;:，。！？；：])@([a-z-]*)$/i);
@@ -34,8 +49,8 @@ export const mentionCompletion = {
       query: query.toLowerCase(),
     };
   },
-  filter(query: string): MentionOption[] {
-    if (!query) return options;
+  filter(query: string, options: readonly MentionOption[] = defaultOptions): MentionOption[] {
+    if (!query) return [...options];
     return options.filter(option =>
       option.id.includes(query) || option.label.toLowerCase().includes(query),
     );

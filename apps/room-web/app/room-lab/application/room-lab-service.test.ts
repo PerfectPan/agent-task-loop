@@ -30,6 +30,11 @@ describe('RoomLabService', () => {
       heldUpToSeq: 2,
       lastDraft: 'claude-relay stale answer',
     });
+
+    await service.compose(['codex']);
+    await expect(service.retryHeld('claude-relay')).rejects.toThrow(
+      'Add claude-relay to the Room before retrying its held draft',
+    );
   });
 
   it('wakes only explicitly mentioned agents and preserves addressedTo', async () => {
@@ -66,6 +71,65 @@ describe('RoomLabService', () => {
       events: [],
       busy: false,
     });
+  });
+
+  it('runs chat and count-off with an arbitrary ordered composition', async () => {
+    const calls: string[] = [];
+    const service = createService(async (agentId, prompt) => {
+      calls.push(agentId);
+      const number = agentId === 'dsh' ? '1' : '2';
+      return {
+        text: prompt.includes('count-off') ? number : `${agentId} answer`,
+        latencyMs: 1,
+      };
+    });
+    await service.compose(['dsh', 'codex']);
+
+    const chatted = await service.sendMessage('Only the selected crew should answer');
+    expect(calls).toEqual(['dsh', 'codex']);
+    expect(chatted.activeAgentIds).toEqual(['dsh', 'codex']);
+    expect(chatted.agents.filter(agent => agent.active).map(agent => agent.id)).toEqual([
+      'codex',
+      'dsh',
+    ]);
+
+    calls.length = 0;
+    const counted = await service.runCountOff();
+    expect(calls).toEqual(['dsh', 'codex']);
+    expect(counted.countOff).toMatchObject({
+      status: 'completed',
+      total: 2,
+      agentIds: ['dsh', 'codex'],
+      reports: [
+        { agentId: 'dsh', number: 1 },
+        { agentId: 'codex', number: 2 },
+      ],
+    });
+
+    const recomposed = await service.compose(['codex']);
+    expect(recomposed.countOff).toBeUndefined();
+  });
+
+  it('keeps Task delivery constrained to the implementation and review seats', async () => {
+    const service = createService(async () => ({ text: 'unused', latencyMs: 0 }));
+    await service.compose(['opencode', 'dsh']);
+
+    await expect(service.runTask('Ship a reviewed change')).rejects.toThrow(
+      'Task gate requires Codex for implementation and Claude for independent review',
+    );
+    await service.compose(['claude', 'codex']);
+    await expect(service.snapshot()).resolves.toMatchObject({
+      activeAgentIds: ['claude', 'codex'],
+    });
+  });
+
+  it('rejects mentions to a known agent outside the active composition', async () => {
+    const service = createService(async () => ({ text: 'unused', latencyMs: 0 }));
+    await service.compose(['codex']);
+
+    await expect(service.sendMessage('@claude 请评审')).rejects.toThrow(
+      'Add these agents to the Room before mentioning them: @claude',
+    );
   });
 
   it('runs a five-seat count-off through one monotonic Room stream', async () => {
@@ -134,6 +198,7 @@ describe('RoomLabService', () => {
       id: 'claude-relay',
       label: 'Claude Relay',
       role: 'Long-form synthesizer',
+      active: true,
       status: 'error',
       seenSeq: 3,
       error: 'relay unavailable during count-off',

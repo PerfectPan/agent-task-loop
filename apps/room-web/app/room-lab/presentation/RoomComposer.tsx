@@ -6,35 +6,40 @@ import {
 } from 'react';
 import { MentionMenu } from './MentionMenu';
 import {
+  buildMentionOptions,
   mentionCompletion,
   type MentionOption,
 } from './mention-completion';
+import type { RoomLabAgentId } from '../read-model';
 import styles from './RoomLab.module.css';
 
 export function RoomComposer({
   mode,
   value,
   disabled,
+  activeAgentIds,
+  taskGateReady,
   onModeChange,
   onValueChange,
   onSubmit,
-  onCountOff,
 }: {
   mode: 'room' | 'task';
   value: string;
   disabled: boolean;
+  activeAgentIds: RoomLabAgentId[];
+  taskGateReady: boolean;
   onModeChange: (mode: 'room' | 'task') => void;
   onValueChange: (value: string) => void;
   onSubmit: () => void;
-  onCountOff: () => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mentionQuery, setMentionQuery] = useState<
     ReturnType<typeof mentionCompletion.find>
   >();
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const availableMentionOptions = buildMentionOptions(activeAgentIds);
   const mentionOptions = mentionQuery
-    ? mentionCompletion.filter(mentionQuery.query)
+    ? mentionCompletion.filter(mentionQuery.query, availableMentionOptions)
     : [];
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -98,7 +103,7 @@ export function RoomComposer({
           aria-pressed={mode === 'task'}
           className={mode === 'task' ? styles.activeMode : undefined}
           onClick={() => onModeChange('task')}
-          disabled={disabled}
+          disabled={disabled || !taskGateReady}
         >
           Task gate
         </button>
@@ -123,7 +128,7 @@ export function RoomComposer({
               ? `room-mention-${mentionOptions[activeMentionIndex]?.id}`
               : undefined}
             placeholder={mode === 'room'
-              ? '输入 @ 选择一个席位，或直接广播给五个 Agent'
+              ? `Message ${activeAgentIds.length} active agent${activeAgentIds.length === 1 ? '' : 's'}…`
               : '例如：用三条验收标准定义一个可靠的 Room 实现'}
             onBlur={() => setMentionQuery(undefined)}
             onKeyDown={handleKeyDown}
@@ -157,22 +162,14 @@ export function RoomComposer({
           <button type="submit" disabled={disabled || !value.trim()}>
             {disabled ? '运行中…' : mode === 'room' ? '发送到 Room' : '开始 Task'}
           </button>
-          {mode === 'room' && (
-            <button
-              type="button"
-              className={styles.countOffButton}
-              disabled={disabled}
-              onClick={onCountOff}
-            >
-              五席报数
-            </button>
-          )}
         </div>
       </div>
       <p>
         {mode === 'room'
-          ? '无 @ 时五席并发；显式 @ 只唤醒被点名的席位。并发草稿仍受 Room HELD 写点约束。'
-          : 'Occupancy 先开放 impl，再开放 review；只有独立 reviewer 给出 PASS，Task 才通过。'}
+          ? `无 @ 时 ${activeAgentIds.length} 席并发；显式 @ 只唤醒被点名的席位。并发草稿仍受 Room HELD 写点约束。`
+          : taskGateReady
+            ? 'Codex 先实施，Claude 再独立审核；只有 reviewer 给出 PASS，Task 才通过。'
+            : '把 Codex 和 Claude 都加入 Room 后，才能运行 Task gate。'}
       </p>
     </form>
   );

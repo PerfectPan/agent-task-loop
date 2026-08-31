@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher, useRevalidator } from '@remix-run/react';
-import { ROOM_AGENT_ROSTER } from '../domain/agent-roster';
 import { RoomLabStateSelector } from '../read-model';
 import type {
   RoomLabAction,
   RoomLabActionResponse,
-  RoomLabAgentView,
   RoomLabState,
 } from '../read-model';
-import { AgentPanel } from './AgentPanel';
-import { CountOffStrip } from './CountOffStrip';
+import { CrewComposer } from './CrewComposer';
 import { RoomComposer } from './RoomComposer';
+import { RoomInspector } from './RoomInspector';
 import { RoomTimeline } from './RoomTimeline';
-import { TaskStrip } from './TaskStrip';
 import styles from './RoomLab.module.css';
 
 export function RoomLab({ initialState }: { initialState: RoomLabState }) {
@@ -42,7 +39,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       setValue('');
     }
     submittedAction.current = undefined;
-  }, [fetcher.data, state.epoch]);
+  }, [fetcher.data, revalidator, state.epoch]);
 
   const pending = fetcher.state !== 'idle';
   useEffect(() => {
@@ -52,6 +49,16 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
     }, 900);
     return () => window.clearInterval(poll);
   }, [pending, revalidator]);
+
+  const taskGateReady = state.activeAgentIds.includes('codex') &&
+    state.activeAgentIds.includes('claude');
+  const agentsById = new Map(state.agents.map(agent => [agent.id, agent]));
+  const activeAgents = state.activeAgentIds
+    .map(agentId => agentsById.get(agentId))
+    .filter(agent => agent !== undefined);
+  useEffect(() => {
+    if (!taskGateReady) setMode('room');
+  }, [taskGateReady]);
 
   const runAction = (action: RoomLabAction) => {
     submittedAction.current = action;
@@ -75,25 +82,24 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
     ? 'LOCAL LINK DEGRADED'
     : disabled
       ? 'AGENTS IN FLIGHT'
-      : 'LOCAL LINK READY';
-  const agents = ROOM_AGENT_ROSTER.map(agent =>
-    state.agents.find(candidate => candidate.id === agent.id) ?? emptyAgent(agent),
-  );
+      : 'LOCAL ONLY · READY';
 
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
         <a
+          className={styles.brand}
           href="https://github.com/PerfectPan/agent-task-loop"
-          aria-label="Open Agent Task Loop on GitHub"
+          aria-label="Open Rivus on GitHub"
           target="_blank"
           rel="noreferrer"
         >
-          ◆
+          <strong>RIVUS ROOM</strong>
+          <span>Shared local agent workspace</span>
         </a>
-        <div>
-          <span>RIVUS LOCAL CANARY</span>
-          <strong>ROOM FLIGHT DECK</strong>
+        <div className={styles.topbarReadout}>
+          <span>Room</span>
+          <strong>{state.roomId}</strong>
         </div>
         <div className={styles.topStatus} role="status" aria-live="polite">
           <span className={error ? styles.errorDot : disabled ? styles.busyDot : styles.readyDot} />
@@ -101,73 +107,79 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
         </div>
       </header>
 
-      <section className={styles.hero}>
-        <div>
-          <span className={styles.eyebrow}>FIVE LOCAL AGENTS / ONE SHARED WORLD</span>
-          <h1>五个声音，<br />只写进一个世界。</h1>
-        </div>
-        <div className={styles.heroReadout}>
-          <span>ROOM</span>
-          <strong>{state.roomId}</strong>
-          <span>HEAD SEQUENCE</span>
-          <strong>{String(state.head).padStart(3, '0')}</strong>
-        </div>
+      <section className={styles.workspace}>
+        <CrewComposer
+          agents={state.agents}
+          activeAgentIds={state.activeAgentIds}
+          disabled={disabled}
+          onCompose={agentIds => runAction({ action: 'compose', agentIds })}
+        />
+
+        <section className={styles.conversationWorkspace} aria-labelledby="room-heading">
+          <header className={styles.conversationHeader}>
+            <div>
+              <span className={styles.kicker}>SHARED CONVERSATION</span>
+              <h1 id="room-heading">One room, {state.activeAgentIds.length} active voice{state.activeAgentIds.length === 1 ? '' : 's'}.</h1>
+              <p>Every visible message is an admitted fact. Drafts stay private until Room accepts them.</p>
+              <ol className={styles.conversationCrewSummary} aria-label="Active Room order">
+                {activeAgents.map((agent, index) => (
+                  <li key={agent.id}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    {agent.label}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <button
+              type="button"
+              className={styles.countOffButton}
+              disabled={disabled}
+              onClick={() => runAction({ action: 'count-off' })}
+            >
+              Run count-off
+            </button>
+          </header>
+
+          {error && <div className={styles.errorBanner} role="alert">{error}</div>}
+          {state.countOff?.status === 'completed' && (
+            <div className={styles.successBanner} role="status">
+              <strong>Count-off complete</strong>
+              <span>{state.countOff.total} agents acknowledged in the configured order.</span>
+            </div>
+          )}
+
+          <RoomTimeline
+            events={state.events}
+            head={state.head}
+            activeCount={state.activeAgentIds.length}
+          />
+          <RoomComposer
+            mode={mode}
+            value={value}
+            disabled={disabled}
+            activeAgentIds={state.activeAgentIds}
+            taskGateReady={taskGateReady}
+            onModeChange={setMode}
+            onValueChange={setValue}
+            onSubmit={submit}
+          />
+        </section>
+
+        <RoomInspector
+          state={state}
+          disabled={disabled}
+          onRetry={agentId => runAction({ action: 'retry', agentId })}
+        />
       </section>
 
-      <RoomComposer
-        mode={mode}
-        value={value}
-        disabled={disabled}
-        onModeChange={setMode}
-        onValueChange={setValue}
-        onSubmit={submit}
-        onCountOff={() => runAction({ action: 'count-off' })}
-      />
-
-      {error && <div className={styles.errorBanner} role="alert">{error}</div>}
-      {state.countOff && <CountOffStrip run={state.countOff} />}
-      {state.task && <TaskStrip task={state.task} />}
-
-      <div className={styles.flightDeck}>
-        <div className={styles.agentColumn}>
-          {agents.slice(0, 2).map(agent => (
-            <AgentPanel
-              key={agent.id}
-              agent={agent}
-              disabled={disabled}
-              onRetry={item => runAction({ action: 'retry', agentId: item.id })}
-            />
-          ))}
-        </div>
-        <RoomTimeline events={state.events} head={state.head} />
-        <div className={styles.agentColumn}>
-          {agents.slice(2).map(agent => (
-            <AgentPanel
-              key={agent.id}
-              agent={agent}
-              disabled={disabled}
-              onRetry={item => runAction({ action: 'retry', agentId: item.id })}
-            />
-          ))}
-        </div>
-      </div>
-
       <footer className={styles.labFooter}>
-        <p>Room owns five-seat seq / addressedTo / seen / HELD. Task Delivery owns rounds / seats / review verdict.</p>
+        <p>
+          Room owns ordering, addressing and HELD writes. Task gate owns implementation rounds and independent review.
+        </p>
         <button type="button" disabled={disabled} onClick={() => runAction({ action: 'reset' })}>
-          Reset local world
+          Reset conversation
         </button>
       </footer>
     </main>
   );
-}
-
-function emptyAgent(agent: (typeof ROOM_AGENT_ROSTER)[number]): RoomLabAgentView {
-  return {
-    id: agent.id,
-    label: agent.label,
-    role: agent.role,
-    status: 'idle',
-    seenSeq: 0,
-  };
 }

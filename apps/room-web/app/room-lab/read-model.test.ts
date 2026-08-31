@@ -47,6 +47,7 @@ function stateAt(revision: number, busy: boolean, epoch = 'epoch-a'): RoomLabSta
     head: revision,
     revision,
     busy,
+    activeAgentIds: [],
     events: [],
     agents: [],
   };

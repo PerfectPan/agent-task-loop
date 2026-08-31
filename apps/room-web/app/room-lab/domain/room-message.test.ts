@@ -9,6 +9,7 @@ describe('parseRoomMessage', () => {
       body,
       addressedTo: ['codex', 'claude-relay'],
       unknownMentions: [],
+      inactiveMentions: [],
     });
   });
 
@@ -16,6 +17,7 @@ describe('parseRoomMessage', () => {
     expect(parseRoomMessage('@all 开始讨论')).toMatchObject({
       addressedTo: ['claude-relay', 'claude', 'codex', 'opencode', 'dsh'],
       unknownMentions: [],
+      inactiveMentions: [],
     });
   });
 
@@ -24,6 +26,16 @@ describe('parseRoomMessage', () => {
       body: '邮件 a@codex.dev 和 @nobody 都不是 Room 地址',
       addressedTo: [],
       unknownMentions: ['nobody'],
+      inactiveMentions: [],
+    });
+  });
+
+  it('expands @all in composition order and reports known inactive mentions', () => {
+    expect(parseRoomMessage('@all 开始，@claude 稍后加入', ['dsh', 'codex'])).toEqual({
+      body: '@all 开始，@claude 稍后加入',
+      addressedTo: ['dsh', 'codex'],
+      unknownMentions: [],
+      inactiveMentions: ['claude'],
     });
   });
 });

@@ -48,4 +48,19 @@ describe('CountOffRun', () => {
       'safe integer greater than 2',
     );
   });
+
+  it('counts off any selected subset in its configured order', () => {
+    const run = new CountOffRun('COUNT-003', ['dsh', 'codex']);
+
+    expect(run.next()).toEqual({ agentId: 'dsh', number: 1 });
+    run.accept({ agentId: 'dsh', reply: '1', seq: 2 });
+    expect(run.next()).toEqual({ agentId: 'codex', number: 2 });
+    run.accept({ agentId: 'codex', reply: '2', seq: 3 });
+
+    expect(run.snapshot()).toMatchObject({
+      status: 'completed',
+      total: 2,
+      agentIds: ['dsh', 'codex'],
+    });
+  });
 });

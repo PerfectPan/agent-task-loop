@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mentionCompletion } from './mention-completion';
+import { buildMentionOptions, mentionCompletion } from './mention-completion';
 
 describe('mentionCompletion', () => {
   it('finds a mention at the caret and inserts the selected agent', () => {
@@ -28,5 +28,12 @@ describe('mentionCompletion', () => {
       end: 6,
       query: 'cl',
     });
+  });
+
+  it('offers only the active composition in its configured order', () => {
+    const options = buildMentionOptions(['dsh', 'codex']);
+
+    expect(options.map(option => option.id)).toEqual(['all', 'dsh', 'codex']);
+    expect(options[0]?.label).toBe('All 2 active agents');
   });
 });

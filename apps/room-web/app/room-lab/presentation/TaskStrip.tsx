@@ -1,43 +1,24 @@
 import type { RoomLabTaskView } from '../read-model';
-import styles from './RoomLab.module.css';
+import styles from './RoomDetails.module.css';
+
+const taskLabels: Record<RoomLabTaskView['status'], string> = {
+  executing: '正在实施', reviewing: '独立审核中', reworking: '根据意见返工',
+  passed: '模型审核通过，待人工验收', 'changes-requested': '仍需修改', failed: '运行失败',
+};
 
 export function TaskStrip({ task }: { task: RoomLabTaskView }) {
-  const terminal = !task.occupied && ['passed', 'changes-requested', 'failed'].includes(task.status);
-  const runLabel = terminal ? 'TASK DELIVERY COMPLETE' : 'OCCUPIED TASK RUN';
-  const seatLabel = terminal ? 'last seat' : 'allowed seat';
-
   return (
-    <section
-      className={styles.taskStrip}
-      aria-label={`Task ${task.taskId}`}
-    >
-      <p className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">
-        Task {task.taskId}, round {task.round} of {task.maxRounds}, gate{' '}
-        {task.verdict ?? task.status}, lease {task.occupied ? 'occupied' : 'released'}.
-      </p>
-      <div>
-        <span className={styles.eyebrow}>{runLabel}</span>
-        <strong>{task.taskId}</strong>
-      </div>
+    <section className={styles.taskStrip} aria-label={`Task ${task.taskId}`}>
+      <strong role="status" aria-live="polite">{taskLabels[task.status]}</strong>
       <p>{task.title}</p>
       <dl>
-        <div>
-          <dt>round</dt>
-          <dd>{task.round}/{task.maxRounds}</dd>
-        </div>
-        <div>
-          <dt>{seatLabel}</dt>
-          <dd>{task.allowedSeat}</dd>
-        </div>
-        <div>
-          <dt>lease</dt>
-          <dd>{task.occupied ? 'occupied' : 'released'}</dd>
-        </div>
-        <div>
-          <dt>gate</dt>
-          <dd>{task.verdict ?? task.status}</dd>
-        </div>
+        <div><dt>轮次</dt><dd>{task.round}/{task.maxRounds}</dd></div>
+        <div><dt>{task.occupied ? '当前席位' : '最后席位'}</dt><dd>{task.allowedSeat === 'impl' ? 'Codex 实施' : 'Claude 审核'}</dd></div>
+        <div><dt>占用</dt><dd>{task.occupied ? '执行中' : '已释放'}</dd></div>
+        <div><dt>审核结论</dt><dd>{task.verdict ?? '尚未给出'}</dd></div>
       </dl>
+      {task.findings && <p className={styles.findings}>{task.findings}</p>}
+      <small>{task.taskId}</small>
     </section>
   );
 }

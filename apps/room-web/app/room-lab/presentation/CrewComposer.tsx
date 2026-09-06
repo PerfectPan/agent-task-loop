@@ -1,133 +1,58 @@
-import type {
-  RoomLabAgentId,
-  RoomLabAgentView,
-} from '../read-model';
-import styles from './RoomLab.module.css';
+import { ArrowUp } from '@phosphor-icons/react/dist/ssr/ArrowUp';
+import { ArrowDown } from '@phosphor-icons/react/dist/ssr/ArrowDown';
+import { Plus } from '@phosphor-icons/react/dist/ssr/Plus';
+import { Minus } from '@phosphor-icons/react/dist/ssr/Minus';
+import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
+import { AgentAvatar } from './AgentAvatar';
+import { agentStatusLabels } from './agent-status';
+import styles from './RoomSidebar.module.css';
 
-const AGENT_MARKS: Record<RoomLabAgentId, string> = {
-  'claude-relay': 'CR',
-  claude: 'CL',
-  codex: 'CX',
-  opencode: 'OC',
-  dsh: 'DS',
-};
-
-export function CrewComposer({
-  agents,
-  activeAgentIds,
-  disabled,
-  onCompose,
-}: {
-  agents: RoomLabAgentView[];
-  activeAgentIds: RoomLabAgentId[];
-  disabled: boolean;
-  onCompose: (agentIds: RoomLabAgentId[]) => void;
+export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
+  agents: RoomLabAgentView[]; activeAgentIds: RoomLabAgentId[];
+  disabled: boolean; onCompose: (agentIds: RoomLabAgentId[]) => void;
 }) {
-  const agentsById = new Map(agents.map(agent => [agent.id, agent]));
-  const activeAgents = activeAgentIds
-    .map(agentId => agentsById.get(agentId))
+  const byId = new Map(agents.map(agent => [agent.id, agent]));
+  const activeAgents = activeAgentIds.map(id => byId.get(id))
     .filter((agent): agent is RoomLabAgentView => agent !== undefined);
-
-  const add = (agentId: RoomLabAgentId) => onCompose([...activeAgentIds, agentId]);
-  const remove = (agentId: RoomLabAgentId) => {
-    onCompose(activeAgentIds.filter(candidate => candidate !== agentId));
-  };
   const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (target < 0 || target >= activeAgentIds.length) return;
+    if (disabled || target < 0 || target >= activeAgentIds.length) return;
     const next = [...activeAgentIds];
     [next[index], next[target]] = [next[target]!, next[index]!];
     onCompose(next);
   };
-
   return (
-    <aside className={styles.crewPanel} aria-labelledby="crew-title">
-      <header className={styles.panelHeader}>
-        <div>
-          <span className={styles.kicker}>ROOM COMPOSITION</span>
-          <h2 id="crew-title">Compose the room</h2>
-        </div>
-        <strong>{activeAgentIds.length} of {agents.length} active</strong>
-      </header>
-
-      <section className={styles.catalogSection} aria-labelledby="available-agents-title">
-        <h3 id="available-agents-title">Available agents</h3>
-        <ul className={styles.agentCatalog}>
-          {agents.map(agent => {
-            const active = activeAgentIds.includes(agent.id);
-            return (
-              <li key={agent.id} className={active ? styles.catalogAgentActive : undefined}>
-                <span className={`${styles.agentMark} ${styles[`mark_${agent.id}`]}`} aria-hidden="true">
-                  {AGENT_MARKS[agent.id]}
-                </span>
-                <span className={styles.agentIdentity}>
-                  <strong>{agent.label}</strong>
-                  <small>{agent.role}</small>
-                </span>
-                <span className={[
-                  styles.miniStatus,
-                  styles[`miniStatus_${agent.status}`],
-                ].filter(Boolean).join(' ')}>
-                  {agent.status}
-                </span>
-                {active ? (
-                  <span className={styles.activeLabel}>Active</span>
-                ) : (
-                  <button type="button" disabled={disabled} onClick={() => add(agent.id)}>
-                    Add
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className={styles.activeCrewSection} aria-labelledby="active-crew-title">
-        <div className={styles.sectionHeading}>
-          <h3 id="active-crew-title">Active crew</h3>
-          <span>Count-off order</span>
-        </div>
-        <ol className={styles.activeCrew}>
-          {activeAgents.map((agent, index) => (
-            <li key={agent.id}>
-              <span className={styles.portNumber}>{index + 1}</span>
-              <span className={`${styles.agentMark} ${styles[`mark_${agent.id}`]}`} aria-hidden="true">
-                {AGENT_MARKS[agent.id]}
-              </span>
-              <strong>{agent.label}</strong>
-              <span className={styles.reorderActions} aria-label={`Reorder ${agent.label}`}>
-                <button
-                  type="button"
-                  disabled={disabled || index === 0}
-                  onClick={() => move(index, -1)}
-                  aria-label={`Move ${agent.label} earlier`}
-                >
-                  Up
-                </button>
-                <button
-                  type="button"
-                  disabled={disabled || index === activeAgents.length - 1}
-                  onClick={() => move(index, 1)}
-                  aria-label={`Move ${agent.label} later`}
-                >
-                  Down
-                </button>
-              </span>
-              <button
-                type="button"
-                className={styles.removeAgent}
-                disabled={disabled || activeAgents.length === 1}
-                onClick={() => remove(agent.id)}
-                aria-label={`Remove ${agent.label} from the Room`}
-              >
-                Remove
-              </button>
+    <section className={styles.crewEditor} aria-label="成员与报数顺序">
+      <p>选择一起协作的 Agent。下方顺序也是检查连接时的报数顺序，至少保留一位成员。</p>
+      <ol className={styles.editList}>
+        {activeAgents.map((agent, index) => (
+          <li key={agent.id}>
+            <span className={styles.order}>{index + 1}</span><AgentAvatar agentId={agent.id} />
+            <div className={styles.editIdentity}><strong>{agent.label}</strong><small>{agentStatusLabels[agent.status]}</small></div>
+            <div className={styles.editActions}>
+              <button type="button" disabled={disabled || index === 0} onClick={() => move(index, -1)}
+                aria-label={`将 ${agent.label} 上移`}><ArrowUp size={18} /></button>
+              <button type="button" disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
+                aria-label={`将 ${agent.label} 下移`}><ArrowDown size={18} /></button>
+              <button type="button" disabled={disabled || activeAgents.length === 1}
+                onClick={() => onCompose(activeAgentIds.filter(id => id !== agent.id))}
+                aria-label={`移除 ${agent.label}`}><Minus size={18} /></button>
+            </div>
+          </li>
+        ))}
+      </ol>
+      {agents.some(agent => !activeAgentIds.includes(agent.id)) && <>
+        <h3>可加入的 Agent</h3>
+        <ul className={styles.editList}>
+          {agents.filter(agent => !activeAgentIds.includes(agent.id)).map(agent => (
+            <li key={agent.id}><AgentAvatar agentId={agent.id} />
+              <div className={styles.editIdentity}><strong>{agent.label}</strong><small>{agent.role}</small></div>
+              <button type="button" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
+                aria-label={`加入 ${agent.label}`}><Plus size={18} /></button>
             </li>
           ))}
-        </ol>
-        <p>Order controls the count-off. Chat without mentions wakes every active seat.</p>
-      </section>
-    </aside>
+        </ul>
+      </>}
+    </section>
   );
 }

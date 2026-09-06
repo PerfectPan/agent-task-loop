@@ -1,5 +1,5 @@
 import type { MentionOption } from './mention-completion';
-import styles from './RoomLab.module.css';
+import styles from './RoomComposer.module.css';
 
 export function MentionMenu({
   options,
@@ -13,7 +13,7 @@ export function MentionMenu({
   onSelect: (option: MentionOption) => void;
 }) {
   return (
-    <div id="room-mention-options" className={styles.mentionMenu} role="listbox">
+    <div id="room-mention-options" className={styles.mentionMenu} role="listbox" aria-label="选择要提及的 Agent">
       {options.length === 0 ? (
         <p>没有匹配的本地 Agent</p>
       ) : options.map((option, index) => (

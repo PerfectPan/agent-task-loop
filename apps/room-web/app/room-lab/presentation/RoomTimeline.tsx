@@ -1,59 +1,39 @@
-import type { RoomLabEventView } from '../read-model';
-import styles from './RoomLab.module.css';
+import { useEffect, useRef } from 'react';
+import type { RoomLabAgentView, RoomLabEventView } from '../read-model';
+import { AgentAvatar } from './AgentAvatar';
+import { RoomMessage } from './RoomMessage';
+import styles from './RoomTimeline.module.css';
 
-export function RoomTimeline({
-  events,
-  head,
-  activeCount,
-}: {
-  events: RoomLabEventView[];
-  head: number;
-  activeCount: number;
+export function RoomTimeline({ events, head, agents }: {
+  events: RoomLabEventView[]; head: number; agents: RoomLabAgentView[];
 }) {
+  const scrollRef = useRef<HTMLElement>(null);
+  const atBottom = useRef(true);
+  const runningAgents = agents.filter(agent => agent.active && agent.status === 'running');
+  useEffect(() => {
+    const pane = scrollRef.current;
+    if (pane && atBottom.current) pane.scrollTop = pane.scrollHeight;
+  }, [head, runningAgents.length]);
   return (
-    <section className={styles.timelinePanel} aria-label="Shared Room event stream">
-      <div className={styles.timelineHeading}>
-        <span className={styles.kicker}>AUTHORITATIVE WORLD</span>
-        <h2>Room event stream</h2>
-        <p>只有这里出现的正文，才算对当前 {activeCount} 个 Agent 都成立的公开事实。</p>
-        <span className={styles.srOnly} role="status" aria-live="polite">
-          Room head is now sequence {head}; {events.length} events are visible.
-        </span>
-      </div>
-
+    <section ref={scrollRef} className={styles.timelinePanel} aria-label="房间对话"
+      onScroll={event => {
+        const pane = event.currentTarget;
+        atBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 100;
+      }}>
+      <span className={styles.srOnly} role="status" aria-live="polite">已收到 {events.length} 条消息，最新序号 {head}。</span>
       {events.length === 0 ? (
-        <div className={styles.emptyTimeline}>
-          <span>SEQ 000</span>
-          <strong>等待第一条消息进入共享世界</strong>
-          <p>自由聊天会并发唤醒当前组合；Task 模式会依次开放实施席和审核席。</p>
+        <div className={styles.empty}>
+          <div className={styles.emptyCrew}>{agents.filter(agent => agent.active).map(agent =>
+            <AgentAvatar key={agent.id} agentId={agent.id} />)}</div>
+          <h2>把想法带进房间。</h2>
+          <p>聊一个问题，写一份初稿，或一起推敲下一步。</p>
+          <small>直接发消息邀请所有成员，输入 @ 点名一位 Agent。</small>
         </div>
-      ) : (
-        <ol className={styles.timeline}>
-          {events.map(event => (
-            <li key={event.seq} className={styles.timelineEvent}>
-              <div className={styles.seqMarker}>{String(event.seq).padStart(3, '0')}</div>
-              <article className={`${styles.eventCard} ${styles[`event_${event.author.kind}`]}`}>
-                <header>
-                  <strong>{event.author.id}</strong>
-                  <span>{event.kind}</span>
-                  <time dateTime={event.at}>
-                    {new Date(event.at).toLocaleTimeString('zh-CN', {
-                      hour12: false,
-                      timeZone: 'Asia/Shanghai',
-                    })}
-                  </time>
-                </header>
-                {event.addressedTo.length > 0 && (
-                  <div className={styles.eventMentions} aria-label="Addressed agents">
-                    {event.addressedTo.map(agentId => <span key={agentId}>@{agentId}</span>)}
-                  </div>
-                )}
-                <p>{event.body}</p>
-              </article>
-            </li>
-          ))}
-        </ol>
-      )}
+      ) : <ol className={styles.messages}>{events.map(event => <RoomMessage key={event.seq} event={event} />)}</ol>}
+      {runningAgents.length > 0 && <div className={styles.typing} role="status">
+        <AgentAvatar agentId={runningAgents[0]!.id} />
+        <span>{runningAgents.map(agent => agent.label).join('、')} 正在思考…</span>
+      </div>}
     </section>
   );
 }

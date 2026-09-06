@@ -96,11 +96,11 @@ export function ErrorBoundary() {
   return (
     <main className={styles.unavailableShell}>
       <section role="alert" aria-labelledby="room-unavailable-title">
-        <span>LOCAL LINK DEGRADED</span>
-        <h1 id="room-unavailable-title">Room flight deck 暂不可用</h1>
+        <span>Rivus Room</span>
+        <h1 id="room-unavailable-title">本地房间暂不可用</h1>
         <p>{message}</p>
         <button type="button" onClick={() => window.location.reload()}>
-          Retry local link
+          重新连接
         </button>
       </section>
     </main>

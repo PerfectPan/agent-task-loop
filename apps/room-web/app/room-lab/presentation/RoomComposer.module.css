@@ -1,0 +1,30 @@
+.composer { position: relative; flex-shrink: 0; margin: 0 40px 32px; padding: 17px 22px 14px; border: 1.5px solid var(--ink); border-radius: 12px; background: var(--paper); }
+.composer:focus-within { outline: 2px solid var(--blue); outline-offset: 3px; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.inputArea { position: relative; }
+.inputArea textarea { display: block; width: 100%; min-height: 60px; max-height: 180px; resize: vertical; border: 0; outline: 0; background: none; color: var(--ink); font-size: 20px; line-height: 1.7; padding: 0; }
+.inputArea textarea::placeholder { color: var(--muted); }
+.toolbar { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.mentionButton { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; min-height: 44px; white-space: nowrap; }
+.hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.sendButton { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 104px; min-height: 44px; padding: 10px 16px; margin-left: auto; border: 1px solid #1f3aba; border-radius: 6px; background: var(--blue); color: white; font-weight: 700 !important; white-space: nowrap; }
+.sendButton:hover:enabled { background: #213fc0; }
+.sendButton:disabled { opacity: 1 !important; background: #e6e4dc; color: #76736b; border-color: #d0cec6; }
+.taskMode { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.taskMode span { color: var(--muted); font-size: 12px; }
+.taskMode button { margin-left: auto; background: none; border: 0; text-decoration: underline; min-height: 32px; }
+.mentionMenu { position: absolute; bottom: calc(100% + 14px); left: 0; z-index: 30; width: min(410px, 100%); max-height: min(300px, 45dvh); overflow-y: auto; padding: 6px; border: 1px solid var(--ink); border-radius: 8px; background: var(--paper); box-shadow: 0 5px 20px #24242118; }
+.mentionMenu p { margin: 12px; font-size: 14px; }
+.mentionMenu button { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; width: 100%; padding: 10px; border: 0; background: none; color: var(--ink); text-align: left; border-radius: 4px; }
+.mentionMenu button small { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
+.mentionMenu button span { font-size: 12px; align-self: center; }
+.mentionMenu button.activeMention { background: var(--yellow); }
+@media (max-width: 1100px) { .composer { margin-left: 28px; margin-right: 28px; } .hint { max-width: 18ch; font-size: 12px; } .inputArea textarea { font-size: 17px; } }
+@media (max-width: 760px) {
+  .composer { margin: 0 18px max(14px, env(safe-area-inset-bottom)); padding: 14px; }
+  .inputArea textarea { font-size: 16px; }
+  .toolbar { gap: 10px; }
+  .hint { font-size: 10px; max-width: 18ch; }
+  .mentionButton { gap: 3px; font-size: 13px !important; }
+  .sendButton { min-width: 80px; padding: 9px 12px; font-size: 14px !important; }
+}

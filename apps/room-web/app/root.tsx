@@ -7,8 +7,10 @@ import {
   ScrollRestoration,
 } from '@remix-run/react';
 import globalStyles from './styles/global.css?url';
+import displayFont from '@fontsource/bricolage-grotesque/latin-700.css?url';
 
 export const links: LinksFunction = () => [
+  { rel: 'stylesheet', href: displayFont },
   { rel: 'stylesheet', href: globalStyles },
   { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
 ];

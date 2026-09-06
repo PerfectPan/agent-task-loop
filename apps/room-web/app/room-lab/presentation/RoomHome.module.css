@@ -1,44 +1,47 @@
 .home {
-  --paper: #f4f0e4;
-  --garden: #e3ebd6;
-  --ink: #2c291f;
-  --muted: #746e61;
-  --moss: #4a6144;
-  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 48px 24px;
   background:
-    radial-gradient(900px 640px at 12% -8%, #dfe8d0 0%, transparent 58%),
-    radial-gradient(720px 480px at 100% 110%, #efe4cf 0%, transparent 52%),
-    var(--paper);
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 28%, transparent), color-mix(in srgb, var(--paper) 55%, transparent)),
+    url("/images/garden.jpg") center / cover no-repeat;
   color: var(--ink);
   font-family: var(--font-ui);
 }
 
 .home section {
   width: min(560px, 100%);
+  padding: 32px 28px;
+  background: color-mix(in srgb, var(--washi) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 28px;
+  box-shadow: 0 18px 40px #3a34281a;
 }
 
-.home section > p:first-child {
-  margin: 0 0 12px;
+.mark {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.home section > p:first-of-type {
+  margin: 0 0 10px;
   color: var(--muted);
   font-size: 13px;
-  letter-spacing: 0.08em;
 }
 
 .home h1 {
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   font-family: var(--font-title);
-  font-size: clamp(32px, 5vw, 44px);
+  font-size: clamp(30px, 5vw, 40px);
   font-weight: 600;
   line-height: 1.35;
 }
 
 .lead {
-  margin: 0 0 36px;
+  margin: 0 0 28px;
   color: var(--muted);
   font-size: 16px;
   line-height: 1.85;
@@ -66,16 +69,16 @@
 .home textarea {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #d3cdbf;
-  border-radius: 2px;
-  background: #fbf7ec;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--washi);
   color: var(--ink);
   font: inherit;
 }
 
 .home input:focus,
 .home textarea:focus {
-  outline: 2px solid var(--moss);
+  outline: 2px solid var(--hydrangea);
   outline-offset: 2px;
 }
 
@@ -84,6 +87,7 @@
   min-height: 44px;
   padding: 0 22px;
   border: 0;
+  border-radius: 999px;
   background: var(--moss);
   color: #f7f3e8;
   font: inherit;
@@ -91,12 +95,12 @@
 }
 
 .home button:hover {
-  background: #3d5238;
+  background: var(--moss-deep);
 }
 
 .error {
   min-height: 1.4em;
   margin: 0;
-  color: #8f3a30;
+  color: var(--seal);
   font-size: 13px;
 }

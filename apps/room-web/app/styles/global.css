@@ -2,15 +2,18 @@
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --paper: #f4f0e4;
-  --garden: #e3ebd6;
-  --ink: #2c291f;
-  --muted: #746e61;
-  --line: #d3cdbf;
-  --moss: #4a6144;
-  --moss-deep: #2f432c;
-  --seal: #8f3a30;
-  --human: #efe6d0;
+  --paper: #f7f1e3;
+  --washi: #fbf6ea;
+  --garden: #d9e4c8;
+  --ink: #3a3428;
+  --muted: #7a7264;
+  --line: #e0d6c4;
+  --moss: #5a7a52;
+  --moss-deep: #3e5a38;
+  --hydrangea: #7b8fc4;
+  --gold: #f0e2b8;
+  --seal: #b45a4c;
+  --human: #f3ead3;
   --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
 }

@@ -1,10 +1,14 @@
 import { useRef } from 'react';
 import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
 import { Users } from '@phosphor-icons/react/dist/ssr/Users';
+import type { RoomLabAgentView } from '../read-model';
+import { AgentAvatar } from './AgentAvatar';
 import styles from './RoomLab.module.css';
 
-export function RoomHeader({ title, activeCount, disabled, taskMode, onTask, onMembers, onDetails, onReset }: {
-  title: string; activeCount: number; disabled: boolean; taskMode: boolean;
+export function RoomHeader({
+  title, agents, disabled, taskMode, onTask, onMembers, onDetails, onReset,
+}: {
+  title: string; agents: RoomLabAgentView[]; disabled: boolean; taskMode: boolean;
   onTask: () => void; onMembers: () => void; onDetails: () => void; onReset: () => void;
 }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -14,7 +18,15 @@ export function RoomHeader({ title, activeCount, disabled, taskMode, onTask, onM
   };
   return (
     <header className={styles.conversationHeader}>
-      <div><h1 id="room-heading">{title}</h1><p>{activeCount} 位成员在场</p></div>
+      <div className={styles.headerMeta}>
+        <div className={styles.crewPeek} aria-hidden="true">
+          {agents.map(agent => <AgentAvatar key={agent.id} agentId={agent.id} />)}
+        </div>
+        <div>
+          <h1 id="room-heading">{title}</h1>
+          <p>{agents.length} 位成员在场</p>
+        </div>
+      </div>
       <div className={styles.headerActions}>
         <button type="button" className={styles.mobileMembers} onClick={onMembers} aria-label="管理房间成员">
           <Users size={22} />

@@ -18,8 +18,11 @@ export function RoomSidebar({
   return (
     <aside className={styles.sidebar} aria-label="房间">
       <div className={styles.brand}>
-        <strong>房间</strong>
-        <p>本地工作台</p>
+        <img src="/images/spirit.png" width={52} height={52} alt="" />
+        <div>
+          <strong>房间</strong>
+          <p>庭院</p>
+        </div>
       </div>
       <div className={styles.roomSection}>
         <span>进行中</span>

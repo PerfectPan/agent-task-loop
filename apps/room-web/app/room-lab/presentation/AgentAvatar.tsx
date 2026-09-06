@@ -5,5 +5,5 @@ export function AgentAvatar({ agentId, className }: {
   className?: string;
 }) {
   return <img src={`/images/crew/${agentId}.png`} alt="" aria-hidden="true"
-    width={48} height={48} className={className} />;
+    width={64} height={64} className={className} />;
 }

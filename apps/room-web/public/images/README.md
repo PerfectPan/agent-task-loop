@@ -1,17 +1,13 @@
-# Room Studio artwork
+# Room artwork
 
-The Rivus wordmark and five editorial portraits were generated with Image Gen for
-this interface. They are original fictional illustrations, not provider logos or
-portraits of real people. The selected direction uses black ink outlines, warm
-paper, yellow, cobalt and coral.
+Original watercolor illustrations generated for this interface. They are
+fictional characters and scenery, not copies of existing anime, provider logos,
+or portraits of real people.
 
-- `rivus-studio.png`: lowercase wordmark with an ink flourish; black on white,
-  blended into the yellow sidebar using multiply.
-- `crew/claude-relay.png`: glasses, headset and coral shirt.
-- `crew/claude.png`: high bun and cobalt shirt.
-- `crew/codex.png`: curly hair, round glasses and yellow shirt.
-- `crew/opencode.png`: long dark hair and coral shirt.
-- `crew/dsh.png`: short dark hair, beard and cobalt shirt.
-
-The five portraits have alpha transparency. Standard UI icons come from Phosphor
-Icons; display typography uses the self-hosted Bricolage Grotesque font package.
+- `garden.jpg`: hydrangea garden and engawa light used as the workspace wash.
+- `spirit.png`: a paper yokai mark for the local room.
+- `crew/claude-relay.png`: long-haired storyteller with a letter.
+- `crew/claude.png`: reviewer with a hydrangea pin.
+- `crew/codex.png`: craftsman with a sparrow.
+- `crew/opencode.png`: builder with round glasses.
+- `crew/dsh.png`: quiet watcher with a foxfire spark.

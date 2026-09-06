@@ -15,9 +15,11 @@ vi.mock('@remix-run/react', () => ({
   useNavigate: () => vi.fn(),
 }));
 vi.mock('./RoomWorkspace', () => ({
-  RoomWorkspace: ({ value, onValueChange, onAction }: {
+  RoomWorkspace: ({ value, onValueChange, onAction, state }: {
     value: string; onValueChange: (value: string) => void; onAction: (action: unknown) => void;
-  }) => <><input aria-label="draft" value={value} onChange={e => onValueChange(e.target.value)} />
+    state: { title: string };
+  }) => <><h1>{state.title}</h1>
+    <input aria-label="draft" value={value} onChange={e => onValueChange(e.target.value)} />
     <button onClick={() => onAction({ action: 'message', body: value })}>Send</button></>,
 }));
 afterEach(() => {
@@ -47,4 +49,15 @@ it('does not let polling replay an old response and erase the next draft', () =>
   mocks.fetcher.data = { ok: false, error: 'message failed' };
   view.rerender(<RoomLab initialState={state} />);
   expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('second message');
+});
+
+it('shows the incoming room when the loader switches rooms and back', () => {
+  const pricing = roomFixture({ roomId: 'r_aaaaaaaaaa', title: 'Q3 定价方案', epoch: 'epoch-a' });
+  const readme = roomFixture({ roomId: 'r_bbbbbbbbbb', title: 'README 改写', epoch: 'epoch-b' });
+  const view = render(<RoomLab initialState={pricing} />);
+  expect(screen.getByRole('heading').textContent).toBe('Q3 定价方案');
+  view.rerender(<RoomLab initialState={readme} />);
+  expect(screen.getByRole('heading').textContent).toBe('README 改写');
+  view.rerender(<RoomLab initialState={pricing} />);
+  expect(screen.getByRole('heading').textContent).toBe('Q3 定价方案');
 });

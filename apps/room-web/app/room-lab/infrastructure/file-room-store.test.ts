@@ -29,6 +29,19 @@ describe('file Room persistence', () => {
     expect(snapshot.catalog.map(room => room.title)).toEqual(['Q3 定价方案']);
   });
 
+  it('keeps catalog order by creation time after a later room is opened', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const store = new FileRoomCatalogStore(root);
+    const host = new RoomLabHost(store, {
+      agentRunner: async () => ({ text: 'ok', latencyMs: 1 }),
+    });
+    const first = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
+    const second = await host.create({ title: 'README 改写', memberIds: ['codex'] });
+    const snapshot = await host.snapshot(first.roomId);
+    expect(host.list().map(room => room.id)).toEqual([first.roomId, second.roomId]);
+    expect(snapshot.catalog.map(room => room.title)).toEqual(['Q3 定价方案', 'README 改写']);
+  });
+
   it('does not rewrite lastOpened when snapshotting the same room', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const store = new FileRoomCatalogStore(root);

@@ -56,7 +56,7 @@ export class RoomCatalog {
   }
 
   list(): RoomRecord[] {
-    return [...this.rooms].sort((left, right) => right.lastOpenedAt.localeCompare(left.lastOpenedAt));
+    return [...this.rooms].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
   get(id: string): RoomRecord {

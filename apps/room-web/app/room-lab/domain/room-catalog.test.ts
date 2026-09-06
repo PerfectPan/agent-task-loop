@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RoomCatalog } from './room-catalog';
 
 describe('RoomCatalog', () => {
-  it('creates rooms by topic and lists the most recently opened first', () => {
+  it('creates rooms by topic and lists them in creation order', () => {
     const catalog = new RoomCatalog();
     catalog.create({
       id: 'r_aaaaaaaaaa',

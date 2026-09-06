@@ -104,6 +104,7 @@ export class RoomLabStateSelector {
   private readonly retiredEpochs = new Set<string>();
 
   takeLoader(current: RoomLabState, incoming: RoomLabState): RoomLabState {
+    if (incoming.roomId !== current.roomId) return incoming;
     if (incoming.epoch === current.epoch) return takeNewestRoomState(current, incoming);
     if (this.retiredEpochs.has(incoming.epoch)) return current;
     this.retiredEpochs.add(current.epoch);
@@ -119,6 +120,7 @@ export function takeNewestRoomState(
   current: RoomLabState,
   incoming: RoomLabState,
 ): RoomLabState {
+  if (incoming.roomId !== current.roomId) return current;
   if (incoming.epoch !== current.epoch) return current;
   return incoming.revision > current.revision ? incoming : current;
 }

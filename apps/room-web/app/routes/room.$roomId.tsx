@@ -10,11 +10,8 @@ import {
   RoomLabBusyError,
   RoomLabInputError,
 } from '../room-lab/application/room-lab-service.server';
-import type {
-  RoomLabAction,
-  RoomLabActionResponse,
-} from '../room-lab/read-model';
-import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
+import type { RoomLabActionResponse } from '../room-lab/read-model';
+import { parseRoomAction } from '../room-lab/application/parse-room-action';
 import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
 import { isRoomIdentity } from '../room-lab/domain/room-identity';
 import {
@@ -23,7 +20,6 @@ import {
   assertSameOriginJson,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-
 
 export async function loader({ params }: LoaderFunctionArgs) {
   try {
@@ -112,7 +108,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function RoomRoute() {
-  return <RoomLab initialState={useLoaderData<typeof loader>()} />;
+  const initialState = useLoaderData<typeof loader>();
+  return <RoomLab key={initialState.roomId} initialState={initialState} />;
 }
 
 export function ErrorBoundary() {
@@ -128,59 +125,6 @@ export function ErrorBoundary() {
       </section>
     </main>
   );
-}
-
-function parseRoomAction(value: unknown): RoomLabAction {
-  if (!value || typeof value !== 'object' || !('action' in value)) {
-    throw new RoomLabInputError('Room action is invalid');
-  }
-  const input = value as Record<string, unknown>;
-  switch (input.action) {
-    case 'message':
-      if (typeof input.body === 'string') {
-        return {
-          action: 'message',
-          body: input.body,
-          ...(typeof input.clientMessageId === 'string'
-            ? { clientMessageId: input.clientMessageId }
-            : {}),
-        };
-      }
-      break;
-    case 'compose':
-      if (
-        Array.isArray(input.agentIds) &&
-        input.agentIds.every(isRoomLabAgentId)
-      ) {
-        return { action: 'compose', agentIds: input.agentIds };
-      }
-      break;
-    case 'retry':
-      if (isRoomLabAgentId(input.agentId)) {
-        return { action: 'retry', agentId: input.agentId };
-      }
-      break;
-    case 'count-off':
-      return { action: 'count-off' };
-    case 'task':
-      if (typeof input.title === 'string') return { action: 'task', title: input.title };
-      break;
-    case 'create':
-      if (typeof input.title === 'string') {
-        return {
-          action: 'create',
-          title: input.title,
-          ...(typeof input.goal === 'string' ? { goal: input.goal } : {}),
-          ...(Array.isArray(input.agentIds) && input.agentIds.every(isRoomLabAgentId)
-            ? { agentIds: input.agentIds }
-            : {}),
-        };
-      }
-      break;
-    case 'reset':
-      return { action: 'reset' };
-  }
-  throw new RoomLabInputError('Room action payload is invalid');
 }
 
 function routeErrorMessage(error: unknown): string {

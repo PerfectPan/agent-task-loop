@@ -25,8 +25,8 @@ export function RoomTimeline({ events, head, agents }: {
         <div className={styles.empty}>
           <div className={styles.emptyCrew}>{agents.filter(agent => agent.active).map(agent =>
             <AgentAvatar key={agent.id} agentId={agent.id} />)}</div>
-          <h2>还没有消息</h2>
-          <p>直接说，在场的人按顺序接话。@ 只问其中一位。</p>
+          <h2>这间房还没有消息。</h2>
+          <p>直接说，在场的人会按顺序接话。输入 @，只问其中一位。</p>
         </div>
       ) : <ol className={styles.messages}>{events.map(event => <RoomMessage key={event.seq} event={event} />)}</ol>}
       {runningAgents.length > 0 && <div className={styles.typing} role="status">

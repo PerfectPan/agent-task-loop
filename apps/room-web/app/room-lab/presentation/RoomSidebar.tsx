@@ -20,11 +20,14 @@ export function RoomSidebar({
   return (
     <aside className={styles.sidebar} aria-label="房间">
       <div className={styles.brand}>
-        <strong>房间</strong>
-        <p>本地多 Agent 协作</p>
+        <img src="/images/spirit.png" width={52} height={52} alt="" />
+        <div>
+          <strong>房间</strong>
+          <p>本地协作</p>
+        </div>
       </div>
       <div className={styles.roomSection}>
-        <span>房间</span>
+        <span>进行中</span>
         <button type="button" className={styles.createRoom} onClick={onCreate}>新建</button>
       </div>
       <ul className={styles.rooms}>
@@ -39,8 +42,8 @@ export function RoomSidebar({
         ))}
       </ul>
       <div className={styles.rosterHeading}>
-        <span>班组</span>
-        <button type="button" onClick={onManage} aria-label="管理房间成员">改成员</button>
+        <span>在场</span>
+        <button type="button" onClick={onManage} aria-label="管理房间成员">管理成员</button>
       </div>
       <ul className={styles.roster}>
         {agents.map(agent => (
@@ -49,8 +52,10 @@ export function RoomSidebar({
             <div>
               <strong>{agent.label}</strong>
               <span className={styles.role}>{agentRoleLabels[agent.id]}</span>
+              <span className={styles.status} data-status={agent.status}>
+                <i aria-hidden="true" />{agentStatusLabels[agent.status]}
+              </span>
             </div>
-            <span className={styles.status} data-status={agent.status}>{agentStatusLabels[agent.status]}</span>
           </li>
         ))}
       </ul>

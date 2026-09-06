@@ -1,38 +1,41 @@
 .composer {
-  position: relative; flex-shrink: 0; margin: 0 12px 12px; padding: 8px 10px 8px;
-  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  position: relative; flex-shrink: 0; margin: 8px 28px 20px; padding: 14px 16px 12px;
+  border: 1px solid var(--line); border-radius: 22px; background: var(--washi);
+  box-shadow: 0 12px 28px #3a342814;
 }
-.composer:focus-within { outline: 2px solid var(--work); outline-offset: 2px; }
+.composer:focus-within { outline: 2px solid var(--hydrangea); outline-offset: 3px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .inputArea { position: relative; }
 .inputArea textarea {
-  display: block; width: 100%; min-height: 44px; max-height: 140px; resize: vertical;
-  border: 0; outline: 0; background: none; color: var(--ink); font-size: 14px; line-height: 1.5; padding: 0;
+  display: block; width: 100%; min-height: 56px; max-height: 180px; resize: vertical;
+  border: 0; outline: 0; background: none; color: var(--ink); font-size: 16px; line-height: 1.7; padding: 0;
 }
 .inputArea textarea::placeholder { color: var(--muted); }
-.toolbar { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.mentionButton { display: flex; align-items: center; gap: 4px; border: 0; background: none; padding: 0; min-height: 32px; white-space: nowrap; color: var(--work); font-size: 13px; }
-.hint { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.toolbar { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.mentionButton { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; min-height: 40px; white-space: nowrap; color: var(--hydrangea); }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .sendButton {
-  display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 72px; min-height: 32px;
-  padding: 0 12px; margin-left: auto; border: 0; border-radius: 8px; background: var(--shift); color: white;
-  white-space: nowrap; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 88px; min-height: 40px;
+  padding: 8px 16px; margin-left: auto; border: 0; border-radius: 999px; background: var(--moss); color: #f7f3e8;
+  white-space: nowrap;
 }
-.sendButton:hover:enabled { background: var(--shift-deep); }
-.sendButton:disabled { opacity: 1 !important; background: #e4e7ec; color: var(--muted); }
-.taskMode { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.sendButton:hover:enabled { background: var(--moss-deep); }
+.sendButton:disabled { opacity: 1 !important; background: #e6e1d4; color: var(--muted); }
+.taskMode { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .taskMode span { color: var(--muted); font-size: 12px; }
-.taskMode button { margin-left: auto; background: none; border: 0; text-decoration: underline; min-height: 28px; }
+.taskMode button { margin-left: auto; background: none; border: 0; text-decoration: underline; min-height: 32px; }
 .mentionMenu {
-  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30; width: min(360px, 100%);
-  max-height: min(260px, 40dvh); overflow-y: auto; padding: 4px; border: 1px solid var(--line);
-  border-radius: 10px; background: var(--panel); box-shadow: 0 8px 20px #1a233014;
+  position: absolute; bottom: calc(100% + 12px); left: 0; z-index: 30; width: min(410px, 100%);
+  max-height: min(300px, 45dvh); overflow-y: auto; padding: 8px; border: 1px solid var(--line);
+  border-radius: 16px; background: var(--washi); box-shadow: 0 12px 28px #3a34281f;
 }
-.mentionMenu p { margin: 8px; font-size: 13px; }
-.mentionMenu button { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; width: 100%; padding: 8px; border: 0; background: none; color: var(--ink); text-align: left; border-radius: 8px; }
+.mentionMenu p { margin: 12px; font-size: 14px; }
+.mentionMenu button { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; width: 100%; padding: 10px; border: 0; background: none; color: var(--ink); text-align: left; border-radius: 12px; }
 .mentionMenu button small { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
 .mentionMenu button span { font-size: 12px; align-self: center; }
-.mentionMenu button.activeMention { background: var(--paper); }
+.mentionMenu button.activeMention { background: var(--garden); }
+@media (max-width: 1100px) { .composer { margin-left: 18px; margin-right: 18px; } .hint { max-width: 22ch; } }
 @media (max-width: 760px) {
-  .composer { margin: 0 8px max(8px, env(safe-area-inset-bottom)); }
+  .composer { margin: 0 12px max(12px, env(safe-area-inset-bottom)); padding: 12px; border-radius: 18px; }
+  .hint { font-size: 11px; max-width: 16ch; }
 }

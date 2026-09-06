@@ -1,11 +1,9 @@
 # Room artwork
 
-Original workplace-anime portraits generated for this interface. They are
-fictional coworkers, not copies of Cells at Work characters, provider logos, or
-real people.
+Original illustrations for this interface. They are fictional, not copies of
+existing anime casts, provider logos, or real people.
 
-- `crew/claude-relay.png`: communications
-- `crew/claude.png`: reviewer
-- `crew/codex.png`: implementer
-- `crew/opencode.png`: builder
-- `crew/dsh.png`: analyst
+- `garden.jpg`: hydrangea garden wash for the workspace.
+- `spirit.png`: paper yokai mark.
+- `crew/*.png`: workplace-anime coworker portraits in a Cells at Work-like
+  style, original characters only.

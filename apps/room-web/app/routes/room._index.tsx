@@ -91,6 +91,7 @@ export default function RoomHome() {
   return (
     <main className={styles.home}>
       <section>
+        <img className={styles.mark} src="/images/spirit.png" width={64} height={64} alt="" />
         <p>本地房间</p>
         <h1>建一间房，把要做的事写在名字上。</h1>
         <p className={styles.lead}>

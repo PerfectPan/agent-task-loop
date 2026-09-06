@@ -522,6 +522,7 @@ export class RoomLabService {
       role,
       active,
       status: runtime.status,
+      availability: 'runnable',
       seenSeq: session.seenSeq,
       ...(runtime.heldUpToSeq === undefined ? {} : { heldUpToSeq: runtime.heldUpToSeq }),
       ...(runtime.lastDraft

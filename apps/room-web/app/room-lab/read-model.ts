@@ -27,18 +27,32 @@ export interface RoomLabEventView {
   failed?: boolean;
 }
 
+export type RoomAgentAvailability = 'runnable' | 'found' | 'missing';
+
+export interface RoomAgentInventoryItem {
+  id: RoomLabAgentId;
+  label: string;
+  role: string;
+  availability: RoomAgentAvailability;
+  command?: string;
+  version?: string;
+}
+
 export interface RoomLabAgentView {
   id: RoomLabAgentId;
   label: string;
   role: string;
   active: boolean;
   status: RoomLabAgentStatus;
+  availability: RoomAgentAvailability;
   seenSeq: number;
   heldUpToSeq?: number;
   lastDraft?: string;
   latencyMs?: number;
   retryAttempt?: number;
   error?: string;
+  command?: string;
+  version?: string;
 }
 
 export type RoomLabTaskStatus =

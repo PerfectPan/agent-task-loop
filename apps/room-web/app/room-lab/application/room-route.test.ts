@@ -5,6 +5,8 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { afterEach, describe, expect, it } from 'vitest';
 import { action, loader } from '../../routes/room.$roomId';
 import { getRoomLabHost } from '../composition.server';
+import { RoomLabHost, runnableInventory } from './room-lab-host.server';
+import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
 
 describe('Room action boundary', () => {
   afterEach(() => {
@@ -61,7 +63,9 @@ describe('Room action boundary', () => {
 
   it('rejects an empty Room composition at the domain boundary', async () => {
     process.env.RIVUS_ROOM_HOME = mkdtempSync(join(tmpdir(), 'rivus-room-'));
-    globalThis.__rivusRoomLabHost = undefined;
+    globalThis.__rivusRoomLabHost = new RoomLabHost(SqliteRoomStore.open(process.env.RIVUS_ROOM_HOME), {
+      listAgents: runnableInventory,
+    });
     const created = await getRoomLabHost().create({ title: '边界测试' });
     const response = await action(args(new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
       method: 'POST',

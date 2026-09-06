@@ -60,37 +60,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
       });
       return json<RoomLabActionResponse>({ ok: true, state: created }, { headers: noStoreHeaders });
     }
-    const service = host.open(roomId);
-    let state;
-    switch (input.action) {
-      case 'message':
-        state = await service.sendMessage(input.body, undefined, input.clientMessageId);
-        break;
-      case 'compose':
-        state = await service.compose(input.agentIds);
-        break;
-      case 'count-off':
-        state = await service.runCountOff(request.signal);
-        break;
-      case 'retry':
-        state = await service.retryHeld(input.agentId, request.signal);
-        break;
-      case 'task':
-        state = await service.runTask(input.title);
-        break;
-      case 'reset':
-        state = await service.reset();
-        break;
-      default:
-        return json<RoomLabActionResponse>(
-          { ok: false, error: 'Unknown Room action' },
-          { status: 400, headers: noStoreHeaders },
-        );
-    }
-    return json<RoomLabActionResponse>(
-      { ok: true, state: host.decorate(state, roomId) },
-      { headers: noStoreHeaders },
-    );
+    const state = await host.act(roomId, input, request.signal);
+    return json<RoomLabActionResponse>({ ok: true, state }, { headers: noStoreHeaders });
   } catch (error) {
     const status = error instanceof RoomLabBusyError
       ? 409

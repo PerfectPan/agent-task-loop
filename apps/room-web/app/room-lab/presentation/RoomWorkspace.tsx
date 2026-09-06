@@ -7,7 +7,8 @@ import { RoomDialog } from './RoomDialog';
 import { RoomComposer } from './RoomComposer';
 import { RoomInspector } from './RoomInspector';
 import { RoomTimeline } from './RoomTimeline';
-import { focusRing, quietButton } from './ui';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
 
 export function RoomWorkspace({ state, pending, sending, error, value, onValueChange, onAction }: {
   state: RoomLabState; pending: boolean; sending?: boolean; error?: string; value: string;
@@ -83,15 +84,15 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
         }}>
           <label className="my-4 block text-sm">
             这件工作叫什么
-            <input
+            <Input
               value={createTitle}
               onChange={event => setCreateTitle(event.currentTarget.value)}
               maxLength={80}
               required
-              className={`mt-2 block w-full rounded-[10px] border border-line bg-washi px-3 py-2 text-ink ${focusRing}`}
+              className="mt-2 h-auto py-2"
             />
           </label>
-          <button type="submit" className={quietButton}>建房间</button>
+          <Button type="submit" variant="outline">建房间</Button>
         </form>
       </RoomDialog>
     </main>

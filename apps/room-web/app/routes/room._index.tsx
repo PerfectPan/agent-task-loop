@@ -17,7 +17,9 @@ import {
   assertSameOriginJson,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-import { focusRing } from '../room-lab/presentation/ui';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 
 export async function loader(_args: LoaderFunctionArgs) {
   try {
@@ -100,18 +102,16 @@ export default function RoomHome() {
         <Form method="post" className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
             房间名
-            <input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus
-              className={`rounded-[10px] border border-line bg-washi px-3 py-2 ${focusRing}`} />
+            <Input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus className="h-auto py-2" />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
             这间房要完成什么 <span className="text-xs text-muted">可选</span>
-            <textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。"
-              className={`rounded-[10px] border border-line bg-washi px-3 py-2 ${focusRing}`} />
+            <Textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。" />
           </label>
           <p data-error className="m-0 min-h-4 text-xs text-seal">
             {actionData && !actionData.ok ? actionData.error : ''}
           </p>
-          <button type="submit" className={`self-start h-8 rounded-lg bg-moss px-3 text-sm text-washi hover:bg-moss-deep ${focusRing}`}>建房间</button>
+          <Button type="submit" className="self-start">建房间</Button>
         </Form>
       </section>
     </main>

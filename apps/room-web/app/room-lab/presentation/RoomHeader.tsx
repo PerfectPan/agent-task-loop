@@ -3,7 +3,8 @@ import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
 import { Users } from '@phosphor-icons/react/dist/ssr/Users';
 import type { RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
-import { focusRing, quietButton } from './ui';
+import { Button } from '~/components/ui/button';
+import { focusRing } from './ui';
 
 export function RoomHeader({
   title, goal, agents, running, disabled, taskMode, onTask, onMembers, onDetails, onReset,
@@ -46,9 +47,9 @@ export function RoomHeader({
         >
           <Users size={22} />
         </button>
-        <button type="button" className={quietButton} onClick={onTask} disabled={disabled}>
+        <Button type="button" variant="outline" onClick={onTask} disabled={disabled}>
           {taskMode ? '返回聊天' : '升级为任务'}
-        </button>
+        </Button>
         <details
           ref={menuRef}
           className="relative"

@@ -11,12 +11,13 @@ import {
   type RoomLabAgentId,
 } from '../domain/agent-roster';
 import type { FileRoomStreamStore } from './file-room-stream-store.server';
+import type { SqliteRoomStreamStore } from './sqlite-room-unit-of-work.server';
 import { MemoryRoomStreamStore } from '@rivus/agent-room';
 
 const TURN_BUDGET = { maxEvents: 50, maxChars: 48_000 } as const;
 const RETRY_EVENT_BUDGET = { maxEvents: 50, maxChars: 30_000 } as const;
 
-export type RoomSessionStore = MemoryRoomStreamStore | FileRoomStreamStore;
+export type RoomSessionStore = MemoryRoomStreamStore | FileRoomStreamStore | SqliteRoomStreamStore;
 
 export class StoredRoomConversation implements RoomConversationPort {
   readonly conversationId: string;

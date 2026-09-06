@@ -1,6 +1,7 @@
 import { isRoomLabAgentId, ROOM_AGENT_ROSTER } from '../domain/agent-roster';
 import type { RoomLabEventView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
+import { formatClock } from './format-time';
 import styles from './RoomTimeline.module.css';
 
 const labels = new Map<string, string>(ROOM_AGENT_ROSTER.map(agent => [agent.id, agent.label]));
@@ -18,11 +19,8 @@ export function RoomMessage({ event }: { event: RoomLabEventView }) {
     ].filter(Boolean).join(' ')}>
       {!human && agentId && <AgentAvatar agentId={agentId} className={styles.avatar} />}
       <article>
-        <header><strong>{name}</strong><time dateTime={event.at}>
-          {new Date(event.at).toLocaleTimeString('zh-CN', {
-            hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Shanghai',
-          })}
-        </time><span className={styles.sequence}>#{event.seq}</span></header>
+        <header><strong>{name}</strong><time dateTime={event.at}>{formatClock(event.at)}</time>
+          <span className={styles.sequence}>#{event.seq}</span></header>
         <p>{event.body.split(/(@(?:all|claude-relay|claude|codex|opencode|dsh)\b)/gi)
           .map((part, index) => /^@(all|claude-relay|claude|codex|opencode|dsh)$/i.test(part)
             ? <span className={styles.mention} key={index}>{part}</span> : part)}</p>

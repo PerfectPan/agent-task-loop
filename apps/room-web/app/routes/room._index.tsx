@@ -91,11 +91,10 @@ export default function RoomHome() {
   return (
     <main className={styles.home}>
       <section>
-        <img className={styles.mark} src="/images/spirit.png" width={64} height={64} alt="" />
-        <p>本地庭院</p>
-        <h1>把要做的事写成房间的名字。</h1>
+        <p>本地房间</p>
+        <h1>建一间房，把要做的事写在名字上。</h1>
         <p className={styles.lead}>
-          一间房是一件正在推进的工作。人和本地 Agent 在同一条时间线里讨论，再把结果写进工作稿。
+          人和本地 Agent 在同一条时间线里讨论、写作、推进任务。
         </p>
         <Form method="post">
           <label>

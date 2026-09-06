@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { RoomId } from '@rivus/agent-room';
 import { RoomLabService, type RoomLabWorkspaceSnapshot } from './room-lab-service.server';
 import type { AgentRunner } from './ports';
@@ -96,11 +97,32 @@ export class RoomLabHost {
   }
 
   catalogView(): RoomCatalogItemView[] {
-    return this.catalog.list().map(room => ({
-      id: room.id,
-      title: room.title,
-      updatedAt: room.updatedAt,
-    }));
+    return this.catalog.list().map(room => {
+      const preview = this.preview(room.id);
+      return {
+        id: room.id,
+        title: room.title,
+        updatedAt: preview.lastAt ?? room.updatedAt,
+        memberCount: room.memberIds.length,
+        ...(preview.lastLine === undefined ? {} : { lastLine: preview.lastLine }),
+      };
+    });
+  }
+
+  private preview(roomId: string): { lastLine?: string; lastAt?: string } {
+    const file = join(this.store.roomDirectory(roomId), 'events.json');
+    if (!existsSync(file)) return {};
+    try {
+      const events = JSON.parse(readFileSync(file, 'utf8')) as Array<{ body?: string; at?: string }>;
+      const last = events.at(-1);
+      if (!last?.body) return {};
+      return {
+        lastLine: last.body.replace(/\s+/g, ' ').slice(0, 48),
+        ...(typeof last.at === 'string' ? { lastAt: last.at } : {}),
+      };
+    } catch {
+      return {};
+    }
   }
 }
 

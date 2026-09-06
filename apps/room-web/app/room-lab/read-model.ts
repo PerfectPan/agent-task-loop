@@ -66,6 +66,8 @@ export interface RoomCatalogItemView {
   id: string;
   title: string;
   updatedAt: string;
+  lastLine?: string;
+  memberCount: number;
 }
 
 export interface RoomLabState {

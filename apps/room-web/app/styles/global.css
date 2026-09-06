@@ -2,28 +2,23 @@
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --paper: #f7f1e3;
-  --washi: #fbf6ea;
-  --garden: #d9e4c8;
-  --ink: #3a3428;
-  --muted: #7a7264;
-  --line: #e0d6c4;
-  --moss: #5a7a52;
-  --moss-deep: #3e5a38;
-  --hydrangea: #7b8fc4;
-  --gold: #f0e2b8;
-  --seal: #b45a4c;
-  --human: #f3ead3;
+  --paper: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #1a2330;
+  --muted: #667084;
+  --line: #d8dee8;
+  --shift: #d94a4a;
+  --shift-deep: #b53636;
+  --work: #1f8aa3;
+  --ok: #2f8f5b;
+  --warn: #c48914;
+  --human: #ffe8e6;
   --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
-body {
+html, body {
   margin: 0;
   min-width: 320px;
   min-height: 100%;
@@ -35,8 +30,4 @@ body {
   font-family: var(--font-ui);
 }
 
-button,
-textarea,
-input {
-  font: inherit;
-}
+button, textarea, input { font: inherit; }

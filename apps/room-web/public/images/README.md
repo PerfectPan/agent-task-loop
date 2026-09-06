@@ -1,13 +1,11 @@
 # Room artwork
 
-Original watercolor illustrations generated for this interface. They are
-fictional characters and scenery, not copies of existing anime, provider logos,
-or portraits of real people.
+Original workplace-anime portraits generated for this interface. They are
+fictional coworkers, not copies of Cells at Work characters, provider logos, or
+real people.
 
-- `garden.jpg`: hydrangea garden and engawa light used as the workspace wash.
-- `spirit.png`: a paper yokai mark for the local room.
-- `crew/claude-relay.png`: long-haired storyteller with a letter.
-- `crew/claude.png`: reviewer with a hydrangea pin.
-- `crew/codex.png`: craftsman with a sparrow.
-- `crew/opencode.png`: builder with round glasses.
-- `crew/dsh.png`: quiet watcher with a foxfire spark.
+- `crew/claude-relay.png`: communications
+- `crew/claude.png`: reviewer
+- `crew/codex.png`: implementer
+- `crew/opencode.png`: builder
+- `crew/dsh.png`: analyst

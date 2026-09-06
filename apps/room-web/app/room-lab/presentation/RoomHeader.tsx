@@ -6,9 +6,9 @@ import { AgentAvatar } from './AgentAvatar';
 import styles from './RoomLab.module.css';
 
 export function RoomHeader({
-  title, agents, disabled, taskMode, onTask, onMembers, onDetails, onReset,
+  title, goal, agents, running, disabled, taskMode, onTask, onMembers, onDetails, onReset,
 }: {
-  title: string; agents: RoomLabAgentView[]; disabled: boolean; taskMode: boolean;
+  title: string; goal?: string; agents: RoomLabAgentView[]; running: string[]; disabled: boolean; taskMode: boolean;
   onTask: () => void; onMembers: () => void; onDetails: () => void; onReset: () => void;
 }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -24,7 +24,11 @@ export function RoomHeader({
         </div>
         <div>
           <h1 id="room-heading">{title}</h1>
-          <p>{agents.length} 位成员在场</p>
+          <p>
+            {agents.length} 人在场
+            {goal ? ` · ${goal}` : ''}
+            {running.length > 0 ? ` · ${running.join('、')} 正在写` : ''}
+          </p>
         </div>
       </div>
       <div className={styles.headerActions}>

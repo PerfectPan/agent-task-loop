@@ -33,7 +33,9 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
         onCountOff={() => { setDialog('details'); onAction({ action: 'count-off' }); }}
         onDetails={() => setDialog('details')} />
       <section className={styles.conversationWorkspace} aria-labelledby="room-heading">
-        <RoomHeader title={state.title} agents={activeAgents} disabled={commandLocked}
+        <RoomHeader title={state.title} goal={state.goal} agents={activeAgents}
+          running={activeAgents.filter(agent => agent.status === 'running').map(agent => agent.label)}
+          disabled={commandLocked}
           taskMode={mode === 'task'}
           onTask={() => {
             if (mode === 'task') setMode('room');

@@ -67,9 +67,9 @@ export function RoomHeader({
             <DotsThree size={28} weight="bold" />
           </summary>
           <div className="absolute right-0 top-10 z-20 w-44 rounded-[10px] border border-line bg-washi p-1">
-            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden" onClick={() => select(onMembers)}>管理成员</button>
-            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden" onClick={() => select(onDetails)}>运行详情</button>
-            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden disabled:opacity-50" disabled={disabled} onClick={() => select(onReset)}>清空对话</button>
+            <Button type="button" variant="ghost" className="h-9 w-full justify-start px-3" onClick={() => select(onMembers)}>管理成员</Button>
+            <Button type="button" variant="ghost" className="h-9 w-full justify-start px-3" onClick={() => select(onDetails)}>运行详情</Button>
+            <Button type="button" variant="ghost" className="h-9 w-full justify-start px-3" disabled={disabled} onClick={() => select(onReset)}>清空对话</Button>
           </div>
         </details>
       </div>

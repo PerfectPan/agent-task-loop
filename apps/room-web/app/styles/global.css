@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@custom-variant hover (&:hover);
+
+/* Unlayered so it wins over UA buttonface and leftover native controls. */
+button:not(:disabled):hover,
+[data-slot='button']:not([aria-disabled='true']):hover {
+  filter: brightness(0.92);
+}
+
 @theme {
   --color-paper: #f7f1e3;
   --color-washi: #fbf6ea;
@@ -33,5 +41,25 @@
   textarea,
   input {
     font: inherit;
+  }
+
+  /* macOS Chrome paints UA buttonface over author colors unless the control is fully unset. */
+  button,
+  input:where([type='button'], [type='reset'], [type='submit']) {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  button:disabled,
+  input:where([type='button'], [type='reset'], [type='submit']):disabled,
+  [data-slot='button']:disabled {
+    cursor: default;
   }
 }

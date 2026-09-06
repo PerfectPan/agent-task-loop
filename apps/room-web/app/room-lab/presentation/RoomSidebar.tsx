@@ -4,7 +4,8 @@ import { AgentAvatar } from './AgentAvatar';
 import { agentRoleLabels } from './agent-role';
 import { agentStatusLabels } from './agent-status';
 import { formatAgo } from './format-time';
-import { focusRing, sectionRow, textAction } from './ui';
+import { Button } from '~/components/ui/button';
+import { focusRing, sectionRow } from './ui';
 
 export function RoomSidebar({
   rooms, currentRoomId, agents, disabled, onCreate, onManage, onCountOff, onDetails,
@@ -32,7 +33,7 @@ export function RoomSidebar({
       </div>
       <div className={sectionRow}>
         <span>进行中</span>
-        <button type="button" className={textAction} onClick={onCreate}>新建</button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCreate}>新建</Button>
       </div>
       <ul className="mt-2 mb-6 flex flex-col gap-1">
         {rooms.map(room => (
@@ -57,7 +58,7 @@ export function RoomSidebar({
       </ul>
       <div className={sectionRow}>
         <span>在场</span>
-        <button type="button" className={textAction} onClick={onManage} aria-label="管理房间成员">管理成员</button>
+        <Button type="button" variant="ghost" size="sm" onClick={onManage} aria-label="管理房间成员">管理成员</Button>
       </div>
       <ul className="mt-2 mb-4 flex flex-col gap-1">
         {agents.map(agent => (
@@ -85,21 +86,23 @@ export function RoomSidebar({
         ))}
       </ul>
       <footer className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           disabled={disabled}
           onClick={onCountOff}
-          className={`h-8 bg-transparent p-0 text-left text-sm text-ink hover:text-moss-deep disabled:opacity-50 ${focusRing}`}
+          className="h-8 justify-start px-2"
         >
           {disabled ? '正在检查…' : '检查连接'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           onClick={onDetails}
-          className={`h-8 bg-transparent p-0 text-left text-sm text-ink hover:text-moss-deep ${focusRing}`}
+          className="h-8 justify-start px-2"
         >
           运行详情
-        </button>
+        </Button>
         <small className="text-xs leading-snug text-muted">保存在这台机器上</small>
       </footer>
     </aside>

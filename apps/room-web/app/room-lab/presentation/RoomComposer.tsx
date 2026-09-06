@@ -4,7 +4,7 @@ import { PaperPlaneTilt } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { MentionMenu } from './MentionMenu';
 import { buildMentionOptions, mentionCompletion, type MentionOption } from './mention-completion';
 import type { RoomLabAgentId } from '../read-model';
-import { focusRing } from './ui';
+import { Button } from '~/components/ui/button';
 
 export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateReady, onModeChange, onValueChange, onSubmit }: {
   mode: 'room' | 'task'; value: string; disabled: boolean; activeAgentIds: RoomLabAgentId[];
@@ -127,27 +127,28 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
       </div>
       <div className="mt-1.5 flex items-center gap-2.5">
         {mode === 'room' && (
-          <button
+          <Button
             type="button"
-            className={`inline-flex h-8 items-center gap-1 whitespace-nowrap bg-transparent p-0 text-sm text-hydrangea ${focusRing}`}
+            variant="ghost"
+            className="h-8 gap-1 px-1.5 text-hydrangea hover:text-moss-deep"
             disabled={disabled}
             onMouseDown={event => event.preventDefault()}
             onClick={openMentions}
           >
             <At size={18} />提及
-          </button>
+          </Button>
         )}
         <span id="room-composer-hint" className="text-xs leading-tight text-muted">
           {mode === 'room' ? 'Enter 发送 · 未点名则依次发言' : '模型通过后，仍要你亲自验收'}
         </span>
-        <button
-          className={`ml-auto inline-flex h-8 min-w-[72px] items-center justify-center gap-1.5 rounded-lg bg-moss px-3 text-sm whitespace-nowrap text-washi hover:bg-moss-deep disabled:bg-line disabled:text-muted ${focusRing}`}
+        <Button
+          className="ml-auto min-w-[72px] whitespace-nowrap disabled:bg-line disabled:text-muted disabled:hover:bg-line"
           type="submit"
           disabled={!canSend}
         >
           {disabled ? '正在送出' : mode === 'room' ? '发送' : '开始任务'}
           <PaperPlaneTilt size={16} weight="fill" />
-        </button>
+        </Button>
       </div>
     </form>
   );

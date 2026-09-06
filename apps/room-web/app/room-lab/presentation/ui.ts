@@ -7,7 +7,7 @@ export const sectionRow =
   'flex h-7 items-center justify-between text-xs text-muted';
 
 export const textAction =
-  `h-7 bg-transparent p-0 text-xs text-ink hover:text-moss-deep disabled:opacity-50 ${focusRing}`;
+  `h-7 rounded-md bg-transparent px-1.5 text-xs text-ink hover:bg-garden hover:text-moss-deep disabled:opacity-50 ${focusRing}`;
 
 export const quietButton =
-  `inline-flex h-8 items-center rounded-lg border border-line bg-washi px-3 text-sm text-moss-deep hover:bg-gold disabled:opacity-50 ${focusRing}`;
+  `inline-flex h-8 items-center rounded-lg border border-line bg-washi px-3 text-sm text-moss-deep hover:border-moss hover:bg-garden disabled:opacity-50 ${focusRing}`;

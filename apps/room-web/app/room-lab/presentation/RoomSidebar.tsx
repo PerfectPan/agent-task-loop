@@ -1,35 +1,51 @@
-import { WifiHigh } from '@phosphor-icons/react/dist/ssr/WifiHigh';
-import { SlidersHorizontal } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
-import { LockSimple } from '@phosphor-icons/react/dist/ssr/LockSimple';
-import type { RoomLabAgentView } from '../read-model';
+import type { RoomCatalogItemView, RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
 import { agentStatusLabels } from './agent-status';
 import styles from './RoomSidebar.module.css';
 
-export function RoomSidebar({ agents, disabled, onManage, onCountOff, onDetails }: {
-  agents: RoomLabAgentView[]; disabled: boolean; onManage: () => void;
-  onCountOff: () => void; onDetails: () => void;
+export function RoomSidebar({
+  rooms, currentRoomId, agents, disabled, onCreate, onManage, onCountOff, onDetails,
+}: {
+  rooms: RoomCatalogItemView[];
+  currentRoomId: string;
+  agents: RoomLabAgentView[];
+  disabled: boolean;
+  onCreate: () => void;
+  onManage: () => void;
+  onCountOff: () => void;
+  onDetails: () => void;
 }) {
   return (
-    <aside className={styles.sidebar} aria-label="本地工作区">
+    <aside className={styles.sidebar} aria-label="房间">
       <div className={styles.brand}>
-        <img src="/images/rivus-studio.png" width={270} height={118} alt="Rivus" />
-        <p>本地工作区</p>
+        <strong>房间</strong>
+        <p>本地工作台</p>
       </div>
-      <div className={styles.roomSection}><span>当前房间</span>
-        <a className={styles.activeRoom} href="#room-heading" aria-current="page">#&nbsp; 产品讨论</a>
+      <div className={styles.roomSection}>
+        <span>进行中</span>
+        <button type="button" className={styles.createRoom} onClick={onCreate}>新建</button>
       </div>
+      <ul className={styles.rooms}>
+        {rooms.map(room => (
+          <li key={room.id}>
+            <a href={`/room/${room.id}`} aria-current={room.id === currentRoomId ? 'page' : undefined}>
+              {room.title}
+            </a>
+          </li>
+        ))}
+      </ul>
       <div className={styles.rosterHeading}>
-        <span>房间成员</span>
-        <button type="button" onClick={onManage} aria-label="管理房间成员" title="管理成员与报数顺序">
-          <SlidersHorizontal size={20} />
+        <span>在场</span>
+        <button type="button" onClick={onManage} aria-label="管理房间成员" title="管理成员与发言顺序">
+          成员
         </button>
       </div>
       <ul className={styles.roster}>
         {agents.map(agent => (
           <li key={agent.id}>
             <AgentAvatar agentId={agent.id} className={styles.avatar} />
-            <div><strong>{agent.label}</strong>
+            <div>
+              <strong>{agent.label}</strong>
               <span className={styles.status} data-status={agent.status}>
                 <i aria-hidden="true" />{agentStatusLabels[agent.status]}
               </span>
@@ -39,12 +55,10 @@ export function RoomSidebar({ agents, disabled, onManage, onCountOff, onDetails 
       </ul>
       <footer className={styles.footer}>
         <button type="button" disabled={disabled} onClick={onCountOff}>
-          <WifiHigh size={24} />{disabled ? '运行中…' : '检查连接'}
+          {disabled ? '正在检查…' : '检查连接'}
         </button>
-        <button type="button" onClick={onDetails} title="查看本地运行详情">
-          <LockSimple size={23} />仅在本地运行
-        </button>
-        <small>会话保存在内存中，服务重启后清空。</small>
+        <button type="button" onClick={onDetails}>运行详情</button>
+        <small>工作保存在这台机器上。</small>
       </footer>
     </aside>
   );

@@ -31,16 +31,16 @@ it('does not let polling replay an old response and erase the next draft', () =>
   const view = render(<RoomLab initialState={state} />);
   fireEvent.change(screen.getByLabelText('draft'), { target: { value: 'first message' } });
   fireEvent.click(screen.getByText('Send'));
+  expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('');
   mocks.fetcher.data = { ok: true, state: { ...state, revision: 1 } };
   view.rerender(<RoomLab initialState={state} />);
-  expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('');
 
   fireEvent.change(screen.getByLabelText('draft'), { target: { value: 'second message' } });
   fireEvent.click(screen.getByText('Send'));
   mocks.fetcher.state = 'submitting';
   mocks.revalidator = { state: 'loading', revalidate: vi.fn() };
   view.rerender(<RoomLab initialState={state} />);
-  expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('second message');
+  expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('');
 
   mocks.fetcher.state = 'idle';
   mocks.fetcher.data = { ok: false, error: 'message failed' };

@@ -11,7 +11,11 @@ export function RoomMessage({ event }: { event: RoomLabEventView }) {
   const agentId = isRoomLabAgentId(event.author.id) ? event.author.id : undefined;
   const name = human ? '董事长' : labels.get(event.author.id) ?? (control ? 'Room' : event.author.id);
   return (
-    <li className={human ? styles.humanMessage : control ? styles.controlMessage : styles.agentMessage}>
+    <li className={[
+      human ? styles.humanMessage : control ? styles.controlMessage : styles.agentMessage,
+      event.pending ? styles.pending : '',
+      event.failed ? styles.failed : '',
+    ].filter(Boolean).join(' ')}>
       {!human && agentId && <AgentAvatar agentId={agentId} className={styles.avatar} />}
       <article>
         <header><strong>{name}</strong><time dateTime={event.at}>

@@ -1,0 +1,102 @@
+.home {
+  --paper: #f4f0e4;
+  --garden: #e3ebd6;
+  --ink: #2c291f;
+  --muted: #746e61;
+  --moss: #4a6144;
+  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+  background:
+    radial-gradient(900px 640px at 12% -8%, #dfe8d0 0%, transparent 58%),
+    radial-gradient(720px 480px at 100% 110%, #efe4cf 0%, transparent 52%),
+    var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.home section {
+  width: min(560px, 100%);
+}
+
+.home section > p:first-child {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.home h1 {
+  margin: 0 0 16px;
+  font-family: var(--font-title);
+  font-size: clamp(32px, 5vw, 44px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.lead {
+  margin: 0 0 36px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.home form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.home label span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home input,
+.home textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d3cdbf;
+  border-radius: 2px;
+  background: #fbf7ec;
+  color: var(--ink);
+  font: inherit;
+}
+
+.home input:focus,
+.home textarea:focus {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.home button {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  background: var(--moss);
+  color: #f7f3e8;
+  font: inherit;
+  cursor: pointer;
+}
+
+.home button:hover {
+  background: #3d5238;
+}
+
+.error {
+  min-height: 1.4em;
+  margin: 0;
+  color: #8f3a30;
+  font-size: 13px;
+}

@@ -4,6 +4,7 @@ import styles from './RoomDetails.module.css';
 const taskLabels: Record<RoomLabTaskView['status'], string> = {
   executing: '正在实施', reviewing: '独立审核中', reworking: '根据意见返工',
   passed: '模型审核通过，待人工验收', 'changes-requested': '仍需修改', failed: '运行失败',
+  interrupted: '上次执行被中断，不会自动重跑',
 };
 
 export function TaskStrip({ task }: { task: RoomLabTaskView }) {

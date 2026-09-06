@@ -3,8 +3,8 @@ import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
 import { Users } from '@phosphor-icons/react/dist/ssr/Users';
 import styles from './RoomLab.module.css';
 
-export function RoomHeader({ activeCount, disabled, taskMode, onTask, onMembers, onDetails, onReset }: {
-  activeCount: number; disabled: boolean; taskMode: boolean;
+export function RoomHeader({ title, activeCount, disabled, taskMode, onTask, onMembers, onDetails, onReset }: {
+  title: string; activeCount: number; disabled: boolean; taskMode: boolean;
   onTask: () => void; onMembers: () => void; onDetails: () => void; onReset: () => void;
 }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -14,13 +14,13 @@ export function RoomHeader({ activeCount, disabled, taskMode, onTask, onMembers,
   };
   return (
     <header className={styles.conversationHeader}>
-      <div><h1 id="room-heading">产品讨论</h1><p>{activeCount} 位 Agent 参与</p></div>
+      <div><h1 id="room-heading">{title}</h1><p>{activeCount} 位成员在场</p></div>
       <div className={styles.headerActions}>
         <button type="button" className={styles.mobileMembers} onClick={onMembers} aria-label="管理房间成员">
           <Users size={22} />
         </button>
         <button type="button" className={styles.taskButton} onClick={onTask} disabled={disabled}>
-          {taskMode ? '返回聊天' : '创建任务'}
+          {taskMode ? '返回聊天' : '升级为任务'}
         </button>
         <details ref={menuRef} className={styles.roomMenu} onKeyDown={event => {
           if (event.key === 'Escape' && menuRef.current) {

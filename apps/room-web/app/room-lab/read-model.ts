@@ -14,6 +14,7 @@ export type RoomLabAgentStatus =
 
 export interface RoomLabEventView {
   seq: number;
+  messageId: string;
   author: {
     kind: 'human' | 'agent' | 'control-plane';
     id: string;
@@ -22,6 +23,8 @@ export interface RoomLabEventView {
   body: string;
   addressedTo: string[];
   at: string;
+  pending?: boolean;
+  failed?: boolean;
 }
 
 export interface RoomLabAgentView {
@@ -44,7 +47,8 @@ export type RoomLabTaskStatus =
   | 'reworking'
   | 'passed'
   | 'changes-requested'
-  | 'failed';
+  | 'failed'
+  | 'interrupted';
 
 export interface RoomLabTaskView {
   taskId: string;
@@ -58,25 +62,36 @@ export interface RoomLabTaskView {
   findings?: string;
 }
 
+export interface RoomCatalogItemView {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
 export interface RoomLabState {
   roomId: string;
+  title: string;
+  goal?: string;
   epoch: string;
   head: number;
   revision: number;
   busy: boolean;
+  runningAgentIds: RoomLabAgentId[];
   activeAgentIds: RoomLabAgentId[];
   events: RoomLabEventView[];
   agents: RoomLabAgentView[];
+  catalog: RoomCatalogItemView[];
   countOff?: CountOffSnapshot;
   task?: RoomLabTaskView;
 }
 
 export type RoomLabAction =
-  | { action: 'message'; body: string }
+  | { action: 'message'; body: string; clientMessageId?: string }
   | { action: 'compose'; agentIds: RoomLabAgentId[] }
   | { action: 'count-off' }
   | { action: 'retry'; agentId: RoomLabAgentId }
   | { action: 'task'; title: string }
+  | { action: 'create'; title: string; goal?: string; agentIds?: RoomLabAgentId[] }
   | { action: 'reset' };
 
 export type RoomLabActionResponse =

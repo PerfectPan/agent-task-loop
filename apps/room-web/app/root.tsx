@@ -7,19 +7,17 @@ import {
   ScrollRestoration,
 } from '@remix-run/react';
 import globalStyles from './styles/global.css?url';
-import displayFont from '@fontsource/bricolage-grotesque/latin-700.css?url';
 
 export const links: LinksFunction = () => [
-  { rel: 'stylesheet', href: displayFont },
   { rel: 'stylesheet', href: globalStyles },
   { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
 ];
 
 export const meta: MetaFunction = () => [
-  { title: 'Rivus Room — Compose local agents into one shared workspace' },
+  { title: '房间 — 本地多 Agent 工作台' },
   {
     name: 'description',
-    content: 'Compose local coding agents, chat in one ordered Room, verify them with count-off, and add an independent Task review gate.',
+    content: '在本地房间里和多个 Agent 一起讨论、写作、把工作做成可交付的结果。',
   },
 ];
 

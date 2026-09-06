@@ -15,7 +15,7 @@ import type {
   RoomLabState,
   RoomLabTaskView,
 } from '../read-model';
-import { CountOffRun } from '../domain/count-off-run';
+import { CountOffRun, type CountOffSnapshot } from '../domain/count-off-run';
 import { HELD_RETRY_LIMIT } from '../domain/held-retry';
 import {
   ROOM_AGENT_ROSTER,
@@ -41,11 +41,23 @@ export interface RoomLabServiceOptions {
   agentRunner: AgentRunner;
   taskDelivery: TaskDeliveryCoordinatorPort;
   textPresenter: RoomLabTextPresenterPort;
+  composition?: RoomComposition;
+  onPersist?: (snapshot: RoomLabWorkspaceSnapshot) => void;
+}
+
+export interface RoomLabWorkspaceSnapshot {
+  composition: RoomLabAgentId[];
+  messageCounter: number;
+  countOffCounter: number;
+  taskCounter: number;
+  agentState: Array<[RoomLabAgentId, AgentRuntimeState]>;
+  countOff?: CountOffSnapshot;
+  task?: RoomLabTaskView;
 }
 
 export class RoomLabService {
   private readonly epoch = randomUUID();
-  private readonly composition = new RoomComposition();
+  private readonly composition: RoomComposition;
   private agentState = createInitialAgentState();
   private countOff?: CountOffRun;
   private task?: RoomLabTaskView;
@@ -54,8 +66,12 @@ export class RoomLabService {
   private messageCounter = 0;
   private countOffCounter = 0;
   private taskCounter = 0;
+  private turnChain: Promise<void> = Promise.resolve();
+  private readonly runningAgents = new Set<RoomLabAgentId>();
 
-  constructor(private readonly options: RoomLabServiceOptions) {}
+  constructor(private readonly options: RoomLabServiceOptions) {
+    this.composition = options.composition ?? new RoomComposition();
+  }
 
   async snapshot(): Promise<RoomLabState> {
     while (true) {
@@ -63,11 +79,14 @@ export class RoomLabService {
       const slice = await this.options.conversation.snapshot();
       const activeAgentIds = this.composition.snapshot();
       const state: RoomLabState = {
-        roomId: this.options.conversation.displayId,
+        roomId: this.options.conversation.conversationId,
+        title: this.options.conversation.conversationId,
         epoch: this.epoch,
         head: slice.head,
         revision,
-        busy: this.busy,
+        busy: this.busy || this.runningAgents.size > 0,
+        runningAgentIds: [...this.runningAgents],
+        catalog: [],
         activeAgentIds,
         events: slice.events.map(event => this.eventView(event)),
         agents: ROOM_AGENT_ROSTER.map(agent => this.agentView(
@@ -83,36 +102,52 @@ export class RoomLabService {
     }
   }
 
-  async sendMessage(body: string, signal?: AbortSignal): Promise<RoomLabState> {
-    await this.exclusive(async () => {
-      signal?.throwIfAborted();
-      const message = validateText(body, 'Message');
-      const activeAgentIds = this.composition.snapshot();
-      const parsed = parseRoomMessage(message, activeAgentIds);
-      if (parsed.unknownMentions.length > 0) {
-        const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
-        throw new RoomLabInputError(`Unknown Room mention: ${mentions}`);
-      }
-      if (parsed.inactiveMentions.length > 0) {
-        const mentions = parsed.inactiveMentions.map(mention => `@${mention}`).join(', ');
-        throw new RoomLabInputError(`Add these agents to the Room before mentioning them: ${mentions}`);
-      }
-      const event = await this.mutateConversation(() =>
-        this.options.conversation.admitHuman({
-          messageId: `web:${++this.messageCounter}`,
-          body: parsed.body,
-          addressedTo: parsed.addressedTo,
-        }),
-      );
+  async sendMessage(
+    body: string,
+    signal?: AbortSignal,
+    clientMessageId?: string,
+  ): Promise<RoomLabState> {
+    if (this.busy) throw new RoomLabBusyError();
+    signal?.throwIfAborted();
+    const message = validateText(body, 'Message');
+    const messageId = validateMessageId(clientMessageId)
+      ?? `web:${String(++this.messageCounter).padStart(4, '0')}`;
+    const activeAgentIds = this.composition.snapshot();
+    const parsed = parseRoomMessage(message, activeAgentIds);
+    if (parsed.unknownMentions.length > 0) {
+      const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
+      throw new RoomLabInputError(`Unknown Room mention: ${mentions}`);
+    }
+    if (parsed.inactiveMentions.length > 0) {
+      const mentions = parsed.inactiveMentions.map(mention => `@${mention}`).join(', ');
+      throw new RoomLabInputError(`Add these agents to the Room before mentioning them: ${mentions}`);
+    }
+    const admitted = await this.mutateConversation(() =>
+      this.options.conversation.admitHuman({
+        messageId,
+        body: parsed.body,
+        addressedTo: parsed.addressedTo,
+      }),
+    );
+    if (!admitted.duplicate) {
       const wakingAgents = activeAgentIds.filter(agentId =>
-        this.options.conversation.shouldWake(event, agentId),
+        this.options.conversation.shouldWake(admitted.event, agentId),
       );
-      await Promise.allSettled(wakingAgents.map(agentId => this.runChatAgent(
-        agentId,
-        activeAgentIds.length,
-        signal,
-      )));
-    });
+      this.enqueueTurn(async () => {
+        for (const agentId of wakingAgents) {
+          try {
+            await this.runChatAgent(agentId, activeAgentIds.length);
+          } catch {
+            // Agent error is already recorded on the seat.
+          }
+        }
+      });
+    }
+    return this.snapshot();
+  }
+
+  async waitForIdle(): Promise<RoomLabState> {
+    await this.turnChain;
     return this.snapshot();
   }
 
@@ -392,12 +427,43 @@ export class RoomLabService {
     return this.snapshot();
   }
 
+  restore(snapshot: RoomLabWorkspaceSnapshot): void {
+    this.composition.replace(snapshot.composition);
+    this.messageCounter = snapshot.messageCounter;
+    this.countOffCounter = snapshot.countOffCounter;
+    this.taskCounter = snapshot.taskCounter;
+    this.agentState = new Map(snapshot.agentState.map(([id, state]) => [
+      id,
+      recoverAgentState(state),
+    ]));
+    this.countOff = undefined;
+    this.task = snapshot.task ? recoverTask(snapshot.task) : undefined;
+    this.touch();
+  }
+
+  workspaceSnapshot(): RoomLabWorkspaceSnapshot {
+    return {
+      composition: this.composition.snapshot(),
+      messageCounter: this.messageCounter,
+      countOffCounter: this.countOffCounter,
+      taskCounter: this.taskCounter,
+      agentState: [...this.agentState.entries()],
+      ...(this.countOff ? { countOff: this.countOff.snapshot() } : {}),
+      ...(this.task ? { task: { ...this.task } } : {}),
+    };
+  }
+
+  private enqueueTurn(work: () => Promise<void>): void {
+    this.turnChain = this.turnChain.then(work, work);
+  }
+
   private async runChatAgent(
     agentId: RoomLabAgentId,
     roomSize: number,
     signal?: AbortSignal,
   ): Promise<void> {
     signal?.throwIfAborted();
+    this.runningAgents.add(agentId);
     this.setAgentState(agentId, { status: 'running' });
     try {
       const context = await this.mutateConversation(() =>
@@ -418,6 +484,9 @@ export class RoomLabService {
         error: this.options.textPresenter.error(error),
       });
       throw error;
+    } finally {
+      this.runningAgents.delete(agentId);
+      this.touch();
     }
   }
 
@@ -494,6 +563,7 @@ export class RoomLabService {
   private eventView(event: RoomEvent): RoomLabEventView {
     return {
       seq: event.seq,
+      messageId: event.messageId,
       author: { ...event.author },
       kind: event.kind,
       body: this.options.textPresenter.text(event.body),
@@ -522,6 +592,7 @@ export class RoomLabService {
 
   private touch(): void {
     this.revision += 1;
+    this.options.onPersist?.(this.workspaceSnapshot());
   }
 
   private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
@@ -603,6 +674,38 @@ function validateText(value: string, label: string): string {
   if (!text) throw new RoomLabInputError(`${label} is required`);
   if (text.length > 2_000) throw new RoomLabInputError(`${label} must be at most 2000 characters`);
   return text;
+}
+
+function validateMessageId(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (!/^[A-Za-z0-9:_-]{8,80}$/.test(value)) {
+    throw new RoomLabInputError('Message id is invalid');
+  }
+  return value;
+}
+
+function recoverAgentState(state: AgentRuntimeState): AgentRuntimeState {
+  if (state.status !== 'running') return state;
+  return {
+    ...state,
+    status: 'error',
+    error: '上次执行被中断，不会自动重跑',
+  };
+}
+
+function recoverTask(task: RoomLabTaskView): RoomLabTaskView {
+  if (
+    task.status !== 'executing'
+    && task.status !== 'reviewing'
+    && task.status !== 'reworking'
+  ) {
+    return task;
+  }
+  return {
+    ...task,
+    status: 'interrupted',
+    occupied: false,
+  };
 }
 
 function isSilent(text: string): boolean {

@@ -2,6 +2,17 @@
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --paper: #f4f0e4;
+  --garden: #e3ebd6;
+  --ink: #2c291f;
+  --muted: #746e61;
+  --line: #d3cdbf;
+  --moss: #4a6144;
+  --moss-deep: #2f432c;
+  --seal: #8f3a30;
+  --human: #efe6d0;
+  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
 }
 
 * {
@@ -16,10 +27,13 @@ body {
 }
 
 body {
-  background: #fffdf6;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
 }
 
 button,
-textarea {
+textarea,
+input {
   font: inherit;
 }

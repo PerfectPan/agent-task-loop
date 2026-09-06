@@ -94,7 +94,7 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
           aria-activedescendant={mentionQuery && mentionOptions[activeMentionIndex]
             ? `room-mention-${mentionOptions[activeMentionIndex]?.id}` : undefined}
           aria-describedby="room-composer-hint"
-          placeholder={mode === 'room' ? '发给房间，输入 @ 选择 Agent' : '描述任务目标，以及怎样才算完成…'}
+          placeholder={mode === 'room' ? '发给房间。不写 @，在场的人会按顺序接话。' : '目标、约束、产物、怎样才算完成'}
           onChange={event => {
             const next = event.currentTarget.value;
             onValueChange(next);
@@ -108,10 +108,10 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
         {mode === 'room' && <button type="button" className={styles.mentionButton} disabled={disabled}
           onMouseDown={event => event.preventDefault()} onClick={openMentions}><At size={22} />提及</button>}
         <span id="room-composer-hint" className={styles.hint}>
-          {mode === 'room' ? 'Enter 发送 · Shift + Enter 换行' : '模型审核通过后，仍需由你最终验收'}
+          {mode === 'room' ? 'Enter 发送 · 未点名则依次发言' : '模型通过后，仍要你亲自验收'}
         </span>
         <button className={styles.sendButton} type="submit" disabled={!canSend}>
-          {disabled ? '运行中…' : mode === 'room' ? '发送' : '开始任务'}<PaperPlaneTilt size={22} weight="fill" />
+          {disabled ? '正在送出' : mode === 'room' ? '发送' : '开始任务'}<PaperPlaneTilt size={22} weight="fill" />
         </button>
       </div>
     </form>

@@ -1,10 +1,19 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import { describe, expect, it } from 'vitest';
-import { action, loader } from '../../routes/room';
+import { afterEach, describe, expect, it } from 'vitest';
+import { action, loader } from '../../routes/room.$roomId';
+import { getRoomLabHost } from '../composition.server';
 
 describe('Room action boundary', () => {
+  afterEach(() => {
+    globalThis.__rivusRoomLabHost = undefined;
+    delete process.env.RIVUS_ROOM_HOME;
+  });
+
   it('rejects a cross-origin JSON mutation', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room', {
+    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +30,7 @@ describe('Room action boundary', () => {
   });
 
   it('rejects form submissions before parsing the action', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room', {
+    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -34,7 +43,7 @@ describe('Room action boundary', () => {
   });
 
   it('rejects malformed JSON payloads as a client error', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room', {
+    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,14 +60,17 @@ describe('Room action boundary', () => {
   });
 
   it('rejects an empty Room composition at the domain boundary', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room', {
+    process.env.RIVUS_ROOM_HOME = mkdtempSync(join(tmpdir(), 'rivus-room-'));
+    globalThis.__rivusRoomLabHost = undefined;
+    const created = await getRoomLabHost().create({ title: '边界测试' });
+    const response = await action(args(new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Origin: 'http://127.0.0.1:3210',
       },
       body: JSON.stringify({ action: 'compose', agentIds: [] }),
-    })));
+    }), created.roomId));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
@@ -71,7 +83,7 @@ describe('Room action boundary', () => {
     const previous = process.env.VERCEL;
     process.env.VERCEL = '1';
     try {
-      const rejected = loader(loaderArgs(new Request('http://127.0.0.1:3210/room')));
+      const rejected = loader(loaderArgs(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa')));
       await expect(rejected).rejects.toMatchObject({ status: 403 });
     } finally {
       if (previous === undefined) delete process.env.VERCEL;
@@ -80,10 +92,10 @@ describe('Room action boundary', () => {
   });
 });
 
-function args(request: Request): ActionFunctionArgs {
-  return { request, params: {}, context: {} };
+function args(request: Request, roomId = 'r_aaaaaaaaaa'): ActionFunctionArgs {
+  return { request, params: { roomId }, context: {} };
 }
 
 function loaderArgs(request: Request): LoaderFunctionArgs {
-  return { request, params: {}, context: {} };
+  return { request, params: { roomId: 'r_aaaaaaaaaa' }, context: {} };
 }

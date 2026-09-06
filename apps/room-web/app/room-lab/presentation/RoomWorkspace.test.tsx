@@ -17,7 +17,7 @@ describe('Room workspace', () => {
     const onAction = vi.fn();
     render(<RoomWorkspace state={roomFixture()} pending={false} value="验收要求"
       onValueChange={vi.fn()} onAction={onAction} />);
-    fireEvent.click(screen.getByRole('button', { name: '创建任务' }));
+    fireEvent.click(screen.getByRole('button', { name: '升级为任务' }));
     fireEvent.click(screen.getByRole('button', { name: /开始任务/ }));
     expect(onAction).toHaveBeenCalledWith({ action: 'task', title: '验收要求' });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
@@ -34,7 +34,7 @@ describe('Room workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '检查连接' }));
     expect(onAction).toHaveBeenCalledWith({ action: 'count-off' });
     expect(screen.getByRole('dialog', { name: '运行详情' })).toBeTruthy();
-    expect(screen.getAllByText('尚未验证').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('在场').length).toBeGreaterThan(0);
   });
 
   it('does not expose held drafts in the public transcript', () => {
@@ -52,7 +52,7 @@ describe('Room workspace', () => {
 
   it('renders message bodies as text, not executable HTML', () => {
     const { container } = render(<ol><RoomMessage event={{
-      seq: 1, author: { kind: 'human', id: 'director' }, kind: 'human',
+      seq: 1, messageId: 'web:1', author: { kind: 'human', id: 'director' }, kind: 'human',
       body: '<img src=x onerror=alert(1)> @codex', addressedTo: ['codex'], at: '2026-09-05T06:32:00Z',
     }} /></ol>);
     expect(container.querySelector('img')).toBeNull();

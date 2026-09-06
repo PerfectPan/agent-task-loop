@@ -42,13 +42,16 @@ describe('RoomLabStateSelector', () => {
 
 function stateAt(revision: number, busy: boolean, epoch = 'epoch-a'): RoomLabState {
   return {
-    roomId: 'local/web-room',
+    roomId: 'r_aaaaaaaaaa',
+    title: '产品讨论',
     epoch,
     head: revision,
     revision,
     busy,
+    runningAgentIds: [],
     activeAgentIds: [],
     events: [],
     agents: [],
+    catalog: [],
   };
 }

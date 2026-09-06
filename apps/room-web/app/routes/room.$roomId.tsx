@@ -1,0 +1,193 @@
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
+import {
+  isRouteErrorResponse,
+  useLoaderData,
+  useRouteError,
+} from '@remix-run/react';
+import { RoomLab } from '../room-lab/presentation/RoomLab';
+import { getRoomLabHost } from '../room-lab/composition.server';
+import {
+  RoomLabBusyError,
+  RoomLabInputError,
+} from '../room-lab/application/room-lab-service.server';
+import type {
+  RoomLabAction,
+  RoomLabActionResponse,
+} from '../room-lab/read-model';
+import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
+import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
+import { isRoomIdentity } from '../room-lab/domain/room-identity';
+import {
+  LocalRequestError,
+  assertLocalRuntime,
+  assertSameOriginJson,
+  noStoreHeaders,
+} from '../room-lab/infrastructure/local-guard.server';
+import styles from '../room-lab/presentation/RoomLab.module.css';
+
+export async function loader({ params }: LoaderFunctionArgs) {
+  try {
+    assertLocalRuntime();
+    const roomId = params.roomId;
+    if (!roomId || !isRoomIdentity(roomId)) {
+      throw new LocalRequestError(404, 'Unknown Room');
+    }
+    return json(await getRoomLabHost().snapshot(roomId), { headers: noStoreHeaders });
+  } catch (error) {
+    if (error instanceof RoomCatalogInvariantError) {
+      throw json({ error: error.message }, { status: 404, headers: noStoreHeaders });
+    }
+    if (error instanceof LocalRequestError) {
+      throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+    }
+    throw error;
+  }
+}
+
+export async function action({ request, params }: ActionFunctionArgs) {
+  try {
+    assertLocalRuntime();
+    assertSameOriginJson(request);
+    const roomId = params.roomId;
+    if (!roomId || !isRoomIdentity(roomId)) {
+      throw new LocalRequestError(404, 'Unknown Room');
+    }
+    const input = parseRoomAction(await request.json().catch(() => {
+      throw new RoomLabInputError('Room action must be valid JSON');
+    }));
+    const host = getRoomLabHost();
+    if (input.action === 'create') {
+      const created = await host.create({
+        title: input.title,
+        ...(input.goal === undefined ? {} : { goal: input.goal }),
+        ...(input.agentIds === undefined ? {} : { memberIds: input.agentIds }),
+      });
+      return json<RoomLabActionResponse>({ ok: true, state: created }, { headers: noStoreHeaders });
+    }
+    const service = host.open(roomId);
+    let state;
+    switch (input.action) {
+      case 'message':
+        state = await service.sendMessage(input.body, undefined, input.clientMessageId);
+        break;
+      case 'compose':
+        state = await service.compose(input.agentIds);
+        break;
+      case 'count-off':
+        state = await service.runCountOff(request.signal);
+        break;
+      case 'retry':
+        state = await service.retryHeld(input.agentId, request.signal);
+        break;
+      case 'task':
+        state = await service.runTask(input.title);
+        break;
+      case 'reset':
+        state = await service.reset();
+        break;
+      default:
+        return json<RoomLabActionResponse>(
+          { ok: false, error: 'Unknown Room action' },
+          { status: 400, headers: noStoreHeaders },
+        );
+    }
+    return json<RoomLabActionResponse>(
+      { ok: true, state: host.decorate(state, roomId) },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    const status = error instanceof RoomLabBusyError
+      ? 409
+      : error instanceof RoomLabInputError || error instanceof RoomCatalogInvariantError
+        ? 400
+        : error instanceof LocalRequestError
+          ? error.status
+          : 500;
+    const message = error instanceof Error ? error.message : 'Room action failed';
+    return json<RoomLabActionResponse>(
+      { ok: false, error: message },
+      { status, headers: noStoreHeaders },
+    );
+  }
+}
+
+export default function RoomRoute() {
+  return <RoomLab initialState={useLoaderData<typeof loader>()} />;
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const message = routeErrorMessage(error);
+  return (
+    <main className={styles.unavailableShell}>
+      <section role="alert" aria-labelledby="room-unavailable-title">
+        <span>本地房间</span>
+        <h1 id="room-unavailable-title">这间房打不开</h1>
+        <p>{message}</p>
+        <a href="/room">回到房间列表</a>
+      </section>
+    </main>
+  );
+}
+
+function parseRoomAction(value: unknown): RoomLabAction {
+  if (!value || typeof value !== 'object' || !('action' in value)) {
+    throw new RoomLabInputError('Room action is invalid');
+  }
+  const input = value as Record<string, unknown>;
+  switch (input.action) {
+    case 'message':
+      if (typeof input.body === 'string') {
+        return {
+          action: 'message',
+          body: input.body,
+          ...(typeof input.clientMessageId === 'string'
+            ? { clientMessageId: input.clientMessageId }
+            : {}),
+        };
+      }
+      break;
+    case 'compose':
+      if (
+        Array.isArray(input.agentIds) &&
+        input.agentIds.every(isRoomLabAgentId)
+      ) {
+        return { action: 'compose', agentIds: input.agentIds };
+      }
+      break;
+    case 'retry':
+      if (isRoomLabAgentId(input.agentId)) {
+        return { action: 'retry', agentId: input.agentId };
+      }
+      break;
+    case 'count-off':
+      return { action: 'count-off' };
+    case 'task':
+      if (typeof input.title === 'string') return { action: 'task', title: input.title };
+      break;
+    case 'create':
+      if (typeof input.title === 'string') {
+        return {
+          action: 'create',
+          title: input.title,
+          ...(typeof input.goal === 'string' ? { goal: input.goal } : {}),
+          ...(Array.isArray(input.agentIds) && input.agentIds.every(isRoomLabAgentId)
+            ? { agentIds: input.agentIds }
+            : {}),
+        };
+      }
+      break;
+    case 'reset':
+      return { action: 'reset' };
+  }
+  throw new RoomLabInputError('Room action payload is invalid');
+}
+
+function routeErrorMessage(error: unknown): string {
+  if (isRouteErrorResponse(error)) {
+    const data = error.data as { error?: unknown } | undefined;
+    if (typeof data?.error === 'string') return data.error;
+    return `${error.status} ${error.statusText}`.trim();
+  }
+  return error instanceof Error ? error.message : 'The local Room service did not respond.';
+}

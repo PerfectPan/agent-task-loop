@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@remix-run/react', () => ({
   useFetcher: () => mocks.fetcher,
   useRevalidator: () => mocks.revalidator,
+  useNavigate: () => vi.fn(),
 }));
 vi.mock('./RoomWorkspace', () => ({
   RoomWorkspace: ({ value, onValueChange, onAction }: {

@@ -23,7 +23,7 @@ import {
   assertSameOriginJson,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-import styles from '../room-lab/presentation/RoomLab.module.css';
+
 
 export async function loader({ params }: LoaderFunctionArgs) {
   try {
@@ -119,12 +119,12 @@ export function ErrorBoundary() {
   const error = useRouteError();
   const message = routeErrorMessage(error);
   return (
-    <main className={styles.unavailableShell}>
-      <section role="alert" aria-labelledby="room-unavailable-title">
-        <span>本地房间</span>
-        <h1 id="room-unavailable-title">这间房打不开</h1>
-        <p>{message}</p>
-        <a href="/room">回到房间列表</a>
+    <main className="min-h-dvh bg-paper bg-[url('/images/garden.jpg')] bg-cover bg-center px-6 py-[10vh] font-sans text-ink">
+      <section className="mx-auto max-w-xl rounded-[10px] bg-washi/90 p-6" role="alert" aria-labelledby="room-unavailable-title">
+        <span className="text-xs text-muted">本地房间</span>
+        <h1 id="room-unavailable-title" className="font-serif text-xl font-semibold">这间房打不开</h1>
+        <p className="leading-relaxed [overflow-wrap:anywhere]">{message}</p>
+        <a className="text-moss-deep" href="/room">回到房间列表</a>
       </section>
     </main>
   );

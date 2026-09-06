@@ -1,42 +1,37 @@
-:root {
-  color-scheme: light;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  --paper: #f7f1e3;
-  --washi: #fbf6ea;
-  --garden: #d9e4c8;
-  --ink: #3a3428;
-  --muted: #7a7264;
-  --line: #e0d6c4;
-  --moss: #5a7a52;
-  --moss-deep: #3e5a38;
-  --hydrangea: #7b8fc4;
-  --gold: #f0e2b8;
-  --seal: #b45a4c;
-  --human: #f3ead3;
-  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-title: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f7f1e3;
+  --color-washi: #fbf6ea;
+  --color-garden: #d9e4c8;
+  --color-ink: #3a3428;
+  --color-muted: #7a7264;
+  --color-line: #e0d6c4;
+  --color-moss: #5a7a52;
+  --color-moss-deep: #3e5a38;
+  --color-hydrangea: #7b8fc4;
+  --color-gold: #f0e2b8;
+  --color-seal: #b45a4c;
+  --color-human: #f3ead3;
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  html,
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100%;
+  }
 
-html,
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100%;
-}
+  body {
+    @apply bg-paper font-sans text-sm text-ink antialiased;
+  }
 
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-ui);
-}
-
-button,
-textarea,
-input {
-  font: inherit;
+  button,
+  textarea,
+  input {
+    font: inherit;
+  }
 }

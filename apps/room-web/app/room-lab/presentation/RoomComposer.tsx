@@ -4,7 +4,7 @@ import { PaperPlaneTilt } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { MentionMenu } from './MentionMenu';
 import { buildMentionOptions, mentionCompletion, type MentionOption } from './mention-completion';
 import type { RoomLabAgentId } from '../read-model';
-import styles from './RoomComposer.module.css';
+import { focusRing } from './ui';
 
 export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateReady, onModeChange, onValueChange, onSubmit }: {
   mode: 'room' | 'task'; value: string; disabled: boolean; activeAgentIds: RoomLabAgentId[];
@@ -78,15 +78,28 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
     }
   };
   return (
-    <form className={styles.composer} onSubmit={submit}>
-      {mode === 'task' && <div className={styles.taskMode}>
-        <strong>创建任务</strong><span>Codex 实施，Claude 独立审核</span>
-        <button type="button" onClick={() => onModeChange('room')} disabled={disabled}>取消</button>
-      </div>}
-      <label className={styles.srOnly} htmlFor="room-command">{mode === 'room' ? '向房间发送消息' : '任务目标与验收要求'}</label>
-      <div className={styles.inputArea}>
-        <textarea ref={textareaRef} id="room-command" value={value} maxLength={2_000} rows={2}
-          disabled={disabled} onBlur={() => setMentionQuery(undefined)} onKeyDown={handleKeyDown}
+    <form
+      className={`relative mx-4 mb-4 shrink-0 rounded-[10px] border border-line bg-washi p-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-hydrangea`}
+      onSubmit={submit}
+    >
+      {mode === 'task' && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-line pb-2 text-sm">
+          <strong>创建任务</strong>
+          <span className="text-xs text-muted">Codex 实施，Claude 独立审核</span>
+          <button type="button" className="ml-auto h-8 bg-transparent underline" onClick={() => onModeChange('room')} disabled={disabled}>取消</button>
+        </div>
+      )}
+      <label className="sr-only" htmlFor="room-command">{mode === 'room' ? '向房间发送消息' : '任务目标与验收要求'}</label>
+      <div className="relative">
+        <textarea
+          ref={textareaRef}
+          id="room-command"
+          value={value}
+          maxLength={2_000}
+          rows={2}
+          disabled={disabled}
+          onBlur={() => setMentionQuery(undefined)}
+          onKeyDown={handleKeyDown}
           role={mode === 'room' ? 'combobox' : undefined}
           aria-autocomplete={mode === 'room' ? 'list' : undefined}
           aria-expanded={mode === 'room' ? mentionQuery !== undefined : undefined}
@@ -95,23 +108,45 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
             ? `room-mention-${mentionOptions[activeMentionIndex]?.id}` : undefined}
           aria-describedby="room-composer-hint"
           placeholder={mode === 'room' ? '发给房间。不写 @，在场的人会按顺序接话。' : '目标、约束、产物、怎样才算完成'}
+          className="block max-h-36 min-h-11 w-full resize-y border-0 bg-transparent p-0 text-sm leading-snug text-ink outline-0 placeholder:text-muted"
           onChange={event => {
             const next = event.currentTarget.value;
             onValueChange(next);
             setMentionQuery(mode === 'room' ? mentionCompletion.find(next, event.currentTarget.selectionStart) : undefined);
             setActiveMentionIndex(0);
-          }} />
-        {mode === 'room' && mentionQuery && <MentionMenu options={mentionOptions} activeIndex={activeMentionIndex}
-          onActiveIndexChange={setActiveMentionIndex} onSelect={selectMention} />}
+          }}
+        />
+        {mode === 'room' && mentionQuery && (
+          <MentionMenu
+            options={mentionOptions}
+            activeIndex={activeMentionIndex}
+            onActiveIndexChange={setActiveMentionIndex}
+            onSelect={selectMention}
+          />
+        )}
       </div>
-      <div className={styles.toolbar}>
-        {mode === 'room' && <button type="button" className={styles.mentionButton} disabled={disabled}
-          onMouseDown={event => event.preventDefault()} onClick={openMentions}><At size={22} />提及</button>}
-        <span id="room-composer-hint" className={styles.hint}>
+      <div className="mt-1.5 flex items-center gap-2.5">
+        {mode === 'room' && (
+          <button
+            type="button"
+            className={`inline-flex h-8 items-center gap-1 whitespace-nowrap bg-transparent p-0 text-sm text-hydrangea ${focusRing}`}
+            disabled={disabled}
+            onMouseDown={event => event.preventDefault()}
+            onClick={openMentions}
+          >
+            <At size={18} />提及
+          </button>
+        )}
+        <span id="room-composer-hint" className="text-xs leading-tight text-muted">
           {mode === 'room' ? 'Enter 发送 · 未点名则依次发言' : '模型通过后，仍要你亲自验收'}
         </span>
-        <button className={styles.sendButton} type="submit" disabled={!canSend}>
-          {disabled ? '正在送出' : mode === 'room' ? '发送' : '开始任务'}<PaperPlaneTilt size={22} weight="fill" />
+        <button
+          className={`ml-auto inline-flex h-8 min-w-[72px] items-center justify-center gap-1.5 rounded-lg bg-moss px-3 text-sm whitespace-nowrap text-washi hover:bg-moss-deep disabled:bg-line disabled:text-muted ${focusRing}`}
+          type="submit"
+          disabled={!canSend}
+        >
+          {disabled ? '正在送出' : mode === 'room' ? '发送' : '开始任务'}
+          <PaperPlaneTilt size={16} weight="fill" />
         </button>
       </div>
     </form>

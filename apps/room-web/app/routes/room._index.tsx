@@ -17,7 +17,7 @@ import {
   assertSameOriginJson,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-import styles from '../room-lab/presentation/RoomHome.module.css';
+import { focusRing } from '../room-lab/presentation/ui';
 
 export async function loader(_args: LoaderFunctionArgs) {
   try {
@@ -89,27 +89,29 @@ function wantsJson(request: Request): boolean {
 export default function RoomHome() {
   const actionData = useActionData<typeof action>();
   return (
-    <main className={styles.home}>
-      <section>
-        <img className={styles.mark} src="/images/spirit.png" width={64} height={64} alt="" />
-        <p>本地房间</p>
-        <h1>建一间房，把要做的事写在名字上。</h1>
-        <p className={styles.lead}>
+    <main className="grid min-h-dvh place-items-center bg-paper bg-[url('/images/garden.jpg')] bg-cover bg-center px-4 py-12 font-sans text-ink">
+      <section className="w-[min(560px,100%)] rounded-[10px] border border-line/80 bg-washi/90 p-6">
+        <img className="mb-3 size-12 object-contain" src="/images/spirit.png" width={48} height={48} alt="" />
+        <p className="mb-1.5 text-xs text-muted">本地房间</p>
+        <h1 className="mb-2 font-serif text-xl font-semibold leading-snug">建一间房，把要做的事写在名字上。</h1>
+        <p className="mb-4 text-sm leading-relaxed text-muted">
           人和本地 Agent 在同一条时间线里讨论、写作、推进任务。
         </p>
-        <Form method="post">
-          <label>
+        <Form method="post" className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5 text-sm">
             房间名
-            <input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus />
+            <input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus
+              className={`rounded-[10px] border border-line bg-washi px-3 py-2 ${focusRing}`} />
           </label>
-          <label>
-            这间房要完成什么 <span>可选</span>
-            <textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。" />
+          <label className="flex flex-col gap-1.5 text-sm">
+            这间房要完成什么 <span className="text-xs text-muted">可选</span>
+            <textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。"
+              className={`rounded-[10px] border border-line bg-washi px-3 py-2 ${focusRing}`} />
           </label>
-          <p data-error className={styles.error}>
+          <p data-error className="m-0 min-h-4 text-xs text-seal">
             {actionData && !actionData.ok ? actionData.error : ''}
           </p>
-          <button type="submit">建房间</button>
+          <button type="submit" className={`self-start h-8 rounded-lg bg-moss px-3 text-sm text-washi hover:bg-moss-deep ${focusRing}`}>建房间</button>
         </Form>
       </section>
     </main>
@@ -124,10 +126,10 @@ export function ErrorBoundary() {
       : `${error.status} ${error.statusText}`.trim())
     : error instanceof Error ? error.message : '本地房间暂不可用';
   return (
-    <main className={styles.home}>
-      <section>
-        <h1>本地房间暂不可用</h1>
-        <p>{message}</p>
+    <main className="grid min-h-dvh place-items-center bg-paper px-4 py-12 font-sans text-ink">
+      <section className="w-[min(560px,100%)]">
+        <h1 className="font-serif text-xl font-semibold">本地房间暂不可用</h1>
+        <p className="leading-relaxed [overflow-wrap:anywhere]">{message}</p>
       </section>
     </main>
   );

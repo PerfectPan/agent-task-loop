@@ -3,7 +3,7 @@ import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
 import { Users } from '@phosphor-icons/react/dist/ssr/Users';
 import type { RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
-import styles from './RoomLab.module.css';
+import { focusRing, quietButton } from './ui';
 
 export function RoomHeader({
   title, goal, agents, running, disabled, taskMode, onTask, onMembers, onDetails, onReset,
@@ -17,38 +17,58 @@ export function RoomHeader({
     action();
   };
   return (
-    <header className={styles.conversationHeader}>
-      <div className={styles.headerMeta}>
-        <div className={styles.crewPeek} aria-hidden="true">
-          {agents.map(agent => <AgentAvatar key={agent.id} agentId={agent.id} />)}
+    <header className="mx-4 mt-3 flex shrink-0 items-center justify-between gap-3 rounded-[10px] border border-line/80 bg-washi/90 px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex items-center pl-2 max-md:hidden" aria-hidden="true">
+          {agents.map(agent => (
+            <AgentAvatar
+              key={agent.id}
+              agentId={agent.id}
+              className="-ml-2 size-8 rounded-full border-2 border-washi object-cover"
+            />
+          ))}
         </div>
-        <div>
-          <h1 id="room-heading">{title}</h1>
-          <p>
+        <div className="min-w-0">
+          <h1 id="room-heading" className="font-serif text-xl font-semibold leading-tight">{title}</h1>
+          <p className="mt-1 truncate text-xs leading-tight text-muted">
             {agents.length} 人在场
             {goal ? ` · ${goal}` : ''}
             {running.length > 0 ? ` · ${running.join('、')} 正在写` : ''}
           </p>
         </div>
       </div>
-      <div className={styles.headerActions}>
-        <button type="button" className={styles.mobileMembers} onClick={onMembers} aria-label="管理房间成员">
+      <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          className={`hidden size-8 place-items-center bg-transparent max-md:grid ${focusRing}`}
+          onClick={onMembers}
+          aria-label="管理房间成员"
+        >
           <Users size={22} />
         </button>
-        <button type="button" className={styles.taskButton} onClick={onTask} disabled={disabled}>
+        <button type="button" className={quietButton} onClick={onTask} disabled={disabled}>
           {taskMode ? '返回聊天' : '升级为任务'}
         </button>
-        <details ref={menuRef} className={styles.roomMenu} onKeyDown={event => {
-          if (event.key === 'Escape' && menuRef.current) {
-            menuRef.current.open = false;
-            menuRef.current.querySelector('summary')?.focus();
-          }
-        }}>
-          <summary aria-label="房间菜单"><DotsThree size={28} weight="bold" /></summary>
-          <div className={styles.menuItems}>
-            <button type="button" onClick={() => select(onMembers)}>管理成员</button>
-            <button type="button" onClick={() => select(onDetails)}>运行详情</button>
-            <button type="button" disabled={disabled} onClick={() => select(onReset)}>清空对话</button>
+        <details
+          ref={menuRef}
+          className="relative"
+          onKeyDown={event => {
+            if (event.key === 'Escape' && menuRef.current) {
+              menuRef.current.open = false;
+              menuRef.current.querySelector('summary')?.focus();
+            }
+          }}
+        >
+          <summary
+            aria-label="房间菜单"
+            className={`flex size-8 list-none items-center justify-center [&::-webkit-details-marker]:hidden ${focusRing}`}
+          >
+            <DotsThree size={28} weight="bold" />
+          </summary>
+          <div className="absolute right-0 top-10 z-20 w-44 rounded-[10px] border border-line bg-washi p-1">
+            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden" onClick={() => select(onMembers)}>管理成员</button>
+            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden" onClick={() => select(onDetails)}>运行详情</button>
+            <button type="button" className="block h-9 w-full rounded-lg bg-transparent px-3 text-left text-sm hover:bg-garden disabled:opacity-50" disabled={disabled} onClick={() => select(onReset)}>清空对话</button>
           </div>
         </details>
       </div>

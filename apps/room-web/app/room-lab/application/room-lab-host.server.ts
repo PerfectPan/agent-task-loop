@@ -50,10 +50,12 @@ export class RoomLabHost {
   }
 
   async snapshot(roomId: string): Promise<RoomLabState> {
-    const record = this.catalog.touch(roomId, nowIso());
-    this.store.save(this.catalog);
+    if (this.catalog.lastOpened()?.id !== roomId) {
+      this.catalog.touch(roomId, nowIso());
+      this.store.save(this.catalog);
+    }
     const service = this.open(roomId);
-    return this.decorate(await service.snapshot(), record.id);
+    return this.decorate(await service.snapshot(), roomId);
   }
 
   open(roomId: string): RoomLabService {

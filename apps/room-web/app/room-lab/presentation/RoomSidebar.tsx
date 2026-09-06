@@ -1,9 +1,10 @@
+import { Link } from '@remix-run/react';
 import type { RoomCatalogItemView, RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
 import { agentRoleLabels } from './agent-role';
 import { agentStatusLabels } from './agent-status';
 import { formatAgo } from './format-time';
-import styles from './RoomSidebar.module.css';
+import { focusRing, sectionRow, textAction } from './ui';
 
 export function RoomSidebar({
   rooms, currentRoomId, agents, disabled, onCreate, onManage, onCountOff, onDetails,
@@ -18,53 +19,88 @@ export function RoomSidebar({
   onDetails: () => void;
 }) {
   return (
-    <aside className={styles.sidebar} aria-label="房间">
-      <div className={styles.brand}>
-        <img src="/images/spirit.png" width={52} height={52} alt="" />
+    <aside
+      className="flex min-h-0 flex-col overflow-y-auto border-r border-line/70 bg-garden/55 px-3 py-4 max-md:hidden"
+      aria-label="房间"
+    >
+      <div className="mb-4 flex h-10 items-center gap-2">
+        <img src="/images/spirit.png" width={36} height={36} alt="" className="size-9 shrink-0 object-contain" />
         <div>
-          <strong>房间</strong>
-          <p>本地协作</p>
+          <strong className="block text-base font-semibold leading-tight">房间</strong>
+          <p className="mt-0.5 text-xs leading-tight text-muted">本地协作</p>
         </div>
       </div>
-      <div className={styles.roomSection}>
+      <div className={sectionRow}>
         <span>进行中</span>
-        <button type="button" className={styles.createRoom} onClick={onCreate}>新建</button>
+        <button type="button" className={textAction} onClick={onCreate}>新建</button>
       </div>
-      <ul className={styles.rooms}>
+      <ul className="mt-2 mb-6 flex flex-col gap-1">
         {rooms.map(room => (
           <li key={room.id}>
-            <a href={`/room/${room.id}`} aria-current={room.id === currentRoomId ? 'page' : undefined}>
-              <span className={styles.roomTitle}>{room.title}</span>
-              <span className={styles.roomMeta}>{room.memberCount} 人 · {formatAgo(room.updatedAt)}</span>
-              {room.lastLine && <span className={styles.roomLine}>{room.lastLine}</span>}
-            </a>
+            <Link
+              to={`/room/${room.id}`}
+              prefetch="intent"
+              preventScrollReset
+              aria-current={room.id === currentRoomId ? 'page' : undefined}
+              className={`block rounded-[10px] px-3 py-2 text-ink no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
+            >
+              <span className="block text-sm font-semibold leading-tight [overflow-wrap:anywhere]">{room.title}</span>
+              <span className="mt-0.5 block text-xs leading-tight text-muted">
+                {room.memberCount} 人 · {formatAgo(room.updatedAt)}
+              </span>
+              {room.lastLine && (
+                <span className="mt-1 block truncate text-xs leading-tight text-ink/80">{room.lastLine}</span>
+              )}
+            </Link>
           </li>
         ))}
       </ul>
-      <div className={styles.rosterHeading}>
+      <div className={sectionRow}>
         <span>在场</span>
-        <button type="button" onClick={onManage} aria-label="管理房间成员">管理成员</button>
+        <button type="button" className={textAction} onClick={onManage} aria-label="管理房间成员">管理成员</button>
       </div>
-      <ul className={styles.roster}>
+      <ul className="mt-2 mb-4 flex flex-col gap-1">
         {agents.map(agent => (
-          <li key={agent.id}>
-            <AgentAvatar agentId={agent.id} className={styles.avatar} />
-            <div>
-              <strong>{agent.label}</strong>
-              <span className={styles.role}>{agentRoleLabels[agent.id]}</span>
-              <span className={styles.status} data-status={agent.status}>
-                <i aria-hidden="true" />{agentStatusLabels[agent.status]}
+          <li key={agent.id} className="flex min-h-11 items-center gap-2 px-2 py-1">
+            <AgentAvatar agentId={agent.id} className="size-10 shrink-0 rounded-full object-cover" />
+            <div className="min-w-0">
+              <strong className="block text-sm font-semibold leading-tight">{agent.label}</strong>
+              <span className="text-xs leading-tight text-muted">
+                {agentRoleLabels[agent.id]}
+                <span className="mx-1">·</span>
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-status={agent.status}
+                >
+                  <i
+                    aria-hidden="true"
+                    data-status={agent.status}
+                    className="inline-block size-1.5 rounded-full bg-muted data-[status=posted]:bg-moss data-[status=completed]:bg-moss data-[status=silent]:bg-moss data-[status=running]:bg-hydrangea data-[status=held]:bg-hydrangea data-[status=error]:bg-seal"
+                  />
+                  {agentStatusLabels[agent.status]}
+                </span>
               </span>
             </div>
           </li>
         ))}
       </ul>
-      <footer className={styles.footer}>
-        <button type="button" disabled={disabled} onClick={onCountOff}>
+      <footer className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onCountOff}
+          className={`h-8 bg-transparent p-0 text-left text-sm text-ink hover:text-moss-deep disabled:opacity-50 ${focusRing}`}
+        >
           {disabled ? '正在检查…' : '检查连接'}
         </button>
-        <button type="button" onClick={onDetails}>运行详情</button>
-        <small>保存在这台机器上</small>
+        <button
+          type="button"
+          onClick={onDetails}
+          className={`h-8 bg-transparent p-0 text-left text-sm text-ink hover:text-moss-deep ${focusRing}`}
+        >
+          运行详情
+        </button>
+        <small className="text-xs leading-snug text-muted">保存在这台机器上</small>
       </footer>
     </aside>
   );

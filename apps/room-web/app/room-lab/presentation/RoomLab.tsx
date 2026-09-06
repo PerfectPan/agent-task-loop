@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useFetcher, useRevalidator } from '@remix-run/react';
+import { useFetcher, useNavigate, useRevalidator } from '@remix-run/react';
 import { RoomLabStateSelector } from '../read-model';
 import type { RoomLabAction, RoomLabActionResponse, RoomLabEventView, RoomLabState } from '../read-model';
 import { RoomWorkspace } from './RoomWorkspace';
@@ -7,6 +7,7 @@ import { RoomWorkspace } from './RoomWorkspace';
 export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   const fetcher = useFetcher<RoomLabActionResponse>();
   const revalidator = useRevalidator();
+  const navigate = useNavigate();
   const [state, setState] = useState(initialState);
   const [value, setValue] = useState('');
   const [error, setError] = useState<string>();
@@ -37,7 +38,8 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       return;
     }
     if (submittedAction.current?.action === 'create') {
-      window.location.assign(`/room/${data.state.roomId}`);
+      navigate(`/room/${data.state.roomId}`);
+      submittedAction.current = undefined;
       return;
     }
     if (data.state.epoch !== state.epoch) revalidator.revalidate();

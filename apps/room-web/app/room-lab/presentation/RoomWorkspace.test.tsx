@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+vi.mock('@remix-run/react', () => ({
+  Link: ({ to, children, prefetch: _prefetch, preventScrollReset: _reset, ...rest }: {
+    to: string; children: React.ReactNode; prefetch?: string; preventScrollReset?: boolean;
+  }) => <a href={to} {...rest}>{children}</a>,
+}));
 import { RoomWorkspace } from './RoomWorkspace';
 import { RoomMessage } from './RoomMessage';
 import { TaskStrip } from './TaskStrip';

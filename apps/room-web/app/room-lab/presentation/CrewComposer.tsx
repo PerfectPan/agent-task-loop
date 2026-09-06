@@ -5,7 +5,7 @@ import { Minus } from '@phosphor-icons/react/dist/ssr/Minus';
 import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
 import { agentStatusLabels } from './agent-status';
-import styles from './RoomSidebar.module.css';
+import { focusRing } from './ui';
 
 export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
   agents: RoomLabAgentView[]; activeAgentIds: RoomLabAgentId[];
@@ -21,20 +21,25 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
     [next[index], next[target]] = [next[target]!, next[index]!];
     onCompose(next);
   };
+  const iconButton = `grid size-8 place-items-center rounded-lg border border-line bg-transparent hover:bg-garden disabled:opacity-50 ${focusRing}`;
   return (
-    <section className={styles.crewEditor} aria-label="成员与报数顺序">
-      <p>选择一起协作的 Agent。下方顺序也是检查连接时的报数顺序，至少保留一位成员。</p>
-      <ol className={styles.editList}>
+    <section aria-label="成员与报数顺序">
+      <p className="text-sm leading-relaxed text-muted">选择一起协作的 Agent。下方顺序也是检查连接时的报数顺序，至少保留一位成员。</p>
+      <ol className="my-3 list-none p-0">
         {activeAgents.map((agent, index) => (
-          <li key={agent.id}>
-            <span className={styles.order}>{index + 1}</span><AgentAvatar agentId={agent.id} />
-            <div className={styles.editIdentity}><strong>{agent.label}</strong><small>{agentStatusLabels[agent.status]}</small></div>
-            <div className={styles.editActions}>
-              <button type="button" disabled={disabled || index === 0} onClick={() => move(index, -1)}
+          <li key={agent.id} className="flex items-center gap-2 border-b border-line py-2">
+            <span className="w-3 text-xs text-muted">{index + 1}</span>
+            <AgentAvatar agentId={agent.id} className="size-10 rounded-full object-cover" />
+            <div className="min-w-0 flex-1">
+              <strong className="block text-sm [overflow-wrap:anywhere]">{agent.label}</strong>
+              <small className="mt-0.5 block text-xs text-muted">{agentStatusLabels[agent.status]}</small>
+            </div>
+            <div className="flex gap-1">
+              <button type="button" className={iconButton} disabled={disabled || index === 0} onClick={() => move(index, -1)}
                 aria-label={`将 ${agent.label} 上移`}><ArrowUp size={18} /></button>
-              <button type="button" disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
+              <button type="button" className={iconButton} disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
                 aria-label={`将 ${agent.label} 下移`}><ArrowDown size={18} /></button>
-              <button type="button" disabled={disabled || activeAgents.length === 1}
+              <button type="button" className={iconButton} disabled={disabled || activeAgents.length === 1}
                 onClick={() => onCompose(activeAgentIds.filter(id => id !== agent.id))}
                 aria-label={`移除 ${agent.label}`}><Minus size={18} /></button>
             </div>
@@ -42,12 +47,16 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
         ))}
       </ol>
       {agents.some(agent => !activeAgentIds.includes(agent.id)) && <>
-        <h3>可加入的 Agent</h3>
-        <ul className={styles.editList}>
+        <h3 className="mt-6 text-sm">可加入的 Agent</h3>
+        <ul className="my-3 list-none p-0">
           {agents.filter(agent => !activeAgentIds.includes(agent.id)).map(agent => (
-            <li key={agent.id}><AgentAvatar agentId={agent.id} />
-              <div className={styles.editIdentity}><strong>{agent.label}</strong><small>{agent.role}</small></div>
-              <button type="button" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
+            <li key={agent.id} className="flex items-center gap-2 border-b border-line py-2">
+              <AgentAvatar agentId={agent.id} className="size-10 rounded-full object-cover" />
+              <div className="min-w-0 flex-1">
+                <strong className="block text-sm [overflow-wrap:anywhere]">{agent.label}</strong>
+                <small className="mt-0.5 block text-xs text-muted">{agent.role}</small>
+              </div>
+              <button type="button" className={iconButton} disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
                 aria-label={`加入 ${agent.label}`}><Plus size={18} /></button>
             </li>
           ))}

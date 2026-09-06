@@ -28,4 +28,16 @@ describe('file Room persistence', () => {
     });
     expect(snapshot.catalog.map(room => room.title)).toEqual(['Q3 定价方案']);
   });
+
+  it('does not rewrite lastOpened when snapshotting the same room', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const store = new FileRoomCatalogStore(root);
+    const host = new RoomLabHost(store, {
+      agentRunner: async () => ({ text: 'ok', latencyMs: 1 }),
+    });
+    const created = await host.create({ title: '同一房间', memberIds: ['codex'] });
+    const first = host.lastOpened()?.lastOpenedAt;
+    await host.snapshot(created.roomId);
+    expect(host.lastOpened()?.lastOpenedAt).toBe(first);
+  });
 });

@@ -1,6 +1,7 @@
 import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
 import {
   Form,
+  Link,
   isRouteErrorResponse,
   useActionData,
   useRouteError,
@@ -113,6 +114,10 @@ export default function RoomHome() {
           </p>
           <Button type="submit" className="self-start">建房间</Button>
         </Form>
+        <p className="mt-4 text-xs text-muted">
+          <Link className="text-moss-deep underline" to="/room/agents">智能体管理</Link>
+          ：看这台机器上谁已安装、谁能跑。
+        </p>
       </section>
     </main>
   );

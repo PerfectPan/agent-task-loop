@@ -84,6 +84,20 @@ export interface RoomCatalogItemView {
   memberCount: number;
 }
 
+export interface AgentDeskSeat {
+  id: string;
+  title: string;
+}
+
+export interface AgentDeskItem extends RoomAgentInventoryItem {
+  seatedIn: AgentDeskSeat[];
+}
+
+export interface AgentDeskView {
+  lastOpenedId?: string;
+  agents: AgentDeskItem[];
+}
+
 export interface RoomLabState {
   roomId: string;
   title: string;

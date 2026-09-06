@@ -17,6 +17,7 @@ import { RoomCatalog, RoomCatalogInvariantError } from '../domain/room-catalog';
 import { RoomComposition } from '../domain/room-composition';
 import type { RoomLabAgentId } from '../domain/agent-roster';
 import type {
+  AgentDeskView,
   RoomAgentInventoryItem,
   RoomCatalogItemView,
   RoomLabAction,
@@ -48,6 +49,25 @@ export class RoomLabHost {
 
   inventory(): RoomAgentInventoryItem[] {
     return this.inventoryCache ??= this.bindings.listAgents?.() ?? listRoomAgentInventory();
+  }
+
+  refreshInventory(): RoomAgentInventoryItem[] {
+    this.inventoryCache = undefined;
+    return this.inventory();
+  }
+
+  agentDesk(): AgentDeskView {
+    const rooms = this.list();
+    const lastOpenedId = this.lastOpened()?.id;
+    return {
+      ...(lastOpenedId === undefined ? {} : { lastOpenedId }),
+      agents: this.inventory().map(agent => ({
+        ...agent,
+        seatedIn: rooms
+          .filter(room => room.memberIds.includes(agent.id))
+          .map(room => ({ id: room.id, title: room.title })),
+      })),
+    };
   }
 
   async create(input: {

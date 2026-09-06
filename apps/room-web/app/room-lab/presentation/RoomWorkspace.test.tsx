@@ -5,6 +5,7 @@ vi.mock('@remix-run/react', () => ({
   Link: ({ to, children, prefetch: _prefetch, preventScrollReset: _reset, ...rest }: {
     to: string; children: React.ReactNode; prefetch?: string; preventScrollReset?: boolean;
   }) => <a href={to} {...rest}>{children}</a>,
+  useLocation: () => ({ pathname: '/room/r_aaaaaaaaaa' }),
 }));
 import { RoomWorkspace } from './RoomWorkspace';
 import { RoomMessage } from './RoomMessage';

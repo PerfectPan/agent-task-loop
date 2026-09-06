@@ -1,4 +1,4 @@
-import { Link } from '@remix-run/react';
+import { Link, useLocation } from '@remix-run/react';
 import type { RoomCatalogItemView, RoomLabAgentView } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
 import { agentRoleLabels } from './agent-role';
@@ -19,6 +19,8 @@ export function RoomSidebar({
   onCountOff: () => void;
   onDetails: () => void;
 }) {
+  const location = useLocation();
+  const onAgents = location.pathname === '/room/agents';
   return (
     <aside
       className="flex min-h-0 flex-col overflow-y-auto border-r border-line/70 bg-garden/55 px-3 py-4 max-md:hidden"
@@ -31,6 +33,26 @@ export function RoomSidebar({
           <p className="mt-0.5 text-xs leading-tight text-muted">本地协作</p>
         </div>
       </div>
+      <nav className="mb-4 flex gap-1" aria-label="后台">
+        <Link
+          to={`/room/${currentRoomId}`}
+          prefetch="intent"
+          preventScrollReset
+          aria-current={!onAgents ? 'page' : undefined}
+          className={`rounded-md px-2 py-1 text-sm no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
+        >
+          房间
+        </Link>
+        <Link
+          to="/room/agents"
+          prefetch="intent"
+          preventScrollReset
+          aria-current={onAgents ? 'page' : undefined}
+          className={`rounded-md px-2 py-1 text-sm no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
+        >
+          智能体
+        </Link>
+      </nav>
       <div className={sectionRow}>
         <span>进行中</span>
         <Button type="button" variant="ghost" size="sm" onClick={onCreate}>新建</Button>
@@ -103,6 +125,13 @@ export function RoomSidebar({
         >
           运行详情
         </Button>
+        <Link
+          to="/room/agents"
+          prefetch="intent"
+          className={`h-8 rounded-md px-2 text-sm leading-8 text-moss-deep no-underline hover:bg-garden ${focusRing}`}
+        >
+          智能体管理
+        </Link>
         <small className="text-xs leading-snug text-muted">保存在这台机器上</small>
       </footer>
     </aside>

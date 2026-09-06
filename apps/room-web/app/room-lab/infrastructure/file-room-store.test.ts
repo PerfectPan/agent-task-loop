@@ -56,6 +56,20 @@ describe('sqlite Room persistence', () => {
     expect(host.lastOpened()?.lastOpenedAt).toBe(first);
   });
 
+  it('lists which rooms an agent is seated in', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const host = new RoomLabHost(SqliteRoomStore.open(root), {
+      agentRunner: async () => ({ text: 'ok', latencyMs: 1 }),
+      listAgents: runnableInventory,
+    });
+    const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
+    const desk = host.agentDesk();
+    expect(desk.agents.find(agent => agent.id === 'codex')?.seatedIn).toEqual([
+      { id: created.roomId, title: 'Q3 定价方案' },
+    ]);
+    expect(desk.agents.find(agent => agent.id === 'claude')?.seatedIn).toEqual([]);
+  });
+
   it('imports a legacy JSON catalog into sqlite once', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     mkdirSync(join(root, 'rooms', 'r_aaaaaaaaaa'), { recursive: true });

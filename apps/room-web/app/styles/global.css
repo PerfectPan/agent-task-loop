@@ -4,6 +4,7 @@
 
 /* Unlayered so it wins over UA buttonface and leftover native controls. */
 button:not(:disabled):hover,
+summary:hover,
 [data-slot='button']:not([aria-disabled='true']):hover {
   filter: brightness(0.92);
 }
@@ -41,6 +42,7 @@ button:not(:disabled):hover,
   textarea,
   input {
     font: inherit;
+    outline: none;
   }
 
   /* macOS Chrome paints UA buttonface over author colors unless the control is fully unset. */

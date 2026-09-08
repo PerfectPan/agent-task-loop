@@ -79,7 +79,7 @@ export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateRe
   };
   return (
     <form
-      className={`relative mx-4 mb-4 shrink-0 rounded-[10px] border border-line bg-washi p-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-hydrangea`}
+      className="relative mx-4 mb-4 shrink-0 rounded-[10px] border border-line bg-washi p-3 focus-within:border-moss"
       onSubmit={submit}
     >
       {mode === 'task' && (

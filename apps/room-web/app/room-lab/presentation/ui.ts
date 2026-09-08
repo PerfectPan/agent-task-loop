@@ -1,7 +1,7 @@
 /** Shared Tailwind clusters. Type: 12 / 14 / 16 / 20. Space: 4 / 8 / 12 / 16. */
 
 export const focusRing =
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hydrangea';
+  'outline-none focus-visible:border-moss';
 
 export const sectionRow =
   'flex h-7 items-center justify-between text-xs text-muted';

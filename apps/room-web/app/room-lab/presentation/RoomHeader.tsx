@@ -62,7 +62,7 @@ export function RoomHeader({
         >
           <summary
             aria-label="房间菜单"
-            className={`flex size-8 list-none items-center justify-center [&::-webkit-details-marker]:hidden ${focusRing}`}
+            className={`flex size-8 list-none items-center justify-center rounded-lg hover:bg-garden [&::-webkit-details-marker]:hidden ${focusRing}`}
           >
             <DotsThree size={28} weight="bold" />
           </summary>

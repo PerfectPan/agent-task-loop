@@ -4,7 +4,8 @@ import { AgentAvatar } from './AgentAvatar';
 import { agentRoleLabels } from './agent-role';
 import { agentStatusLabels } from './agent-status';
 import { formatAgo } from './format-time';
-import { Button } from '~/components/ui/button';
+import { Button, buttonVariants } from '~/components/ui/button';
+import { cn } from '~/lib/utils';
 import { focusRing, sectionRow } from './ui';
 
 export function RoomSidebar({
@@ -107,7 +108,7 @@ export function RoomSidebar({
           </li>
         ))}
       </ul>
-      <footer className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
+      <footer className="mt-auto flex flex-col border-t border-line pt-3">
         <Button
           type="button"
           variant="ghost"
@@ -128,11 +129,11 @@ export function RoomSidebar({
         <Link
           to="/room/agents"
           prefetch="intent"
-          className={`h-8 rounded-md px-2 text-sm leading-8 text-moss-deep no-underline hover:bg-garden ${focusRing}`}
+          className={cn(buttonVariants({ variant: 'ghost' }), 'h-8 justify-start px-2 no-underline')}
         >
           智能体管理
         </Link>
-        <small className="text-xs leading-snug text-muted">保存在这台机器上</small>
+        <small className="px-2 pt-1 text-xs leading-snug text-muted">保存在这台机器上</small>
       </footer>
     </aside>
   );

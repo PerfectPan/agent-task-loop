@@ -66,7 +66,7 @@ function DialogCloseButton() {
   return (
     <DialogPrimitive.Close
       aria-label="关闭弹窗"
-      className="grid size-9 place-items-center bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hydrangea"
+      className="grid size-9 place-items-center bg-transparent outline-none hover:bg-garden"
     >
       <X size={22} />
     </DialogPrimitive.Close>

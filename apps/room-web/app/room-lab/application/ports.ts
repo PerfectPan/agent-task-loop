@@ -8,13 +8,19 @@ import type {
 } from '@rivus/agent-task-loop/task-delivery';
 import type { RoomLabAgentId } from '../domain/agent-roster';
 
+export interface RoomHumanAdmitResult {
+  event: RoomEvent;
+  duplicate: boolean;
+}
+
 export interface RoomConversationPort {
+  readonly conversationId: string;
   readonly displayId: string;
   admitHuman(input: {
     messageId: string;
     body: string;
     addressedTo: RoomLabAgentId[];
-  }): Promise<RoomEvent>;
+  }): Promise<RoomHumanAdmitResult>;
   shouldWake(event: RoomEvent, agentId: RoomLabAgentId): boolean;
   prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]>;
   prepareHeldRetry(

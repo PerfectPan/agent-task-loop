@@ -7,6 +7,8 @@ export {
 } from './agent-session/domain/errors';
 
 export type { RoomAdmissionStore, RoomStreamStore } from './room/application/room-stream-store';
+export { RoomStreamService } from './room/application/room-stream-service';
+export type { RoomUnitOfWork } from './room/application/room-unit-of-work';
 
 export {
   ROOM_VALIDATION_CODE,

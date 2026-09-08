@@ -1,25 +1,67 @@
-:root {
-  color-scheme: light;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+@import "tailwindcss";
+
+@custom-variant hover (&:hover);
+
+/* Unlayered so it wins over UA buttonface and leftover native controls. */
+button:not(:disabled):hover,
+summary:hover,
+[data-slot='button']:not([aria-disabled='true']):hover {
+  filter: brightness(0.92);
 }
 
-* {
-  box-sizing: border-box;
+@theme {
+  --color-paper: #f7f1e3;
+  --color-washi: #fbf6ea;
+  --color-garden: #d9e4c8;
+  --color-ink: #3a3428;
+  --color-muted: #7a7264;
+  --color-line: #e0d6c4;
+  --color-moss: #5a7a52;
+  --color-moss-deep: #3e5a38;
+  --color-hydrangea: #7b8fc4;
+  --color-gold: #f0e2b8;
+  --color-seal: #b45a4c;
+  --color-human: #f3ead3;
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;
 }
 
-html,
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100%;
-}
+@layer base {
+  html,
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100%;
+  }
 
-body {
-  background: #fffdf6;
-}
+  body {
+    @apply bg-paper font-sans text-sm text-ink antialiased;
+  }
 
-button,
-textarea {
-  font: inherit;
+  button,
+  textarea,
+  input {
+    font: inherit;
+    outline: none;
+  }
+
+  /* macOS Chrome paints UA buttonface over author colors unless the control is fully unset. */
+  button,
+  input:where([type='button'], [type='reset'], [type='submit']) {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  button:disabled,
+  input:where([type='button'], [type='reset'], [type='submit']):disabled,
+  [data-slot='button']:disabled {
+    cursor: default;
+  }
 }

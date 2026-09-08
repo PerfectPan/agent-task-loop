@@ -68,7 +68,7 @@ describe('Room composer', () => {
   it('keeps a disabled draft intact', () => {
     const send = vi.fn();
     render(<Harness value="保留草稿" disabled onSubmit={send} />);
-    fireEvent.submit(screen.getByRole('button', { name: /运行中/ }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /正在送出/ }).closest('form')!);
     expect(send).not.toHaveBeenCalled();
     expect((screen.getByRole('combobox') as HTMLTextAreaElement).value).toBe('保留草稿');
   });

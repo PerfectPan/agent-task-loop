@@ -38,17 +38,36 @@ describe('RoomLabStateSelector', () => {
     expect(selector.takeLoader(restarted, oldState)).toBe(restarted);
     expect(selector.takeAction(restarted, oldState)).toBe(restarted);
   });
+
+  it('takes a different room from the loader even if that room was open before', () => {
+    const selector = new RoomLabStateSelector();
+    const pricing = stateAt(8, false, 'epoch-a', 'r_aaaaaaaaaa', 'Q3 定价方案');
+    const readme = stateAt(3, false, 'epoch-b', 'r_bbbbbbbbbb', 'README 改写');
+
+    expect(selector.takeLoader(pricing, readme)).toBe(readme);
+    expect(selector.takeLoader(readme, pricing)).toBe(pricing);
+    expect(selector.takeAction(readme, pricing)).toBe(readme);
+  });
 });
 
-function stateAt(revision: number, busy: boolean, epoch = 'epoch-a'): RoomLabState {
+function stateAt(
+  revision: number,
+  busy: boolean,
+  epoch = 'epoch-a',
+  roomId = 'r_aaaaaaaaaa',
+  title = '产品讨论',
+): RoomLabState {
   return {
-    roomId: 'local/web-room',
+    roomId,
+    title,
     epoch,
     head: revision,
     revision,
     busy,
+    runningAgentIds: [],
     activeAgentIds: [],
     events: [],
     agents: [],
+    catalog: [],
   };
 }

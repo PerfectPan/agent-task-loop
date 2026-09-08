@@ -17,18 +17,23 @@ describe('RoomLabService', () => {
     };
     const service = createService(runner);
 
-    const state = await service.sendMessage('How should five agents share a Room?');
-
-    expect(state.events.map(event => [event.seq, event.author.id, event.body])).toEqual([
-      [1, 'director', 'How should five agents share a Room?'],
-      [2, 'codex', 'Codex public answer'],
+    const admitted = await service.sendMessage('How should five agents share a Room?');
+    expect(admitted.events).toEqual([
+      expect.objectContaining({ seq: 1, author: { kind: 'human', id: 'director' } }),
     ]);
-    expect(state.agents.filter(agent => agent.status === 'held')).toHaveLength(4);
+    const state = await service.waitForIdle();
+
+    expect(state.events.map(event => [event.seq, event.author.id])).toEqual([
+      [1, 'director'],
+      [2, 'claude-relay'],
+      [3, 'claude'],
+      [4, 'codex'],
+      [5, 'opencode'],
+      [6, 'dsh'],
+    ]);
+    expect(state.agents.filter(agent => agent.status === 'posted')).toHaveLength(5);
     expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
-      status: 'held',
-      seenSeq: 1,
-      heldUpToSeq: 2,
-      lastDraft: 'claude-relay stale answer',
+      status: 'posted',
     });
 
     await service.compose(['codex']);
@@ -44,7 +49,8 @@ describe('RoomLabService', () => {
       return { text: 'A focused challenge', latencyMs: 1 };
     });
 
-    const state = await service.sendMessage('@dsh 请挑战这个写作提纲');
+    await service.sendMessage('@dsh 请挑战这个写作提纲');
+    const state = await service.waitForIdle();
 
     expect(calls).toEqual(['dsh']);
     expect(state.events[0]).toMatchObject({
@@ -85,7 +91,8 @@ describe('RoomLabService', () => {
     });
     await service.compose(['dsh', 'codex']);
 
-    const chatted = await service.sendMessage('Only the selected crew should answer');
+    await service.sendMessage('Only the selected crew should answer');
+    const chatted = await service.waitForIdle();
     expect(calls).toEqual(['dsh', 'codex']);
     expect(chatted.activeAgentIds).toEqual(['dsh', 'codex']);
     expect(chatted.agents.filter(agent => agent.active).map(agent => agent.id)).toEqual([
@@ -187,6 +194,7 @@ describe('RoomLabService', () => {
     });
 
     await service.sendMessage('Create one public answer and four HELD drafts');
+    await service.waitForIdle();
     const state = await service.runCountOff();
 
     expect(state.countOff).toMatchObject({
@@ -194,44 +202,49 @@ describe('RoomLabService', () => {
       failedAgentId: 'claude-relay',
       reports: [],
     });
-    expect(state.agents.find(agent => agent.id === 'claude-relay')).toEqual({
+    expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
       id: 'claude-relay',
-      label: 'Claude Relay',
-      role: 'Long-form synthesizer',
-      active: true,
       status: 'error',
-      seenSeq: 3,
       error: 'relay unavailable during count-off',
     });
     await expect(service.retryHeld('claude-relay')).rejects.toThrow('has no held draft');
   });
 
-  it('cancels all broadcast agents and releases busy when the request disconnects', async () => {
-    const started = new Set<string>();
-    const controller = new AbortController();
-    const service = createService(async (agentId, _prompt, signal) => {
-      started.add(agentId);
-      signal?.throwIfAborted();
-      return new Promise((_resolve, reject) => {
-        signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
-      });
+  it('returns as soon as the human message is admitted', async () => {
+    let release = () => {};
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const service = createService(async () => {
+      await gate;
+      return { text: 'later', latencyMs: 1 };
     });
 
-    const pending = service.sendMessage('Start all five agents', controller.signal);
-    await waitUntil(() => started.size === 5);
-    controller.abort(new Error('browser disconnected'));
-    const state = await pending;
+    const admitted = await service.sendMessage('Do not wait for the agents');
+    expect(admitted.events).toHaveLength(1);
+    expect(admitted.events[0]).toMatchObject({ author: { id: 'director' } });
+    expect(admitted.runningAgentIds.length + admitted.agents.filter(agent => agent.status === 'running').length)
+      .toBeGreaterThan(0);
 
-    expect(started).toEqual(new Set([
-      'claude-relay',
-      'claude',
-      'codex',
-      'opencode',
-      'dsh',
-    ]));
+    release();
+    const state = await service.waitForIdle();
+    expect(state.events.length).toBeGreaterThan(1);
     expect(state.busy).toBe(false);
-    expect(state.agents.every(agent => agent.status === 'error')).toBe(true);
-    expect(state.agents.every(agent => agent.error === 'browser disconnected')).toBe(true);
+  });
+
+  it('does not wake agents twice for the same client message id', async () => {
+    const calls: string[] = [];
+    const service = createService(async agentId => {
+      calls.push(agentId);
+      return { text: `${agentId} answer`, latencyMs: 1 };
+    });
+    await service.sendMessage('hello', undefined, 'client:msg-duplicate');
+    await service.waitForIdle();
+    calls.length = 0;
+    const again = await service.sendMessage('hello', undefined, 'client:msg-duplicate');
+    await service.waitForIdle();
+    expect(calls).toEqual([]);
+    expect(again.events.filter(event => event.author.kind === 'human')).toHaveLength(1);
   });
 
   it('keeps HELD context after a failed retry and allows another retry', async () => {
@@ -250,8 +263,9 @@ describe('RoomLabService', () => {
       if (claudeCalls === 2) throw new Error('temporary CLI failure');
       return { text: 'Claude additive answer', latencyMs: 3 };
     };
-    const service = createService(runner);
-    await service.sendMessage('Coordinate this answer');
+    const conversation = new MemoryRoomConversation();
+    const service = createService(runner, conversation);
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const failed = await service.retryHeld('claude');
     expect(failed.agents.find(agent => agent.id === 'claude')).toMatchObject({
@@ -300,7 +314,7 @@ describe('RoomLabService', () => {
       }
       return { text: 'Claude converged answer', latencyMs: 3 };
     }, conversation);
-    await service.sendMessage('Coordinate this answer');
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const state = await service.retryHeld('claude');
 
@@ -346,7 +360,7 @@ describe('RoomLabService', () => {
         latencyMs: retryAttempt,
       };
     }, conversation);
-    await service.sendMessage('Keep changing while Claude replies');
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const state = await service.retryHeld('claude');
 
@@ -365,6 +379,7 @@ describe('RoomLabService', () => {
 
   it('acknowledges a caught-up silent retry without posting a Room event', async () => {
     let claudeCalls = 0;
+    const conversation = new MemoryRoomConversation();
     const service = createService(async agentId => {
       if (agentId === 'codex') return { text: 'Codex answer', latencyMs: 1 };
       if (agentId !== 'claude') {
@@ -377,8 +392,8 @@ describe('RoomLabService', () => {
         return { text: 'Claude stale draft', latencyMs: 10 };
       }
       return { text: '[SILENT]', latencyMs: 2 };
-    });
-    await service.sendMessage('Coordinate this answer');
+    }, conversation);
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const state = await service.retryHeld('claude');
 
@@ -415,7 +430,7 @@ describe('RoomLabService', () => {
       }
       return { text: '[SILENT]', latencyMs: claudeCalls };
     }, conversation);
-    await service.sendMessage('Coordinate this answer');
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const state = await service.retryHeld('claude');
 
@@ -459,7 +474,7 @@ describe('RoomLabService', () => {
         signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
       });
     }, conversation);
-    await service.sendMessage('Coordinate this answer');
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
 
     const retry = service.retryHeld('claude', controller.signal);
     await waitUntil(() => secondRetryStarted);
@@ -562,7 +577,7 @@ describe('RoomLabService', () => {
       taskDelivery: new LocalTaskDelivery(processRunner),
       textPresenter: new LocalTextPresenter(),
     });
-    await service.sendMessage('Coordinate this answer');
+    await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
     const retried = await service.retryHeld('claude');
     expect(retried.agents.find(agent => agent.id === 'claude')).toMatchObject({
       status: 'posted',
@@ -633,6 +648,22 @@ describe('RoomLabService', () => {
     });
   });
 });
+
+async function holdClaudeReply(
+  service: RoomLabService,
+  conversation: MemoryRoomConversation,
+  started: () => boolean,
+) {
+  const pending = service.sendMessage('@claude Coordinate this answer');
+  await waitUntil(started);
+  await conversation.admitHuman({
+    messageId: 'external:hold-initial',
+    body: 'A newer public fact arrived',
+    addressedTo: [],
+  });
+  await pending;
+  return service.waitForIdle();
+}
 
 function createService(
   agentRunner: AgentRunner,

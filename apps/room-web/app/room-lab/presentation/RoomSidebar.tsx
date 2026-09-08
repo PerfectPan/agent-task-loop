@@ -4,6 +4,7 @@ import { AgentAvatar } from './AgentAvatar';
 import { agentRoleLabels } from './agent-role';
 import { agentStatusLabels } from './agent-status';
 import { formatAgo } from './format-time';
+import { PRODUCT_NAME } from './product';
 import { Button, buttonVariants } from '~/components/ui/button';
 import { cn } from '~/lib/utils';
 import { focusRing, sectionRow } from './ui';
@@ -30,7 +31,7 @@ export function RoomSidebar({
       <div className="mb-4 flex h-10 items-center gap-2">
         <img src="/images/spirit.png" width={36} height={36} alt="" className="size-9 shrink-0 object-contain" />
         <div>
-          <strong className="block text-base font-semibold leading-tight">房间</strong>
+          <strong className="block text-base font-semibold leading-tight">{PRODUCT_NAME}</strong>
           <p className="mt-0.5 text-xs leading-tight text-muted">本地协作</p>
         </div>
       </div>

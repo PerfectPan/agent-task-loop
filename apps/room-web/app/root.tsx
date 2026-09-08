@@ -7,6 +7,7 @@ import {
   ScrollRestoration,
 } from '@remix-run/react';
 import globalStyles from './styles/global.css?url';
+import { PRODUCT_NAME } from './room-lab/presentation/product';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: globalStyles },
@@ -14,7 +15,7 @@ export const links: LinksFunction = () => [
 ];
 
 export const meta: MetaFunction = () => [
-  { title: '房间 — 本地多 Agent 工作台' },
+  { title: `${PRODUCT_NAME} — 本地多 Agent 工作台` },
   {
     name: 'description',
     content: '在本地房间里和多个 Agent 一起讨论、写作、把工作做成可交付的结果。',

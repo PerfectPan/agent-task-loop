@@ -4,6 +4,7 @@ import type { AgentDeskView, RoomLabAgentId } from '../read-model';
 import { AgentAvatar } from './AgentAvatar';
 import { agentAvailabilityLabels } from './agent-availability';
 import { agentRoleLabels } from './agent-role';
+import { PRODUCT_NAME } from './product';
 import { Badge } from '~/components/ui/badge';
 import { Button, buttonVariants } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
@@ -21,7 +22,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
   return (
     <main className="min-h-dvh bg-paper bg-[url('/images/garden.jpg')] bg-cover bg-center px-4 py-10 font-sans text-ink">
       <section className="mx-auto w-[min(760px,100%)] rounded-[10px] border border-line/80 bg-washi/90 p-6">
-        <p className="mb-1.5 text-xs text-muted">本地协作</p>
+        <p className="mb-1.5 text-xs text-muted">{PRODUCT_NAME}</p>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-serif text-xl font-semibold">智能体</h1>

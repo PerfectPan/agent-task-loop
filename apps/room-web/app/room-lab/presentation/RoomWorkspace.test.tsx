@@ -10,6 +10,7 @@ vi.mock('@remix-run/react', () => ({
 import { RoomWorkspace } from './RoomWorkspace';
 import { RoomMessage } from './RoomMessage';
 import { TaskStrip } from './TaskStrip';
+import { PRODUCT_NAME } from './product';
 import { roomFixture } from './testing/room-fixture';
 
 beforeAll(() => {
@@ -19,6 +20,15 @@ beforeAll(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('Room workspace', () => {
+  it('uses Rivus as the product wordmark, not 房间', () => {
+    render(<RoomWorkspace state={roomFixture()} pending={false} value=""
+      onValueChange={vi.fn()} onAction={vi.fn()} />);
+    expect(screen.getByText(PRODUCT_NAME)).toBeTruthy();
+    expect(PRODUCT_NAME).not.toBe('房间');
+    const brand = screen.getByText(PRODUCT_NAME);
+    expect(brand.tagName).toBe('STRONG');
+  });
+
   it('starts a task through the existing task action and only clears by confirmation', () => {
     const onAction = vi.fn();
     render(<RoomWorkspace state={roomFixture()} pending={false} value="验收要求"

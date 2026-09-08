@@ -2,6 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { AgentDesk } from './AgentDesk';
+import { PRODUCT_NAME } from './product';
 
 vi.mock('@remix-run/react', () => ({
   Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => <a href={to} {...rest}>{children}</a>,
@@ -27,6 +28,7 @@ it('shows a system-prompt field per selected agent and does not send CLI probes'
       ],
     }} />,
   );
+  expect(screen.getByText(PRODUCT_NAME)).toBeTruthy();
   expect(screen.getByRole('heading', { name: '智能体' })).toBeTruthy();
   expect(screen.getByLabelText('Codex 的系统提示')).toBeTruthy();
   expect((screen.getByLabelText('Codex 的系统提示') as HTMLTextAreaElement).value).toBe('先给结论。');

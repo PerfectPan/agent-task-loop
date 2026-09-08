@@ -21,6 +21,7 @@ import {
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
+import { PRODUCT_NAME } from '../room-lab/presentation/product';
 
 export async function loader(_args: LoaderFunctionArgs) {
   try {
@@ -95,7 +96,7 @@ export default function RoomHome() {
     <main className="grid min-h-dvh place-items-center bg-paper bg-[url('/images/garden.jpg')] bg-cover bg-center px-4 py-12 font-sans text-ink">
       <section className="w-[min(560px,100%)] rounded-[10px] border border-line/80 bg-washi/90 p-6">
         <img className="mb-3 size-12 object-contain" src="/images/spirit.png" width={48} height={48} alt="" />
-        <p className="mb-1.5 text-xs text-muted">本地房间</p>
+        <p className="mb-1.5 text-xs text-muted">{PRODUCT_NAME}</p>
         <h1 className="mb-2 font-serif text-xl font-semibold leading-snug">建一间房，把要做的事写在名字上。</h1>
         <p className="mb-4 text-sm leading-relaxed text-muted">
           人和本地 Agent 在同一条时间线里讨论、写作、推进任务。

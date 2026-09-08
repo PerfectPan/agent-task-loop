@@ -91,6 +91,7 @@ export interface AgentDeskSeat {
 
 export interface AgentDeskItem extends RoomAgentInventoryItem {
   seatedIn: AgentDeskSeat[];
+  systemPrompt?: string;
 }
 
 export interface AgentDeskView {

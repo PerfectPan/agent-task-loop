@@ -56,6 +56,53 @@ describe('sqlite Room persistence', () => {
     expect(host.lastOpened()?.lastOpenedAt).toBe(first);
   });
 
+  it('persists a system prompt and prepends it on the real agent invoke path', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const prompts: string[] = [];
+    const host = new RoomLabHost(SqliteRoomStore.open(root), {
+      agentRunner: async (_agentId, prompt) => {
+        prompts.push(prompt);
+        return { text: '收到', latencyMs: 1 };
+      },
+      listAgents: runnableInventory,
+    });
+    const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
+    host.saveSystemPrompt('codex', '  SENTINEL_SYS_PROMPT  ');
+    const restored = new RoomLabHost(SqliteRoomStore.open(root), {
+      agentRunner: async (_agentId, prompt) => {
+        prompts.push(prompt);
+        return { text: '收到', latencyMs: 1 };
+      },
+      listAgents: runnableInventory,
+    });
+    expect(restored.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt).toBe('SENTINEL_SYS_PROMPT');
+    restored.saveSystemPrompt('codex', '   ');
+    expect(restored.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt).toBeUndefined();
+    restored.saveSystemPrompt('codex', 'SENTINEL_SYS_PROMPT');
+    await restored.open(created.roomId).sendMessage('比较三档价格', undefined, 'client:sys-1');
+    await restored.open(created.roomId).waitForIdle();
+    expect(prompts.at(-1)).toContain('SENTINEL_SYS_PROMPT');
+    expect(prompts.at(-1)).toContain('比较三档价格');
+  });
+
+  it('does not change the invoke prompt when no system prompt is saved', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const prompts: string[] = [];
+    const host = new RoomLabHost(SqliteRoomStore.open(root), {
+      agentRunner: async (_agentId, prompt) => {
+        prompts.push(prompt);
+        return { text: '收到', latencyMs: 1 };
+      },
+      listAgents: runnableInventory,
+    });
+    const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
+    await host.open(created.roomId).sendMessage('比较三档价格', undefined, 'client:sys-none');
+    await host.open(created.roomId).waitForIdle();
+    expect(prompts.at(-1)).toBeDefined();
+    expect(prompts.at(-1)).not.toContain('SENTINEL_SYS_PROMPT');
+    expect(prompts.at(-1)?.startsWith('You are Codex')).toBe(true);
+  });
+
   it('lists which rooms an agent is seated in', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), {

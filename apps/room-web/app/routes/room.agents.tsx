@@ -1,12 +1,20 @@
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
-import { isRouteErrorResponse, useLoaderData, useRouteError } from '@remix-run/react';
+import {
+  isRouteErrorResponse,
+  useActionData,
+  useLoaderData,
+  useRouteError,
+} from '@remix-run/react';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { AgentDesk } from '../room-lab/presentation/AgentDesk';
+import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
+import { RoomLabInputError } from '../room-lab/application/room-lab-service.server';
 import {
   LocalRequestError,
   assertLocalRuntime,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
+import type { AgentDeskView } from '../room-lab/read-model';
 
 export async function loader(_args: LoaderFunctionArgs) {
   try {
@@ -27,18 +35,32 @@ export async function action({ request }: ActionFunctionArgs) {
     if (origin && !origin.startsWith('http://127.0.0.1') && !origin.startsWith('http://localhost')) {
       throw new LocalRequestError(403, 'Room actions require a same-origin browser request');
     }
-    getRoomLabHost().refreshInventory();
-    return json(getRoomLabHost().agentDesk(), { headers: noStoreHeaders });
+    const host = getRoomLabHost();
+    const form = await request.formData();
+    const intent = String(form.get('intent') ?? 'scan');
+    if (intent === 'save-prompt') {
+      const agentId = form.get('agentId');
+      if (!isRoomLabAgentId(agentId)) throw new RoomLabInputError('Unknown agent');
+      host.saveSystemPrompt(agentId, String(form.get('systemPrompt') ?? ''));
+      return json<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
+    }
+    host.refreshInventory();
+    return json<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof LocalRequestError) {
       throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+    }
+    if (error instanceof RoomLabInputError) {
+      return json({ error: error.message }, { status: 400, headers: noStoreHeaders });
     }
     throw error;
   }
 }
 
 export default function AgentDeskRoute() {
-  return <AgentDesk desk={useLoaderData<typeof loader>()} />;
+  const desk = useActionData<typeof action>();
+  const loaded = useLoaderData<typeof loader>();
+  return <AgentDesk desk={desk && 'agents' in desk ? desk : loaded} />;
 }
 
 export function ErrorBoundary() {

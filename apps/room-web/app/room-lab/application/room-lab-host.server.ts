@@ -1,6 +1,7 @@
 import type { RoomLabWorkspaceSnapshot } from './room-lab-service.server';
 import { RoomLabService } from './room-lab-service.server';
 import type { AgentRunner } from './ports';
+import { withSystemPrompt } from './system-prompt';
 import {
   listRoomAgentInventory,
   runnableInventory,
@@ -28,6 +29,7 @@ export class RoomLabHost {
   private readonly workspaces = new Map<string, RoomLabService>();
   private catalog: RoomCatalog;
   private inventoryCache?: RoomAgentInventoryItem[];
+  private systemPrompts: Map<RoomLabAgentId, string>;
 
   constructor(
     private readonly store: SqliteRoomStore = SqliteRoomStore.open(),
@@ -37,6 +39,7 @@ export class RoomLabHost {
     } = {},
   ) {
     this.catalog = store.loadCatalog();
+    this.systemPrompts = store.loadSystemPrompts();
   }
 
   list() {
@@ -56,17 +59,28 @@ export class RoomLabHost {
     return this.inventory();
   }
 
+  saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
+    const trimmed = prompt.trim();
+    this.store.saveSystemPrompt(agentId, trimmed, nowIso());
+    if (trimmed) this.systemPrompts.set(agentId, trimmed);
+    else this.systemPrompts.delete(agentId);
+  }
+
   agentDesk(): AgentDeskView {
     const rooms = this.list();
     const lastOpenedId = this.lastOpened()?.id;
     return {
       ...(lastOpenedId === undefined ? {} : { lastOpenedId }),
-      agents: this.inventory().map(agent => ({
-        ...agent,
-        seatedIn: rooms
-          .filter(room => room.memberIds.includes(agent.id))
-          .map(room => ({ id: room.id, title: room.title })),
-      })),
+      agents: this.inventory().map(agent => {
+        const systemPrompt = this.systemPrompts.get(agent.id);
+        return {
+          ...agent,
+          seatedIn: rooms
+            .filter(room => room.memberIds.includes(agent.id))
+            .map(room => ({ id: room.id, title: room.title })),
+          ...(systemPrompt === undefined ? {} : { systemPrompt }),
+        };
+      }),
     };
   }
 
@@ -125,9 +139,11 @@ export class RoomLabHost {
     const existing = this.workspaces.get(roomId);
     if (existing) return existing;
     const record = this.catalog.get(roomId);
+    const run = this.bindings.agentRunner ?? runLocalAgent;
     const service = new RoomLabService({
       conversation: this.store.conversation(roomId),
-      agentRunner: this.bindings.agentRunner ?? runLocalAgent,
+      agentRunner: (agentId, prompt, signal) =>
+        run(agentId, withSystemPrompt(this.systemPrompts.get(agentId), prompt), signal),
       taskDelivery: new LocalTaskDelivery(),
       textPresenter: new LocalTextPresenter(),
       composition: new RoomComposition(record.memberIds),

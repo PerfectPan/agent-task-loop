@@ -126,6 +126,31 @@ export class SqliteRoomStore {
     };
   }
 
+  loadSystemPrompts(): Map<RoomLabAgentId, string> {
+    const rows = this.db.prepare(`
+      SELECT agent_id, prompt FROM agent_system_prompts
+    `).all() as unknown as Array<{ agent_id: string; prompt: string }>;
+    const prompts = new Map<RoomLabAgentId, string>();
+    for (const row of rows) {
+      if (!isRoomLabAgentId(row.agent_id) || !row.prompt.trim()) continue;
+      prompts.set(row.agent_id, row.prompt);
+    }
+    return prompts;
+  }
+
+  saveSystemPrompt(agentId: RoomLabAgentId, prompt: string, now: string): void {
+    const trimmed = prompt.trim();
+    if (!trimmed) {
+      this.db.prepare('DELETE FROM agent_system_prompts WHERE agent_id = ?').run(agentId);
+      return;
+    }
+    this.db.prepare(`
+      INSERT INTO agent_system_prompts (agent_id, prompt, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(agent_id) DO UPDATE SET prompt = excluded.prompt, updated_at = excluded.updated_at
+    `).run(agentId, trimmed, now);
+  }
+
   conversation(roomId: string): SqliteRoomConversation {
     const id: RoomId = { tenantId: TENANT, conversationId: roomId };
     return new SqliteRoomConversation(this.db, id);

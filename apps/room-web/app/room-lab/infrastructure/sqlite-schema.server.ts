@@ -61,4 +61,10 @@ CREATE TABLE IF NOT EXISTS app_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS agent_system_prompts (
+  agent_id TEXT PRIMARY KEY,
+  prompt TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;

@@ -58,6 +58,16 @@ export function laneOf(status: TaskStatus): LaneId {
   return laneId;
 }
 
+/**
+ * The lane a backend string belongs to, or undefined when this build does not
+ * know the status. Client bundles use this instead of testing membership
+ * against TASK_STATUSES: importing a runtime value from the task-management
+ * barrel drags the Feishu provider's execa dependency into the browser.
+ */
+export function laneOfUnknown(status: string): LaneId | undefined {
+  return STATUS_TO_LANE_ID.get(status as TaskStatus);
+}
+
 function parseUpdatedAt(value: string | undefined): number {
   if (!value) {
     return Number.NEGATIVE_INFINITY;

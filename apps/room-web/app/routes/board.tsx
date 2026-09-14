@@ -81,7 +81,9 @@ function LaneColumn({ lane }: { lane: Lane }) {
       {lane.tasks.length === 0 ? (
         <p className="px-1 py-3 text-xs text-muted">{EMPTY_DESCRIPTIONS[lane.id]}</p>
       ) : (
-        <div className="flex flex-col overflow-y-auto">
+        // Bounded so a long finished lane cannot outweigh the four lanes that
+        // still need something from someone.
+        <div className="flex max-h-[28rem] flex-col overflow-y-auto">
           {lane.tasks.map(task => (
             <TaskRow key={task.taskId} task={task} />
           ))}

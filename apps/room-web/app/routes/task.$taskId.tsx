@@ -2,9 +2,8 @@ import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { Link, useLoaderData } from '@remix-run/react';
 import type { TaskRecord } from '@rivus/agent-task-loop/task-management';
-import { TASK_STATUSES } from '@rivus/agent-task-loop/task-management';
 import type { LaneId } from '~/board/domain/lanes';
-import { laneOf } from '~/board/domain/lanes';
+import { laneOfUnknown } from '~/board/domain/lanes';
 import { loadTaskDetail } from '~/board/application/task-detail.server';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -42,7 +41,7 @@ const LANE_BADGE: Record<LaneId, string> = {
 
 function StatusBadge({ status }: { status: TaskRecord['status'] }) {
   // A backend row can carry a status this build does not know.
-  const lane = TASK_STATUSES.includes(status) ? laneOf(status) : undefined;
+  const lane = laneOfUnknown(status);
   const cls = lane ? LANE_BADGE[lane] : 'bg-washi text-ink border-line';
   return (
     <span

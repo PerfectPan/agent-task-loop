@@ -1,0 +1,427 @@
+import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
+import { json } from '@remix-run/node';
+import { Link, useLoaderData } from '@remix-run/react';
+import type { TaskRecord } from '@rivus/agent-task-loop/task-management';
+import { TASK_STATUSES } from '@rivus/agent-task-loop/task-management';
+import type { LaneId } from '~/board/domain/lanes';
+import { laneOf } from '~/board/domain/lanes';
+import { loadTaskDetail } from '~/board/application/task-detail.server';
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  const task = data?.task;
+  if (task) {
+    return [
+      { title: `${task.title} · 任务详情 · Rivus` },
+      { name: 'description', content: `Rivus 任务看板 - ${task.title}` },
+    ];
+  }
+  return [{ title: '任务详情 · Rivus' }];
+};
+
+export async function loader({ params }: LoaderFunctionArgs) {
+  const taskId = params.taskId ?? '';
+  const detail = await loadTaskDetail(taskId);
+  return json(detail);
+}
+
+function hasValue(val: unknown): boolean {
+  return val !== undefined && val !== null && String(val).trim() !== '';
+}
+
+/**
+ * A status is styled by the lane it belongs to, so the badge here and the
+ * column on the board can never drift apart. Ten statuses, five vocabularies.
+ */
+const LANE_BADGE: Record<LaneId, string> = {
+  todo: 'bg-washi text-ink border-line',
+  running: 'bg-washi text-hydrangea border-hydrangea/40',
+  review: 'bg-washi text-ink border-gold',
+  decide: 'bg-washi text-moss border-moss/40',
+  done: 'bg-washi text-muted border-line',
+};
+
+function StatusBadge({ status }: { status: TaskRecord['status'] }) {
+  // A backend row can carry a status this build does not know.
+  const lane = TASK_STATUSES.includes(status) ? laneOf(status) : undefined;
+  const cls = lane ? LANE_BADGE[lane] : 'bg-washi text-ink border-line';
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border ${cls}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function ReviewVerdictBadge({ verdict }: { verdict: string }) {
+  const isPass = verdict === '通过';
+  const cls = isPass
+    ? 'bg-washi text-moss-deep border-moss/40'
+    : 'bg-washi text-seal border-seal/40';
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
+    >
+      {verdict}
+    </span>
+  );
+}
+
+function AcceptanceVerdictBadge({ verdict }: { verdict: string }) {
+  const isPass = verdict === '通过';
+  const cls = isPass
+    ? 'bg-washi text-moss-deep border-moss/40'
+    : 'bg-washi text-seal border-seal/40';
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
+    >
+      {verdict}
+    </span>
+  );
+}
+
+export default function TaskDetailRoute() {
+  const { task, error } = useLoaderData<typeof loader>();
+
+  return (
+    <div className="min-h-screen bg-paper text-ink selection:bg-moss/20">
+      <header className="border-b border-line bg-paper sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link
+            to="/board"
+            className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss rounded px-1.5 py-1 -ml-1.5"
+          >
+            ← 返回看板
+          </Link>
+          {task ? (
+            <span className="text-xs text-muted">
+              {task.taskId}
+            </span>
+          ) : null}
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {error ? (
+          <div className="rounded-lg border border-seal bg-washi p-6">
+            <h2 className="text-base font-semibold text-seal mb-2">
+              无法显示任务
+            </h2>
+            <p className="text-sm text-seal">{error}</p>
+          </div>
+        ) : task ? (
+          <TaskDetailContent task={task} />
+        ) : null}
+      </main>
+    </div>
+  );
+}
+
+function TaskDetailContent({ task }: { task: TaskRecord }) {
+  const isFailed = task.status === '已失败';
+  const hasLastError = hasValue(task.lastError);
+  const hasProgressSummary = hasValue(task.progressSummary);
+  const hasResultSummary = hasValue(task.resultSummary);
+  const showProgressSection =
+    hasLastError || hasProgressSummary || hasResultSummary;
+
+  const hasReviewRound = hasValue(task.reviewRound);
+  const hasReviewVerdict = hasValue(task.reviewVerdict);
+  const hasReviewFindings = hasValue(task.reviewFindings);
+  const showReviewSection =
+    hasReviewRound || hasReviewVerdict || hasReviewFindings;
+
+  const hasAcceptanceRound = hasValue(task.acceptanceRound);
+  const hasAcceptanceVerdict = hasValue(task.acceptanceVerdict);
+  const hasAcceptanceFeedback = hasValue(task.acceptanceFeedback);
+  const reviewPassedWithoutAcceptance =
+    task.reviewVerdict === '通过' && !hasAcceptanceVerdict;
+  const showAcceptanceSection =
+    hasAcceptanceRound ||
+    hasAcceptanceVerdict ||
+    hasAcceptanceFeedback ||
+    reviewPassedWithoutAcceptance;
+
+  const hasPrLink = hasValue(task.prLink);
+  const hasPublishBranch = hasValue(task.publishBranch);
+  const hasPublishCommit = hasValue(task.publishCommit);
+  const hasPublishedAt = hasValue(task.publishedAt);
+  const showPublicationSection =
+    hasPrLink || hasPublishBranch || hasPublishCommit || hasPublishedAt;
+
+  const hasWorkspacePath = hasValue(task.workspacePath);
+  const hasLogPath = hasValue(task.logPath);
+  const hasExecutionSessionName = hasValue(task.executionSessionName);
+  const hasReviewSessionName = hasValue(task.reviewSessionName);
+  const hasLastHeartbeatAt = hasValue(task.lastHeartbeatAt);
+  const showRunSection =
+    hasWorkspacePath ||
+    hasLogPath ||
+    hasExecutionSessionName ||
+    hasReviewSessionName ||
+    hasLastHeartbeatAt;
+
+  return (
+    <article className="space-y-8">
+      {/* 1. The title, and under it the exact status, the project, the targetAgent and the source that owns this record */}
+      <section className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
+          {task.title}
+        </h1>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <StatusBadge status={task.status} />
+          <span className="text-muted">·</span>
+          <span className="text-muted">
+            项目：<span className="font-medium text-ink">{task.project}</span>
+          </span>
+          <span className="text-muted">·</span>
+          <span className="text-muted">
+            目标 Agent：<span className="font-medium text-ink">{task.targetAgent}</span>
+          </span>
+          <span className="text-muted">·</span>
+          <span className="text-muted">
+            数据源：<span className="font-medium text-ink">{task.source}</span>
+          </span>
+        </div>
+      </section>
+
+      {/* 2. description, as prose, preserving its line breaks */}
+      {hasValue(task.description) ? (
+        <section className="border-t border-line pt-6">
+          <div className="max-w-[70ch] text-base leading-relaxed text-ink whitespace-pre-wrap">
+            {task.description}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 3. Progress — progressSummary, resultSummary, lastError. A failed task leads with lastError. */}
+      {showProgressSection ? (
+        <section className="border-t border-line pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">进度</h2>
+          <div className="space-y-4 max-w-[70ch]">
+            {isFailed && hasLastError ? (
+              <div className="rounded-lg border border-seal bg-washi p-4">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
+                  失败原因
+                </span>
+                <p className="text-sm font-medium text-seal whitespace-pre-wrap">
+                  {task.lastError}
+                </p>
+              </div>
+            ) : null}
+
+            {hasProgressSummary ? (
+              <div>
+                <span className="block text-xs font-medium text-muted mb-1">
+                  进度说明
+                </span>
+                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                  {task.progressSummary}
+                </p>
+              </div>
+            ) : null}
+
+            {hasResultSummary ? (
+              <div>
+                <span className="block text-xs font-medium text-muted mb-1">
+                  结果摘要
+                </span>
+                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                  {task.resultSummary}
+                </p>
+              </div>
+            ) : null}
+
+            {!isFailed && hasLastError ? (
+              <div className="rounded-lg border border-seal bg-washi p-4">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
+                  上次错误
+                </span>
+                <p className="text-sm font-medium text-seal whitespace-pre-wrap">
+                  {task.lastError}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 4. Review — reviewRound, reviewVerdict, reviewFindings */}
+      {showReviewSection ? (
+        <section className="border-t border-line pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">评审</h2>
+          <div className="space-y-3 max-w-[70ch]">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              {hasReviewRound ? (
+                <span className="text-muted">
+                  轮次：<span className="font-medium text-ink">第 {task.reviewRound} 轮</span>
+                </span>
+              ) : null}
+              {hasReviewVerdict && task.reviewVerdict ? (
+                <div className="flex items-center gap-1.5 text-muted">
+                  <span>结论：</span>
+                  <ReviewVerdictBadge verdict={task.reviewVerdict} />
+                </div>
+              ) : null}
+            </div>
+
+            {hasReviewFindings ? (
+              <div>
+                <span className="block text-xs font-medium text-muted mb-1">
+                  评审意见
+                </span>
+                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                  {task.reviewFindings}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 5. Acceptance — acceptanceRound, acceptanceVerdict, acceptanceFeedback. When reviewVerdict is 通过 but there is no acceptanceVerdict, say plainly that the model passed it and a person has not accepted it yet. */}
+      {showAcceptanceSection ? (
+        <section className="border-t border-line pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">验收</h2>
+          <div className="space-y-3 max-w-[70ch]">
+            {reviewPassedWithoutAcceptance ? (
+              <div className="rounded-lg border border-gold bg-washi p-4 text-sm text-ink">
+                模型评审已通过，人工尚未完成最终验收。
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              {hasAcceptanceRound ? (
+                <span className="text-muted">
+                  轮次：<span className="font-medium text-ink">第 {task.acceptanceRound} 轮</span>
+                </span>
+              ) : null}
+              {hasAcceptanceVerdict && task.acceptanceVerdict ? (
+                <div className="flex items-center gap-1.5 text-muted">
+                  <span>结论：</span>
+                  <AcceptanceVerdictBadge verdict={task.acceptanceVerdict} />
+                </div>
+              ) : null}
+            </div>
+
+            {hasAcceptanceFeedback ? (
+              <div>
+                <span className="block text-xs font-medium text-muted mb-1">
+                  验收反馈
+                </span>
+                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                  {task.acceptanceFeedback}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 6. Publication — prLink as a real link when present, publishBranch, publishCommit, publishedAt */}
+      {showPublicationSection ? (
+        <section className="border-t border-line pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">发布</h2>
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm max-w-[70ch]">
+            {hasPrLink && task.prLink ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">PR 链接</dt>
+                <dd className="mt-0.5">
+                  <a
+                    href={task.prLink}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-hydrangea hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss rounded break-all"
+                  >
+                    {task.prLink}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
+
+            {hasPublishBranch ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">发布分支</dt>
+                <dd className="mt-0.5 text-ink text-xs">
+                  {task.publishBranch}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasPublishCommit ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">发布 Commit</dt>
+                <dd className="mt-0.5 text-ink text-xs">
+                  {task.publishCommit}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasPublishedAt ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">发布时间</dt>
+                <dd className="mt-0.5 text-ink">
+                  {task.publishedAt}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+      ) : null}
+
+      {/* 7. Run — workspacePath, logPath, executionSessionName, reviewSessionName, lastHeartbeatAt */}
+      {showRunSection ? (
+        <section className="border-t border-line pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">运行</h2>
+          <dl className="space-y-3 text-sm max-w-[70ch]">
+            {hasWorkspacePath ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">工作区路径</dt>
+                <dd className="mt-0.5 font-mono text-xs text-ink break-all">
+                  {task.workspacePath}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasLogPath ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">日志路径</dt>
+                <dd className="mt-0.5 font-mono text-xs text-ink break-all">
+                  {task.logPath}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasExecutionSessionName ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">执行会话名称</dt>
+                <dd className="mt-0.5 text-ink">
+                  {task.executionSessionName}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasReviewSessionName ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">评审会话名称</dt>
+                <dd className="mt-0.5 text-ink">
+                  {task.reviewSessionName}
+                </dd>
+              </div>
+            ) : null}
+
+            {hasLastHeartbeatAt ? (
+              <div>
+                <dt className="text-xs font-medium text-muted">最后心跳时间</dt>
+                <dd className="mt-0.5 text-ink">
+                  {task.lastHeartbeatAt}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+      ) : null}
+    </article>
+  );
+}

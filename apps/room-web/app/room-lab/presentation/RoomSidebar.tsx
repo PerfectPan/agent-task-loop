@@ -134,6 +134,13 @@ export function RoomSidebar({
         >
           智能体管理
         </Link>
+        <Link
+          to="/board"
+          prefetch="intent"
+          className={cn(buttonVariants({ variant: 'ghost' }), 'h-8 justify-start px-2 no-underline')}
+        >
+          任务看板
+        </Link>
         <small className="px-2 pt-1 text-xs leading-snug text-muted">保存在这台机器上</small>
       </footer>
     </aside>

@@ -14,13 +14,19 @@ summary:hover,
   --color-washi: #fbf6ea;
   --color-garden: #d9e4c8;
   --color-ink: #3a3428;
-  --color-muted: #7a7264;
+  /*
+   * Secondary, accent and error text all sat between 2.4:1 and 4.4:1 on every
+   * surface in this palette — below the 4.5:1 body-text floor. Each is scaled
+   * toward black along its own hue so the colours read the same and the text
+   * clears AA on paper, washi, garden, gold and human.
+   */
+  --color-muted: #696256;
   --color-line: #e0d6c4;
-  --color-moss: #5a7a52;
+  --color-moss: #4f6b48;
   --color-moss-deep: #3e5a38;
-  --color-hydrangea: #7b8fc4;
+  --color-hydrangea: #556387;
   --color-gold: #f0e2b8;
-  --color-seal: #b45a4c;
+  --color-seal: #994d41;
   --color-human: #f3ead3;
   --font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   --font-serif: "Songti SC", "STSong", "Noto Serif SC", "PMingLiU", serif;

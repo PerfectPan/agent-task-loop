@@ -1,8 +1,8 @@
 import type { HeadersFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { useLoaderData } from '@remix-run/react';
+import { Link, useLoaderData } from '@remix-run/react';
 import type { TaskRecord } from '@rivus/agent-task-loop/task-management';
-import type { Lane } from '~/board/domain/lanes';
+import type { Lane, LaneId } from '~/board/domain/lanes';
 import { loadBoard } from '~/board/application/board.server';
 
 export const headers: HeadersFunction = () => ({
@@ -15,35 +15,38 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json(board);
 }
 
-const EMPTY_DESCRIPTIONS: Record<string, string> = {
-  decide: '当前没有需要你介入裁决的受阻任务。',
-  running: '当前没有正在执行或复核修复中的任务。',
-  review: '当前没有等待复核或验收的任务。',
-  todo: '队列中没有待处理的任务。',
-  done: '当前周期内暂无已完成或终止的任务。',
+/** Exhaustive over LaneId, so a new lane without its own words is a type error. */
+const EMPTY_DESCRIPTIONS: Record<LaneId, string> = {
+  todo: '没有排队等着开始的任务。',
+  running: '没有 agent 正在跑的任务。',
+  review: '没有任务在等审核。',
+  decide: '没有任务在等你。',
+  done: '还没有任务走完。',
 };
 
-function TaskCard({ task }: { task: TaskRecord }) {
+/**
+ * A row, not a card. The lane is the container; giving every task its own
+ * border, radius and fill would nest a card inside a card and bury the lane.
+ */
+function TaskRow({ task }: { task: TaskRecord }) {
   return (
-    <article
-      tabIndex={0}
-      className="flex flex-col gap-2 rounded-lg border border-line bg-paper p-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss"
+    <Link
+      to={`/task/${encodeURIComponent(task.taskId)}`}
+      className="flex flex-col gap-1.5 border-b border-line px-1 py-3 text-ink transition-colors last:border-b-0 hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="line-clamp-2 text-sm font-medium leading-snug text-ink">{task.title}</h3>
-        <span className="shrink-0 rounded bg-washi px-1.5 py-0.5 text-xs font-mono text-muted">
-          {task.status}
-        </span>
+        <span className="shrink-0 text-xs text-muted">{task.status}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-        <span className="font-mono text-ink">{task.project}</span>
-        <span>•</span>
+        <span className="text-ink">{task.project}</span>
+        <span aria-hidden>·</span>
         <span>{task.targetAgent}</span>
         {task.source ? (
           <>
-            <span>•</span>
-            <span className="rounded bg-washi px-1 text-muted">{task.source}</span>
+            <span aria-hidden>·</span>
+            <span>{task.source}</span>
           </>
         ) : null}
       </div>
@@ -53,23 +56,22 @@ function TaskCard({ task }: { task: TaskRecord }) {
           {task.progressSummary}
         </p>
       ) : null}
-    </article>
+    </Link>
   );
 }
 
 function LaneColumn({ lane }: { lane: Lane }) {
   const isDecide = lane.id === 'decide';
-  const emptyText = EMPTY_DESCRIPTIONS[lane.id] ?? '当前泳道无任务。';
 
   return (
-    <section className="flex flex-col min-w-0 rounded-lg bg-washi p-3">
-      <header className="mb-3 flex items-center justify-between gap-2">
+    <section className="flex min-w-0 flex-col rounded-lg bg-washi px-3 py-3">
+      <header className="mb-1 flex items-baseline justify-between gap-2 border-b border-line pb-2">
         <h2 className={`text-sm font-semibold ${isDecide ? 'text-moss' : 'text-muted'}`}>
           {lane.title}
         </h2>
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            isDecide ? 'bg-moss text-paper' : 'bg-line text-muted'
+          className={`rounded-full px-2 py-1 text-xs font-medium ${
+            isDecide ? 'bg-moss text-paper' : 'text-muted'
           }`}
         >
           {lane.tasks.length}
@@ -77,13 +79,11 @@ function LaneColumn({ lane }: { lane: Lane }) {
       </header>
 
       {lane.tasks.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-line p-6 text-center">
-          <p className="text-xs text-muted">{emptyText}</p>
-        </div>
+        <p className="px-1 py-3 text-xs text-muted">{EMPTY_DESCRIPTIONS[lane.id]}</p>
       ) : (
-        <div className="flex flex-col gap-2 overflow-y-auto">
-          {lane.tasks.map((task) => (
-            <TaskCard key={task.taskId} task={task} />
+        <div className="flex flex-col overflow-y-auto">
+          {lane.tasks.map(task => (
+            <TaskRow key={task.taskId} task={task} />
           ))}
         </div>
       )}
@@ -105,22 +105,27 @@ export default function BoardRoute() {
     );
   }
 
+  const waiting = data.lanes.find(lane => lane.id === 'decide')?.tasks.length ?? 0;
+
   return (
     <main className="min-h-screen bg-paper px-4 py-6 md:px-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
         <div>
           <h1 className="text-lg font-semibold text-ink">任务看板</h1>
-          <p className="text-xs text-muted">监控并跟踪各后端任务执行与决策状态</p>
+          {/* The one fact the columns do not already show: how much is on you. */}
+          <p className="text-xs text-muted">
+            {waiting > 0 ? `${waiting} 个任务在等你决定` : '没有任务在等你'}
+          </p>
         </div>
         {data.sources.length > 0 ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted">
-            <span>来源:</span>
-            {data.sources.map((source) => (
-              <span key={source} className="rounded bg-washi px-1.5 py-0.5 font-mono text-ink">
+          <ul className="flex items-center gap-2 text-xs text-muted">
+            <li>来源</li>
+            {data.sources.map(source => (
+              <li key={source} className="rounded bg-washi px-2 py-1 text-ink">
                 {source}
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : null}
       </header>
 

@@ -204,7 +204,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
                   失败原因
                 </span>
-                <p className="text-sm font-medium text-seal whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm font-medium text-seal whitespace-pre-wrap">
                   {task.lastError}
                 </p>
               </div>
@@ -215,7 +215,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-medium text-muted mb-1">
                   进度说明
                 </span>
-                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
                   {task.progressSummary}
                 </p>
               </div>
@@ -226,7 +226,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-medium text-muted mb-1">
                   结果摘要
                 </span>
-                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
                   {task.resultSummary}
                 </p>
               </div>
@@ -237,7 +237,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
                   上次错误
                 </span>
-                <p className="text-sm font-medium text-seal whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm font-medium text-seal whitespace-pre-wrap">
                   {task.lastError}
                 </p>
               </div>
@@ -270,7 +270,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-medium text-muted mb-1">
                   评审意见
                 </span>
-                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
                   {task.reviewFindings}
                 </p>
               </div>
@@ -309,7 +309,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
                 <span className="block text-xs font-medium text-muted mb-1">
                   验收反馈
                 </span>
-                <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
                   {task.acceptanceFeedback}
                 </p>
               </div>
@@ -377,7 +377,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
             {hasWorkspacePath ? (
               <div>
                 <dt className="text-xs font-medium text-muted">工作区路径</dt>
-                <dd className="mt-0.5 font-mono text-xs text-ink break-all">
+                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-ink break-all">
                   {task.workspacePath}
                 </dd>
               </div>
@@ -386,7 +386,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
             {hasLogPath ? (
               <div>
                 <dt className="text-xs font-medium text-muted">日志路径</dt>
-                <dd className="mt-0.5 font-mono text-xs text-ink break-all">
+                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-ink break-all">
                   {task.logPath}
                 </dd>
               </div>

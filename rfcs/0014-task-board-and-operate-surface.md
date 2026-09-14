@@ -66,9 +66,12 @@ system of record. This RFC does not move it.
 | `room-web` `agentSeatBinding` | `claude-relay`, `claude`, `codex`, `opencode`, `dsh` |
 | `github-issues-task-provider` `AGENT_LABEL` | `claude`, `codex`, `coco`, `glm` |
 
-The intersection is two agents. Issues #93 and #94 in
-`PerfectPan/agent-task-loop` carry `agent:grok`, which no list contains, so they
-silently fall back to `defaultAgent`. An agent that can be seated in a Room
+The intersection is two agents, and the cost is worse than a fallback. An issue
+is "managed" only when its body carries a task-id marker or it carries an
+`agent:(claude|codex|coco|glm)` label. Issues #93 and #94 in
+`PerfectPan/agent-task-loop` carry `agent:grok` and no marker, so `listTasks`
+drops them: two real open issues, deliberately assigned to an agent, invisible
+to the CLI, the TUI and the board alike. An agent that can be seated in a Room
 cannot be assigned a Task, and vice versa. One registry has to own this.
 
 ### The interface is in the wrong register
@@ -90,6 +93,12 @@ against the rules they violate:
 | No skeleton, no empty state, no per-control loading state | `product-components-skeleton-loading`, `product-components-empty-states` |
 | Focus ring, selection, caret, scrollbar all browser default | `skill-craft-browser-surfaces` |
 | Inline `#f6e4de` and `#ffe17a` | project style rules, `product-color-second-neutral` |
+
+Measured, not asserted: every secondary, accent and error colour in the palette
+sat under the 4.5:1 body-text floor on every surface it is used on — `muted`
+3.6–4.4, `moss` 3.7–4.5, `seal` 3.5–4.3, `hydrangea` 2.4–3.0. The accent that
+marks the lane needing a human, and the colour that carries an error, were both
+below the readability floor. Only `ink` and `moss-deep` passed.
 
 The illustrated crew is not itself the problem — a fixed identity per agent is
 useful. Sizing it at 70px, on a garden photograph, behind glass, as the primary
@@ -251,16 +260,24 @@ against the running dev server, as a check, not as a screenshot opinion.
 
 Each is independently reviewable and independently revertible.
 
-| # | Slice | Verifiable by |
-| --- | --- | --- |
-| 1 | `./task-management` export | typecheck + an import from room-web |
-| 2 | Read-only board over the real provider at `/board` | real GitHub issue titles over HTTP |
-| 3 | Task detail + log tail + Room link | a task detail route for a live issue |
-| 4 | Operate-register shell replacing the Experience one | detector clean at both viewports |
-| 5 | One agent registry | grok assignable from both surfaces |
-| 6 | Promote a Room draft to a real Task | a task created from a Room, visible in the TUI |
-| 7 | Human accept / rework from the board | status moves out of 待你决定 |
-| 8 | SSE replacing loader revalidation | composer stays live during a turn |
+| # | Slice | Verifiable by | State |
+| --- | --- | --- | --- |
+| 1 | `./task-management` export | typecheck + an import from room-web | done |
+| 2 | Lane grouping over the ten statuses | unit tests | done |
+| 3 | Read-only board over the real provider at `/board` | real task titles over HTTP | done |
+| 4 | Task detail at `/task/:id` | a detail page for a live record | done |
+| 5 | Palette clears the contrast floor | detector at both viewports | done |
+| 6 | Operate-register shell replacing the Experience one | detector, and the shell shared by both surfaces | open |
+| 7 | One agent registry | grok assignable from both surfaces | open |
+| 8 | Promote a Room draft to a real Task | a task created from a Room, visible in the TUI | open |
+| 9 | Human accept / rework from the board | status moves out of 待你决定 | open |
+| 10 | SSE replacing loader revalidation | composer stays live during a turn | open |
+
+Slices 1–5 landed on `feat/task-board`. The board reads 13 records across the
+Feishu bitable and `github:PerfectPan/agent-task-loop`, four of them in 待你决定.
+A detector pass over the running pages went from 57 findings to 1 at 1280x800
+and 52 to 1 at 390x844; the remaining finding on each page is the cream page
+background, which is Part 3's open question rather than a defect.
 
 Slices 1–3 are a read path and carry no write risk. Slice 6 onward writes to a
 real backend and must not run unattended.

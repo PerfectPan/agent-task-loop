@@ -14,7 +14,8 @@ export default defineConfig({
     entry: {
       cli: "src/cli.ts",
       "rivus-plugin": "src/rivus-plugin.ts",
-      "task-delivery": "src/task-delivery.ts"
+      "task-delivery": "src/task-delivery.ts",
+      "task-management": "src/task-management.ts"
     }
   },
   tools: {

@@ -18,3 +18,14 @@ export function formatAgo(iso: string, now = Date.now()): string {
   if (days < 7) return `${days} 天前`;
   return new Date(iso).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
+
+/** 47 → "0:47", 125 → "2:05". Seconds only; a run that needs hours is a bug. */
+export function formatElapsed(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/** 61_400 ms → "1:01". Used for the "用时" a finished reply carries. */
+export function formatLatency(ms: number): string {
+  return formatElapsed(ms / 1000);
+}

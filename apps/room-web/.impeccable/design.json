@@ -1,0 +1,953 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T11:49:41+00:00",
+  "title": "Design System: Rivus room-web",
+  "source": {
+    "tokens": "app/styles/global.css",
+    "components": "app/components/ui (shadcn new-york; see components.json)",
+    "clusters": "app/room-lab/presentation/ui.ts",
+    "statusCopy": "app/room-lab/presentation/agent-status.ts",
+    "round": "app/room-lab/presentation/round.ts",
+    "note": "shadcn 的标准词表，宣纸的配色。Frontmatter 的颜色是亮色主题；暗色在 extensions.colorMeta.<token>.dark，由根节点上的 dark class 切换（没有 prefers-color-scheme 媒体查询，跟随系统由 JS 解析）。上一轮自造的 canvas/side/stream/raised/ink-N/sel/run/held/err/done/id-N 及所有旧别名已删除。--chart-1…5 是五位成员的身份色（就座顺序）；--accent 是上一轮那层 8% 墨的实色等价物；--info/--warning/--success/--destructive-soft 是按 shadcn 的配对写法补出来的四对：token 是洗底，-foreground 是落在它上面的墨。 正文是自托管的思源宋体，界面词是 Inter；输入框是 Tiptap，提及是一枚序列化回 @id 的胶囊。",
+    "composer": "app/room-lab/presentation/RoomComposer.tsx + composer-doc.ts + composer-mention.tsx + mention-chip.ts"
+  },
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "canonical": "#ffffff",
+        "dark": "#191919",
+        "cssVar": "--background",
+        "usage": "body、对话流、创建页与错误页、智能体页的底。"
+      },
+      "foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--foreground",
+        "usage": "标题、消息正文、成员 id、输入内容、人的头像底。foreground/75 是副标题与次要按钮文字，foreground/20 是抽屉遮罩。",
+        "contrast": {
+          "light": {
+            "background": 12.26,
+            "card": 12.26,
+            "popover": 12.26,
+            "sidebar": 11.43,
+            "muted": 11.43,
+            "accent": 10.64,
+            "sidebar-accent": 10.26
+          },
+          "dark": {
+            "background": 11.86,
+            "card": 10.34,
+            "popover": 10.34,
+            "sidebar": 10.99,
+            "muted": 10.99,
+            "accent": 9.68,
+            "sidebar-accent": 9.68
+          }
+        }
+      },
+      "card": {
+        "role": "neutral",
+        "canonical": "#ffffff",
+        "dark": "#252525",
+        "cssVar": "--card",
+        "usage": "输入卡片、新建房间表单、智能体页的卡片。",
+        "pairedForeground": "card-foreground"
+      },
+      "card-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--card-foreground",
+        "usage": "card 上的文字。与 foreground 同值。",
+        "contrast": {
+          "light": {
+            "card": 12.26
+          },
+          "dark": {
+            "card": 10.34
+          }
+        }
+      },
+      "popover": {
+        "role": "neutral",
+        "canonical": "#ffffff",
+        "dark": "#252525",
+        "cssVar": "--popover",
+        "usage": "房间菜单、提及菜单、跳转链接、草稿预览块。",
+        "pairedForeground": "popover-foreground"
+      },
+      "popover-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--popover-foreground",
+        "usage": "popover 上的文字。与 foreground 同值。",
+        "contrast": {
+          "light": {
+            "popover": 12.26
+          },
+          "dark": {
+            "popover": 10.34
+          }
+        }
+      },
+      "primary": {
+        "role": "accent",
+        "canonical": "#1a6fd1",
+        "dark": "#529cca",
+        "cssVar": "--primary",
+        "usage": "链接、@ 提及高亮、提及按钮、品牌河流标、主按钮底、焦点环。primary/10 是提及菜单活动项与智能体页选中行的洗底。",
+        "pairedForeground": "primary-foreground",
+        "contrast": {
+          "light": {
+            "background": 4.95,
+            "card": 4.95,
+            "popover": 4.95,
+            "sidebar": 4.62
+          },
+          "dark": {
+            "background": 5.83,
+            "card": 5.09,
+            "popover": 5.09,
+            "sidebar": 5.41
+          }
+        }
+      },
+      "primary-foreground": {
+        "role": "accent",
+        "canonical": "#ffffff",
+        "dark": "#191919",
+        "cssVar": "--primary-foreground",
+        "usage": "主按钮与新消息胶囊上的字。",
+        "contrast": {
+          "light": {
+            "primary": 4.95
+          },
+          "dark": {
+            "primary": 5.83
+          }
+        }
+      },
+      "secondary": {
+        "role": "neutral",
+        "canonical": "#f7f7f5",
+        "dark": "#202020",
+        "cssVar": "--secondary",
+        "usage": "secondary 按钮底。与 muted / sidebar 同值。",
+        "pairedForeground": "secondary-foreground"
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--secondary-foreground",
+        "usage": "secondary 上的文字。",
+        "contrast": {
+          "light": {
+            "secondary": 11.43
+          },
+          "dark": {
+            "secondary": 10.99
+          }
+        }
+      },
+      "muted": {
+        "role": "neutral",
+        "canonical": "#f7f7f5",
+        "dark": "#202020",
+        "cssVar": "--muted",
+        "usage": "与 sidebar 同值；/board 与 /task 的卡片底。",
+        "pairedForeground": "muted-foreground"
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "canonical": "#676664",
+        "dark": "#9e9e9e",
+        "cssVar": "--muted-foreground",
+        "usage": "节标签、时间戳、元信息、占位符、排队中的文字、说完了的状态词。允许作为文字的最浅一档；muted-foreground/60 只做装饰。",
+        "contrast": {
+          "light": {
+            "background": 5.74,
+            "card": 5.74,
+            "popover": 5.74,
+            "sidebar": 5.35,
+            "muted": 5.35,
+            "accent": 4.98,
+            "sidebar-accent": 4.8
+          },
+          "dark": {
+            "background": 6.56,
+            "card": 5.72,
+            "popover": 5.72,
+            "sidebar": 6.08,
+            "muted": 6.08,
+            "accent": 5.36,
+            "sidebar-accent": 5.36
+          }
+        }
+      },
+      "accent": {
+        "role": "neutral",
+        "canonical": "#efefec",
+        "dark": "#2a2a2a",
+        "cssVar": "--accent",
+        "usage": "中栏的悬停与选中底。上一轮 8% 墨的实色等价物。",
+        "pairedForeground": "accent-foreground"
+      },
+      "accent-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--accent-foreground",
+        "usage": "accent 上的文字。",
+        "contrast": {
+          "light": {
+            "accent": 10.64
+          },
+          "dark": {
+            "accent": 9.68
+          }
+        }
+      },
+      "destructive": {
+        "role": "neutral",
+        "canonical": "#b0322d",
+        "dark": "#e88080",
+        "cssVar": "--destructive",
+        "usage": "错误文字、发送失败外框、确认清空的实色底。",
+        "pairedForeground": "destructive-foreground",
+        "contrast": {
+          "light": {
+            "background": 6.29,
+            "card": 6.29,
+            "popover": 6.29,
+            "sidebar": 5.86,
+            "sidebar-accent": 5.26
+          },
+          "dark": {
+            "background": 6.56,
+            "card": 5.72,
+            "popover": 5.72,
+            "sidebar": 6.08,
+            "sidebar-accent": 5.35
+          }
+        }
+      },
+      "destructive-foreground": {
+        "role": "neutral",
+        "canonical": "#ffffff",
+        "dark": "#191919",
+        "cssVar": "--destructive-foreground",
+        "usage": "destructive 实底上的字。暗色下是深色，不是白色。",
+        "contrast": {
+          "light": {
+            "destructive": 6.29
+          },
+          "dark": {
+            "destructive": 6.56
+          }
+        }
+      },
+      "border": {
+        "role": "neutral",
+        "canonical": "#e9e9e7",
+        "dark": "#2f2f2f",
+        "cssVar": "--border",
+        "usage": "栏与栏之间、页头底边、发言顺序条顶边、列表行线。"
+      },
+      "input": {
+        "role": "neutral",
+        "canonical": "#dedddb",
+        "dark": "#3a3a3a",
+        "cssVar": "--input",
+        "usage": "控件边与卡片边。"
+      },
+      "ring": {
+        "role": "accent",
+        "canonical": "#1a6fd1",
+        "dark": "#529cca",
+        "cssVar": "--ring",
+        "usage": "焦点环。与 primary 同值。"
+      },
+      "chart-1": {
+        "role": "identity",
+        "canonical": "#6940a5",
+        "dark": "#b69be5",
+        "cssVar": "--chart-1",
+        "usage": "成员 claude-relay 的身份色：作者名的字色，以及圆头像里的 CR。头像底是 bg-chart-1/15。",
+        "contrast": {
+          "light": {
+            "background": 7.3,
+            "sidebar": 6.8,
+            "tile-15": 5.78
+          },
+          "dark": {
+            "background": 7.38,
+            "sidebar": 6.83,
+            "tile-15": 5.67
+          }
+        }
+      },
+      "chart-2": {
+        "role": "identity",
+        "canonical": "#a25207",
+        "dark": "#e8955a",
+        "cssVar": "--chart-2",
+        "usage": "成员 claude 的身份色：作者名的字色，以及圆头像里的 CL。头像底是 bg-chart-2/15。",
+        "contrast": {
+          "light": {
+            "background": 5.61,
+            "sidebar": 5.23,
+            "tile-15": 4.53
+          },
+          "dark": {
+            "background": 7.43,
+            "sidebar": 6.89,
+            "tile-15": 5.74
+          }
+        }
+      },
+      "chart-3": {
+        "role": "identity",
+        "canonical": "#3a7351",
+        "dark": "#7cc29a",
+        "cssVar": "--chart-3",
+        "usage": "成员 codex 的身份色：作者名的字色，以及圆头像里的 CX。头像底是 bg-chart-3/15。",
+        "contrast": {
+          "light": {
+            "background": 5.6,
+            "sidebar": 5.22,
+            "tile-15": 4.56
+          },
+          "dark": {
+            "background": 8.41,
+            "sidebar": 7.79,
+            "tile-15": 6.32
+          }
+        }
+      },
+      "chart-4": {
+        "role": "identity",
+        "canonical": "#ac3e79",
+        "dark": "#e48cbc",
+        "cssVar": "--chart-4",
+        "usage": "成员 opencode 的身份色：作者名的字色，以及圆头像里的 OC。头像底是 bg-chart-4/15。",
+        "contrast": {
+          "light": {
+            "background": 5.65,
+            "sidebar": 5.26,
+            "tile-15": 4.54
+          },
+          "dark": {
+            "background": 7.35,
+            "sidebar": 6.81,
+            "tile-15": 5.68
+          }
+        }
+      },
+      "chart-5": {
+        "role": "identity",
+        "canonical": "#636e0f",
+        "dark": "#b9c25a",
+        "cssVar": "--chart-5",
+        "usage": "成员 dsh 的身份色：作者名的字色，以及圆头像里的 DS。头像底是 bg-chart-5/15。",
+        "contrast": {
+          "light": {
+            "background": 5.57,
+            "sidebar": 5.2,
+            "tile-15": 4.54
+          },
+          "dark": {
+            "background": 9.15,
+            "sidebar": 8.48,
+            "tile-15": 6.76
+          }
+        }
+      },
+      "sidebar": {
+        "role": "neutral",
+        "canonical": "#f7f7f5",
+        "dark": "#202020",
+        "cssVar": "--sidebar",
+        "usage": "左栏、右栏、≤1180 的成员抽屉。",
+        "pairedForeground": "sidebar-foreground"
+      },
+      "sidebar-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--sidebar-foreground",
+        "usage": "栏里的文字。",
+        "contrast": {
+          "light": {
+            "sidebar": 11.43
+          },
+          "dark": {
+            "sidebar": 10.99
+          }
+        }
+      },
+      "sidebar-primary": {
+        "role": "accent",
+        "canonical": "#1a6fd1",
+        "dark": "#529cca",
+        "cssVar": "--sidebar-primary",
+        "usage": "栏里的强调。与 primary 同值。",
+        "pairedForeground": "sidebar-primary-foreground"
+      },
+      "sidebar-primary-foreground": {
+        "role": "accent",
+        "canonical": "#ffffff",
+        "dark": "#191919",
+        "cssVar": "--sidebar-primary-foreground",
+        "usage": "sidebar-primary 上的字。",
+        "contrast": {
+          "light": {
+            "sidebar-primary": 4.95
+          },
+          "dark": {
+            "sidebar-primary": 5.83
+          }
+        }
+      },
+      "sidebar-accent": {
+        "role": "neutral",
+        "canonical": "#ebebe8",
+        "dark": "#2a2a2a",
+        "cssVar": "--sidebar-accent",
+        "usage": "栏里的悬停、当前导航项、当前房间项、报数记录块。",
+        "pairedForeground": "sidebar-accent-foreground"
+      },
+      "sidebar-accent-foreground": {
+        "role": "neutral",
+        "canonical": "#37352f",
+        "dark": "#d4d4d4",
+        "cssVar": "--sidebar-accent-foreground",
+        "usage": "sidebar-accent 上的文字。",
+        "contrast": {
+          "light": {
+            "sidebar-accent": 10.26
+          },
+          "dark": {
+            "sidebar-accent": 9.68
+          }
+        }
+      },
+      "sidebar-border": {
+        "role": "neutral",
+        "canonical": "#e9e9e7",
+        "dark": "#2f2f2f",
+        "cssVar": "--sidebar-border",
+        "usage": "栏与纸之间的发丝线。与 border 同值。"
+      },
+      "sidebar-ring": {
+        "role": "accent",
+        "canonical": "#1a6fd1",
+        "dark": "#529cca",
+        "cssVar": "--sidebar-ring",
+        "usage": "栏里的焦点环。"
+      },
+      "info": {
+        "role": "status",
+        "canonical": "#e7f3f8",
+        "dark": "#1c2b35",
+        "cssVar": "--info",
+        "usage": "正在生成的洗底；Badge info（CLI 可运行）。",
+        "pairedForeground": "info-foreground"
+      },
+      "info-foreground": {
+        "role": "status",
+        "canonical": "#2b6c92",
+        "dark": "#7fb6dc",
+        "cssVar": "--info-foreground",
+        "usage": "正在生成：脉冲点、页头「轮到 X」、发言顺序条亮项、报数「回答中」。",
+        "contrast": {
+          "light": {
+            "info": 5.07
+          },
+          "dark": {
+            "info": 6.66
+          }
+        }
+      },
+      "warning": {
+        "role": "status",
+        "canonical": "#fbeedc",
+        "dark": "#33290f",
+        "cssVar": "--warning",
+        "usage": "草稿待唤醒的洗底；Badge warning（CLI 已安装）。",
+        "pairedForeground": "warning-foreground"
+      },
+      "warning-foreground": {
+        "role": "status",
+        "canonical": "#8a5a10",
+        "dark": "#d9a94a",
+        "cssVar": "--warning-foreground",
+        "usage": "时间线的 held 药丸、成员栏草稿块与其按钮。",
+        "contrast": {
+          "light": {
+            "warning": 5.17
+          },
+          "dark": {
+            "warning": 6.64
+          }
+        }
+      },
+      "success": {
+        "role": "status",
+        "canonical": "#ebf6f1",
+        "dark": "#1c2f25",
+        "cssVar": "--success",
+        "usage": "Badge success 的洗底。房间界面目前未用到。",
+        "pairedForeground": "success-foreground"
+      },
+      "success-foreground": {
+        "role": "status",
+        "canonical": "#3d7a56",
+        "dark": "#6fb58b",
+        "cssVar": "--success-foreground",
+        "usage": "静止状态的实心点（在场 / 说完了 / 读了没说话）。只做点，不做文字。",
+        "contrast": {
+          "light": {
+            "success": 4.61
+          },
+          "dark": {
+            "success": 5.84
+          }
+        }
+      },
+      "destructive-soft": {
+        "role": "status",
+        "canonical": "#fbe4e4",
+        "dark": "#3a1f1f",
+        "cssVar": "--destructive-soft",
+        "usage": "错误横幅、成员错误块、时间线错误药丸、报数错误行的洗底。",
+        "pairedForeground": "destructive-soft-foreground"
+      },
+      "destructive-soft-foreground": {
+        "role": "status",
+        "canonical": "#b0322d",
+        "dark": "#e88080",
+        "cssVar": "--destructive-soft-foreground",
+        "usage": "destructive-soft 上的字。与 destructive 同值。",
+        "contrast": {
+          "light": {
+            "destructive-soft": 5.19
+          },
+          "dark": {
+            "destructive-soft": 5.61
+          }
+        }
+      }
+    },
+    "pairs": {
+      "note": "每一对 <x> / <x>-foreground 都测过：一个组件不论落在哪个表面上都读得清。",
+      "list": [
+        {
+          "surface": "primary",
+          "foreground": "primary-foreground",
+          "light": 4.95,
+          "dark": 5.83
+        },
+        {
+          "surface": "secondary",
+          "foreground": "secondary-foreground",
+          "light": 11.43,
+          "dark": 10.99
+        },
+        {
+          "surface": "muted",
+          "foreground": "muted-foreground",
+          "light": 5.35,
+          "dark": 6.08
+        },
+        {
+          "surface": "accent",
+          "foreground": "accent-foreground",
+          "light": 10.64,
+          "dark": 9.68
+        },
+        {
+          "surface": "destructive",
+          "foreground": "destructive-foreground",
+          "light": 6.29,
+          "dark": 6.56
+        },
+        {
+          "surface": "card",
+          "foreground": "card-foreground",
+          "light": 12.26,
+          "dark": 10.34
+        },
+        {
+          "surface": "popover",
+          "foreground": "popover-foreground",
+          "light": 12.26,
+          "dark": 10.34
+        },
+        {
+          "surface": "sidebar",
+          "foreground": "sidebar-foreground",
+          "light": 11.43,
+          "dark": 10.99
+        },
+        {
+          "surface": "sidebar-primary",
+          "foreground": "sidebar-primary-foreground",
+          "light": 4.95,
+          "dark": 5.83
+        },
+        {
+          "surface": "sidebar-accent",
+          "foreground": "sidebar-accent-foreground",
+          "light": 10.26,
+          "dark": 9.68
+        },
+        {
+          "surface": "info",
+          "foreground": "info-foreground",
+          "light": 5.07,
+          "dark": 6.66
+        },
+        {
+          "surface": "warning",
+          "foreground": "warning-foreground",
+          "light": 5.17,
+          "dark": 6.64
+        },
+        {
+          "surface": "success",
+          "foreground": "success-foreground",
+          "light": 4.61,
+          "dark": 5.84
+        },
+        {
+          "surface": "destructive-soft",
+          "foreground": "destructive-soft-foreground",
+          "light": 5.19,
+          "dark": 5.61
+        }
+      ]
+    },
+    "alphaTokens": [
+      {
+        "spec": "foreground/75",
+        "purpose": "副标题、说明段、次要按钮文字、导航项静止态。shadcn 词表里没有中间灰这一档，半透明在任何表面上都成立。",
+        "worstLight": 5.07,
+        "worstDark": 5.22
+      },
+      {
+        "spec": "muted-foreground/60",
+        "purpose": "装饰：禁用态、空心圆点。永远不是文字。",
+        "worstLight": 2.52,
+        "worstDark": 3.19
+      },
+      {
+        "spec": "primary/10",
+        "purpose": "提及菜单活动项、智能体页选中行。上一轮 accent-wash 的等价物。",
+        "worstLight": 10.72,
+        "worstDark": 9.05
+      },
+      {
+        "spec": "chart-N/15",
+        "purpose": "头像的淡染底。",
+        "worstLight": 4.53,
+        "worstDark": 5.67
+      },
+      {
+        "spec": "foreground/20",
+        "purpose": "成员抽屉的遮罩。shadcn 默认的 black/50 在这套配色里是外来物。"
+      }
+    ],
+    "legacyAliases": {
+      "note": "全部删除。/board 与 /task 在本轮做了纯机械的类名替换，没有别的改动。",
+      "mapping": {
+        "bg-paper": "bg-background",
+        "bg-washi": "bg-muted",
+        "text-muted": "text-muted-foreground",
+        "text-ink": "text-foreground",
+        "border-line": "border-border",
+        "text-moss": "text-primary",
+        "text-moss-deep": "text-primary",
+        "bg-moss": "bg-primary",
+        "border-moss/40": "border-primary/40",
+        "ring-moss": "ring-ring",
+        "text-paper": "text-primary-foreground",
+        "text-seal": "text-destructive",
+        "border-seal": "border-destructive",
+        "text-hydrangea": "text-info-foreground",
+        "border-hydrangea/40": "border-info-foreground/40",
+        "border-gold": "border-warning"
+      },
+      "washiNote": "washi 是 #f7f7f5，等于 muted / secondary / sidebar，不是 card（#ffffff）。映射到 bg-card 会重画这两个不在本轮范围的路由。"
+    },
+    "typographyMeta": {
+      "scale": [
+        12,
+        13,
+        14,
+        16,
+        24
+      ],
+      "scaleNote": "阶梯之外四个例外，都是记号不是文字：空状态标题 18px，头像字母 11px（22px 头像上 10px），提及胶囊 15px 和胶囊圆点里的 8px。",
+      "fontSans": "Inter, -apple-system, \"PingFang SC\", \"Hiragino Sans GB\", \"Noto Sans SC\", sans-serif",
+      "fontSerif": "\"Noto Serif SC\", \"Songti SC\", \"STSong\", Georgia, serif",
+      "fontMono": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+      "division": "界面词黑体，正文宋体。font-serif 只给成段的人话：消息正文、输入框编辑区、右栏草稿预览、空状态那句说明；其余全部 font-sans，包括落在宋体正文里的提及胶囊。",
+      "proseLeading": 1.7,
+      "proseLeadingNote": "宋体笔画细、字面小，比黑体的 1.65 多给一点行距。",
+      "selfHosted": {
+        "packages": [
+          "@fontsource/inter (400/500/600/700)",
+          "@fontsource/noto-serif-sc (400/600)"
+        ],
+        "importedIn": "app/styles/global.css 顶部",
+        "slicing": "noto-serif-sc 按 unicode-range 切成约 100 片，浏览器只拉这一页用到的那几片。",
+        "display": "swap（fontsource 默认）：首屏用回退字，字体到了换一次，不做 FOIT。",
+        "caveat": "没有消费者的分片不会被下载，所以 document.fonts.check('600 16px \"Noto Serif SC\"') 在正文没有粗体时是 false——那是切片生效，不是加载失败。"
+      },
+      "tabular": "Tailwind 内置的 tabular-nums，不再自造 .tnum。"
+    },
+    "radius": {
+      "base": "--radius: 0.5rem",
+      "sm": "4px — 按钮、输入、药丸、Badge（rounded-sm）",
+      "md": "6px — 导航项、房间项、成员行、菜单项（rounded-md）",
+      "lg": "8px — 输入卡片、菜单、草稿块、报数记录块（rounded-lg）",
+      "full": "头像、状态点、新消息胶囊",
+      "note": "三档由 shadcn 的 --radius 派生，正好是宣纸要的 4 / 6 / 8。"
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 3px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.04)",
+        "dark": "0 1px 3px rgb(0 0 0 / 0.5), 0 4px 14px rgb(0 0 0 / 0.4)",
+        "cssVar": "--card-shadow",
+        "utility": "shadow-card（@theme inline 的 --shadow-card）",
+        "purpose": "唯一的阴影值。输入卡片、房间菜单、提及菜单、成员抽屉、新消息胶囊、新建房间表单、创建页与错误页的卡片、跳转链接。shadcn 组件自带的 shadow-xs 已从 Button / Input / Textarea 去掉。"
+      }
+    ],
+    "focus": {
+      "components": "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50（shadcn 的写法）",
+      "composer": "输入卡片挂在 focus-within 上：卡片就是字段。",
+      "bareButtons": "全局 all: unset 之后，@layer base 里补一圈 2px ring 描边。"
+    },
+    "motion": {
+      "transitions": "transition-colors / transition-[color,box-shadow] 150ms。没有位移、缩放或阴影的过渡。",
+      "animation": "animate-pulse-soft（--animate-pulse-soft: rivus-pulse 1.4s ease-in-out infinite，透明度 1 → 0.25 → 1）。只用在「正在生成」的状态点上，旁边必须有真在走的计时器。",
+      "removed": "tw-animate-css 没有安装；slide-in / zoom-in / fade-in 已从 Sheet 与 DropdownMenu 删除，不留成无效 class。",
+      "reducedMotion": "prefers-reduced-motion: reduce 时所有动画取消、所有 transition-duration 归零。"
+    },
+    "breakpoints": [
+      {
+        "name": "context-drawer",
+        "value": "1180px",
+        "purpose": "≤ 1180：右栏不再是网格里的一列，改由 shadcn 的 Sheet（side=\"right\"，min(320px,100%)，sidebar 底，foreground/20 遮罩）承担。两者只挂载一个，用 matchMedia 选择，所以文档里不会出现第二份面板 id。页头出现「成员」按钮。"
+      },
+      {
+        "name": "rail-topbar",
+        "value": "820px",
+        "purpose": "≤ 820：网格单列，左栏变横向顶栏，可横向滚动。"
+      },
+      {
+        "name": "desk-stack",
+        "value": "720px",
+        "purpose": "≤ 720：智能体页两栏变单栏。"
+      },
+      {
+        "name": "min-width",
+        "value": "320px",
+        "purpose": "html / body 最小宽。"
+      }
+    ],
+    "layout": {
+      "grid": "240px / minmax(0,1fr) / 300px",
+      "height": "100dvh, min 420px",
+      "messageGrid": "30px / minmax(0,1fr), gap 12px",
+      "measure": {
+        "message": "66ch",
+        "emptyState": "46ch",
+        "desk": "min(760px, 100%)"
+      },
+      "rhythm": [
+        4,
+        8,
+        10,
+        12,
+        14,
+        18,
+        22,
+        28
+      ],
+      "gutter": "中栏所有东西共用 28px 左右留白；左栏 10px，右栏 16px。",
+      "separation": "栏与栏之间只有一根 1px border，没有色块、没有阴影、没有色相差。",
+      "scrolling": "右栏与抽屉用 shadcn 的 ScrollArea；时间线保持原生滚动容器，因为它要直接读写 scrollTop。"
+    },
+    "marks": {
+      "component": "shadcn Avatar + AvatarFallback，AgentMark 是薄封装。",
+      "sizes": [
+        30,
+        22,
+        36
+      ],
+      "letterType": "11px / 600 / letter-spacing 0.02em；22px 的头像上 10px。",
+      "background": "bg-chart-N/15",
+      "foreground": "text-chart-N",
+      "seating": [
+        "claude-relay",
+        "claude",
+        "codex",
+        "opencode",
+        "dsh"
+      ],
+      "letters": {
+        "claude-relay": "CR",
+        "claude": "CL",
+        "codex": "CX",
+        "opencode": "OC",
+        "dsh": "DS"
+      },
+      "human": "foreground 实底上一个 background 色的「我」字。",
+      "brand": "RiverMark：viewBox 0 0 24 24，两条错位的正弦短线，primary 色，stroke 2。",
+      "note": "状态永远不从记号读：运行中记号不变，排队中只降到 opacity-55。"
+    },
+    "shadcn": {
+      "config": "components.json：new-york / neutral / cssVariables / phosphor / ~/components/ui",
+      "installed": [
+        "button",
+        "badge",
+        "input",
+        "textarea",
+        "dropdown-menu",
+        "sheet",
+        "avatar",
+        "separator",
+        "scroll-area",
+        "(composer: Tiptap, not shadcn — shadcn has no editor primitive)"
+      ],
+      "divergences": [
+        "forwardRef：本仓库在 React 18，registry 现在产出 React 19 的写法（ref 当普通 prop）。所有渲染 DOM 节点的包装都转成 React.forwardRef，否则 Radix 会丢掉它用来定位、锁焦点、还焦点的节点。",
+        "尺度：圆角 6px → 4px，控件高 36px → 30px，去掉 shadow-xs。",
+        "动效：删掉 slide-in / zoom-in / fade-in（tw-animate-css 未安装）。",
+        "图标：lucide-react 换成 components.json 指定的 phosphor。",
+        "Badge 加 muted / info / warning / success / destructive-soft 五个变体；Button 的 destructive 用 destructive-foreground 而不是写死的 text-white。",
+        "Sheet 的遮罩从 black/50 改成 foreground/20。"
+      ],
+      "notConverted": [
+        "MentionMenu 仍是手写的 role=\"listbox\"：它是 textarea 的内联补全，activedescendant 归 textarea 管，换成 Command 会把焦点从输入框里拿走。",
+        "房间菜单的两步确认留在 DropdownMenu 里，没有用 AlertDialog：一句两个词的确认不值得占满整屏。",
+        "Separator 只用在发言顺序条顶部那根本来就存在的线；没有在节标签下面加新的分隔线，那会改画面而不是换词表。"
+      ]
+    },
+    "statusCopy": {
+      "source": "app/room-lab/presentation/agent-status.ts",
+      "note": "这一轮是词表与组件的改动，文案一个字没动。",
+      "labels": {
+        "idle": {
+          "text": "在场",
+          "dot": "success-foreground",
+          "ink": "muted-foreground"
+        },
+        "running": {
+          "text": "正在生成",
+          "dot": "info-foreground",
+          "ink": "info-foreground"
+        },
+        "completed": {
+          "text": "说完了",
+          "dot": "success-foreground",
+          "ink": "muted-foreground"
+        },
+        "posted": {
+          "text": "说完了",
+          "dot": "success-foreground",
+          "ink": "muted-foreground"
+        },
+        "held": {
+          "text": "草稿待唤醒",
+          "dot": "warning-foreground",
+          "ink": "warning-foreground"
+        },
+        "silent": {
+          "text": "读了，没说话",
+          "dot": "success-foreground",
+          "ink": "muted-foreground"
+        },
+        "error": {
+          "text": "没跑起来",
+          "dot": "destructive",
+          "ink": "destructive"
+        },
+        "queued": {
+          "text": "排队中",
+          "dot": "空心环",
+          "ink": "muted-foreground"
+        }
+      }
+    },
+    "composer": {
+      "editor": "Tiptap 3，schema 只有 Document > Paragraph+ > (Text | Mention | HardBreak)*。没有标题 / 列表 / 加粗：这是一行话，不是一篇文档。",
+      "extensions": [
+        "Document",
+        "Paragraph",
+        "Text",
+        "HardBreak",
+        "History",
+        "Placeholder",
+        "CharacterCount",
+        "Mention(+suggestion)"
+      ],
+      "card": "card 底、input 边、rounded-xl(12px)、shadow-card、内边距 14px 14px 10px；focus-within 时 border-ring 加 3px ring-ring/15。卡片就是字段。",
+      "editable": "font-serif 16px/1.7，最小 78px（三行），最高 40dvh 后内部滚动。role=textbox aria-multiline，id 仍为 room-command。",
+      "toolbar": "一根 border-t 之上：@ 图标按钮（ghost/icon-sm）、12px 提示行、右侧字数 n / 2000（tabular-nums，n>0 才出现）、32px 圆形主按钮（ArrowUp）。没有附件按钮——后端不收附件。",
+      "keys": {
+        "Enter": "弹层开着 → 选中当前项；否则 → 发送（canSend 才发）",
+        "Shift+Enter": "hardBreak",
+        "Escape": "关弹层",
+        "repeat": "长按不重复发送",
+        "ime": "view.composing / isComposing / keyCode 229 时 Enter 被整个吞掉：不发送、不选人、也不落到基础 keymap 上劈开段落。"
+      },
+      "countNote": "字数量的是序列化之后的字符串长度，不是文档字符数：一个胶囊在屏幕上是一个物件、在线路上是八个字符，而服务端量的是线路上那一串（>2000 拒绝）。CharacterCount 的 2000 只给文档封顶。",
+      "serialization": {
+        "module": "app/room-lab/presentation/composer-doc.ts",
+        "docToText": "段落间 \\n，HardBreak → \\n，Mention → @id，首尾 trim。",
+        "textToDoc": "按 \\n 切段落，再用服务端同一条正则（ROOM_MENTION_SOURCE）把 @id 切成 Mention 节点；只有房间认识的 id 才变胶囊。",
+        "why": "两个方向各在不同时刻用一次：敲键盘时序列化给 RoomLab，发送失败时从回填的原文重建。只在一个方向成立的提及，会在第一次发送失败时把胶囊变成散字。",
+        "unchanged": [
+          "RoomLab",
+          "parseRoomMessage",
+          "服务端",
+          "路由",
+          "read-model"
+        ]
+      }
+    },
+    "mentionChip": {
+      "module": "app/room-lab/presentation/mention-chip.ts",
+      "why": "编辑中的胶囊和已发出的胶囊是同一个东西的两个时刻，不能有两套样式。描述只有一份，被 Tiptap 的 renderHTML（产出 DOM spec 不是 JSX）、只读胶囊和提及菜单三处读。",
+      "chip": "inline-flex 圆角胶囊，bg-chart-N/15 + text-chart-N，15px/600 黑体，px-1.5，align-baseline。",
+      "dot": "14px 圆点，bg-chart-N 底上 8px 的两个大写字母，与头像同一张字母表。",
+      "all": "@all 用 bg-accent text-accent-foreground，圆点里是 @。",
+      "tailwind": "id → class 写成常量表（五个成员加 all），不拼串：Tailwind 只认源码里的字面 class。"
+    }
+  },
+  "narrative": {
+    "northStar": "宣纸（warm white paper），写成 shadcn 的词表",
+    "overview": "一张暖白的纸，文字是主体。左栏和右栏是 sidebar——只比纸面暗一档的暖灰，靠一根 1px 的 sidebar-border 和中间的纸分开；中间的对话流就是 background 本身。整个界面没有一块实色大面，没有堆叠的阴影，唯一浮起来的物件是输入框那张 card。选中和悬停靠一层 accent，不靠色块。\n\n正文是自托管的思源宋体、界面词是 Inter；输入框是 Tiptap，提及在里面是一枚可以整体删除的胶囊。上一轮换的是词表和组件，不是画面：上一轮自造的 token 全部换成 shadcn 的标准名字，手写的 class 集群全部换成 ~/components/ui 里的 shadcn 组件。颜色值没有重新设计，是同一批宣纸的值搬到了标准名字上。",
+    "keyCharacteristics": [
+      "纸（background）与两侧的暖灰（sidebar）靠一根发丝线分开，不靠色块，也不靠色相。",
+      "唯一浮起的物件是输入卡片；菜单、抽屉、胶囊共用同一个 shadow-card。",
+      "一个强调色（primary）管交互，四对状态色以药丸形态管「现在怎么了」，五个 chart-* 只管头像与作者名。",
+      "状态永远成对取用：bg-<x> text-<x>-foreground，由 Badge 的一个 variant 名交代完。",
+      "界面上没有后端不存在的动作：没有「停下这一轮」，没有对失败成员的单独重试。",
+      "正文宋体、界面词黑体：读的是文章，点的是界面。",
+      "提及是一个物件不是九个字符——在输入框里和在已发消息里长得一样，发出去仍然是 @id。"
+    ],
+    "contrastFloor": {
+      "measuredMinimum": 4.53,
+      "pairsChecked": 134,
+      "rule": "两族配对全部 ≥ 4.5:1：(1) 每一对 <x> / <x>-foreground；(2) 每个文字色落在它在本应用里真正会落到的每一个表面上（background / card / popover / sidebar / muted / accent / sidebar-accent）。/75、/15、/10 先合成到所在表面再测。muted-foreground/60、border、input 是装饰，不参与。相对样稿，十个值沿各自色相做过位移（亮色 muted-foreground、info-foreground 和四个 chart-*，暗色 muted-foreground、destructive、chart-1、chart-4），另外 success 洗底从 #e7f3ee 提亮到 #ebf6f1。"
+    }
+  }
+}

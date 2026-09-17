@@ -1,155 +1,200 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { At } from '@phosphor-icons/react/dist/ssr/At';
-import { PaperPlaneTilt } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
-import { MentionMenu } from './MentionMenu';
-import { buildMentionOptions, mentionCompletion, type MentionOption } from './mention-completion';
+import { ArrowUp } from '@phosphor-icons/react/dist/ssr/ArrowUp';
+import { EditorContent, useEditor } from '@tiptap/react';
+import type { Editor } from '@tiptap/core';
+import { Document } from '@tiptap/extension-document';
+import { Paragraph } from '@tiptap/extension-paragraph';
+import { Text } from '@tiptap/extension-text';
+import { HardBreak } from '@tiptap/extension-hard-break';
+import { History } from '@tiptap/extension-history';
+import { Placeholder } from '@tiptap/extension-placeholder';
+import { CharacterCount } from '@tiptap/extension-character-count';
 import type { RoomLabAgentId } from '../read-model';
 import { Button } from '~/components/ui/button';
+import { docToText, textToDoc, type MentionId } from './composer-doc';
+import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mention';
 
-export function RoomComposer({ mode, value, disabled, activeAgentIds, taskGateReady, onModeChange, onValueChange, onSubmit }: {
-  mode: 'room' | 'task'; value: string; disabled: boolean; activeAgentIds: RoomLabAgentId[];
-  taskGateReady: boolean; onModeChange: (mode: 'room' | 'task') => void;
+const MAX_CHARACTERS = 2_000;
+
+/**
+ * The composer is never disabled. A round in progress only changes where a
+ * new message lands, and the hint says so. Only the send button waits while
+ * the previous message is in flight.
+ *
+ * The editor is Tiptap, but nothing downstream knows that: `value` in and out
+ * is still the plain string the room stores, and a mention is still `@id` by
+ * the time it leaves. The document exists so that a mention can be one object
+ * you delete in one keystroke instead of nine characters you can half-delete.
+ */
+export function RoomComposer({ value, sending, activeAgentIds, behind, onValueChange, onSubmit }: {
+  value: string; sending: boolean; activeAgentIds: RoomLabAgentId[];
+  behind?: RoomLabAgentId;
   onValueChange: (value: string) => void; onSubmit: () => void;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const previousMode = useRef(mode);
-  const [mentionQuery, setMentionQuery] = useState<ReturnType<typeof mentionCompletion.find>>();
-  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
-  const options = buildMentionOptions(activeAgentIds);
-  const mentionOptions = mode === 'room' && mentionQuery ? mentionCompletion.filter(mentionQuery.query, options) : [];
-  const canSend = !disabled && !!value.trim() && (mode === 'room' || taskGateReady);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeOptionId, setActiveOptionId] = useState<string>();
 
+  // Read by the editor's own handlers, which are created once and must not
+  // close over a stale render.
+  const agentsRef = useRef(activeAgentIds);
+  agentsRef.current = activeAgentIds;
+  const menuOpenRef = useRef(false);
+  const sendingRef = useRef(sending);
+  sendingRef.current = sending;
+  const submitRef = useRef(onSubmit);
+  submitRef.current = onSubmit;
+  /** The last string this component put on the wire, to break the update loop. */
+  const lastTextRef = useRef(value);
+
+  const mentionable = useMemo<MentionId[]>(() => ['all', ...activeAgentIds], [activeAgentIds]);
+
+  const setMenu = useCallback((open: boolean) => {
+    menuOpenRef.current = open;
+    setMenuOpen(open);
+  }, []);
+
+  const editor = useEditor({
+    // A chat line, not a document: no headings, no lists, no bold.
+    extensions: [
+      Document,
+      Paragraph,
+      Text,
+      HardBreak,
+      History,
+      Placeholder.configure({ placeholder: '说点什么' }),
+      // A ceiling on the document, so a paste cannot grow it without bound. The
+      // number the person reads, and the one that gates sending, is the length
+      // of the serialised string, because that is what the server measures: a
+      // chip is one character here and eight on the wire.
+      CharacterCount.configure({ limit: MAX_CHARACTERS }),
+      roomMention({
+        activeAgentIds: () => agentsRef.current,
+        onOpenChange: setMenu,
+        onActiveOptionChange: setActiveOptionId,
+      }),
+    ],
+    content: textToDoc(value, ['all', ...activeAgentIds]),
+    editorProps: {
+      attributes: {
+        id: 'room-command',
+        role: 'textbox',
+        'aria-multiline': 'true',
+        'aria-label': '向房间发送消息',
+        'aria-describedby': 'room-composer-hint',
+        class: 'min-h-[78px] max-h-[40dvh] overflow-y-auto font-serif text-base leading-[1.7] text-foreground outline-none',
+      },
+      handleKeyDown: (view, event) => {
+        // An IME is mid-composition, so this key belongs to the candidate
+        // window. Enter is swallowed outright: it must not send, must not pick
+        // a mention, and must not reach the base keymap and split the
+        // paragraph — confirming 中文 is not a newline. Every other key is left
+        // to ProseMirror.
+        if (view.composing || event.isComposing || event.keyCode === 229) {
+          return event.key === 'Enter';
+        }
+        if (event.key !== 'Enter' || event.shiftKey) return false;
+        // The suggestion plugin runs after this handler, so a menu that is open
+        // gets Enter handed back to it to pick a member.
+        if (menuOpenRef.current) return false;
+        event.preventDefault();
+        if (event.repeat) return true;
+        send();
+        return true;
+      },
+    },
+    onUpdate: ({ editor: instance }) => {
+      const text = docToText(instance.getJSON());
+      lastTextRef.current = text;
+      onValueChange(text);
+    },
+    immediatelyRender: false,
+  }, []);
+
+  const characters = value.length;
+  const canSend = !sending && !!value.trim() && characters <= MAX_CHARACTERS;
+  const canSendRef = useRef(canSend);
+  canSendRef.current = canSend;
+
+  function send() {
+    if (!canSendRef.current) return;
+    submitRef.current();
+  }
+
+  // The value can change from outside: a send clears it, a failed send puts the
+  // draft back. Rebuild only when the string really differs from what the
+  // document already says, or every keystroke would round-trip through
+  // setContent and drop the cursor.
   useEffect(() => {
-    if (previousMode.current === mode) return;
-    previousMode.current = mode;
-    setMentionQuery(undefined);
-    textareaRef.current?.focus();
-  }, [mode]);
+    if (!editor || value === lastTextRef.current) return;
+    lastTextRef.current = value;
+    editor.commands.setContent(textToDoc(value, mentionable), { emitUpdate: false });
+  }, [editor, value, mentionable]);
 
-  const send = () => { if (canSend) onSubmit(); };
-  const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); send(); };
-  const positionCursor = (cursor: number) => window.requestAnimationFrame(() => {
-    textareaRef.current?.focus();
-    textareaRef.current?.setSelectionRange(cursor, cursor);
-  });
-  const selectMention = (option: MentionOption) => {
-    if (!mentionQuery) return;
-    const inserted = mentionCompletion.insert(value, mentionQuery, option);
-    onValueChange(inserted.value);
-    setMentionQuery(undefined);
-    positionCursor(inserted.cursor);
-  };
   const openMentions = () => {
-    const start = textareaRef.current?.selectionStart ?? value.length;
-    const end = textareaRef.current?.selectionEnd ?? start;
-    const prefix = start > 0 && !/\s/.test(value[start - 1]!) ? ' @' : '@';
-    const next = value.slice(0, start) + prefix + value.slice(end);
-    if (next.length > 2_000) return;
-    const cursor = start + prefix.length;
-    onValueChange(next);
-    setMentionQuery(mentionCompletion.find(next, cursor));
-    setActiveMentionIndex(0);
-    positionCursor(cursor);
+    if (!editor) return;
+    // A composer that has never been focused has its caret at the very start,
+    // so an unfocused click would put the `@` before everything already typed.
+    if (!editor.isFocused) editor.commands.focus('end');
+    const { state } = editor;
+    const before = state.doc.textBetween(Math.max(0, state.selection.from - 1), state.selection.from);
+    // `@` only triggers the suggestion at a word boundary, so give it one.
+    const prefix = before && !/\s/.test(before) ? ' @' : '@';
+    editor.chain().focus().insertContent(prefix).run();
   };
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-    if (mentionQuery && mentionOptions.length > 0) {
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        event.preventDefault();
-        const direction = event.key === 'ArrowDown' ? 1 : -1;
-        setActiveMentionIndex(index => (index + direction + mentionOptions.length) % mentionOptions.length);
-        return;
-      }
-      if ((event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey) {
-        event.preventDefault();
-        const option = mentionOptions[activeMentionIndex] ?? mentionOptions[0];
-        if (option) selectMention(option);
-        return;
-      }
-    }
-    if (event.key === 'Escape' && mentionQuery) {
-      event.preventDefault();
-      setMentionQuery(undefined);
-      return;
-    }
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      if (!event.repeat) send();
-    }
+
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    send();
   };
+
   return (
     <form
-      className="relative mx-4 mb-4 shrink-0 rounded-[10px] border border-line bg-washi p-3 focus-within:border-moss"
+      className="mx-7 mt-3 mb-[22px] flex shrink-0 flex-col rounded-xl border border-input bg-card px-3.5 pt-3.5 pb-2.5 shadow-card transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/15"
       onSubmit={submit}
     >
-      {mode === 'task' && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-line pb-2 text-sm">
-          <strong>创建任务</strong>
-          <span className="text-xs text-muted">Codex 实施，Claude 独立审核</span>
-          <button type="button" className="ml-auto h-8 bg-transparent underline" onClick={() => onModeChange('room')} disabled={disabled}>取消</button>
-        </div>
-      )}
-      <label className="sr-only" htmlFor="room-command">{mode === 'room' ? '向房间发送消息' : '任务目标与验收要求'}</label>
-      <div className="relative">
-        <textarea
-          ref={textareaRef}
-          id="room-command"
-          value={value}
-          maxLength={2_000}
-          rows={2}
-          disabled={disabled}
-          onBlur={() => setMentionQuery(undefined)}
-          onKeyDown={handleKeyDown}
-          role={mode === 'room' ? 'combobox' : undefined}
-          aria-autocomplete={mode === 'room' ? 'list' : undefined}
-          aria-expanded={mode === 'room' ? mentionQuery !== undefined : undefined}
-          aria-controls={mode === 'room' && mentionQuery ? 'room-mention-options' : undefined}
-          aria-activedescendant={mentionQuery && mentionOptions[activeMentionIndex]
-            ? `room-mention-${mentionOptions[activeMentionIndex]?.id}` : undefined}
-          aria-describedby="room-composer-hint"
-          placeholder={mode === 'room' ? '发给房间。不写 @，在场的人会按顺序接话。' : '目标、约束、产物、怎样才算完成'}
-          className="block max-h-36 min-h-11 w-full resize-y border-0 bg-transparent p-0 text-sm leading-snug text-ink outline-0 placeholder:text-muted"
-          onChange={event => {
-            const next = event.currentTarget.value;
-            onValueChange(next);
-            setMentionQuery(mode === 'room' ? mentionCompletion.find(next, event.currentTarget.selectionStart) : undefined);
-            setActiveMentionIndex(0);
-          }}
-        />
-        {mode === 'room' && mentionQuery && (
-          <MentionMenu
-            options={mentionOptions}
-            activeIndex={activeMentionIndex}
-            onActiveIndexChange={setActiveMentionIndex}
-            onSelect={selectMention}
-          />
-        )}
-      </div>
-      <div className="mt-1.5 flex items-center gap-2.5">
-        {mode === 'room' && (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-8 gap-1 px-1.5 text-hydrangea hover:text-moss-deep"
-            disabled={disabled}
-            onMouseDown={event => event.preventDefault()}
-            onClick={openMentions}
-          >
-            <At size={18} />提及
-          </Button>
-        )}
-        <span id="room-composer-hint" className="text-xs leading-tight text-muted">
-          {mode === 'room' ? 'Enter 发送 · 未点名则依次发言' : '模型通过后，仍要你亲自验收'}
-        </span>
+      {/* The card is the field: the editor gives up its own border and fill so
+          focus lands on the whole raised block. */}
+      <EditorContent
+        editor={editor}
+        aria-expanded={menuOpen}
+        aria-controls={menuOpen ? MENTION_LIST_ID : undefined}
+        aria-activedescendant={menuOpen && activeOptionId ? mentionOptionId(activeOptionId) : undefined}
+      />
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 border-t border-border pt-2.5">
         <Button
-          className="ml-auto min-w-[72px] whitespace-nowrap disabled:bg-line disabled:text-muted disabled:hover:bg-line"
-          type="submit"
-          disabled={!canSend}
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="提及"
+          className="text-muted-foreground hover:text-foreground"
+          onMouseDown={event => event.preventDefault()}
+          onClick={openMentions}
         >
-          {disabled ? '正在送出' : mode === 'room' ? '发送' : '开始任务'}
-          <PaperPlaneTilt size={16} weight="fill" />
+          <At size={16} />
+        </Button>
+        <span id="room-composer-hint" className="ml-1 text-xs leading-tight text-muted-foreground">
+          {behind
+            ? <>现在发出去的话，会排在 <span className="text-foreground/75">{behind}</span> 后面</>
+            : 'Enter 发送 · Shift+Enter 换行 · 不 @ 则在场成员依次发言'}
+        </span>
+        {characters > 0 && (
+          <span className={`ml-auto text-xs tabular-nums ${characters > MAX_CHARACTERS ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {characters} / {MAX_CHARACTERS}
+          </span>
+        )}
+        <Button
+          type="submit"
+          size="icon"
+          className={`size-8 rounded-full ${characters > 0 ? 'ml-2' : 'ml-auto'}`}
+          disabled={!canSend}
+          aria-label={sending ? '正在送出' : '发送'}
+        >
+          <ArrowUp size={16} weight="bold" />
         </Button>
       </div>
     </form>
   );
 }
+
+export type { Editor };

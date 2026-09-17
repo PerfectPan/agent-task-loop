@@ -32,17 +32,17 @@ function hasValue(val: unknown): boolean {
  * column on the board can never drift apart. Ten statuses, five vocabularies.
  */
 const LANE_BADGE: Record<LaneId, string> = {
-  todo: 'bg-washi text-ink border-line',
-  running: 'bg-washi text-hydrangea border-hydrangea/40',
-  review: 'bg-washi text-ink border-gold',
-  decide: 'bg-washi text-moss border-moss/40',
-  done: 'bg-washi text-muted border-line',
+  todo: 'bg-muted text-foreground border-border',
+  running: 'bg-muted text-info-foreground border-info-foreground/40',
+  review: 'bg-muted text-foreground border-warning',
+  decide: 'bg-muted text-primary border-primary/40',
+  done: 'bg-muted text-muted-foreground border-border',
 };
 
 function StatusBadge({ status }: { status: TaskRecord['status'] }) {
   // A backend row can carry a status this build does not know.
   const lane = laneOfUnknown(status);
-  const cls = lane ? LANE_BADGE[lane] : 'bg-washi text-ink border-line';
+  const cls = lane ? LANE_BADGE[lane] : 'bg-muted text-foreground border-border';
   return (
     <span
       className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border ${cls}`}
@@ -55,8 +55,8 @@ function StatusBadge({ status }: { status: TaskRecord['status'] }) {
 function ReviewVerdictBadge({ verdict }: { verdict: string }) {
   const isPass = verdict === '通过';
   const cls = isPass
-    ? 'bg-washi text-moss-deep border-moss/40'
-    : 'bg-washi text-seal border-seal/40';
+    ? 'bg-muted text-primary border-primary/40'
+    : 'bg-muted text-destructive border-destructive/40';
   return (
     <span
       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
@@ -69,8 +69,8 @@ function ReviewVerdictBadge({ verdict }: { verdict: string }) {
 function AcceptanceVerdictBadge({ verdict }: { verdict: string }) {
   const isPass = verdict === '通过';
   const cls = isPass
-    ? 'bg-washi text-moss-deep border-moss/40'
-    : 'bg-washi text-seal border-seal/40';
+    ? 'bg-muted text-primary border-primary/40'
+    : 'bg-muted text-destructive border-destructive/40';
   return (
     <span
       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
@@ -84,17 +84,17 @@ export default function TaskDetailRoute() {
   const { task, error } = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-paper text-ink selection:bg-moss/20">
-      <header className="border-b border-line bg-paper sticky top-0 z-10">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <header className="border-b border-border bg-background sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link
             to="/board"
-            className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss rounded px-1.5 py-1 -ml-1.5"
+            className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-1 -ml-1.5"
           >
             ← 返回看板
           </Link>
           {task ? (
-            <span className="text-xs text-muted">
+            <span className="text-xs text-muted-foreground">
               {task.taskId}
             </span>
           ) : null}
@@ -103,11 +103,11 @@ export default function TaskDetailRoute() {
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error ? (
-          <div className="rounded-lg border border-seal bg-washi p-6">
-            <h2 className="text-base font-semibold text-seal mb-2">
+          <div className="rounded-lg border border-destructive bg-muted p-6">
+            <h2 className="text-base font-semibold text-destructive mb-2">
               无法显示任务
             </h2>
-            <p className="text-sm text-seal">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         ) : task ? (
           <TaskDetailContent task={task} />
@@ -165,30 +165,30 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
     <article className="space-y-8">
       {/* 1. The title, and under it the exact status, the project, the targetAgent and the source that owns this record */}
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {task.title}
         </h1>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <StatusBadge status={task.status} />
-          <span className="text-muted">·</span>
-          <span className="text-muted">
-            项目：<span className="font-medium text-ink">{task.project}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">
+            项目：<span className="font-medium text-foreground">{task.project}</span>
           </span>
-          <span className="text-muted">·</span>
-          <span className="text-muted">
-            目标 Agent：<span className="font-medium text-ink">{task.targetAgent}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">
+            目标 Agent：<span className="font-medium text-foreground">{task.targetAgent}</span>
           </span>
-          <span className="text-muted">·</span>
-          <span className="text-muted">
-            数据源：<span className="font-medium text-ink">{task.source}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">
+            数据源：<span className="font-medium text-foreground">{task.source}</span>
           </span>
         </div>
       </section>
 
       {/* 2. description, as prose, preserving its line breaks */}
       {hasValue(task.description) ? (
-        <section className="border-t border-line pt-6">
-          <div className="max-w-[70ch] text-base leading-relaxed text-ink whitespace-pre-wrap">
+        <section className="border-t border-border pt-6">
+          <div className="max-w-[70ch] text-base leading-relaxed text-foreground whitespace-pre-wrap">
             {task.description}
           </div>
         </section>
@@ -196,15 +196,15 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
       {/* 3. Progress — progressSummary, resultSummary, lastError. A failed task leads with lastError. */}
       {showProgressSection ? (
-        <section className="border-t border-line pt-6 space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">进度</h2>
+        <section className="border-t border-border pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">进度</h2>
           <div className="space-y-4 max-w-[70ch]">
             {isFailed && hasLastError ? (
-              <div className="rounded-lg border border-seal bg-washi p-4">
-                <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
+              <div className="rounded-lg border border-destructive bg-muted p-4">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-destructive mb-1">
                   失败原因
                 </span>
-                <p className="max-w-[70ch] text-sm font-medium text-seal whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm font-medium text-destructive whitespace-pre-wrap">
                   {task.lastError}
                 </p>
               </div>
@@ -212,10 +212,10 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasProgressSummary ? (
               <div>
-                <span className="block text-xs font-medium text-muted mb-1">
+                <span className="block text-xs font-medium text-muted-foreground mb-1">
                   进度说明
                 </span>
-                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.progressSummary}
                 </p>
               </div>
@@ -223,21 +223,21 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasResultSummary ? (
               <div>
-                <span className="block text-xs font-medium text-muted mb-1">
+                <span className="block text-xs font-medium text-muted-foreground mb-1">
                   结果摘要
                 </span>
-                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.resultSummary}
                 </p>
               </div>
             ) : null}
 
             {!isFailed && hasLastError ? (
-              <div className="rounded-lg border border-seal bg-washi p-4">
-                <span className="block text-xs font-semibold uppercase tracking-wider text-seal mb-1">
+              <div className="rounded-lg border border-destructive bg-muted p-4">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-destructive mb-1">
                   上次错误
                 </span>
-                <p className="max-w-[70ch] text-sm font-medium text-seal whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm font-medium text-destructive whitespace-pre-wrap">
                   {task.lastError}
                 </p>
               </div>
@@ -248,17 +248,17 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
       {/* 4. Review — reviewRound, reviewVerdict, reviewFindings */}
       {showReviewSection ? (
-        <section className="border-t border-line pt-6 space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">评审</h2>
+        <section className="border-t border-border pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">评审</h2>
           <div className="space-y-3 max-w-[70ch]">
             <div className="flex flex-wrap items-center gap-4 text-sm">
               {hasReviewRound ? (
-                <span className="text-muted">
-                  轮次：<span className="font-medium text-ink">第 {task.reviewRound} 轮</span>
+                <span className="text-muted-foreground">
+                  轮次：<span className="font-medium text-foreground">第 {task.reviewRound} 轮</span>
                 </span>
               ) : null}
               {hasReviewVerdict && task.reviewVerdict ? (
-                <div className="flex items-center gap-1.5 text-muted">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <span>结论：</span>
                   <ReviewVerdictBadge verdict={task.reviewVerdict} />
                 </div>
@@ -267,10 +267,10 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasReviewFindings ? (
               <div>
-                <span className="block text-xs font-medium text-muted mb-1">
+                <span className="block text-xs font-medium text-muted-foreground mb-1">
                   评审意见
                 </span>
-                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.reviewFindings}
                 </p>
               </div>
@@ -281,23 +281,23 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
       {/* 5. Acceptance — acceptanceRound, acceptanceVerdict, acceptanceFeedback. When reviewVerdict is 通过 but there is no acceptanceVerdict, say plainly that the model passed it and a person has not accepted it yet. */}
       {showAcceptanceSection ? (
-        <section className="border-t border-line pt-6 space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">验收</h2>
+        <section className="border-t border-border pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">验收</h2>
           <div className="space-y-3 max-w-[70ch]">
             {reviewPassedWithoutAcceptance ? (
-              <div className="rounded-lg border border-gold bg-washi p-4 text-sm text-ink">
+              <div className="rounded-lg border border-warning bg-muted p-4 text-sm text-foreground">
                 模型评审已通过，人工尚未完成最终验收。
               </div>
             ) : null}
 
             <div className="flex flex-wrap items-center gap-4 text-sm">
               {hasAcceptanceRound ? (
-                <span className="text-muted">
-                  轮次：<span className="font-medium text-ink">第 {task.acceptanceRound} 轮</span>
+                <span className="text-muted-foreground">
+                  轮次：<span className="font-medium text-foreground">第 {task.acceptanceRound} 轮</span>
                 </span>
               ) : null}
               {hasAcceptanceVerdict && task.acceptanceVerdict ? (
-                <div className="flex items-center gap-1.5 text-muted">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <span>结论：</span>
                   <AcceptanceVerdictBadge verdict={task.acceptanceVerdict} />
                 </div>
@@ -306,10 +306,10 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasAcceptanceFeedback ? (
               <div>
-                <span className="block text-xs font-medium text-muted mb-1">
+                <span className="block text-xs font-medium text-muted-foreground mb-1">
                   验收反馈
                 </span>
-                <p className="max-w-[70ch] text-sm leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.acceptanceFeedback}
                 </p>
               </div>
@@ -320,18 +320,18 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
       {/* 6. Publication — prLink as a real link when present, publishBranch, publishCommit, publishedAt */}
       {showPublicationSection ? (
-        <section className="border-t border-line pt-6 space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">发布</h2>
+        <section className="border-t border-border pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">发布</h2>
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm max-w-[70ch]">
             {hasPrLink && task.prLink ? (
               <div>
-                <dt className="text-xs font-medium text-muted">PR 链接</dt>
+                <dt className="text-xs font-medium text-muted-foreground">PR 链接</dt>
                 <dd className="mt-0.5">
                   <a
                     href={task.prLink}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-hydrangea hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss rounded break-all"
+                    className="text-info-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded break-all"
                   >
                     {task.prLink}
                   </a>
@@ -341,8 +341,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasPublishBranch ? (
               <div>
-                <dt className="text-xs font-medium text-muted">发布分支</dt>
-                <dd className="mt-0.5 text-ink text-xs">
+                <dt className="text-xs font-medium text-muted-foreground">发布分支</dt>
+                <dd className="mt-0.5 text-foreground text-xs">
                   {task.publishBranch}
                 </dd>
               </div>
@@ -350,8 +350,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasPublishCommit ? (
               <div>
-                <dt className="text-xs font-medium text-muted">发布 Commit</dt>
-                <dd className="mt-0.5 text-ink text-xs">
+                <dt className="text-xs font-medium text-muted-foreground">发布 Commit</dt>
+                <dd className="mt-0.5 text-foreground text-xs">
                   {task.publishCommit}
                 </dd>
               </div>
@@ -359,8 +359,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasPublishedAt ? (
               <div>
-                <dt className="text-xs font-medium text-muted">发布时间</dt>
-                <dd className="mt-0.5 text-ink">
+                <dt className="text-xs font-medium text-muted-foreground">发布时间</dt>
+                <dd className="mt-0.5 text-foreground">
                   {task.publishedAt}
                 </dd>
               </div>
@@ -371,13 +371,13 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
       {/* 7. Run — workspacePath, logPath, executionSessionName, reviewSessionName, lastHeartbeatAt */}
       {showRunSection ? (
-        <section className="border-t border-line pt-6 space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">运行</h2>
+        <section className="border-t border-border pt-6 space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">运行</h2>
           <dl className="space-y-3 text-sm max-w-[70ch]">
             {hasWorkspacePath ? (
               <div>
-                <dt className="text-xs font-medium text-muted">工作区路径</dt>
-                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-ink break-all">
+                <dt className="text-xs font-medium text-muted-foreground">工作区路径</dt>
+                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-foreground break-all">
                   {task.workspacePath}
                 </dd>
               </div>
@@ -385,8 +385,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasLogPath ? (
               <div>
-                <dt className="text-xs font-medium text-muted">日志路径</dt>
-                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-ink break-all">
+                <dt className="text-xs font-medium text-muted-foreground">日志路径</dt>
+                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-foreground break-all">
                   {task.logPath}
                 </dd>
               </div>
@@ -394,8 +394,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasExecutionSessionName ? (
               <div>
-                <dt className="text-xs font-medium text-muted">执行会话名称</dt>
-                <dd className="mt-0.5 text-ink">
+                <dt className="text-xs font-medium text-muted-foreground">执行会话名称</dt>
+                <dd className="mt-0.5 text-foreground">
                   {task.executionSessionName}
                 </dd>
               </div>
@@ -403,8 +403,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasReviewSessionName ? (
               <div>
-                <dt className="text-xs font-medium text-muted">评审会话名称</dt>
-                <dd className="mt-0.5 text-ink">
+                <dt className="text-xs font-medium text-muted-foreground">评审会话名称</dt>
+                <dd className="mt-0.5 text-foreground">
                   {task.reviewSessionName}
                 </dd>
               </div>
@@ -412,8 +412,8 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasLastHeartbeatAt ? (
               <div>
-                <dt className="text-xs font-medium text-muted">最后心跳时间</dt>
-                <dd className="mt-0.5 text-ink">
+                <dt className="text-xs font-medium text-muted-foreground">最后心跳时间</dt>
+                <dd className="mt-0.5 text-foreground">
                   {task.lastHeartbeatAt}
                 </dd>
               </div>

@@ -1,26 +1,31 @@
 import type { CountOffSnapshot } from '../domain/count-off-run';
-import type { RoomLabAgentView } from '../read-model';
 
-export function CountOffStrip({ run, agents }: { run: CountOffSnapshot; agents: RoomLabAgentView[] }) {
-  const byId = new Map(agents.map(agent => [agent.id, agent]));
+export function CountOffStrip({ run }: { run: CountOffSnapshot }) {
+  const headline = run.status === 'completed'
+    ? `${run.total} 位都答上了`
+    : run.status === 'failed'
+      ? `第 ${run.nextNumber} 位没答上`
+      : `等第 ${run.nextNumber} 位回答`;
   return (
-    <section className="mt-3 rounded-[10px] bg-paper p-3" aria-label={`Count-off ${run.runId}`}>
-      <strong className="block" role="status" aria-live="polite">{run.status === 'completed' ? `${run.total} 位成员已按序报数`
-        : run.status === 'failed' ? `第 ${run.nextNumber} 位成员未完成` : `等待第 ${run.nextNumber} 位成员报数`}</strong>
-      <ol className="mt-2 list-none p-0">
+    <section className="rounded-lg bg-sidebar-accent p-2.5" aria-label={`检查记录 ${run.runId}`}>
+      <strong className="block text-sm font-medium" role="status" aria-live="polite">{headline}</strong>
+      <ol className="m-0 mt-1.5 list-none p-0">
         {run.agentIds.map((id, index) => {
           const report = run.reports.find(item => item.agentId === id);
           const active = run.status === 'running' && run.nextNumber === index + 1;
+          const failed = run.failedAgentId === id;
           return (
-            <li key={id} className="flex items-baseline gap-3 py-2">
-              <span className="text-xs text-muted">{index + 1}</span>
-              <strong>{byId.get(id)?.label ?? id}</strong>
-              <small className="ml-auto text-xs text-muted">{report ? `已报数 · #${report.seq}` : run.failedAgentId === id ? '失败' : active ? '报数中' : '等待'}</small>
+            <li key={id} className="flex items-baseline gap-2.5 py-1 text-[13px]">
+              <span className="tabular-nums w-3 text-xs text-muted-foreground">{index + 1}</span>
+              <span className="flex-1">{id}</span>
+              <small className={`tabular-nums text-xs ${failed ? 'text-destructive-soft-foreground' : active ? 'text-info-foreground' : 'text-muted-foreground'}`}>
+                {report ? `答了 · #${report.seq}` : failed ? '没答上' : active ? '回答中' : '等待'}
+              </small>
             </li>
           );
         })}
       </ol>
-      {run.error && <p className="rounded-lg bg-[#f9e6df] px-3 py-2 text-seal">{run.error}</p>}
+      {run.error && <p className="m-0 mt-1.5 rounded-sm bg-destructive-soft px-2.5 py-[5px] text-xs leading-snug text-destructive-soft-foreground [overflow-wrap:anywhere]">{run.error}</p>}
     </section>
   );
 }

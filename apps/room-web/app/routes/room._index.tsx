@@ -18,10 +18,11 @@ import {
   assertSameOriginJson,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
+import { RiverMark } from '../room-lab/presentation/AgentMark';
 import { PRODUCT_NAME } from '../room-lab/presentation/product';
+import { Button } from '../components/ui/button';
 
 export async function loader(_args: LoaderFunctionArgs) {
   try {
@@ -93,31 +94,34 @@ function wantsJson(request: Request): boolean {
 export default function RoomHome() {
   const actionData = useActionData<typeof action>();
   return (
-    <main className="grid min-h-dvh place-items-center bg-paper bg-[url('/images/garden.jpg')] bg-cover bg-center px-4 py-12 font-sans text-ink">
-      <section className="w-[min(560px,100%)] rounded-[10px] border border-line/80 bg-washi/90 p-6">
-        <img className="mb-3 size-12 object-contain" src="/images/spirit.png" width={48} height={48} alt="" />
-        <p className="mb-1.5 text-xs text-muted">{PRODUCT_NAME}</p>
-        <h1 className="mb-2 font-serif text-xl font-semibold leading-snug">建一间房，把要做的事写在名字上。</h1>
-        <p className="mb-4 text-sm leading-relaxed text-muted">
-          人和本地 Agent 在同一条时间线里讨论、写作、推进任务。
+    <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
+      <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6">
+        <div className="mb-5 flex items-center gap-2">
+          <RiverMark size={18} />
+          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
+          <span className="text-xs leading-none text-muted-foreground">本地工作台</span>
+        </div>
+        <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">开一间房</h1>
+        <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">
+          把要做的事写在房名上。在场的 agent 会在同一条对话里依次接话。
         </p>
         <Form method="post" className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
             房间名
-            <Input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus className="h-auto py-2" />
+            <Input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            这间房要完成什么 <span className="text-xs text-muted">可选</span>
+            <span>这间房要完成什么 <span className="ml-1 text-xs text-muted-foreground">可以不填</span></span>
             <Textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。" />
           </label>
-          <p data-error className="m-0 min-h-4 text-xs text-seal">
+          <p data-error className="m-0 min-h-4 text-xs text-destructive" role={actionData && !actionData.ok ? 'alert' : undefined}>
             {actionData && !actionData.ok ? actionData.error : ''}
           </p>
           <Button type="submit" className="self-start">建房间</Button>
         </Form>
-        <p className="mt-4 text-xs text-muted">
-          <Link className="text-moss-deep underline" to="/room/agents">智能体管理</Link>
-          ：看这台机器上谁已安装、谁能跑。
+        <p className="mt-5 mb-0 text-xs text-muted-foreground">
+          <Link className="text-primary" to="/room/agents">智能体</Link>
+          ：看这台机器上谁已安装、谁能跑，给每位写常驻提示。
         </p>
       </section>
     </main>
@@ -132,10 +136,10 @@ export function ErrorBoundary() {
       : `${error.status} ${error.statusText}`.trim())
     : error instanceof Error ? error.message : '本地房间暂不可用';
   return (
-    <main className="grid min-h-dvh place-items-center bg-paper px-4 py-12 font-sans text-ink">
-      <section className="w-[min(560px,100%)]">
-        <h1 className="font-serif text-xl font-semibold">本地房间暂不可用</h1>
-        <p className="leading-relaxed [overflow-wrap:anywhere]">{message}</p>
+    <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
+      <section className="w-[min(480px,100%)]" role="alert">
+        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">本地房间暂不可用</h1>
+        <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
       </section>
     </main>
   );

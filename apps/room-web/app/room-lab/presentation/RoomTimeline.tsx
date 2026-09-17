@@ -1,54 +1,132 @@
-import { useEffect, useRef } from 'react';
-import type { RoomLabAgentView, RoomLabEventView } from '../read-model';
-import { AgentAvatar } from './AgentAvatar';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDown } from '@phosphor-icons/react/dist/ssr/ArrowDown';
+import type { RoomLabAgentId, RoomLabAgentView, RoomLabEventView } from '../read-model';
+import { AgentMark } from './AgentMark';
 import { RoomMessage } from './RoomMessage';
+import { formatElapsed } from './format-time';
+import type { Round } from './round';
+import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 
-export function RoomTimeline({ events, head, agents }: {
-  events: RoomLabEventView[]; head: number; agents: RoomLabAgentView[];
+/**
+ * A state pill: Badge carries the colour pair, this carries 宣纸's pill metrics
+ * and lets the text wrap, which a stock badge does not do.
+ */
+const statePill = 'm-0 w-full justify-start gap-2 whitespace-normal px-2.5 py-[5px] text-left text-[13px] leading-snug';
+
+export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
+  events: RoomLabEventView[]; head: number; agents: RoomLabAgentView[]; round: Round | undefined;
+  elapsedOf: (agentId: RoomLabAgentId) => number | undefined;
 }) {
   const scrollRef = useRef<HTMLElement>(null);
   const atBottom = useRef(true);
-  const runningAgents = agents.filter(agent => agent.active && agent.status === 'running');
+  const lastHead = useRef(head);
+  const [unseen, setUnseen] = useState(0);
+  const turns = round?.turns.filter(turn => turn.phase !== 'done') ?? [];
+
   useEffect(() => {
     const pane = scrollRef.current;
-    if (pane && atBottom.current) pane.scrollTop = pane.scrollHeight;
-  }, [head, runningAgents.length]);
+    if (!pane) return;
+    if (atBottom.current) {
+      pane.scrollTop = pane.scrollHeight;
+      setUnseen(0);
+    } else if (head > lastHead.current) {
+      setUnseen(count => count + (head - lastHead.current));
+    }
+    lastHead.current = head;
+  }, [head, turns.length]);
+
+  const jump = () => {
+    const pane = scrollRef.current;
+    if (pane) pane.scrollTop = pane.scrollHeight;
+    atBottom.current = true;
+    setUnseen(0);
+  };
+
   return (
-    <section
-      ref={scrollRef}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3"
-      aria-label="房间对话"
-      onScroll={event => {
-        const pane = event.currentTarget;
-        atBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 100;
-      }}
-    >
-      <span className="sr-only" role="status" aria-live="polite">已收到 {events.length} 条消息，最新序号 {head}。</span>
-      {events.length === 0 ? (
-        <div className="flex min-h-full flex-col justify-center px-1 py-6">
-          <div className="mb-3 flex items-center pl-2">
-            {agents.filter(agent => agent.active).map(agent => (
-              <AgentAvatar
-                key={agent.id}
-                agentId={agent.id}
-                className="-ml-1.5 size-10 rounded-full border-2 border-washi object-cover"
-              />
-            ))}
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <section
+        ref={scrollRef}
+        // `relative` makes this the containing block for anything positioned
+        // inside a message; without it their overflow escapes the scroll clip
+        // and stretches the whole document (measured: 6913px tall page).
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-7 pt-[22px] pb-3"
+        aria-label="房间对话"
+        onScroll={event => {
+          const pane = event.currentTarget;
+          atBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 100;
+          if (atBottom.current) setUnseen(0);
+        }}
+      >
+        <span className="sr-only" role="status" aria-live="polite">已收到 {events.length} 条消息，最新序号 {head}。</span>
+        {events.length === 0 ? (
+          <div className="flex min-h-full flex-col justify-end pb-6">
+            <div className="mb-3 flex items-center gap-1.5">
+              {agents.map(agent => <AgentMark key={agent.id} agentId={agent.id} size={22} />)}
+            </div>
+            <h2 className="m-0 mb-1 text-[18px] font-semibold">这间房还没有消息。</h2>
+            <p className="m-0 max-w-[46ch] font-serif text-base leading-[1.7] text-foreground/75">
+              直接说，在场的 {agents.length} 位会按顺序接话。输入 @，只问其中一位。
+            </p>
           </div>
-          <h2 className="m-0 mb-1.5 font-serif text-xl font-semibold">这间房还没有消息。</h2>
-          <p className="m-0 max-w-[46ch] text-sm leading-relaxed text-muted">直接说，在场的人会按顺序接话。输入 @，只问其中一位。</p>
-        </div>
-      ) : (
-        <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
-          {events.map(event => <RoomMessage key={event.seq} event={event} />)}
-        </ol>
+        ) : (
+          <ol className="m-0 flex list-none flex-col gap-[22px] p-0">
+            {events.map(event => <RoomMessage key={event.messageId} event={event} />)}
+          </ol>
+        )}
+        {turns.length > 0 && (
+          <ol className="m-0 mt-[22px] flex list-none flex-col gap-3 p-0" aria-label="这一轮">
+            {turns.map(({ agent, phase }) => (
+              <li key={agent.id} className="grid grid-cols-[30px_minmax(0,1fr)] items-center gap-3">
+                <AgentMark agentId={agent.id} className={phase === 'queued' ? 'opacity-55' : ''} />
+                {phase === 'now' && (
+                  <p className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground" role="status">
+                    <span aria-hidden="true" className="animate-pulse-soft inline-block size-1.5 rounded-full bg-info-foreground" />
+                    <b className="font-medium text-info-foreground">{agent.id}</b>
+                    正在生成
+                    <ElapsedLabel seconds={elapsedOf(agent.id)} />
+                  </p>
+                )}
+                {phase === 'queued' && (
+                  <p className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground">
+                    <b className="font-medium text-foreground/75">{agent.id}</b>排队中
+                  </p>
+                )}
+                {/* Status only. The draft and its one action live in the members column,
+                    so the held state has a single home. */}
+                {phase === 'held' && (
+                  <Badge variant="warning" className={statePill}>
+                    <span><b className="font-semibold">{agent.id}</b> 的草稿在等新消息，重读之后才会发出。去成员栏处理。</span>
+                  </Badge>
+                )}
+                {phase === 'error' && (
+                  <Badge variant="destructive-soft" className={`${statePill} [overflow-wrap:anywhere]`}>
+                    <span>
+                      <b className="font-semibold">{agent.id}</b> 这一轮没跑起来
+                      {agent.error ? <span className="block">{agent.error}</span> : null}
+                    </span>
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+      {unseen > 0 && (
+        <Button
+          size="xs"
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full px-3.5 shadow-card"
+          onClick={jump}
+        >
+          <ArrowDown size={13} weight="bold" />
+          {unseen} 条新消息
+        </Button>
       )}
-      {runningAgents.length > 0 && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted" role="status">
-          <AgentAvatar agentId={runningAgents[0]!.id} className="size-6 rounded-full object-cover" />
-          <span>{runningAgents.map(agent => agent.label).join('、')} 正在思考…</span>
-        </div>
-      )}
-    </section>
+    </div>
   );
+}
+
+function ElapsedLabel({ seconds }: { seconds: number | undefined }) {
+  if (seconds === undefined) return null;
+  return <span className="tabular-nums font-mono text-xs text-muted-foreground">{formatElapsed(seconds)}</span>;
 }

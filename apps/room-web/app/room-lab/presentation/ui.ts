@@ -1,13 +1,17 @@
-/** Shared Tailwind clusters. Type: 12 / 14 / 16 / 20. Space: 4 / 8 / 12 / 16. */
+/**
+ * What is left of the room's shared Tailwind clusters once the shadcn
+ * components carry the controls. Buttons, fields, badges and menus come from
+ * `~/components/ui/*`; only this one pure-typography cluster is shared here.
+ *
+ * Type: 12 / 13 / 14 / 16 / 24, nothing in between; 18 is allowed once, for the
+ * empty-state title. Space: 4 / 8 / 12 / 14 / 22 / 28.
+ * Radius: `rounded-sm` is 4px — controls, pills, fields; `rounded-md` is 6px —
+ * rows and menu items; `rounded-lg` is 8px — the composer card, the menus, the
+ * drawer, the count-off block. All three derive from shadcn's `--radius`.
+ * Surfaces: `background` is the sheet, `sidebar` the two margins beside it,
+ * `card` / `popover` anything lifted off the page. The margins are told from
+ * the sheet by a hairline (`sidebar-border`), not by a field of colour.
+ */
 
-export const focusRing =
-  'outline-none focus-visible:border-moss';
-
-export const sectionRow =
-  'flex h-7 items-center justify-between text-xs text-muted';
-
-export const textAction =
-  `h-7 rounded-md bg-transparent px-1.5 text-xs text-ink hover:bg-garden hover:text-moss-deep disabled:opacity-50 ${focusRing}`;
-
-export const quietButton =
-  `inline-flex h-8 items-center rounded-lg border border-line bg-washi px-3 text-sm text-moss-deep hover:border-moss hover:bg-garden disabled:opacity-50 ${focusRing}`;
+/** Section label in the rail and the context column. Quiet, never uppercase. */
+export const sectionLabel = 'm-0 text-xs font-medium text-muted-foreground';

@@ -71,10 +71,10 @@ export function ErrorBoundary() {
       : `${error.status} ${error.statusText}`.trim())
     : error instanceof Error ? error.message : '本地房间暂不可用';
   return (
-    <main className="grid min-h-dvh place-items-center bg-paper px-4 py-12 font-sans text-ink">
-      <section className="w-[min(560px,100%)]">
-        <h1 className="font-serif text-xl font-semibold">智能体管理暂不可用</h1>
-        <p className="leading-relaxed [overflow-wrap:anywhere]">{message}</p>
+    <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
+      <section className="w-[min(480px,100%)]" role="alert">
+        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">智能体页面暂不可用</h1>
+        <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
       </section>
     </main>
   );

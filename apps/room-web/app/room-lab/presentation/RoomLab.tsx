@@ -49,7 +49,6 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       setOptimistic(events => events.filter(event => event.messageId !== acceptedId));
       setValue('');
     }
-    if (submittedAction.current?.action === 'task') setValue('');
     submittedAction.current = undefined;
   }, [fetcher.data, revalidator, state.epoch]);
 

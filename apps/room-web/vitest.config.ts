@@ -8,5 +8,9 @@ export default defineConfig({
     alias: { '~': path.resolve(__dirname, 'app') },
   },
   esbuild: { jsx: 'automatic' },
-  test: { environment: 'node' },
+  test: {
+    environment: 'node',
+    // Only the jsdom files need it; in a node environment the shims no-op.
+    setupFiles: [path.resolve(__dirname, 'vitest.setup.ts')],
+  },
 });

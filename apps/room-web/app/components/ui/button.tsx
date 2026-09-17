@@ -1,46 +1,76 @@
-import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '~/lib/utils';
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "~/lib/utils"
+import { Slot } from "radix-ui"
 
+/*
+ * Stock shadcn new-york, retuned to 宣纸's control scale: 4px radius instead of
+ * 6px, 30px instead of 36px, and no `shadow-xs` — this system is flat and only
+ * the composer card floats. `outline` and `ghost` carry foreground/75 so a
+ * secondary action reads as quieter than a heading, and `destructive` uses
+ * --destructive-foreground rather than a hard-coded white, because in the dark
+ * theme --destructive is a light red that white text would sit on illegibly.
+ */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-[filter,background-color,color,border-color] outline-none disabled:pointer-events-none disabled:opacity-50',
+  "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-sm text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-45 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: 'bg-moss text-washi hover:bg-moss-deep',
-        outline: 'border border-line bg-washi text-moss-deep hover:border-moss hover:bg-garden',
-        ghost: 'bg-transparent text-ink hover:bg-garden hover:text-moss-deep',
-        destructive: 'bg-seal text-washi hover:opacity-90',
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20",
+        outline:
+          "border border-input bg-transparent text-foreground/75 hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost:
+          "text-foreground/75 hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: 'h-8 px-3',
-        sm: 'h-7 px-2 text-xs',
-        icon: 'size-8',
+        default: "h-[30px] px-3 has-[>svg]:px-2.5",
+        xs: "h-6 gap-1 px-1.5 text-xs",
+        sm: "h-[26px] gap-1.5 px-2.5 text-xs",
+        lg: "h-10 px-6 has-[>svg]:px-4",
+        icon: "size-[30px]",
+        "icon-xs": "size-6",
+        "icon-sm": "size-7",
+        "icon-lg": "size-10",
       },
     },
     defaultVariants: {
-      variant: 'default',
-      size: 'default',
+      variant: "default",
+      size: "default",
     },
-  },
-);
+  }
+)
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<'button'> & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : 'button';
+/*
+ * forwardRef, because this repo is on React 18 while the shadcn registry now
+ * emits React 19 components that take `ref` as a plain prop. Without it Radix
+ * silently loses the trigger it anchors and returns focus to, and `ref` on a
+ * field does nothing.
+ */
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> &
+    VariantProps<typeof buttonVariants> & { asChild?: boolean }
+>(function Button(
+  { className, variant = "default", size = "default", asChild = false, ...props },
+  ref,
+) {
+  const Comp = asChild ? Slot.Root : "button"
+
   return (
     <Comp
+      ref={ref}
       data-slot="button"
-      className={cn(buttonVariants({ variant, size }), className)}
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
-  );
-}
+  )
+})
 
-export { Button, buttonVariants };
+export { Button, buttonVariants }

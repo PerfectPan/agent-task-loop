@@ -1,148 +1,174 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from '@remix-run/react';
-import type { RoomCatalogItemView, RoomLabAgentView } from '../read-model';
-import { AgentAvatar } from './AgentAvatar';
-import { agentRoleLabels } from './agent-role';
-import { agentStatusLabels } from './agent-status';
+import type { RoomCatalogItemView } from '../read-model';
+import { RiverMark } from './AgentMark';
 import { formatAgo } from './format-time';
 import { PRODUCT_NAME } from './product';
-import { Button, buttonVariants } from '~/components/ui/button';
-import { cn } from '~/lib/utils';
-import { focusRing, sectionRow } from './ui';
+import { sectionLabel } from './ui';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
 
-export function RoomSidebar({
-  rooms, currentRoomId, agents, disabled, onCreate, onManage, onCountOff, onDetails,
-}: {
+const navLink =
+  'flex h-7 items-center justify-between gap-2 rounded-md px-2 text-sm text-sidebar-foreground/75 no-underline transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-foreground';
+
+type ThemeChoice = 'light' | 'dark' | undefined;
+const THEME_KEY = 'rivus-theme';
+const themeLabels = { system: '跟随系统', light: '亮色', dark: '暗色' } as const;
+
+const SYSTEM_DARK = '(prefers-color-scheme: dark)';
+
+/** shadcn switches on a `dark` class, so 跟随系统 has to resolve the query itself. */
+function applyTheme(choice: ThemeChoice) {
+  const dark = choice === 'dark'
+    || (choice === undefined && window.matchMedia(SYSTEM_DARK).matches);
+  document.documentElement.classList.toggle('dark', dark);
+}
+
+/**
+ * Three states, one text action: follow the system, force light, force dark.
+ * The choice is written to the same key the inline script in root.tsx reads
+ * before first paint, so a reload does not flash the other theme.
+ */
+function ThemeAction() {
+  const [choice, setChoice] = useState<ThemeChoice>(undefined);
+  // Read after mount: the server has no localStorage, and the button's first
+  // client render has to match the markup the server sent.
+  useEffect(() => {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    if (stored === 'light' || stored === 'dark') setChoice(stored);
+  }, []);
+  // While following the system there is no media query doing the work for us:
+  // the class has to be restamped whenever the system flips.
+  useEffect(() => {
+    if (choice !== undefined) return;
+    const query = window.matchMedia(SYSTEM_DARK);
+    const sync = () => applyTheme(undefined);
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, [choice]);
+  const cycle = () => {
+    const next: ThemeChoice = choice === undefined ? 'light' : choice === 'light' ? 'dark' : undefined;
+    setChoice(next);
+    if (next) window.localStorage.setItem(THEME_KEY, next);
+    else window.localStorage.removeItem(THEME_KEY);
+    applyTheme(next);
+  };
+  return (
+    <Button variant="ghost" size="xs" onClick={cycle}>
+      主题：{themeLabels[choice ?? 'system']}
+    </Button>
+  );
+}
+
+export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
   rooms: RoomCatalogItemView[];
   currentRoomId: string;
-  agents: RoomLabAgentView[];
   disabled: boolean;
-  onCreate: () => void;
-  onManage: () => void;
-  onCountOff: () => void;
-  onDetails: () => void;
+  onCreate: (title: string) => void;
 }) {
   const location = useLocation();
   const onAgents = location.pathname === '/room/agents';
+  const [creating, setCreating] = useState(false);
+  const [title, setTitle] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (creating) inputRef.current?.focus(); }, [creating]);
+
   return (
-    <aside
-      className="flex min-h-0 flex-col overflow-y-auto border-r border-line/70 bg-garden/55 px-3 py-4 max-md:hidden"
+    <nav
+      className="flex min-h-0 flex-col gap-[18px] overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground px-2.5 py-3.5 max-[820px]:flex-row max-[820px]:items-center max-[820px]:gap-4 max-[820px]:overflow-x-auto max-[820px]:border-r-0 max-[820px]:border-b max-[820px]:py-2.5"
       aria-label="房间"
     >
-      <div className="mb-4 flex h-10 items-center gap-2">
-        <img src="/images/spirit.png" width={36} height={36} alt="" className="size-9 shrink-0 object-contain" />
-        <div>
-          <strong className="block text-base font-semibold leading-tight">{PRODUCT_NAME}</strong>
-          <p className="mt-0.5 text-xs leading-tight text-muted">本地协作</p>
-        </div>
+      <div className="flex items-center gap-2 px-2 pt-1 max-[820px]:shrink-0 max-[820px]:pt-0">
+        <RiverMark size={18} />
+        <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
+        <span className="text-xs leading-none text-muted-foreground max-[820px]:hidden">本地工作台</span>
       </div>
-      <nav className="mb-4 flex gap-1" aria-label="后台">
+
+      <div className="flex flex-col gap-0.5 max-[820px]:flex-row max-[820px]:shrink-0" aria-label="页面">
         <Link
           to={`/room/${currentRoomId}`}
           prefetch="intent"
           preventScrollReset
           aria-current={!onAgents ? 'page' : undefined}
-          className={`rounded-md px-2 py-1 text-sm no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
+          className={navLink}
         >
           房间
+          <span className="tabular-nums text-xs text-muted-foreground">{rooms.length}</span>
         </Link>
         <Link
           to="/room/agents"
           prefetch="intent"
           preventScrollReset
           aria-current={onAgents ? 'page' : undefined}
-          className={`rounded-md px-2 py-1 text-sm no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
+          className={navLink}
         >
           智能体
         </Link>
-      </nav>
-      <div className={sectionRow}>
-        <span>进行中</span>
-        <Button type="button" variant="ghost" size="sm" onClick={onCreate}>新建</Button>
       </div>
-      <ul className="mt-2 mb-6 flex flex-col gap-1">
-        {rooms.map(room => (
-          <li key={room.id}>
-            <Link
-              to={`/room/${room.id}`}
-              prefetch="intent"
-              preventScrollReset
-              aria-current={room.id === currentRoomId ? 'page' : undefined}
-              className={`block rounded-[10px] px-3 py-2 text-ink no-underline hover:bg-washi/80 aria-[current=page]:bg-gold ${focusRing}`}
-            >
-              <span className="block text-sm font-semibold leading-tight [overflow-wrap:anywhere]">{room.title}</span>
-              <span className="mt-0.5 block text-xs leading-tight text-muted">
-                {room.memberCount} 人 · {formatAgo(room.updatedAt)}
-              </span>
-              {room.lastLine && (
-                <span className="mt-1 block truncate text-xs leading-tight text-ink/80">{room.lastLine}</span>
-              )}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <div className={sectionRow}>
-        <span>在场</span>
-        <Button type="button" variant="ghost" size="sm" onClick={onManage} aria-label="管理房间成员">管理成员</Button>
-      </div>
-      <ul className="mt-2 mb-4 flex flex-col gap-1">
-        {agents.map(agent => (
-          <li key={agent.id} className="flex min-h-11 items-center gap-2 px-2 py-1">
-            <AgentAvatar agentId={agent.id} className="size-10 shrink-0 rounded-full object-cover" />
-            <div className="min-w-0">
-              <strong className="block text-sm font-semibold leading-tight">{agent.label}</strong>
-              <span className="text-xs leading-tight text-muted">
-                {agentRoleLabels[agent.id]}
-                <span className="mx-1">·</span>
-                <span
-                  className="inline-flex items-center gap-1.5"
-                  data-status={agent.status}
-                >
-                  <i
-                    aria-hidden="true"
-                    data-status={agent.status}
-                    className="inline-block size-1.5 rounded-full bg-muted data-[status=posted]:bg-moss data-[status=completed]:bg-moss data-[status=silent]:bg-moss data-[status=running]:bg-hydrangea data-[status=held]:bg-hydrangea data-[status=error]:bg-seal"
-                  />
-                  {agentStatusLabels[agent.status]}
-                </span>
-              </span>
+
+      <div className="flex min-h-0 flex-col max-[820px]:min-w-0 max-[820px]:flex-1 max-[820px]:flex-row max-[820px]:items-center max-[820px]:gap-2">
+        <div className="mb-1 flex h-6 items-center justify-between px-2 max-[820px]:mb-0 max-[820px]:shrink-0 max-[820px]:px-0">
+          <h2 className={`${sectionLabel} max-[820px]:hidden`}>房间</h2>
+          {!creating && (
+            <Button variant="ghost" size="xs" disabled={disabled} onClick={() => setCreating(true)}>
+              新建
+            </Button>
+          )}
+        </div>
+        {creating && (
+          <form
+            className="shadow-card mb-2 flex flex-col gap-2 rounded-lg border border-input bg-card p-2 max-[820px]:mb-0 max-[820px]:w-[260px] max-[820px]:shrink-0"
+            onSubmit={event => {
+              event.preventDefault();
+              const next = title.trim();
+              if (!next) return;
+              onCreate(next);
+              setTitle('');
+              setCreating(false);
+            }}
+          >
+            <label className="sr-only" htmlFor="new-room-title">房间名</label>
+            <Input
+              ref={inputRef}
+              id="new-room-title"
+              value={title}
+              maxLength={80}
+              placeholder="这间房要做什么"
+              onChange={event => setTitle(event.currentTarget.value)}
+              onKeyDown={event => { if (event.key === 'Escape') { setCreating(false); setTitle(''); } }}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <Button type="button" variant="ghost" size="xs" onClick={() => { setCreating(false); setTitle(''); }}>取消</Button>
+              <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>建房间</Button>
             </div>
-          </li>
-        ))}
-      </ul>
-      <footer className="mt-auto flex flex-col border-t border-line pt-3">
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={disabled}
-          onClick={onCountOff}
-          className="h-8 justify-start px-2"
-        >
-          {disabled ? '正在检查…' : '检查连接'}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onDetails}
-          className="h-8 justify-start px-2"
-        >
-          运行详情
-        </Button>
-        <Link
-          to="/room/agents"
-          prefetch="intent"
-          className={cn(buttonVariants({ variant: 'ghost' }), 'h-8 justify-start px-2 no-underline')}
-        >
-          智能体管理
-        </Link>
-        <Link
-          to="/board"
-          prefetch="intent"
-          className={cn(buttonVariants({ variant: 'ghost' }), 'h-8 justify-start px-2 no-underline')}
-        >
-          任务看板
-        </Link>
-        <small className="px-2 pt-1 text-xs leading-snug text-muted">保存在这台机器上</small>
+          </form>
+        )}
+        <ul className="m-0 flex list-none flex-col gap-0.5 p-0 max-[820px]:flex-row max-[820px]:gap-1">
+          {rooms.map(room => (
+            <li key={room.id} className="max-[820px]:shrink-0">
+              <Link
+                to={`/room/${room.id}`}
+                prefetch="intent"
+                preventScrollReset
+                aria-current={room.id === currentRoomId ? 'page' : undefined}
+                className="block rounded-md px-2 py-1.5 text-sidebar-foreground/75 no-underline transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:text-sidebar-foreground max-[820px]:whitespace-nowrap"
+              >
+                <span className="block text-sm leading-snug [overflow-wrap:anywhere] max-[820px]:inline">{room.title}</span>
+                {/* Relative time is read off the clock at render; the server and the
+                    browser render seconds apart, so the two strings may differ. */}
+                <span className="mt-0.5 block text-xs leading-tight text-muted-foreground max-[820px]:hidden" suppressHydrationWarning>
+                  {room.memberCount} 位成员 · {formatAgo(room.updatedAt)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <footer className="mt-auto flex flex-col items-start gap-0.5 px-0.5 pt-2 text-xs leading-snug text-muted-foreground max-[820px]:hidden">
+        <ThemeAction />
+        <span className="px-1.5">保存在这台机器上</span>
       </footer>
-    </aside>
+    </nav>
   );
 }

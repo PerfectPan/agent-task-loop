@@ -3,11 +3,20 @@ import { ArrowDown } from '@phosphor-icons/react/dist/ssr/ArrowDown';
 import { Plus } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Minus } from '@phosphor-icons/react/dist/ssr/Minus';
 import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
-import { AgentAvatar } from './AgentAvatar';
+import { AgentMark } from './AgentMark';
 import { agentAvailabilityLabels } from './agent-availability';
-import { agentStatusLabels } from './agent-status';
+import { agentRoleLabels } from './agent-role';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
+import { sectionLabel } from './ui';
+
+/** CLI availability, not member state: runnable reads as info, installed-but-
+ *  not-runnable as warning, absent as the neutral chip. */
+const availabilityVariant = {
+  runnable: 'info',
+  found: 'warning',
+  missing: 'muted',
+} as const;
 
 export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
   agents: RoomLabAgentView[]; activeAgentIds: RoomLabAgentId[];
@@ -24,49 +33,50 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
     onCompose(next);
   };
   return (
-    <section aria-label="成员与报数顺序">
-      <p className="text-sm leading-relaxed text-muted">
-        选择一起协作的 Agent。未安装的也可以入座，发言时才会真正调用本机 CLI。下方顺序也是检查连接时的报数顺序。
+    <section aria-label="成员与发言顺序" className="flex flex-col gap-2">
+      <p className="m-0 text-[13px] leading-relaxed text-foreground/75">
+        这里的顺序就是发言顺序，也是报数顺序。未安装的也能加入，叫到它时才真正调用本机 CLI。
       </p>
-      <ol className="my-3 list-none p-0">
+      <ol className="m-0 flex list-none flex-col p-0">
         {activeAgents.map((agent, index) => (
-          <li key={agent.id} className="flex items-center gap-2 border-b border-line py-2">
-            <span className="w-3 text-xs text-muted">{index + 1}</span>
-            <AgentAvatar agentId={agent.id} className="size-10 rounded-full object-cover" />
+          <li key={agent.id} className="flex items-center gap-2 border-b border-border py-2">
+            <span className="tabular-nums w-3 text-xs text-muted-foreground">{index + 1}</span>
+            <AgentMark agentId={agent.id} size={22} />
             <div className="min-w-0 flex-1">
-              <strong className="block text-sm [overflow-wrap:anywhere]">{agent.label}</strong>
-              <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                <Badge variant={agent.availability}>{agentAvailabilityLabels[agent.availability]}</Badge>
-                <span>{agentStatusLabels[agent.status]}</span>
+              <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
+              <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
+                <span>{agentRoleLabels[agent.id]}</span>
               </small>
             </div>
             <div className="flex gap-1">
-              <Button type="button" variant="outline" size="icon" disabled={disabled || index === 0} onClick={() => move(index, -1)}
-                aria-label={`将 ${agent.label} 上移`}><ArrowUp size={18} /></Button>
-              <Button type="button" variant="outline" size="icon" disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
-                aria-label={`将 ${agent.label} 下移`}><ArrowDown size={18} /></Button>
-              <Button type="button" variant="outline" size="icon" disabled={disabled || activeAgents.length === 1}
+              <Button variant="outline" size="icon-sm" disabled={disabled || index === 0} onClick={() => move(index, -1)}
+                aria-label={`将 ${agent.label} 上移`}><ArrowUp size={15} /></Button>
+              <Button variant="outline" size="icon-sm" disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
+                aria-label={`将 ${agent.label} 下移`}><ArrowDown size={15} /></Button>
+              <Button variant="outline" size="icon-sm" disabled={disabled || activeAgents.length === 1}
                 onClick={() => onCompose(activeAgentIds.filter(id => id !== agent.id))}
-                aria-label={`移除 ${agent.label}`}><Minus size={18} /></Button>
+                aria-label={`移除 ${agent.label}`}><Minus size={15} /></Button>
             </div>
           </li>
         ))}
       </ol>
       {agents.some(agent => !activeAgentIds.includes(agent.id)) && <>
-        <h3 className="mt-6 text-sm">可加入的 Agent</h3>
-        <ul className="my-3 list-none p-0">
+        <h3 className={`${sectionLabel} mt-2`}>可加入</h3>
+        <ul className="m-0 flex list-none flex-col p-0">
           {agents.filter(agent => !activeAgentIds.includes(agent.id)).map(agent => (
-            <li key={agent.id} className="flex items-center gap-2 border-b border-line py-2">
-              <AgentAvatar agentId={agent.id} className="size-10 rounded-full object-cover" />
+            <li key={agent.id} className="flex items-center gap-2 border-b border-border py-2 last:border-b-0">
+              <span className="w-3" aria-hidden="true" />
+              <AgentMark agentId={agent.id} size={22} className="opacity-70" />
               <div className="min-w-0 flex-1">
-                <strong className="block text-sm [overflow-wrap:anywhere]">{agent.label}</strong>
-                <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                  <Badge variant={agent.availability}>{agentAvailabilityLabels[agent.availability]}</Badge>
-                  <span>{agent.role}</span>
+                <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
+                <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
+                  <span>{agentRoleLabels[agent.id]}</span>
                 </small>
               </div>
-              <Button type="button" variant="outline" size="icon" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
-                aria-label={`加入 ${agent.label}`}><Plus size={18} /></Button>
+              <Button variant="outline" size="icon-sm" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
+                aria-label={`加入 ${agent.label}`}><Plus size={15} /></Button>
             </li>
           ))}
         </ul>

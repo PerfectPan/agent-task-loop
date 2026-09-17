@@ -6,7 +6,15 @@ import {
 const KNOWN_MENTIONS = new Map<string, RoomLabAgentId>(
   ROOM_AGENT_ROSTER.map(agent => [agent.id, agent.id]),
 );
-const MENTION_PATTERN = /(?<![a-z0-9._%+-])@(all|[a-z][a-z-]*)(?=\s|$|[,.!?;:，。！？；：])/gi;
+/**
+ * The one mention grammar. Exported as a source string rather than a RegExp so
+ * every reader builds its own object and no one inherits someone else's
+ * lastIndex; the composer's string→document rebuild uses it so that what the
+ * editor turns into a chip is exactly what the server will read as a mention.
+ */
+export const ROOM_MENTION_SOURCE = String.raw`(?<![a-z0-9._%+-])@(all|[a-z][a-z-]*)(?=\s|$|[,.!?;:，。！？；：])`;
+
+const MENTION_PATTERN = new RegExp(ROOM_MENTION_SOURCE, 'gi');
 
 export interface RoomMessage {
   body: string;

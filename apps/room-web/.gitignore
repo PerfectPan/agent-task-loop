@@ -2,3 +2,6 @@ build/
 node_modules/
 .cache/
 .tmp-bin/
+
+# impeccable review captures are local evidence, not source
+.impeccable/review/

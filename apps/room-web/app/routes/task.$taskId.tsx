@@ -1,6 +1,5 @@
-import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
-import { json } from '@remix-run/node';
-import { Link, useLoaderData } from '@remix-run/react';
+import type { LoaderFunctionArgs, MetaFunction } from 'react-router';
+import { Link, useLoaderData } from 'react-router';
 import type { TaskRecord } from '@rivus/agent-task-loop/task-management';
 import type { LaneId } from '~/board/domain/lanes';
 import { laneOfUnknown } from '~/board/domain/lanes';
@@ -20,7 +19,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 export async function loader({ params }: LoaderFunctionArgs) {
   const taskId = params.taskId ?? '';
   const detail = await loadTaskDetail(taskId);
-  return json(detail);
+  return detail;
 }
 
 function hasValue(val: unknown): boolean {

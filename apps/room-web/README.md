@@ -1,6 +1,6 @@
 # @rivus/room-web — composable local agent workspace
 
-A local-only Remix application for composing authenticated coding agents into
+A local-only React Router 7 (framework mode) application for composing authenticated coding agents into
 one shared Room. The catalog currently includes Claude Relay, Claude, Codex,
 OpenCode, and DSH; a Room may use any non-empty subset in any order.
 
@@ -49,6 +49,6 @@ Enter sends, Shift+Enter inserts a line break, and Enter or Tab selects an open
 mention suggestion. IME composition does not submit. Escape closes dialogs and
 returns focus to their trigger. Drafts survive failed actions and polling updates.
 
-Component tests use the separate `vitest.config.ts`; Remix's browser Fast Refresh
-pipeline is not loaded into jsdom. Run `pnpm --filter @rivus/room-web test` and
+Component tests use the separate `vitest.config.ts`; React Router's browser Fast
+Refresh pipeline is not loaded into jsdom. Run `pnpm --filter @rivus/room-web test` and
 `pnpm --filter @rivus/room-web typecheck` to check this app.

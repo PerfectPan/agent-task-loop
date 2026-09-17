@@ -2,6 +2,7 @@ build/
 node_modules/
 .cache/
 .tmp-bin/
+.react-router/
 
 # impeccable review captures are local evidence, not source
 .impeccable/review/

@@ -1,13 +1,9 @@
 "use client"
 
 /*
- * Stock shadcn new-york, with two project-wide adaptations:
- *  - every wrapper that renders a DOM node is a React.forwardRef, because this
- *    repo is on React 18 while the registry now emits React 19 components that
- *    take `ref` as a plain prop. Without it Radix silently loses the node it
- *    positions, traps focus in and returns focus to.
- *  - the motion classes are gone (tw-animate-css is deliberately not
- *    installed): this system transitions colour only, never position or scale.
+ * Stock shadcn new-york, minus the motion classes (tw-animate-css is
+ * deliberately not installed): this system transitions colour only, never
+ * position or scale.
  */
 import * as React from "react"
 import { cn } from "~/lib/utils"
@@ -18,23 +14,17 @@ function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-const SheetTrigger = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Trigger>,
-  React.ComponentProps<typeof SheetPrimitive.Trigger>
->(function SheetTrigger({
+function SheetTrigger({
   ...props
-}, ref) {
-  return <SheetPrimitive.Trigger ref={ref} data-slot="sheet-trigger" {...props} />
-})
+}: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
+  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+}
 
-const SheetClose = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Close>,
-  React.ComponentProps<typeof SheetPrimitive.Close>
->(function SheetClose({
+function SheetClose({
   ...props
-}, ref) {
-  return <SheetPrimitive.Close ref={ref} data-slot="sheet-close" {...props} />
-})
+}: React.ComponentProps<typeof SheetPrimitive.Close>) {
+  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
+}
 
 function SheetPortal({
   ...props
@@ -42,16 +32,12 @@ function SheetPortal({
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
-const SheetOverlay = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Overlay>,
-  React.ComponentProps<typeof SheetPrimitive.Overlay>
->(function SheetOverlay({
+function SheetOverlay({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
   return (
     <SheetPrimitive.Overlay
-      ref={ref}
       data-slot="sheet-overlay"
       className={cn(
         // a 50% black scrim is a foreign object on this palette; the
@@ -62,26 +48,22 @@ const SheetOverlay = React.forwardRef<
       {...props}
     />
   )
-})
-
-const SheetContent = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Content>,
-  React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left"
-  showCloseButton?: boolean
 }
->(function SheetContent({
+
+function SheetContent({
   className,
   children,
   side = "right",
   showCloseButton = true,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof SheetPrimitive.Content> & {
+  side?: "top" | "right" | "bottom" | "left"
+  showCloseButton?: boolean
+}) {
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
-        ref={ref}
         data-slot="sheet-content"
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-popover text-popover-foreground shadow-card",
@@ -107,69 +89,53 @@ const SheetContent = React.forwardRef<
       </SheetPrimitive.Content>
     </SheetPortal>
   )
-})
+}
 
-const SheetHeader = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(function SheetHeader({ className, ...props }, ref) {
+function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      ref={ref}
       data-slot="sheet-header"
       className={cn("flex flex-col gap-1.5 p-4", className)}
       {...props}
     />
   )
-})
+}
 
-const SheetFooter = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(function SheetFooter({ className, ...props }, ref) {
+function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      ref={ref}
       data-slot="sheet-footer"
       className={cn("mt-auto flex flex-col gap-2 p-4", className)}
       {...props}
     />
   )
-})
+}
 
-const SheetTitle = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Title>,
-  React.ComponentProps<typeof SheetPrimitive.Title>
->(function SheetTitle({
+function SheetTitle({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof SheetPrimitive.Title>) {
   return (
     <SheetPrimitive.Title
-      ref={ref}
       data-slot="sheet-title"
       className={cn("font-semibold text-foreground", className)}
       {...props}
     />
   )
-})
+}
 
-const SheetDescription = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Description>,
-  React.ComponentProps<typeof SheetPrimitive.Description>
->(function SheetDescription({
+function SheetDescription({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof SheetPrimitive.Description>) {
   return (
     <SheetPrimitive.Description
-      ref={ref}
       data-slot="sheet-description"
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   )
-})
+}
 
 export {
   Sheet,

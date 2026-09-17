@@ -1,11 +1,15 @@
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
 import {
   Form,
   Link,
+  data,
   isRouteErrorResponse,
+  redirect,
   useActionData,
   useRouteError,
-} from '@remix-run/react';
+  type ActionFunctionArgs,
+  type HeadersFunction,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import {
   RoomLabBusyError,
@@ -24,18 +28,21 @@ import { RiverMark } from '../room-lab/presentation/AgentMark';
 import { PRODUCT_NAME } from '../room-lab/presentation/product';
 import { Button } from '../components/ui/button';
 
+/** Single fetch reads response headers off this export, not off the loader. */
+export const headers: HeadersFunction = () => noStoreHeaders;
+
 export async function loader(_args: LoaderFunctionArgs) {
   try {
     assertLocalRuntime();
   } catch (error) {
     if (error instanceof LocalRequestError) {
-      throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
     }
     throw error;
   }
   const last = getRoomLabHost().lastOpened();
   if (last) return redirect(`/room/${last.id}`);
-  return json({ empty: true as const }, { headers: noStoreHeaders });
+  return data({ empty: true as const }, { headers: noStoreHeaders });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -43,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
     assertLocalRuntime();
     const created = await createRoomFromRequest(request);
     if (wantsJson(request)) {
-      return json({ ok: true as const, redirectTo: `/room/${created.roomId}` }, { headers: noStoreHeaders });
+      return data({ ok: true as const, redirectTo: `/room/${created.roomId}` }, { headers: noStoreHeaders });
     }
     return redirect(`/room/${created.roomId}`);
   } catch (error) {
@@ -55,7 +62,7 @@ export async function action({ request }: ActionFunctionArgs) {
           ? error.status
           : 500;
     const message = error instanceof Error ? error.message : 'Room action failed';
-    return json({ ok: false as const, error: message }, { status, headers: noStoreHeaders });
+    return data({ ok: false as const, error: message }, { status, headers: noStoreHeaders });
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from '@remix-run/react';
+import { Link, useLocation } from 'react-router';
 import type { RoomCatalogItemView } from '../read-model';
 import { RiverMark } from './AgentMark';
 import { formatAgo } from './format-time';

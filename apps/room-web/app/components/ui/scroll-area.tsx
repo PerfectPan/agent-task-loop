@@ -1,23 +1,15 @@
-/*
- * Stock shadcn new-york, with every DOM wrapper converted to React.forwardRef:
- * this repo is on React 18 and the registry now emits React 19 components that
- * take `ref` as a plain prop, which React 18 drops with a warning.
- */
+/* Stock shadcn new-york. */
 import * as React from "react"
 import { cn } from "~/lib/utils"
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
 
-const ScrollArea = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentProps<typeof ScrollAreaPrimitive.Root>
->(function ScrollArea({
+function ScrollArea({
   className,
   children,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
   return (
     <ScrollAreaPrimitive.Root
-      ref={ref}
       data-slot="scroll-area"
       className={cn("relative", className)}
       {...props}
@@ -32,19 +24,15 @@ const ScrollArea = React.forwardRef<
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   )
-})
+}
 
-const ScrollBar = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-  React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(function ScrollBar({
+function ScrollBar({
   className,
   orientation = "vertical",
   ...props
-}, ref) {
+}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
-      ref={ref}
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
@@ -63,6 +51,6 @@ const ScrollBar = React.forwardRef<
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   )
-})
+}
 
 export { ScrollArea, ScrollBar }

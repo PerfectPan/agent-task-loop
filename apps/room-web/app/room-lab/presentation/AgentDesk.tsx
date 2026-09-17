@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Link, useNavigation } from '@remix-run/react';
+import { Form, Link, useNavigation } from 'react-router';
 import type { AgentDeskView, RoomLabAgentId } from '../read-model';
 import { AgentMark, RiverMark } from './AgentMark';
 import { agentAvailabilityLabels } from './agent-availability';

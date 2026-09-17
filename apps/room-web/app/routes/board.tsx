@@ -1,6 +1,5 @@
-import type { HeadersFunction, LoaderFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
-import { Link, useLoaderData } from '@remix-run/react';
+import type { HeadersFunction, LoaderFunctionArgs } from 'react-router';
+import { Link, useLoaderData } from 'react-router';
 import type { TaskRecord } from '@rivus/agent-task-loop/task-management';
 import type { Lane, LaneId } from '~/board/domain/lanes';
 import { loadBoard } from '~/board/application/board.server';
@@ -12,7 +11,7 @@ export const headers: HeadersFunction = () => ({
 export async function loader({ request }: LoaderFunctionArgs) {
   void request;
   const board = await loadBoard();
-  return json(board);
+  return board;
 }
 
 /** Exhaustive over LaneId, so a new lane without its own words is a type error. */

@@ -444,11 +444,10 @@ components:
 
 ## Components
 
-组件全部来自 `app/components/ui/*`，由 `npx shadcn@latest add` 装入（`components.json`：new-york、neutral、cssVariables、phosphor 图标、`~/components/ui` 别名）。相对 registry 的改动只有三类，每个文件顶部都写了原因：
+组件全部来自 `app/components/ui/*`，由 `npx shadcn@latest add` 装入（`components.json`：new-york、neutral、cssVariables、phosphor 图标、`~/components/ui` 别名）。本仓库在 React 19，`ref` 是普通 prop，组件保持 registry 原样的函数写法。相对 registry 的改动只有两类，每个文件顶部都写了原因：
 
-1. **forwardRef**：本仓库在 React 18，而 registry 现在产出 React 19 的写法（`ref` 当普通 prop）。所有渲染 DOM 节点的包装都转成了 `React.forwardRef`，否则 Radix 会悄悄丢掉它用来定位、锁焦点、还焦点的那个节点。
-2. **尺度**：圆角 6px → 4px，控件高 36px → 30px，去掉 `shadow-xs`——这套系统是平的。
-3. **动效**：`tw-animate-css` 没有安装，`slide-in` / `zoom-in` / `fade-in` 这些 class 已从 `Sheet` 和 `DropdownMenu` 里删掉，而不是留成无效 class。这套系统只过渡颜色。
+1. **尺度**：圆角 6px → 4px，控件高 36px → 30px，去掉 `shadow-xs`——这套系统是平的。
+2. **动效**：`tw-animate-css` 没有安装，`slide-in` / `zoom-in` / `fade-in` 这些 class 已从 `Sheet` 和 `DropdownMenu` 里删掉，而不是留成无效 class。这套系统只过渡颜色。
 
 `lucide-react` 没有安装：`shadcn add` 带进来的图标已换成 `components.json` 指定的 phosphor（`XIcon` → `X`，`CheckIcon` → `Check`，`ChevronRightIcon` → `CaretRight`，`CircleIcon` → `Circle`）。
 

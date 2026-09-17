@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { afterEach, describe, expect, it } from 'vitest';
 import { action, loader } from '../../routes/room.$roomId';
 import { getRoomLabHost } from '../composition.server';
@@ -15,14 +15,14 @@ describe('Room action boundary', () => {
   });
 
   it('rejects a cross-origin JSON mutation', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Origin: 'https://attacker.example',
       },
       body: JSON.stringify({ action: 'reset' }),
-    })));
+    }))));
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
@@ -32,27 +32,27 @@ describe('Room action boundary', () => {
   });
 
   it('rejects form submissions before parsing the action', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Origin: 'http://127.0.0.1:3210',
       },
       body: 'action=reset',
-    })));
+    }))));
 
     expect(response.status).toBe(415);
   });
 
   it('rejects malformed JSON payloads as a client error', async () => {
-    const response = await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Origin: 'http://127.0.0.1:3210',
       },
       body: JSON.stringify({ action: 'task', title: 42 }),
-    })));
+    }))));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -67,14 +67,14 @@ describe('Room action boundary', () => {
       listAgents: runnableInventory,
     });
     const created = await getRoomLabHost().create({ title: '边界测试' });
-    const response = await action(args(new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
+    const response = asResponse(await action(args(new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Origin: 'http://127.0.0.1:3210',
       },
       body: JSON.stringify({ action: 'compose', agentIds: [] }),
-    }), created.roomId));
+    }), created.roomId)));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
@@ -88,7 +88,7 @@ describe('Room action boundary', () => {
     process.env.VERCEL = '1';
     try {
       const rejected = loader(loaderArgs(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa')));
-      await expect(rejected).rejects.toMatchObject({ status: 403 });
+      await expect(rejected).rejects.toMatchObject({ init: { status: 403 } });
     } finally {
       if (previous === undefined) delete process.env.VERCEL;
       else process.env.VERCEL = previous;
@@ -96,10 +96,27 @@ describe('Room action boundary', () => {
   });
 });
 
+/**
+ * Single fetch has the action return its value plus a response init rather than
+ * a Response. Rebuild the response the router would send, so the assertions
+ * stay about status codes and bodies.
+ */
+function asResponse(result: Awaited<ReturnType<typeof action>>): Response {
+  return Response.json(result.data, result.init ?? undefined);
+}
+
+const ROOM_PATTERN = '/room/:roomId';
+
 function args(request: Request, roomId = 'r_aaaaaaaaaa'): ActionFunctionArgs {
-  return { request, params: { roomId }, context: {} };
+  return { request, url: new URL(request.url), pattern: ROOM_PATTERN, params: { roomId }, context: {} };
 }
 
 function loaderArgs(request: Request): LoaderFunctionArgs {
-  return { request, params: { roomId: 'r_aaaaaaaaaa' }, context: {} };
+  return {
+    request,
+    url: new URL(request.url),
+    pattern: ROOM_PATTERN,
+    params: { roomId: 'r_aaaaaaaaaa' },
+    context: {},
+  };
 }

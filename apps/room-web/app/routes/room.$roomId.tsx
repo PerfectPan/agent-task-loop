@@ -1,9 +1,12 @@
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
 import {
+  data,
   isRouteErrorResponse,
   useLoaderData,
   useRouteError,
-} from '@remix-run/react';
+  type ActionFunctionArgs,
+  type HeadersFunction,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { RoomLab } from '../room-lab/presentation/RoomLab';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import {
@@ -21,6 +24,13 @@ import {
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
 
+/**
+ * Single fetch builds every response's headers from the route's `headers`
+ * export; a loader's own init headers only survive as cookies. Re-export
+ * no-store here so Room state stays uncached on document and .data alike.
+ */
+export const headers: HeadersFunction = () => noStoreHeaders;
+
 export async function loader({ params }: LoaderFunctionArgs) {
   try {
     assertLocalRuntime();
@@ -28,13 +38,13 @@ export async function loader({ params }: LoaderFunctionArgs) {
     if (!roomId || !isRoomIdentity(roomId)) {
       throw new LocalRequestError(404, 'Unknown Room');
     }
-    return json(await getRoomLabHost().snapshot(roomId), { headers: noStoreHeaders });
+    return data(await getRoomLabHost().snapshot(roomId), { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof RoomCatalogInvariantError) {
-      throw json({ error: error.message }, { status: 404, headers: noStoreHeaders });
+      throw data({ error: error.message }, { status: 404, headers: noStoreHeaders });
     }
     if (error instanceof LocalRequestError) {
-      throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
     }
     throw error;
   }
@@ -58,10 +68,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
         ...(input.goal === undefined ? {} : { goal: input.goal }),
         ...(input.agentIds === undefined ? {} : { memberIds: input.agentIds }),
       });
-      return json<RoomLabActionResponse>({ ok: true, state: created }, { headers: noStoreHeaders });
+      return data<RoomLabActionResponse>({ ok: true, state: created }, { headers: noStoreHeaders });
     }
     const state = await host.act(roomId, input, request.signal);
-    return json<RoomLabActionResponse>({ ok: true, state }, { headers: noStoreHeaders });
+    return data<RoomLabActionResponse>({ ok: true, state }, { headers: noStoreHeaders });
   } catch (error) {
     const status = error instanceof RoomLabBusyError
       ? 409
@@ -71,7 +81,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           ? error.status
           : 500;
     const message = error instanceof Error ? error.message : 'Room action failed';
-    return json<RoomLabActionResponse>(
+    return data<RoomLabActionResponse>(
       { ok: false, error: message },
       { status, headers: noStoreHeaders },
     );

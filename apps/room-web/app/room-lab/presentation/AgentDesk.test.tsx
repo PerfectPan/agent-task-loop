@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { AgentDesk } from './AgentDesk';
 import { PRODUCT_NAME } from './product';
 
-vi.mock('@remix-run/react', () => ({
+vi.mock('react-router', () => ({
   Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => <a href={to} {...rest}>{children}</a>,
   Form: ({ children, ...rest }: { children: React.ReactNode }) => <form {...rest}>{children}</form>,
   useNavigation: () => ({ state: 'idle', formData: undefined }),

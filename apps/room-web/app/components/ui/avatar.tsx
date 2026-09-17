@@ -1,25 +1,17 @@
-/*
- * Stock shadcn new-york, with every DOM wrapper converted to React.forwardRef:
- * this repo is on React 18 and the registry now emits React 19 components that
- * take `ref` as a plain prop, which React 18 drops with a warning.
- */
+/* Stock shadcn new-york. */
 import * as React from "react"
 import { cn } from "~/lib/utils"
 import { Avatar as AvatarPrimitive } from "radix-ui"
 
-const Avatar = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  React.ComponentProps<typeof AvatarPrimitive.Root> & {
-  size?: "default" | "sm" | "lg"
-}
->(function Avatar({
+function Avatar({
   className,
   size = "default",
   ...props
-}, ref) {
+}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
+  size?: "default" | "sm" | "lg"
+}) {
   return (
     <AvatarPrimitive.Root
-      ref={ref}
       data-slot="avatar"
       data-size={size}
       className={cn(
@@ -29,35 +21,27 @@ const Avatar = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
-const AvatarImage = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Image>,
-  React.ComponentProps<typeof AvatarPrimitive.Image>
->(function AvatarImage({
+function AvatarImage({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
-      ref={ref}
       data-slot="avatar-image"
       className={cn("aspect-square size-full", className)}
       {...props}
     />
   )
-})
+}
 
-const AvatarFallback = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Fallback>,
-  React.ComponentProps<typeof AvatarPrimitive.Fallback>
->(function AvatarFallback({
+function AvatarFallback({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
   return (
     <AvatarPrimitive.Fallback
-      ref={ref}
       data-slot="avatar-fallback"
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
@@ -66,15 +50,11 @@ const AvatarFallback = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
-const AvatarBadge = React.forwardRef<
-  HTMLSpanElement,
-  React.ComponentProps<"span">
->(function AvatarBadge({ className, ...props }, ref) {
+function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
-      ref={ref}
       data-slot="avatar-badge"
       className={cn(
         "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background select-none",
@@ -86,15 +66,11 @@ const AvatarBadge = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
-const AvatarGroup = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(function AvatarGroup({ className, ...props }, ref) {
+function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      ref={ref}
       data-slot="avatar-group"
       className={cn(
         "group/avatar-group flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background",
@@ -103,18 +79,14 @@ const AvatarGroup = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
-const AvatarGroupCount = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(function AvatarGroupCount({
+function AvatarGroupCount({
   className,
   ...props
-}, ref) {
+}: React.ComponentProps<"div">) {
   return (
     <div
-      ref={ref}
       data-slot="avatar-group-count"
       className={cn(
         "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground ring-2 ring-background group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
@@ -123,7 +95,7 @@ const AvatarGroupCount = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
 export {
   Avatar,

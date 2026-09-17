@@ -1,10 +1,13 @@
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node';
 import {
+  data,
   isRouteErrorResponse,
   useActionData,
   useLoaderData,
   useRouteError,
-} from '@remix-run/react';
+  type ActionFunctionArgs,
+  type HeadersFunction,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { AgentDesk } from '../room-lab/presentation/AgentDesk';
 import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
@@ -16,13 +19,16 @@ import {
 } from '../room-lab/infrastructure/local-guard.server';
 import type { AgentDeskView } from '../room-lab/read-model';
 
+/** Single fetch reads response headers off this export, not off the loader. */
+export const headers: HeadersFunction = () => noStoreHeaders;
+
 export async function loader(_args: LoaderFunctionArgs) {
   try {
     assertLocalRuntime();
-    return json(getRoomLabHost().agentDesk(), { headers: noStoreHeaders });
+    return data(getRoomLabHost().agentDesk(), { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof LocalRequestError) {
-      throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
     }
     throw error;
   }
@@ -42,16 +48,16 @@ export async function action({ request }: ActionFunctionArgs) {
       const agentId = form.get('agentId');
       if (!isRoomLabAgentId(agentId)) throw new RoomLabInputError('Unknown agent');
       host.saveSystemPrompt(agentId, String(form.get('systemPrompt') ?? ''));
-      return json<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
+      return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
     }
     host.refreshInventory();
-    return json<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
+    return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof LocalRequestError) {
-      throw json({ error: error.message }, { status: error.status, headers: noStoreHeaders });
+      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
     }
     if (error instanceof RoomLabInputError) {
-      return json({ error: error.message }, { status: 400, headers: noStoreHeaders });
+      return data({ error: error.message }, { status: 400, headers: noStoreHeaders });
     }
     throw error;
   }

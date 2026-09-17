@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useFetcher, useNavigate, useRevalidator } from '@remix-run/react';
+import { useFetcher, useNavigate, useRevalidator } from 'react-router';
 import { RoomLabStateSelector } from '../read-model';
 import type { RoomLabAction, RoomLabActionResponse, RoomLabEventView, RoomLabState } from '../read-model';
 import { RoomWorkspace } from './RoomWorkspace';
@@ -12,8 +12,8 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string>();
   const [optimistic, setOptimistic] = useState<RoomLabEventView[]>([]);
-  const submittedAction = useRef<RoomLabAction>();
-  const handledResponse = useRef<RoomLabActionResponse>();
+  const submittedAction = useRef<RoomLabAction | undefined>(undefined);
+  const handledResponse = useRef<RoomLabActionResponse | undefined>(undefined);
   const stateSelector = useRef(new RoomLabStateSelector());
 
   useEffect(() => {

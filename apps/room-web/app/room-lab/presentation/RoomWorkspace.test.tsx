@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-vi.mock('@remix-run/react', () => ({
+vi.mock('react-router', () => ({
   Link: ({ to, children, prefetch: _prefetch, preventScrollReset: _reset, ...rest }: {
     to: string; children: React.ReactNode; prefetch?: string; preventScrollReset?: boolean;
   }) => <a href={to} {...rest}>{children}</a>,

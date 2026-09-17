@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   fetcher: { state: 'idle', data: undefined as RoomLabActionResponse | undefined, submit: vi.fn() },
   revalidator: { state: 'idle', revalidate: vi.fn() },
 }));
-vi.mock('@remix-run/react', () => ({
+vi.mock('react-router', () => ({
   useFetcher: () => mocks.fetcher,
   useRevalidator: () => mocks.revalidator,
   useNavigate: () => vi.fn(),

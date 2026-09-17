@@ -2,11 +2,9 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /* Stock shadcn new-york at 宣纸's control scale: 30px tall, 4px radius, flat. */
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  function Input({ className, type, ...props }, ref) {
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input
-      ref={ref}
       type={type}
       data-slot="input"
       className={cn(
@@ -18,6 +16,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       {...props}
     />
   )
-})
+}
 
 export { Input }

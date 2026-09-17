@@ -45,25 +45,18 @@ const buttonVariants = cva(
   }
 )
 
-/*
- * forwardRef, because this repo is on React 18 while the shadcn registry now
- * emits React 19 components that take `ref` as a plain prop. Without it Radix
- * silently loses the trigger it anchors and returns focus to, and `ref` on a
- * field does nothing.
- */
-const Button = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button"> &
-    VariantProps<typeof buttonVariants> & { asChild?: boolean }
->(function Button(
-  { className, variant = "default", size = "default", asChild = false, ...props },
-  ref,
-) {
+function Button({
+  className,
+  variant = "default",
+  size = "default",
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
-      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -71,6 +64,6 @@ const Button = React.forwardRef<
       {...props}
     />
   )
-})
+}
 
 export { Button, buttonVariants }

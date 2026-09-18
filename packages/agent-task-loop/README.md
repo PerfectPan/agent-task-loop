@@ -4,6 +4,13 @@ Agent Task Loop is a local CLI for running AI coding agent task delivery workflo
 
 It connects your task trackers (a Feishu Base table today, GitHub Issues optionally) to local coding agents, then drives a task through execution, review, rework, branch publishing, and Pull Request handoff. Tasks stay owned by their source — the CLI and TUI are an integration layer, not a system of record — so writes route back to the backend each task came from.
 
+The package also exports a Rivus Task Manager Plugin at
+`@rivus/agent-task-loop/rivus-plugin`. It provides one least-authority Agent
+Profile and four bounded task Tools without granting Shell, filesystem,
+credential, or Endpoint access. See the [Rivus Plugin guide](docs/rivus-plugin.md)
+for installation, Deployment configuration, Tool contracts, and data-safety
+boundaries.
+
 ## Local CLI
 
 Install dependencies from the monorepo root:
@@ -35,17 +42,19 @@ npx --no-install @rivus/agent-task-loop --help
 - `npx agent-task-loop sync`
 - `npx agent-task-loop schema`
 - `npx agent-task-loop schema --apply`
+- `npx agent-task-loop create --task TASK-101 --title "Fix login" --project web --agent codex --priority 3`
 - `npx agent-task-loop start --task TASK-101`
 - `npx agent-task-loop watch --task TASK-101`
 - `npx agent-task-loop resume --task TASK-101`
 - `npx agent-task-loop complete --task TASK-101`
 
-Summary commands support `--json` for scripts and agents:
+Commands with machine-readable output support `--json` for scripts and agents:
 
 ```bash
 npx agent-task-loop sync --json
 npx agent-task-loop schema --json
 npx agent-task-loop schema --apply --json
+npx agent-task-loop create --task TASK-101 --title "Fix login" --project web --agent codex --priority 3 --json
 npx agent-task-loop cleanup --task TASK-101 --json
 npx agent-task-loop complete --task TASK-101 --json
 ```

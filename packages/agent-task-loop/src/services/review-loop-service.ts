@@ -2,6 +2,11 @@ import type { TaskService } from './task-service';
 import { buildReworkPrompt } from './rework-prompt-service';
 import type { TargetAgent, TaskRecord } from '../types/task';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
+import {
+  formatFailureMessage,
+  type FailureMessageFormatter,
+} from './failure-message';
+import type { TaskMutationFence } from './task-service';
 
 export class ReviewLoopService {
   constructor(
@@ -31,10 +36,17 @@ export class ReviewLoopService {
         onSession?: (payload: { sessionId?: string; sessionName?: string }) => void;
       }) => Promise<{ verdict: '通过' | '驳回'; findings: string; sessionId?: string; sessionName?: string }>;
       isTaskDeliverable: (input: { task: TaskRecord; workspacePath: string }) => Promise<boolean>;
-      publishForAcceptance: (task: TaskRecord, workspacePath: string) => Promise<{ branch: string; commit: string }>;
+      publishForAcceptance: (
+        task: TaskRecord,
+        workspacePath: string,
+        signal?: AbortSignal,
+      ) => Promise<{ branch: string; commit: string }>;
       updatePublishResult: TaskService['updatePublishResult'];
       updateReviewState: TaskService['updateReviewState'];
+      mutationFence: TaskMutationFence;
       maxRounds: number;
+      signal?: AbortSignal;
+      formatFailure?: FailureMessageFormatter;
     },
   ) {}
 
@@ -43,11 +55,13 @@ export class ReviewLoopService {
     let promptOverride = input.promptOverride;
 
     while (round <= this.deps.maxRounds) {
+      this.deps.signal?.throwIfAborted();
       const execution = await this.deps.executeRound({
         task: input.task,
         promptOverride,
         round,
       });
+      this.assertActive();
 
       if (execution.workspacePath) {
         input.task.workspacePath = execution.workspacePath;
@@ -59,6 +73,7 @@ export class ReviewLoopService {
         input.task.executionSessionName = execution.sessionName;
       }
       if (execution.status === '已失败') {
+        this.deps.signal?.throwIfAborted();
         return;
       }
 
@@ -77,14 +92,16 @@ export class ReviewLoopService {
       round += 1;
     }
 
-    await this.deps.updateReviewState(input.task, {
+    this.assertActive();
+    await this.persist(() => this.deps.updateReviewState(input.task, {
       status: '已失败',
       currentOwner: '董事长',
       reviewRound: this.deps.maxRounds,
       lastError: `Review loop exceeded ${this.deps.maxRounds} rounds`,
       sessionHistory: input.task.sessionHistory,
       progressSummary: '自动 review loop 超出最大轮次',
-    });
+    }));
+    this.assertActive();
   }
 
   async resumeFromReview(input: {
@@ -93,6 +110,7 @@ export class ReviewLoopService {
     workspacePath: string;
     resultSummary?: string;
   }): Promise<void> {
+    this.deps.signal?.throwIfAborted();
     const reviewOutcome = await this.runReviewRound({
       task: input.task,
       round: input.round,
@@ -117,6 +135,7 @@ export class ReviewLoopService {
     resultSummary?: string;
     workspacePath: string;
   }): Promise<{ done: boolean; nextPromptOverride?: string }> {
+    this.deps.signal?.throwIfAborted();
     const reviewerAgent = 'codex' as TargetAgent;
     let review: Awaited<ReturnType<typeof this.deps.review>>;
     try {
@@ -131,7 +150,8 @@ export class ReviewLoopService {
         acceptanceFeedback: input.task.acceptanceVerdict === '打回' ? input.task.acceptanceFeedback : undefined,
       });
     } catch (error) {
-      await this.deps.updateReviewState(input.task, {
+      this.assertActive();
+      await this.persist(() => this.deps.updateReviewState(input.task, {
         status: '已失败',
         currentOwner: '董事长',
         reviewRound: input.round,
@@ -141,13 +161,19 @@ export class ReviewLoopService {
         reviewSessionName: input.task.reviewSessionName,
         sessionHistory: input.task.sessionHistory,
         progressSummary: `${reviewerAgent} 复核执行失败，请处理`,
-        lastError: error instanceof Error ? error.message : String(error),
+        lastError: formatFailureMessage(
+          this.deps.formatFailure,
+          error,
+          'Task review failed',
+        ),
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
+      this.assertActive();
       return { done: true };
     }
 
+    this.assertActive();
     input.task.sessionHistory = appendSessionHistory(
       input.task.sessionHistory,
       formatSessionHistoryEntry({
@@ -161,24 +187,36 @@ export class ReviewLoopService {
     );
 
     if (review.verdict === '通过') {
+      this.assertActive();
       const isDeliverable = await this.deps.isTaskDeliverable({
         task: input.task,
         workspacePath: input.workspacePath,
       });
+      this.assertActive();
       let acceptanceProgressSummary = `${reviewerAgent} review 已通过，等待验收`;
       if (isDeliverable) {
         try {
-          const publish = await this.deps.publishForAcceptance(input.task, input.workspacePath);
+          const publish = this.deps.signal
+            ? await this.deps.publishForAcceptance(
+                input.task,
+                input.workspacePath,
+                this.deps.signal,
+              )
+            : await this.deps.publishForAcceptance(input.task, input.workspacePath);
+          this.assertActive();
           acceptanceProgressSummary = '分支已推送，等待创建或更新 Pull Request';
-          await this.deps.updatePublishResult(input.task, {
+          this.assertActive();
+          await this.persist(() => this.deps.updatePublishResult(input.task, {
             publishBranch: publish.branch,
             publishCommit: publish.commit,
             progressSummary: acceptanceProgressSummary,
             resultSummary: input.task.resultSummary,
             sessionHistory: input.task.sessionHistory,
-          });
+          }));
+          this.assertActive();
         } catch (error) {
-          await this.deps.updateReviewState(input.task, {
+          this.assertActive();
+          await this.persist(() => this.deps.updateReviewState(input.task, {
             status: '待发布',
             currentOwner: '董事长',
             reviewRound: input.round,
@@ -190,14 +228,20 @@ export class ReviewLoopService {
             reviewSessionName: review.sessionName,
             sessionHistory: input.task.sessionHistory,
             progressSummary: '自动推送远端分支失败，请先处理发布问题',
-            lastError: error instanceof Error ? error.message : String(error),
+            lastError: formatFailureMessage(
+              this.deps.formatFailure,
+              error,
+              'Task publication failed',
+            ),
             runnerKind: '',
             runnerAgent: '',
-          });
+          }));
+          this.assertActive();
           return { done: true };
         }
       }
-      await this.deps.updateReviewState(input.task, {
+      this.assertActive();
+      await this.persist(() => this.deps.updateReviewState(input.task, {
         status: isDeliverable ? '待发布' : '待决策',
         currentOwner: '董事长',
         reviewRound: input.round,
@@ -211,11 +255,13 @@ export class ReviewLoopService {
         progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待董事长确定修复方向',
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
+      this.assertActive();
       return { done: true };
     }
 
-    await this.deps.updateReviewState(input.task, {
+    this.assertActive();
+    await this.persist(() => this.deps.updateReviewState(input.task, {
       status: '修复中',
       currentOwner: input.task.targetAgent,
       reviewRound: input.round,
@@ -229,7 +275,8 @@ export class ReviewLoopService {
       progressSummary: `${reviewerAgent} 复核未通过，正在回到 ${input.task.targetAgent} 修复`,
       runnerKind: '',
       runnerAgent: '',
-    });
+    }));
+    this.assertActive();
 
     return {
       done: false,
@@ -239,5 +286,14 @@ export class ReviewLoopService {
         reviewFindings: review.findings,
       }),
     };
+  }
+
+  private assertActive(): void {
+    this.deps.signal?.throwIfAborted();
+  }
+
+  private async persist(mutation: () => Promise<void>): Promise<void> {
+    this.assertActive();
+    await this.deps.mutationFence.run(mutation);
   }
 }

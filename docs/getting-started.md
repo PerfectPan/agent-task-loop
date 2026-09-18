@@ -75,6 +75,7 @@ npx @rivus/agent-task-loop --help
 
 ```bash
 npx --no-install @rivus/agent-task-loop run --agent codex
+npx --no-install @rivus/agent-task-loop create --task TASK-101 --title "Fix login" --project web --agent codex --priority 3
 npx --no-install @rivus/agent-task-loop start --task TASK-101
 npx --no-install @rivus/agent-task-loop watch --task TASK-101
 npx --no-install @rivus/agent-task-loop resume --task TASK-101
@@ -82,9 +83,10 @@ npx --no-install @rivus/agent-task-loop complete --task TASK-101
 npx --no-install @rivus/agent-task-loop cleanup --task TASK-101
 ```
 
-Use `--json` with summary commands when another program needs stable output:
+Use `--json` when another program needs stable output:
 
 ```bash
 npx --no-install @rivus/agent-task-loop sync --json
 npx --no-install @rivus/agent-task-loop schema --json
+npx --no-install @rivus/agent-task-loop create --task TASK-101 --title "Fix login" --project web --agent codex --priority 3 --json
 ```

@@ -72,6 +72,41 @@ describe('TaskService', () => {
     );
   });
 
+  it('routes lifecycle mutations through the occupancy fence', async () => {
+    const provider = {
+      listTasks: vi.fn(),
+      listPendingTasks: vi.fn(),
+      getTaskById: vi.fn(),
+      createTask: vi.fn(),
+      claimTask: vi.fn(),
+      updateTaskProgress: vi.fn(),
+      updateRunnerState: vi.fn(),
+      updateTaskAssignment: vi.fn(),
+      markTaskSucceeded: vi.fn(),
+      markTaskFailed: vi.fn(),
+      updateReviewState: vi.fn().mockResolvedValue(undefined),
+      updatePublishResult: vi.fn(),
+      updateCleanupState: vi.fn(),
+    };
+    const order: string[] = [];
+    const service = new TaskService(provider).withMutationFence({
+      run: async mutation => {
+        order.push('fence:start');
+        const result = await mutation();
+        order.push('fence:end');
+        return result;
+      },
+    });
+
+    await service.updateReviewState(
+      { taskId: 'TASK-FENCE', source: 'github:o/r', recordId: '7' },
+      { status: '待复核' },
+    );
+
+    expect(provider.updateReviewState).toHaveBeenCalledOnce();
+    expect(order).toEqual(['fence:start', 'fence:end']);
+  });
+
   it('returns only pending tasks for one agent', async () => {
     const service = new TaskService(config);
     const tasks = await service.listPendingTasks('codex');

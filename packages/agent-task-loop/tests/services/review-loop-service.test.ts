@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ReviewLoopService } from '../../src/services/review-loop-service';
 
+const immediateMutationFence = {
+  run: <T>(mutation: () => Promise<T>) => mutation(),
+};
+
 describe('ReviewLoopService', () => {
   it('re-enters execution when review rejects and exits when review passes', async () => {
     const executeRound = vi
@@ -19,6 +23,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -77,6 +82,7 @@ describe('ReviewLoopService', () => {
     const updatePublishResult = vi.fn();
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(false),
@@ -131,6 +137,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -194,6 +201,7 @@ describe('ReviewLoopService', () => {
     const publishForAcceptance = vi.fn().mockRejectedValue(new Error('push failed'));
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -247,6 +255,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -298,6 +307,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -349,6 +359,7 @@ describe('ReviewLoopService', () => {
     });
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -404,6 +415,7 @@ describe('ReviewLoopService', () => {
     const updatePublishResult = vi.fn();
 
     const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
       executeRound,
       review,
       isTaskDeliverable: vi.fn().mockResolvedValue(true),
@@ -434,6 +446,158 @@ describe('ReviewLoopService', () => {
         lastError: 'review output did not contain a valid verdict JSON',
       }),
     );
+  });
+
+  it('uses an injected neutral failure message when review execution throws', async () => {
+    const sensitiveMessage = 'review provider leaked credential=sensitive-test-value';
+    const updateReviewState = vi.fn();
+    const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
+      executeRound: vi.fn().mockResolvedValue({
+        resultSummary: 'done',
+        workspacePath: '/tmp/TASK-209-codex',
+      }),
+      review: vi.fn().mockRejectedValue(new Error(sensitiveMessage)),
+      isTaskDeliverable: vi.fn(),
+      publishForAcceptance: vi.fn(),
+      updatePublishResult: vi.fn(),
+      updateReviewState,
+      maxRounds: 1,
+      formatFailure: (_error, neutralMessage) => neutralMessage,
+    });
+
+    await service.start({
+      task: {
+        taskId: 'TASK-209',
+        title: 'title',
+        description: 'desc',
+        project: 'demo',
+        targetAgent: 'codex',
+        priority: 1,
+        status: '待处理',
+      } as never,
+    });
+
+    expect(updateReviewState).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'TASK-209' }),
+      expect.objectContaining({ lastError: 'Task review failed' }),
+    );
+    expect(JSON.stringify(updateReviewState.mock.calls)).not.toContain(sensitiveMessage);
+  });
+
+  it('does not persist a review failure after the occupancy lease is lost', async () => {
+    const leaseError = new Error('occupancy lost');
+    const controller = new AbortController();
+    const updateReviewState = vi.fn();
+    const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
+      executeRound: vi.fn(),
+      review: vi.fn().mockImplementation(async () => {
+        controller.abort(leaseError);
+        throw leaseError;
+      }),
+      isTaskDeliverable: vi.fn(),
+      publishForAcceptance: vi.fn(),
+      updatePublishResult: vi.fn(),
+      updateReviewState,
+      maxRounds: 1,
+      signal: controller.signal,
+    });
+
+    await expect(
+      service.resumeFromReview({
+        task: {
+          taskId: 'TASK-LEASE-REVIEW',
+          title: 'title',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 1,
+          status: '待复核',
+        } as never,
+        round: 1,
+        workspacePath: '/tmp/TASK-LEASE-REVIEW-codex',
+      }),
+    ).rejects.toBe(leaseError);
+    expect(updateReviewState).not.toHaveBeenCalled();
+  });
+
+  it('does not publish after the lease is lost during delivery inspection', async () => {
+    const leaseError = new Error('occupancy lost');
+    const controller = new AbortController();
+    const publishForAcceptance = vi.fn();
+    const updateReviewState = vi.fn();
+    const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
+      executeRound: vi.fn(),
+      review: vi.fn().mockResolvedValue({ verdict: '通过', findings: '' }),
+      isTaskDeliverable: vi.fn().mockImplementation(async () => {
+        controller.abort(leaseError);
+        return true;
+      }),
+      publishForAcceptance,
+      updatePublishResult: vi.fn(),
+      updateReviewState,
+      maxRounds: 1,
+      signal: controller.signal,
+    });
+
+    await expect(
+      service.resumeFromReview({
+        task: {
+          taskId: 'TASK-LEASE-DELIVERY',
+          title: 'title',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 1,
+          status: '待复核',
+        } as never,
+        round: 1,
+        workspacePath: '/tmp/TASK-LEASE-DELIVERY-codex',
+      }),
+    ).rejects.toBe(leaseError);
+    expect(publishForAcceptance).not.toHaveBeenCalled();
+    expect(updateReviewState).not.toHaveBeenCalled();
+  });
+
+  it('does not persist publish results after the lease is lost during publish', async () => {
+    const leaseError = new Error('occupancy lost');
+    const controller = new AbortController();
+    const updatePublishResult = vi.fn();
+    const updateReviewState = vi.fn();
+    const service = new ReviewLoopService({
+      mutationFence: immediateMutationFence,
+      executeRound: vi.fn(),
+      review: vi.fn().mockResolvedValue({ verdict: '通过', findings: '' }),
+      isTaskDeliverable: vi.fn().mockResolvedValue(true),
+      publishForAcceptance: vi.fn().mockImplementation(async () => {
+        controller.abort(leaseError);
+        return { branch: 'task/lease', commit: 'abc123' };
+      }),
+      updatePublishResult,
+      updateReviewState,
+      maxRounds: 1,
+      signal: controller.signal,
+    });
+
+    await expect(
+      service.resumeFromReview({
+        task: {
+          taskId: 'TASK-LEASE-PUBLISH',
+          title: 'title',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 1,
+          status: '待复核',
+        } as never,
+        round: 1,
+        workspacePath: '/tmp/TASK-LEASE-PUBLISH-codex',
+      }),
+    ).rejects.toBe(leaseError);
+    expect(updatePublishResult).not.toHaveBeenCalled();
+    expect(updateReviewState).not.toHaveBeenCalled();
   });
 
 });

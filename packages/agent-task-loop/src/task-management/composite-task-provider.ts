@@ -22,6 +22,8 @@ export interface CompositeTaskProviderOptions {
    * provider source ids.
    */
   defaultSource?: string;
+  /** Fail closed on incomplete reads without logging backend exception text. */
+  readFailureMode?: 'best-effort' | 'strict';
 }
 
 /**
@@ -39,6 +41,7 @@ export class CompositeTaskProvider implements TaskProvider {
   private readonly providers: readonly SourceProvider[];
   private readonly bySource: Map<string, SourceProvider>;
   private readonly defaultSource: string;
+  private readonly readFailureMode: 'best-effort' | 'strict';
 
   constructor(providers: SourceProvider[], options: CompositeTaskProviderOptions = {}) {
     if (providers.length === 0) {
@@ -53,6 +56,7 @@ export class CompositeTaskProvider implements TaskProvider {
     }
     this.providers = providers;
     this.defaultSource = options.defaultSource ?? providers[0]!.source;
+    this.readFailureMode = options.readFailureMode ?? 'best-effort';
     if (!this.bySource.has(this.defaultSource)) {
       throw new Error(`Unknown default source "${this.defaultSource}"`);
     }
@@ -77,6 +81,12 @@ export class CompositeTaskProvider implements TaskProvider {
     console.warn(`[agent-task-loop] task source "${source}" failed to read; skipping it: ${message}`);
   }
 
+  private readFailed(source: string, reason: unknown): void {
+    if (this.readFailureMode === 'best-effort') {
+      this.warnSourceFailure(source, reason);
+    }
+  }
+
   /**
    * Reads from every source and merges. A source that fails is **skipped with a
    * warning** rather than failing the whole read — one unreachable or
@@ -85,12 +95,16 @@ export class CompositeTaskProvider implements TaskProvider {
    */
   private async mergeReads(read: (provider: SourceProvider) => Promise<TaskRecord[]>): Promise<TaskRecord[]> {
     const settled = await Promise.allSettled(this.providers.map(read));
+    const failures = settled.filter(result => result.status === 'rejected');
+    if (this.readFailureMode === 'strict' && failures.length > 0) {
+      throw new Error('One or more task sources failed to read');
+    }
     const tasks: TaskRecord[] = [];
     settled.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         tasks.push(...result.value);
       } else {
-        this.warnSourceFailure(this.providers[index]!.source, result.reason);
+        this.readFailed(this.providers[index]!.source, result.reason);
       }
     });
     return tasks;
@@ -105,18 +119,27 @@ export class CompositeTaskProvider implements TaskProvider {
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
+    let failed = false;
+    let firstMatch: TaskRecord | undefined;
     for (const provider of this.providers) {
       try {
         const task = await provider.getTaskById(taskId);
         if (task) {
-          return task;
+          if (this.readFailureMode === 'best-effort') {
+            return task;
+          }
+          firstMatch ??= task;
         }
       } catch (reason) {
         // Skip a failing source so it can't hide a task owned by a healthy one.
-        this.warnSourceFailure(provider.source, reason);
+        failed = true;
+        this.readFailed(provider.source, reason);
       }
     }
-    return undefined;
+    if (this.readFailureMode === 'strict' && failed) {
+      throw new Error('One or more task sources failed to read');
+    }
+    return firstMatch;
   }
 
   async createTask(payload: CreateTaskPayload): Promise<void> {

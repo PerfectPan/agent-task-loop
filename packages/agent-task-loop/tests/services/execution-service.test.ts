@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionService } from '../../src/services/execution-service';
+
+const immediateMutationFence = {
+  run: <T>(mutation: () => Promise<T>) => mutation(),
+};
 import type { TaskRecord } from '../../src/types/task';
 
 describe('ExecutionService', () => {
@@ -34,6 +38,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute,
       },
@@ -114,6 +119,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockResolvedValue({
           status: 'failure',
@@ -171,6 +177,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockResolvedValue({
           status: 'success',
@@ -225,6 +232,7 @@ describe('ExecutionService', () => {
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute: vi.fn().mockRejectedValue(new Error('adapter crashed')),
       },
@@ -264,6 +272,56 @@ describe('ExecutionService', () => {
     );
   });
 
+  it('uses an injected neutral failure message for persisted state and logs', async () => {
+    const sensitiveMessage = 'provider failed with authorization: Bearer sensitive-test-value';
+    const taskService = {
+      claimTask: vi.fn(),
+      updateTaskProgress: vi.fn().mockRejectedValue(new Error(sensitiveMessage)),
+      updateRunnerState: vi.fn(),
+      updateReviewState: vi.fn(),
+      markTaskSucceeded: vi.fn(),
+      markTaskFailed: vi.fn(),
+    };
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    try {
+      const executionService = new ExecutionService({
+        taskService: taskService as never,
+        mutationFence: immediateMutationFence,
+        adapter: { execute: vi.fn() },
+        adapterCommand: {
+          command: 'codex',
+          args: [],
+          env: {},
+          cwd: '/tmp/TASK-12-codex',
+          prompt: 'do the task',
+        },
+        formatFailure: (_error, neutralMessage) => neutralMessage,
+      });
+
+      await executionService.executeTask(
+        {
+          taskId: 'TASK-12',
+          title: 'Provider failure',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 5,
+          status: '待处理',
+        },
+        '/tmp/TASK-12-codex',
+      );
+
+      expect(taskService.updateReviewState).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId: 'TASK-12' }),
+        expect.objectContaining({ lastError: 'Task execution failed' }),
+      );
+      expect(stdout.mock.calls.flat().join('')).not.toContain(sensitiveMessage);
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+
   it('continues execution when heartbeat persistence fails', async () => {
     const taskService = {
       claimTask: vi.fn(),
@@ -282,9 +340,11 @@ describe('ExecutionService', () => {
         workspacePath: '/tmp/TASK-11-codex',
       };
     });
+    const onHeartbeatError = vi.fn();
 
     const executionService = new ExecutionService({
       taskService: taskService as never,
+      mutationFence: immediateMutationFence,
       adapter: {
         execute,
       },
@@ -295,6 +355,7 @@ describe('ExecutionService', () => {
         cwd: '/tmp/TASK-11-codex',
         prompt: 'do the task',
       },
+      onHeartbeatError,
     });
 
     const result = await executionService.executeTask(
@@ -311,6 +372,9 @@ describe('ExecutionService', () => {
     );
 
     expect(result.status).toBe('待复核');
+    expect(onHeartbeatError).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'TLS handshake timeout',
+    }));
     expect(taskService.updateReviewState).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 'TASK-11' }),
       expect.objectContaining({
@@ -318,5 +382,53 @@ describe('ExecutionService', () => {
         resultSummary: 'done after transient heartbeat failure',
       }),
     );
+  });
+
+  it('does not claim or execute a task when its occupancy lease is already lost', async () => {
+    const leaseError = new Error('occupancy lost');
+    const controller = new AbortController();
+    controller.abort(leaseError);
+    const taskService = {
+      claimTask: vi.fn(),
+      updateTaskProgress: vi.fn(),
+      updateRunnerState: vi.fn(),
+      updateReviewState: vi.fn(),
+      markTaskSucceeded: vi.fn(),
+      markTaskFailed: vi.fn(),
+    };
+    const execute = vi.fn();
+    const executionService = new ExecutionService({
+      taskService: taskService as never,
+      mutationFence: immediateMutationFence,
+      adapter: { execute },
+      adapterCommand: {
+        command: 'codex',
+        args: [],
+        env: {},
+        cwd: '/tmp/TASK-LEASE-codex',
+        prompt: 'do the task',
+      },
+    });
+
+    await expect(
+      executionService.executeTask(
+        {
+          taskId: 'TASK-LEASE',
+          title: 'Lease lost',
+          description: 'desc',
+          project: 'demo',
+          targetAgent: 'codex',
+          priority: 5,
+          status: '待处理',
+        },
+        '/tmp/TASK-LEASE-codex',
+        1,
+        controller.signal,
+      ),
+    ).rejects.toBe(leaseError);
+    expect(taskService.claimTask).not.toHaveBeenCalled();
+    expect(taskService.updateTaskProgress).not.toHaveBeenCalled();
+    expect(taskService.updateReviewState).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
   });
 });

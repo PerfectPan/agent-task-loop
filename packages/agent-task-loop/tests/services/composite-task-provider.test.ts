@@ -75,6 +75,34 @@ describe('CompositeTaskProvider', () => {
     expect((await composite.getTaskById('GH-7'))?.source).toBe('github');
   });
 
+  it('strict reads reject a partial list without logging raw backend failures', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const composite = new CompositeTaskProvider([
+      failingProvider('feishu', 'credential detail must stay private'),
+      fakeProvider('github', [record('GH-7', 'github')]),
+    ], { readFailureMode: 'strict' });
+
+    await expect(composite.listTasks()).rejects.toThrow('One or more task sources failed to read');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('strict get rejects whenever any source fails, even if another source matches', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const failing = failingProvider('feishu', 'credential detail must stay private');
+    const github = fakeProvider('github', [record('GH-7', 'github')]);
+    const composite = new CompositeTaskProvider([failing, github], { readFailureMode: 'strict' });
+
+    await expect(composite.getTaskById('missing')).rejects.toThrow(
+      'One or more task sources failed to read',
+    );
+    await expect(composite.getTaskById('GH-7')).rejects.toThrow(
+      'One or more task sources failed to read',
+    );
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('merges reads from every source', async () => {
     const feishu = fakeProvider('feishu', [record('IDEA-1', 'feishu')]);
     const github = fakeProvider('github', [record('GH-7', 'github')]);

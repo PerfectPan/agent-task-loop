@@ -29,6 +29,7 @@ export const codexAdapter: AgentAdapter = {
         }
         input.onOutput?.(chunk);
       },
+      input.signal,
     );
 
     if (result.exitCode !== 0) {

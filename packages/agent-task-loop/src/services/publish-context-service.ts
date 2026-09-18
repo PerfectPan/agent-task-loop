@@ -15,12 +15,14 @@ type ExecLike = typeof execa;
 export class PublishContextService {
   constructor(private readonly exec: ExecLike = execa) {}
 
-  async load(workspacePath: string): Promise<PublishContext> {
+  async load(workspacePath: string, signal?: AbortSignal): Promise<PublishContext> {
+    signal?.throwIfAborted();
     const [branchResult, headResult, statusResult] = await Promise.all([
-      this.exec('git', ['-C', workspacePath, 'branch', '--show-current']),
-      this.exec('git', ['-C', workspacePath, 'rev-parse', 'HEAD']),
-      this.exec('git', ['-C', workspacePath, 'status', '--short']),
+      this.runGit(['-C', workspacePath, 'branch', '--show-current'], signal),
+      this.runGit(['-C', workspacePath, 'rev-parse', 'HEAD'], signal),
+      this.runGit(['-C', workspacePath, 'status', '--short'], signal),
     ]);
+    signal?.throwIfAborted();
 
     const status = statusResult.stdout.trim();
     const isDirty = status.length > 0;
@@ -29,9 +31,10 @@ export class PublishContextService {
     let diff = '';
     if (isDirty) {
       const [diffStatResult, diffResult] = await Promise.all([
-        this.exec('git', ['-C', workspacePath, 'diff', '--stat']),
-        this.exec('git', ['-C', workspacePath, 'diff']),
+        this.runGit(['-C', workspacePath, 'diff', '--stat'], signal),
+        this.runGit(['-C', workspacePath, 'diff'], signal),
       ]);
+      signal?.throwIfAborted();
       diffStat = diffStatResult.stdout;
       diff = diffResult.stdout;
     }
@@ -45,5 +48,12 @@ export class PublishContextService {
       diff,
       status,
     };
+  }
+
+  private runGit(args: string[], signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    return signal
+      ? this.exec('git', args, { cancelSignal: signal })
+      : this.exec('git', args);
   }
 }

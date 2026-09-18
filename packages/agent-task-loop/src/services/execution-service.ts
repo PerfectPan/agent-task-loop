@@ -3,8 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentAdapter } from '../adapters/base';
 import type { TaskRecord } from '../types/task';
-import type { TaskService } from './task-service';
+import type { TaskMutationFence, TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
+import {
+  formatFailureMessage,
+  type FailureMessageFormatter,
+} from './failure-message';
 
 function buildSessionName(task: TaskRecord): string {
   return `${task.taskId}-${task.targetAgent}`
@@ -28,10 +32,13 @@ export class ExecutionService {
         cwd: string;
         prompt: string;
       };
+      onHeartbeatError?: (error: unknown) => void;
+      formatFailure?: FailureMessageFormatter;
+      mutationFence: TaskMutationFence;
     },
   ) {}
 
-  async executeTask(task: TaskRecord, workspacePath: string, round = 1): Promise<{
+  async executeTask(task: TaskRecord, workspacePath: string, round = 1, signal?: AbortSignal): Promise<{
     runId: string;
     logPath: string;
     workspacePath: string;
@@ -40,6 +47,7 @@ export class ExecutionService {
     executionSessionName: string;
     status: '待复核' | '已失败';
   }> {
+    signal?.throwIfAborted();
     const runId = crypto.randomUUID();
     const logPath = path.join(workspacePath, '.agent-task-loop', 'logs', `${runId}.log`);
     const sessionName = buildSessionName(task);
@@ -57,6 +65,7 @@ export class ExecutionService {
     let lastRecordedSessionKey: string | undefined;
     let lastHeartbeatPersistedAt = 0;
     const persistHeartbeat = async (force = false) => {
+      signal?.throwIfAborted();
       const now = Date.now();
       if (!force && now - lastHeartbeatPersistedAt < 15_000) {
         return;
@@ -65,25 +74,32 @@ export class ExecutionService {
       latestHeartbeatAt = new Date(now).toISOString();
       lastHeartbeatPersistedAt = now;
       try {
-        await this.deps.taskService.updateRunnerState(task, {
+        await this.persist(() => this.deps.taskService.updateRunnerState(task, {
           runnerPid: latestRunnerPid,
           runnerKind: 'execute',
           runnerAgent: task.targetAgent,
           runnerRound: round,
           lastHeartbeatAt: latestHeartbeatAt,
-        });
+        }));
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
+        signal?.throwIfAborted();
+        if (this.deps.onHeartbeatError) {
+          this.deps.onHeartbeatError(error);
+        } else {
+          const message = error instanceof Error ? error.message : String(error);
+          writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
+        }
       }
+      signal?.throwIfAborted();
     };
     const writeProgress = async (summary: string) => {
       if (!summary || summary === latestProgressSummary) {
         return;
       }
 
+      signal?.throwIfAborted();
       latestProgressSummary = summary;
-      await this.deps.taskService.updateTaskProgress(task, {
+      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
         progressSummary: summary,
         workspacePath,
         logPath,
@@ -95,9 +111,11 @@ export class ExecutionService {
         runnerAgent: task.targetAgent,
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
-      });
+      }));
+      signal?.throwIfAborted();
     };
     const writeSession = async (payload: { sessionId?: string; sessionName?: string }) => {
+      signal?.throwIfAborted();
       const nextSessionId = payload.sessionId ?? latestSessionId;
       const nextSessionName = payload.sessionName ?? sessionName;
       if (!nextSessionId && !nextSessionName) {
@@ -121,7 +139,8 @@ export class ExecutionService {
         lastRecordedSessionKey = sessionKey;
       }
       latestSessionId = nextSessionId;
-      await this.deps.taskService.updateTaskProgress(task, {
+      signal?.throwIfAborted();
+      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
         progressSummary: latestProgressSummary,
         workspacePath,
         logPath,
@@ -133,14 +152,16 @@ export class ExecutionService {
         runnerAgent: task.targetAgent,
         runnerRound: round,
         lastHeartbeatAt: latestHeartbeatAt,
-      });
+      }));
+      signal?.throwIfAborted();
     };
 
     writeLog(`[agent-task-loop] runId=${runId}\n`);
     writeLog(`[agent-task-loop] workspace=${workspacePath}\n`);
     writeLog(`[agent-task-loop] logPath=${logPath}\n`);
 
-    await this.deps.taskService.claimTask(task, {
+    signal?.throwIfAborted();
+    await this.persist(() => this.deps.taskService.claimTask(task, {
       claimedBy: `${task.targetAgent}@local`,
       claimedAt: new Date().toISOString(),
       runId,
@@ -155,7 +176,8 @@ export class ExecutionService {
       runnerAgent: task.targetAgent,
       runnerRound: round,
       lastHeartbeatAt: latestHeartbeatAt,
-    });
+    }));
+    signal?.throwIfAborted();
 
     try {
       await writeProgress(`正在使用 ${task.targetAgent} 执行任务`);
@@ -168,6 +190,7 @@ export class ExecutionService {
         args: this.deps.adapterCommand.args,
         env: this.deps.adapterCommand.env,
         sessionName,
+        signal,
         onSpawn: async payload => {
           latestRunnerPid = payload.pid;
           await persistHeartbeat(true);
@@ -179,9 +202,11 @@ export class ExecutionService {
         onProgress: writeProgress,
         onSession: writeSession,
       });
+      signal?.throwIfAborted();
 
       if (result.status === 'success') {
-        await this.deps.taskService.updateReviewState(task, {
+        signal?.throwIfAborted();
+        await this.persist(() => this.deps.taskService.updateReviewState(task, {
           status: '待复核',
           currentOwner: 'codex',
           reviewRound: round,
@@ -194,7 +219,8 @@ export class ExecutionService {
           sessionHistory: latestSessionHistory,
           runnerKind: '',
           runnerAgent: '',
-        });
+        }));
+        signal?.throwIfAborted();
         writeLog('\n[agent-task-loop] status=待复核\n');
         return {
           runId,
@@ -207,10 +233,15 @@ export class ExecutionService {
         };
       }
 
-      await this.deps.taskService.updateReviewState(task, {
+      signal?.throwIfAborted();
+      await this.persist(() => this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
-        lastError: result.error ?? 'unknown error',
+        lastError: formatFailureMessage(
+          this.deps.formatFailure,
+          result.error ?? 'unknown error',
+          'Task execution failed',
+        ),
         workspacePath: result.workspacePath,
         logPath,
         progressSummary: '执行失败，请查看 LastError 和日志',
@@ -219,7 +250,8 @@ export class ExecutionService {
         sessionHistory: latestSessionHistory,
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
+      signal?.throwIfAborted();
       writeLog('\n[agent-task-loop] status=已失败\n');
       return {
         runId,
@@ -231,8 +263,13 @@ export class ExecutionService {
         status: '已失败',
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await this.deps.taskService.updateReviewState(task, {
+      signal?.throwIfAborted();
+      const message = formatFailureMessage(
+        this.deps.formatFailure,
+        error,
+        'Task execution failed',
+      );
+      await this.persist(() => this.deps.taskService.updateReviewState(task, {
         status: '已失败',
         currentOwner: '董事长',
         lastError: message,
@@ -244,7 +281,7 @@ export class ExecutionService {
         sessionHistory: latestSessionHistory,
         runnerKind: '',
         runnerAgent: '',
-      });
+      }));
       writeLog(`\n[agent-task-loop] status=已失败\n[agent-task-loop] error=${message}\n`);
       return {
         runId,
@@ -257,5 +294,9 @@ export class ExecutionService {
     } finally {
       stream.end();
     }
+  }
+
+  private async persist(mutation: () => Promise<void>): Promise<void> {
+    await this.deps.mutationFence.run(mutation);
   }
 }

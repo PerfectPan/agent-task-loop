@@ -1,0 +1,38 @@
+{
+  "name": "@rivus/room-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:workspace-deps": "pnpm --filter @rivus/agent-orchestration build && pnpm --filter @rivus/agent-room build && pnpm --filter @rivus/agent-task-loop build",
+    "prebuild": "pnpm build:workspace-deps",
+    "predev": "pnpm build:workspace-deps",
+    "dev": "remix vite:dev --host 127.0.0.1 --port 3210 --strictPort",
+    "build": "remix vite:build",
+    "start": "ROOM_LAB_LOCAL=1 HOST=127.0.0.1 PORT=3210 remix-serve ./build/server/index.js",
+    "pretest": "pnpm build:workspace-deps",
+    "test": "vitest run",
+    "pretypecheck": "pnpm build:workspace-deps",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remix-run/node": "^2.17.5",
+    "@remix-run/react": "^2.17.5",
+    "@remix-run/serve": "^2.17.5",
+    "@rivus/agent-orchestration": "workspace:*",
+    "@rivus/agent-room": "workspace:*",
+    "@rivus/agent-task-loop": "workspace:*",
+    "isbot": "^4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.17.5",
+    "@types/node": "^22.15.3",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@rivus/agent-task-loop",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": false,
   "description": "Run AI coding agents through task execution, review, rework, and pull request handoff.",
   "license": "GPL-3.0-only",
@@ -25,9 +25,20 @@
   "bin": {
     "agent-task-loop": "./bin/agent-task-loop.mjs"
   },
+  "exports": {
+    "./task-delivery": {
+      "types": "./dist/task-delivery.d.ts",
+      "import": "./dist/task-delivery.js"
+    },
+    "./rivus-plugin": {
+      "types": "./dist/rivus-plugin.d.ts",
+      "import": "./dist/rivus-plugin.js"
+    }
+  },
   "files": [
     "bin/",
     "dist/",
+    "docs/rivus-plugin.md",
     "skills/agent-task-loop-cli/",
     "README.md",
     "LICENSE"
@@ -40,8 +51,9 @@
     "build": "rslib build",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/cli.ts",
-    "prepack": "pnpm build",
+    "prepack": "rslib build",
     "prepublishOnly": "pnpm test",
+    "package:check": "node scripts/check-package.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -54,6 +66,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@rivus/agent": "0.1.1",
+    "@rivus/agent-orchestration": "workspace:*",
     "@rivus/agent-sessions": "workspace:*",
     "@rsbuild/core": "^2.0.3",
     "@rslib/core": "^0.21.3",
@@ -64,6 +78,14 @@
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
+  },
+  "peerDependencies": {
+    "@rivus/agent": ">=0.1.1 <0.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@rivus/agent": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,71 @@
+import type { RoomLabAgentView } from '../read-model';
+import styles from './RoomLab.module.css';
+
+export function AgentPanel({
+  agent,
+  disabled,
+  onRetry,
+}: {
+  agent: RoomLabAgentView;
+  disabled: boolean;
+  onRetry: (agent: RoomLabAgentView) => void;
+}) {
+  const hasHeldDraft = agent.heldUpToSeq !== undefined;
+  return (
+    <section className={`${styles.agentPanel} ${styles[agent.id]}`} aria-label={`${agent.label} status`}>
+      <div className={styles.agentHeading}>
+        <div>
+          <span className={styles.eyebrow}>LOCAL AGENT / {agent.id.toUpperCase()}</span>
+          <h2>{agent.label}</h2>
+          <p>{agent.role}</p>
+        </div>
+        <span
+          className={`${styles.statusLamp} ${styles[`status_${agent.status}`]}`}
+          role="status"
+          aria-live="polite"
+        >
+          {agent.status}{hasHeldDraft && agent.status !== 'held' ? ' / held' : ''}
+        </span>
+      </div>
+
+      <dl className={styles.agentMetrics}>
+        <div>
+          <dt>seen boundary</dt>
+          <dd>SEQ {String(agent.seenSeq).padStart(3, '0')}</dd>
+        </div>
+        <div>
+          <dt>latency</dt>
+          <dd>{agent.latencyMs ? `${(agent.latencyMs / 1000).toFixed(1)}s` : '—'}</dd>
+        </div>
+      </dl>
+
+      {agent.status === 'running' && (
+        <div className={styles.radar}>
+          <span />
+          <p>CLI 正在生成草稿</p>
+        </div>
+      )}
+
+      {agent.lastDraft && (
+        <div className={styles.draft}>
+          <span>{hasHeldDraft ? 'HELD DRAFT' : 'LAST TRANSMISSION'}</span>
+          <p>{agent.lastDraft}</p>
+        </div>
+      )}
+
+      {hasHeldDraft && (
+        <div className={styles.heldBox}>
+          <strong>写点被截停</strong>
+          <p>
+            Room 在发送前发现 SEQ {agent.heldUpToSeq} 已出现更新。读取最新世界后才能重答。
+          </p>
+          <button type="button" disabled={disabled} onClick={() => onRetry(agent)}>
+            读取更新并重答
+          </button>
+        </div>
+      )}
+
+      {agent.error && <p className={styles.agentError}>{agent.error}</p>}
+    </section>
+  );
+}

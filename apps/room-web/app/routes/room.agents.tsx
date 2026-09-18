@@ -18,6 +18,7 @@ import {
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
 import type { AgentDeskView } from '../room-lab/read-model';
+import { copy } from '../room-lab/presentation/copy';
 
 /** Single fetch reads response headers off this export, not off the loader. */
 export const headers: HeadersFunction = () => noStoreHeaders;
@@ -75,11 +76,11 @@ export function ErrorBoundary() {
     ? (typeof (error.data as { error?: unknown })?.error === 'string'
       ? (error.data as { error: string }).error
       : `${error.status} ${error.statusText}`.trim())
-    : error instanceof Error ? error.message : '本地房间暂不可用';
+    : error instanceof Error ? error.message : copy.say.agentsUnavailable;
   return (
     <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
       <section className="w-[min(480px,100%)]" role="alert">
-        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">智能体页面暂不可用</h1>
+        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.agentsUnavailable}</h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
       </section>
     </main>

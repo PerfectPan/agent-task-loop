@@ -64,7 +64,7 @@ describe('Room workspace', () => {
     const aside = screen.getByRole('complementary', { name: '成员与连接' });
     fireEvent.click(within(aside).getByRole('button', { name: '开始报数' }));
     expect(onAction).toHaveBeenCalledWith({ action: 'count-off' });
-    expect(within(aside).getByText('5 位都答上了')).toBeTruthy();
+    expect(within(aside).getByText('5 位全部通过')).toBeTruthy();
   });
 
   it('keeps a held draft out of the transcript and retries it from where the member is listed', () => {
@@ -79,7 +79,7 @@ describe('Room workspace', () => {
     render(<RoomWorkspace state={state} pending={false} value=""
       onValueChange={vi.fn()} onAction={onAction} />);
     expect(screen.getByRole('region', { name: '房间对话' }).textContent).not.toContain('PRIVATE_DRAFT');
-    expect(screen.getByRole('region', { name: '房间对话' }).textContent).toContain('草稿在等新消息');
+    expect(screen.getByRole('region', { name: '房间对话' }).textContent).toContain('草稿被新消息打断');
     const aside = screen.getByRole('complementary', { name: '成员与连接' });
     expect(within(aside).getByText('PRIVATE_DRAFT')).toBeTruthy();
     fireEvent.click(within(aside).getByRole('button', { name: '读取更新并重答' }));
@@ -101,8 +101,8 @@ describe('Room workspace', () => {
     });
     render(<RoomWorkspace state={state} pending={false} value=""
       onValueChange={vi.fn()} onAction={vi.fn()} />);
-    expect(screen.getByText('轮到 codex，后面还有 2 位')).toBeTruthy();
-    expect(screen.getByText(/会排在/).textContent).toContain('dsh');
+    expect(screen.getByText('当前 codex · 待回复 2 位')).toBeTruthy();
+    expect(screen.getByText(/排在/).textContent).toContain('dsh');
     expect(screen.queryByRole('button', { name: /停/ })).toBeNull();
     // The composer is a Tiptap editor now, so "still editable" reads off
     // contenteditable rather than a textarea's disabled flag.

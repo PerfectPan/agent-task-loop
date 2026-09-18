@@ -2,6 +2,7 @@ import {
   ROOM_AGENT_ROSTER,
   type RoomLabAgentId,
 } from '../domain/agent-roster';
+import { copy } from './copy';
 
 export interface MentionOption {
   id: 'all' | (typeof ROOM_AGENT_ROSTER)[number]['id'];
@@ -21,7 +22,7 @@ export function buildMentionOptions(activeAgentIds: readonly RoomLabAgentId[]): 
     {
       id: 'all',
       label: `All ${activeAgentIds.length} active agents`,
-      description: '广播给当前 Room 的全部席位',
+      description: copy.say.everyoneDescription,
     },
     ...ROOM_AGENT_ROSTER
       .filter(agent => activeAgents.has(agent.id))

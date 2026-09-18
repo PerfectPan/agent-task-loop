@@ -3,6 +3,7 @@ import type { RoomLabAgentId, RoomLabEventView } from '../read-model';
 import { AgentMark, HumanMark } from './AgentMark';
 import { formatClock } from './format-time';
 import { mentionChip } from './mention-chip';
+import { copy } from './copy';
 
 export const HUMAN_LABEL = '你';
 
@@ -60,7 +61,7 @@ export function RoomMessage({ event }: { event: RoomLabEventView }) {
         <header className="mb-[3px] flex items-baseline gap-2 leading-tight">
           <strong className={`text-sm font-semibold ${human ? 'text-foreground' : agentId ? authorInk[agentId] : ''}`}>{name}</strong>
           <time className="tabular-nums whitespace-nowrap text-xs text-muted-foreground" dateTime={event.at}>{formatClock(event.at)}</time>
-          {event.failed && <span className="text-xs text-destructive">没发出去，内容还在输入框里</span>}
+          {event.failed && <span className="text-xs text-destructive">{copy.say.sendFailed}</span>}
         </header>
         <p className="m-0 max-w-[66ch] font-serif text-base leading-[1.7] whitespace-pre-wrap [overflow-wrap:anywhere]">
           {event.body.split(mentionPattern).map((part, index) => {
@@ -78,7 +79,7 @@ export function RoomMessage({ event }: { event: RoomLabEventView }) {
           })}
         </p>
         {event.addressedTo.length > 0 && <span className="sr-only">
-          提及：{event.addressedTo.join('、')}
+          {copy.say.mentioned(event.addressedTo.join('、'))}
         </span>}
       </article>
     </li>

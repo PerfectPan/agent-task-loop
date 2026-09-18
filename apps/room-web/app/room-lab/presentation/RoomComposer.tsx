@@ -11,6 +11,7 @@ import { History } from '@tiptap/extension-history';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import type { RoomLabAgentId } from '../read-model';
+import { copy } from './copy';
 import { Button } from '~/components/ui/button';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mention';
@@ -62,7 +63,7 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
       Text,
       HardBreak,
       History,
-      Placeholder.configure({ placeholder: '说点什么' }),
+      Placeholder.configure({ placeholder: copy.label.composerPlaceholder }),
       // A ceiling on the document, so a paste cannot grow it without bound. The
       // number the person reads, and the one that gates sending, is the length
       // of the serialised string, because that is what the server measures: a
@@ -80,7 +81,7 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
         id: 'room-command',
         role: 'textbox',
         'aria-multiline': 'true',
-        'aria-label': '向房间发送消息',
+        'aria-label': copy.label.composer,
         'aria-describedby': 'room-composer-hint',
         class: 'min-h-[78px] max-h-[40dvh] overflow-y-auto font-serif text-base leading-[1.7] text-foreground outline-none',
       },
@@ -166,7 +167,7 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="提及"
+          aria-label={copy.action.mention}
           className="text-muted-foreground hover:text-foreground"
           onMouseDown={event => event.preventDefault()}
           onClick={openMentions}
@@ -175,8 +176,8 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
         </Button>
         <span id="room-composer-hint" className="ml-1 text-xs leading-tight text-muted-foreground">
           {behind
-            ? <>现在发出去的话，会排在 <span className="text-foreground/75">{behind}</span> 后面</>
-            : 'Enter 发送 · Shift+Enter 换行 · 不 @ 则在场成员依次发言'}
+            ? copy.say.queueBehind(behind)
+            : copy.say.composerHint}
         </span>
         {characters > 0 && (
           <span className={`ml-auto text-xs tabular-nums ${characters > MAX_CHARACTERS ? 'text-destructive' : 'text-muted-foreground'}`}>
@@ -188,7 +189,7 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
           size="icon"
           className={`size-8 rounded-full ${characters > 0 ? 'ml-2' : 'ml-auto'}`}
           disabled={!canSend}
-          aria-label={sending ? '正在送出' : '发送'}
+          aria-label={sending ? copy.action.sending : copy.action.send}
         >
           <ArrowUp size={16} weight="bold" />
         </Button>

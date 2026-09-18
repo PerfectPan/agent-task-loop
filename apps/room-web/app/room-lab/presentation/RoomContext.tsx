@@ -9,6 +9,7 @@ import { agentStatusLabels, agentStatusTone, toneDot, toneText } from './agent-s
 import { formatElapsed, formatLatency } from './format-time';
 import type { Round } from './round';
 import { sectionLabel } from './ui';
+import { copy } from './copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Separator } from '~/components/ui/separator';
@@ -65,12 +66,12 @@ export function RoomContext({
     <>
       <section className="flex flex-col gap-2" aria-labelledby="members-title">
         <div className="flex h-6 items-center justify-between">
-          <h2 id="members-title" className={sectionLabel}>成员 · {agents.length}</h2>
+          <h2 id="members-title" className={sectionLabel}>{copy.label.members(agents.length)}</h2>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="xs" onClick={() => onEditingChange(!editing)} aria-label={editing ? '完成成员编辑' : '管理房间成员'}>
-              {editing ? '完成' : '编辑'}
+            <Button variant="ghost" size="xs" onClick={() => onEditingChange(!editing)} aria-label={editing ? '完成成员编辑' : copy.action.manageMembers}>
+              {editing ? copy.action.done : copy.action.edit}
             </Button>
-            <Button variant="ghost" size="icon-xs" className="min-[1180px]:hidden" onClick={onClose} aria-label="收起成员面板">
+            <Button variant="ghost" size="icon-xs" className="min-[1180px]:hidden" onClick={onClose} aria-label={copy.action.closeMembers}>
               <X size={16} />
             </Button>
           </div>
@@ -95,10 +96,10 @@ export function RoomContext({
                     </span>
                     <span className={`flex shrink-0 items-center gap-1.5 text-xs ${queued ? 'text-muted-foreground' : toneText[tone]}`}>
                       <i aria-hidden="true" className={`inline-block size-1.5 rounded-full ${queued ? 'bg-transparent shadow-[inset_0_0_0_1px_currentColor]' : toneDot[tone]} ${agent.status === 'running' ? 'animate-pulse-soft' : ''}`} />
-                      {queued ? '排队中' : agentStatusLabels[agent.status]}
+                      {queued ? copy.status.queued : agentStatusLabels[agent.status]}
                       {seconds !== undefined && <span className="tabular-nums font-mono">{formatElapsed(seconds)}</span>}
                       {seconds === undefined && !queued && agent.latencyMs !== undefined && agent.status !== 'idle' && (
-                        <span className="text-muted-foreground">用时 <span className="tabular-nums font-mono">{formatLatency(agent.latencyMs)}</span></span>
+                        <span className="text-muted-foreground">{copy.label.spent} <span className="tabular-nums font-mono">{formatLatency(agent.latencyMs)}</span></span>
                       )}
                     </span>
                   </div>
@@ -108,12 +109,12 @@ export function RoomContext({
                   {retryable && (
                     <div className="mb-1.5 ml-9 flex flex-col gap-2 rounded-lg bg-warning px-3 py-2.5 text-[13px] leading-normal text-warning-foreground">
                       <p className="m-0">
-                        {agent.status === 'error' ? '上次重读没成功。' : '发出前发现有新消息，先停下了。'}
-                        重读之后再答，草稿会重写。
-                        {agent.retryAttempt !== undefined ? ` 已试 ${agent.retryAttempt} 次。` : ''}
+                        {agent.status === 'error' ? `${copy.say.heldRetryFailed}` : ''}
+                        {copy.say.heldExplain}
+                        {agent.retryAttempt !== undefined ? copy.say.retried(agent.retryAttempt) : ''}
                       </p>
                       <details>
-                        <summary className="cursor-pointer text-xs text-warning-foreground underline decoration-current underline-offset-[3px]">看草稿</summary>
+                        <summary className="cursor-pointer text-xs text-warning-foreground underline decoration-current underline-offset-[3px]">{copy.action.viewDraft}</summary>
                         <pre className="m-0 mt-1.5 max-h-52 overflow-auto rounded-md bg-popover p-2 font-serif text-[13px] leading-[1.7] whitespace-pre-wrap text-popover-foreground [overflow-wrap:anywhere]">{agent.lastDraft}</pre>
                       </details>
                       <Button
@@ -123,7 +124,7 @@ export function RoomContext({
                         disabled={disabled}
                         onClick={() => onRetry(agent.id)}
                       >
-                        读取更新并重答
+                        {copy.action.retryHeld}
                       </Button>
                     </div>
                   )}
@@ -136,17 +137,17 @@ export function RoomContext({
 
       <section className="flex flex-col gap-2" aria-labelledby="connection-title">
         <div className="flex h-6 items-center justify-between">
-          <h2 id="connection-title" className={sectionLabel}>检查连接</h2>
+          <h2 id="connection-title" className={sectionLabel}>{copy.label.connection}</h2>
           <Button variant="ghost" size="xs" disabled={disabled} onClick={onCountOff}>
-            {state.countOff?.status === 'running' ? '正在检查…' : '开始报数'}
+            {state.countOff?.status === 'running' ? copy.action.countingOff : copy.action.startCountOff}
           </Button>
         </div>
         <p className="m-0 text-[13px] leading-relaxed text-foreground/75">
-          按成员顺序各回一个数字，确认每位都能读写这段对话。「在场」不等于连接通过。
+          {copy.say.connectionExplain}
         </p>
         {state.countOff
           ? <CountOffStrip run={state.countOff} />
-          : <p className="m-0 text-xs text-muted-foreground">还没有检查记录。</p>}
+          : <p className="m-0 text-xs text-muted-foreground">{copy.say.noCountOff}</p>}
       </section>
     </>
   );
@@ -161,8 +162,8 @@ export function RoomContext({
           aria-label="成员与连接"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>成员与连接</SheetTitle>
-            <SheetDescription>这间房的成员状态与连接检查。</SheetDescription>
+            <SheetTitle>{copy.label.membersAndConnection}</SheetTitle>
+            <SheetDescription>{copy.say.membersSheet}</SheetDescription>
           </SheetHeader>
           <ScrollArea className="h-full">
             <div className="flex flex-col gap-5 px-4 py-[18px]">{panel}</div>

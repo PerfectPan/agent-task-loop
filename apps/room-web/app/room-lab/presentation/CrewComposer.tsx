@@ -6,6 +6,7 @@ import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
 import { AgentMark } from './AgentMark';
 import { agentAvailabilityLabels } from './agent-availability';
 import { agentRoleLabels } from './agent-role';
+import { copy } from './copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { sectionLabel } from './ui';
@@ -35,7 +36,7 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
   return (
     <section aria-label="成员与发言顺序" className="flex flex-col gap-2">
       <p className="m-0 text-[13px] leading-relaxed text-foreground/75">
-        这里的顺序就是发言顺序，也是报数顺序。未安装的也能加入，叫到它时才真正调用本机 CLI。
+        {copy.say.crewExplain}
       </p>
       <ol className="m-0 flex list-none flex-col p-0">
         {activeAgents.map((agent, index) => (
@@ -62,7 +63,7 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
         ))}
       </ol>
       {agents.some(agent => !activeAgentIds.includes(agent.id)) && <>
-        <h3 className={`${sectionLabel} mt-2`}>可加入</h3>
+        <h3 className={`${sectionLabel} mt-2`}>{copy.label.joinable}</h3>
         <ul className="m-0 flex list-none flex-col p-0">
           {agents.filter(agent => !activeAgentIds.includes(agent.id)).map(agent => (
             <li key={agent.id} className="flex items-center gap-2 border-b border-border py-2 last:border-b-0">

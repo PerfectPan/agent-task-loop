@@ -1,4 +1,5 @@
 import type { RoomLabAgentId, RoomLabAgentView, RoomLabEventView, RoomLabState } from '../read-model';
+import { copy } from './copy';
 
 export type TurnPhase = 'done' | 'now' | 'queued' | 'held' | 'error';
 
@@ -71,10 +72,10 @@ export function roundSentence(round: Round | undefined): string | undefined {
   if (!round?.live) return undefined;
   if (round.now) {
     const rest = round.queued.length;
-    return rest > 0 ? `轮到 ${round.now.id}，后面还有 ${rest} 位` : `轮到 ${round.now.id}，这是最后一位`;
+    return copy.say.roundNow(round.now.id, rest);
   }
   const first = round.queued[0];
-  return first ? `${first.id} 马上开始` : undefined;
+  return first ? copy.say.roundNext(first.id) : undefined;
 }
 
 /** Whom a message sent right now would wait behind. */

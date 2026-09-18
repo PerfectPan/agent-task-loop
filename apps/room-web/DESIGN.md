@@ -278,7 +278,7 @@ components:
 - 唯一浮起的物件是输入卡片；菜单、抽屉、新消息胶囊共用同一个 `shadow-card`，没有第二个阴影值。
 - 一个强调色（`primary`）管交互，四对状态色以药丸形态管「现在怎么了」，五个 `chart-*` 只管头像与作者名。
 - 头像是 shadcn 的 `Avatar`：`bg-chart-N/15` 的淡染底 + 两个大写字母，字母在自己的底上清 4.5:1。
-- 状态是印出来的记号：空心 = 还没轮到，实心 = 说完了，亮色实心 + 计时 = 正在说。
+- 状态是印出来的记号：空心 = 排队中，实心 = 已回复，亮色实心 + 计时 = 生成中。
 - 界面上没有后端不存在的动作：没有「停下这一轮」，没有对失败成员的单独重试。
 
 ## Colors
@@ -305,7 +305,7 @@ components:
 
 - **`foreground`**（`#37352f` / `#d4d4d4`）：标题、消息正文、成员 id、输入内容、人的头像底。
 - **`foreground/75`**：副标题、说明段、次要按钮文字、导航项静止态。它替代上一轮的 `--ink-2`；不另开 token，因为 shadcn 词表里没有中间灰这一档，而半透明在任何表面上都成立。最差 5.07 / 5.22。
-- **`muted-foreground`**（`#676664` / `#9e9e9e`）：节标签、时间戳、元信息、占位符、排队中的文字、「说完了」的状态词。**它是允许作为文字的最浅一档**，最差 4.80 / 4.55（落在 `sidebar-accent` 上）。
+- **`muted-foreground`**（`#676664` / `#9e9e9e`）：节标签、时间戳、元信息、占位符、排队中的文字、「已回复」的状态词。**它是允许作为文字的最浅一档**，最差 4.80 / 4.55（落在 `sidebar-accent` 上）。
 - **`muted-foreground/60`**：**只做装饰**——禁用态、空心圆点。任何情况下都不能当文字色，它不在对比度表里（在纸上只有 2.52 / 3.19）。
 
 ### 强调与状态
@@ -316,10 +316,10 @@ components:
 
 | 对 | 墨（浅 / 深） | 洗底（浅 / 深） | 用在 |
 | --- | --- | --- | --- |
-| `info` | `#2b6c92` / `#7fb6dc` | `#e7f3f8` / `#1c2b35` | 正在生成：脉冲点、页头「轮到 X」、发言顺序条亮项、报数「回答中」；Badge `info` 标 CLI 可运行 |
-| `warning` | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待唤醒：时间线药丸、成员栏草稿块与其按钮；Badge `warning` 标 CLI 已安装 |
+| `info` | `#2b6c92` / `#7fb6dc` | `#e7f3f8` / `#1c2b35` | 生成中：脉冲点、页头「当前 X」、发言顺序条亮项、报数「回复中」；Badge `info` 标 CLI 可运行 |
+| `warning` | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待更新：时间线药丸、成员栏草稿块与其按钮；Badge `warning` 标 CLI 已安装 |
 | `success` | `#3d7a56` / `#6fb58b` | `#ebf6f1` / `#1c2f25` | 静止状态的实心点。洗底目前只作为 Badge `success` 变体存在，房间界面未用到 |
-| `destructive-soft` | `#b0322d` / `#e88080` | `#fbe4e4` / `#3a1f1f` | 错误横幅、成员错误块、时间线错误药丸、报数「没答上」 |
+| `destructive-soft` | `#b0322d` / `#e88080` | `#fbe4e4` / `#3a1f1f` | 错误横幅、成员错误块、时间线错误药丸、报数「回复失败」 |
 
 ### 身份色
 
@@ -390,7 +390,7 @@ components:
 
 **The Tabular Clock Rule.** 会随时间跳动或会在一列里对齐的数字一律 `tabular-nums`（Tailwind 内置，不再自造 `.tnum`）；正在走的计时器同时切 `font-mono`，让宽度不抖。
 
-**The Serif Is For Sentences Rule.** 宋体只给成段的人话：消息正文、正在写的那条、草稿预览、空状态的那句解释。凡是标签、按钮、状态词、时间、数字——只要它是界面在说话而不是人在说话——都是黑体。判断标准和文案纪律的第一条是同一条：这句话是读的，还是点的。
+**The Serif Is For Sentences Rule.** 宋体只给成段的句子：消息正文、正在写的那条、草稿预览、空状态的那句解释。凡是标签、按钮、状态词、时间、数字——只要它是界面在说话而不是人在说话——都是黑体。判断标准和文案纪律的第一条是同一条：这句话是读的，还是点的。
 
 **The m:ss Rule.** 时长只用 `分:秒` 一种写法（`formatElapsed`：47 → `0:47`，125 → `2:05`）。已完成的回复写「用时 1:04」，不写「耗时」。
 
@@ -457,8 +457,8 @@ components:
 
 标准 variant（`default` / `outline` / `ghost` / `secondary` / `destructive` / `link`）与 size（`default` 30px / `sm` 26px / `xs` 24px / `icon` 30px / `icon-sm` 28px / `icon-xs` 24px）。
 
-- **default**：`primary` 底 `primary-foreground` 字，hover `primary/90`，无内高光。用于「发送」（卡片里 28px）「保存」「建房间」「新消息」。
-- **outline**：透明底 `input` 边 `foreground/75` 字，hover `accent`。用于「管理成员」「成员」「回房间」「重新扫描」「读取更新并重答」（配 `warning-foreground` 的边与字）和 `CrewComposer` 的三个图标按钮。
+- **default**：`primary` 底 `primary-foreground` 字，hover `primary/90`，无内高光。用于「发送」（卡片里 28px）「保存」「创建房间」「新消息」。
+- **outline**：透明底 `input` 边 `foreground/75` 字，hover `accent`。用于「管理成员」「成员」「返回房间」「重新扫描」「读取更新并重答」（配 `warning-foreground` 的边与字）和 `CrewComposer` 的三个图标按钮。
 - **ghost**：无边，hover `accent`。用于「新建」「取消」「编辑」「完成」「开始报数」「主题：…」「@ 提及」和三点菜单的触发器。
 - **destructive**：`destructive` 底 `destructive-foreground` 字。只用在「确认清空」。
 - `destructive` 取 `destructive-foreground` 而不是 registry 写死的 `text-white`：暗色下 `destructive` 是一抹亮红，白字在上面读不了。
@@ -509,7 +509,7 @@ id → class 的映射写成常量表（五个成员加 `all`），不拼串：T
 
 - **卡片**：`card` 底、`input` 边、`rounded-xl`（12px，比别处的 8px 更圆，因为它是唯一一个要被当成「盒子」看的东西）、`shadow-card`、内边距 `14px 14px 10px`、`mx-7 mt-3 mb-[22px]`。`focus-within` 时 `border-ring` 加 3px `ring-ring/15` 的外圈——卡片就是字段，焦点落在整张卡片上，编辑区自己不带边、不带底、不带焦点环。
 - **编辑区**：`font-serif text-base leading-[1.7]`，最小三行（78px），最高 `40dvh` 后内部滚动。占位符「说点什么」由 Placeholder 扩展画成 `::before`，`muted-foreground`。`role="textbox" aria-multiline="true" aria-label="向房间发送消息" aria-describedby="room-composer-hint"`，id 仍是 `room-command`（跳转链接指着它）。弹层开着时补 `aria-expanded` / `aria-controls` / `aria-activedescendant`。
-- **工具栏**：编辑区下一根 `border-t border-border`，`mt-2.5 pt-2.5`。左起：`@` 图标按钮（`ghost` / `icon-sm`，phosphor `At`），12px `muted-foreground` 的提示行（一轮进行中「现在发出去的话，会排在 X 后面」，否则「Enter 发送 · Shift+Enter 换行 · 不 @ 则在场成员依次发言」）；右侧：字数「n / 2000」（`tabular-nums`，n > 0 时才出现，超限转 `destructive`），和一枚 32px 的圆形主按钮（phosphor `ArrowUp`），空或发送中时禁用，`aria-label` 在「发送」与「正在送出」之间切换。**没有附件按钮**：后端不收附件，界面就不放这个控件。
+- **工具栏**：编辑区下一根 `border-t border-border`，`mt-2.5 pt-2.5`。左起：`@` 图标按钮（`ghost` / `icon-sm`，phosphor `At`），12px `muted-foreground` 的提示行（一轮进行中「发送后将排在 X 之后」，否则「Enter 发送 · Shift+Enter 换行 · 不 @ 时全体成员依次回复」）；右侧：字数「n / 2000」（`tabular-nums`，n > 0 时才出现，超限转 `destructive`），和一枚 32px 的圆形主按钮（phosphor `ArrowUp`），空或发送中时禁用，`aria-label` 在「发送」与「发送中」之间切换。**没有附件按钮**：后端不收附件，界面就不放这个控件。
 - **键位**：Enter 发送（弹层开着时改为选中当前项）；Shift+Enter 换行；Escape 关弹层；`event.repeat` 不重复发送。输入法合成期间（`view.composing` / `isComposing` / `keyCode === 229`）Enter 被整个吞掉——它既不发送、不选人，也不落到基础 keymap 上把段落劈开：确认中文候选不是换行。
 - **字数**：数的是**序列化之后的字符串长度**，不是文档里的字符数。一个胶囊在屏幕上是一个物件、在线路上是八个字符，而服务端量的是线路上那一串（`> 2000` 直接拒绝）。`CharacterCount` 仍然配了 2000 的上限，作用是给文档本身封顶，不是给这个数字做依据。
 
@@ -528,37 +528,50 @@ id → class 的映射写成常量表（五个成员加 `all`），不拼串：T
 - **每一项**：22px 的 `AgentMark`、id、12px `muted-foreground` 的角色词，当前项右侧一枚 `↵` 的 `<kbd>`、底色 `accent`。`@all` 那一项的圆点是 `accent` 底上一个 `@`，说明写「所有在场成员」。
 - **`@` 按钮**在光标处插入 `@` 触发弹层；前面不是空白时先补一个空格（`@` 只在词边界触发）。编辑区还没被聚焦过时先把光标送到末尾，否则会插到所有已输入内容的前面。
 
-### Copy（`agent-status.ts`、`round.ts`）
+### Copy（`copy.ts`）
 
-这一轮是词表与组件的改动，文案一个字没动。read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译：
+所有上屏文字都在 `app/room-lab/presentation/copy.ts` 一个字典里，按**被读的方式**分四组；组件只引用 key，不写字面量。`copy.test.ts` 用几条正则守着每组的语法，所以口语状态词（「说完了」）或者写成句子的标签回不来。
+
+| 组 | 读法 | 语法 | 例 |
+| --- | --- | --- | --- |
+| `status` | 扫：在列表里和圆点、数字并排 | 名词短语，只有四种构词：**已X · X中 · 待X · X失败**（加裸状态「在场」「等待」） | 已回复 · 生成中 · 排队中 · 草稿待更新 · 运行失败 · 已读未答 |
+| `action` | 做：按钮、菜单项 | 动词短语，不带句号 | 发送 · 创建房间 · 读取更新并重答 · 开始报数 |
+| `label` | 认：节标题、导航、表单标签、占位 | 名词，不带句号 | 成员 · 5 · 检查连接 · 房间名 |
+| `say` | 懂：说明、空状态、错误、页头那一句 | 完整陈述句：事实 + 下一步 | 发送失败，内容已保留在输入框 |
+
+判断一个字串属于哪组很机械：会和别的字串并排出现的，是 `status` 或 `label`；点了会发生事的，是 `action`；其余是 `say`。
+
+read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译成 `copy.status`：
 
 | 状态 | 上屏文案 | tone | 点 / 字色 |
 | --- | --- | --- | --- |
 | idle | 在场 | quiet | `success-foreground` / `muted-foreground` |
-| running | 正在生成 | run | `info-foreground` / `info-foreground` |
-| completed | 说完了 | quiet | `success-foreground` / `muted-foreground` |
-| posted | 说完了 | quiet | `success-foreground` / `muted-foreground` |
-| held | 草稿待唤醒 | held | `warning-foreground` / `warning-foreground` |
-| silent | 读了，没说话 | quiet | `success-foreground` / `muted-foreground` |
-| error | 没跑起来 | err | `destructive` / `destructive` |
+| running | 生成中 | run | `info-foreground` / `info-foreground` |
+| completed / posted | 已回复 | quiet | `success-foreground` / `muted-foreground` |
+| held | 草稿待更新 | held | `warning-foreground` / `warning-foreground` |
+| silent | 已读未答 | quiet | `success-foreground` / `muted-foreground` |
+| error | 运行失败 | err | `destructive` / `destructive` |
 | （派生）queued | 排队中 | — | 空心环 / `muted-foreground` |
+| 报数每行 | 已回复 · #seq / 回复中 / 回复失败 / 等待 | | |
+
+页头那一句也是名词形式，好和成员栏并排读：「当前 codex · 待回复 2 位」「当前 dsh · 最后一位」「dsh 即将开始」。
 
 确认过的文案纪律：
 
-1. **一个判断标准**：这个词，使用者在界面之外还会不会碰到？会，就必须用同一个词（agent 的 id 原样英文）；不会，就是实现细节漏上来了，翻译成人话。
-2. **人叫「你」**，产品叫 Rivus，房间叫「房间」。
-3. **副标题说此刻**：「轮到 dsh，后面还有 1 位」。
-4. **等待要有数字**：正在生成 = 脉冲点 + 真在走的计时器；说完了 = 「用时 1:04」。
-5. **HELD 草稿不是已发出的事实**：草稿正文只能出现在成员栏的「看草稿」里。
+1. **一个判断标准**：这个词，使用者在界面之外还会不会碰到？会，就必须用同一个词（agent 的 id 原样英文）；不会，就是实现细节漏上来了。这条只管**用哪个词**，不管语气。
+2. **语气中性**：操作型界面没有人格，读的人在看一台机器的状态。个性只允许出现在空状态那一句里。
+3. **人叫「你」**，产品叫 Rivus，房间叫「房间」。
+4. **等待要有数字**：生成中 = 脉冲点 + 真在走的计时器；已回复 = 「用时 1:04」。
+5. **HELD 草稿不是已发出的事实**：草稿正文只能出现在成员栏的「查看草稿」里。
 6. **没有假控件**：后端没有 stop，界面就没有「停下这一轮」。
-7. **站在使用者那一侧说话**，空状态要教会界面。
+7. **空状态要教会界面**，不写「暂无」。
 8. **模板不写死数据**：人数、顺序、用时全部来自 read model。
-9. **不隐瞒代价和不确定**：「在场」不等于连接通过。
+9. **不隐瞒代价和不确定**：「在场不代表连接可用」。
 
 ## Motion
 
 - **颜色过渡**：可交互元素 `transition-colors` / `transition-[color,box-shadow]`，150ms。没有位移、缩放或阴影的过渡；shadcn 组件里的 `slide-in` / `zoom-in` 已删除。
-- **唯一的动画**：`animate-pulse-soft`（`@theme` 里的 `--animate-pulse-soft`，`rivus-pulse 1.4s ease-in-out infinite`，透明度 1 → 0.25 → 1）。只用在「正在生成」的状态点上。它旁边必须有真在走的计时器。
+- **唯一的动画**：`animate-pulse-soft`（`@theme` 里的 `--animate-pulse-soft`，`rivus-pulse 1.4s ease-in-out infinite`，透明度 1 → 0.25 → 1）。只用在「生成中」的状态点上。它旁边必须有真在走的计时器。
 - **减少动效**：`prefers-reduced-motion: reduce` 时所有动画取消、所有 `transition-duration` 归零。
 
 ## `/board` 与 `/task`
@@ -589,7 +602,7 @@ id → class 的映射写成常量表（五个成员加 `all`），不拼串：T
 - **Do** 控件用 `~/components/ui/*` 的组件，不要再写 class 集群。
 - **Do** 改 shadcn 组件时在文件顶部写清为什么偏离 registry。
 - **Do** 计时、用时、序号、时间戳用 `tabular-nums`，时长写 `m:ss`。
-- **Do** 成段的人话用 `font-serif`，界面在说话的地方用 `font-sans`。
+- **Do** 成段的句子（`copy.say`）用 `font-serif`，界面在说话的地方用 `font-sans`。
 - **Do** 提及一律走 `mention-chip.ts` 的那张表，编辑中和已发出用同一份描述。
 - **Do** 保持输入框永远可用，一轮进行中只改提示行。
 

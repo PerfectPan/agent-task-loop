@@ -104,14 +104,14 @@ describe('Room composer', () => {
     const send = vi.fn();
     render(<Harness value="保留草稿" sending onSubmit={send} />);
     expect(editorEl().getAttribute('contenteditable')).toBe('true');
-    fireEvent.submit(screen.getByRole('button', { name: '正在送出' }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: '发送中' }).closest('form')!);
     expect(send).not.toHaveBeenCalled();
     expect(editorEl().textContent).toContain('保留草稿');
   });
 
   it('says whom a message sent now would wait behind', () => {
     render(<Harness onSubmit={vi.fn()} behind="dsh" />);
-    expect(screen.getByText(/会排在/).textContent).toContain('dsh');
+    expect(screen.getByText(/排在/).textContent).toContain('dsh');
   });
 
   it('counts characters against the 2000 limit only once there are any', () => {

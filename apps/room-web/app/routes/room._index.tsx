@@ -26,6 +26,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { RiverMark } from '../room-lab/presentation/AgentMark';
 import { PRODUCT_NAME } from '../room-lab/presentation/product';
+import { copy } from '../room-lab/presentation/copy';
 import { Button } from '../components/ui/button';
 
 /** Single fetch reads response headers off this export, not off the loader. */
@@ -108,27 +109,27 @@ export default function RoomHome() {
           <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
           <span className="text-xs leading-none text-muted-foreground">本地工作台</span>
         </div>
-        <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">开一间房</h1>
+        <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">{copy.say.createTitle}</h1>
         <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">
-          把要做的事写在房名上。在场的 agent 会在同一条对话里依次接话。
+          {copy.say.createIntro}
         </p>
         <Form method="post" className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
-            房间名
-            <Input name="title" required maxLength={80} placeholder="例如：Q3 定价方案" autoFocus />
+            {copy.label.roomName}
+            <Input name="title" required maxLength={80} placeholder={copy.label.roomNamePlaceholder} autoFocus />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span>这间房要完成什么 <span className="ml-1 text-xs text-muted-foreground">可以不填</span></span>
-            <Textarea name="goal" maxLength={400} rows={3} placeholder="一句话就够，之后还能改。" />
+            <span>{copy.label.goal} <span className="ml-1 text-xs text-muted-foreground">{copy.label.optional}</span></span>
+            <Textarea name="goal" maxLength={400} rows={3} placeholder={copy.label.goalPlaceholder} />
           </label>
           <p data-error className="m-0 min-h-4 text-xs text-destructive" role={actionData && !actionData.ok ? 'alert' : undefined}>
             {actionData && !actionData.ok ? actionData.error : ''}
           </p>
-          <Button type="submit" className="self-start">建房间</Button>
+          <Button type="submit" className="self-start">{copy.action.createRoom}</Button>
         </Form>
         <p className="mt-5 mb-0 text-xs text-muted-foreground">
-          <Link className="text-primary" to="/room/agents">智能体</Link>
-          ：看这台机器上谁已安装、谁能跑，给每位写常驻提示。
+          <Link className="text-primary" to="/room/agents">{copy.label.agents}</Link>
+          ：{copy.say.agentsLink}
         </p>
       </section>
     </main>
@@ -141,11 +142,11 @@ export function ErrorBoundary() {
     ? (typeof (error.data as { error?: unknown })?.error === 'string'
       ? (error.data as { error: string }).error
       : `${error.status} ${error.statusText}`.trim())
-    : error instanceof Error ? error.message : '本地房间暂不可用';
+    : error instanceof Error ? error.message : copy.say.serviceUnavailable;
   return (
     <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
       <section className="w-[min(480px,100%)]" role="alert">
-        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">本地房间暂不可用</h1>
+        <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.serviceUnavailable}</h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
       </section>
     </main>

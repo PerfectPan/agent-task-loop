@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
+import { copy } from './copy';
 import { Button } from '~/components/ui/button';
 import {
   DropdownMenu,
@@ -38,14 +39,14 @@ export function RoomHeader({
           成员
         </Button>
         <Button variant="outline" className="max-[1180px]:hidden" onClick={onManage}>
-          管理成员
+          {copy.action.manageMembers}
         </Button>
         <DropdownMenu
           open={menuOpen}
           onOpenChange={next => { setMenuOpen(next); if (!next) setConfirming(false); }}
         >
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="房间菜单">
+            <Button variant="ghost" size="icon" aria-label={copy.action.roomMenu}>
               <DotsThree size={22} weight="bold" />
             </Button>
           </DropdownMenuTrigger>
@@ -55,16 +56,16 @@ export function RoomHeader({
           <DropdownMenuContent align="end" className="w-56">
             {confirming ? (
               <div className="flex flex-col gap-2 p-2 text-[13px]">
-                <p className="m-0 leading-snug text-foreground/75">清掉这间房的对话？房间和成员都保留。</p>
+                <p className="m-0 leading-snug text-foreground/75">{copy.say.clearConfirm}</p>
                 <div className="flex items-center justify-end gap-1">
-                  <Button variant="ghost" size="xs" onClick={closeMenu}>取消</Button>
+                  <Button variant="ghost" size="xs" onClick={closeMenu}>{copy.action.cancel}</Button>
                   <Button
                     variant="destructive"
                     size="xs"
                     className="px-2.5"
                     onClick={() => { closeMenu(); onReset(); }}
                   >
-                    确认清空
+                    {copy.action.confirmClear}
                   </Button>
                 </div>
               </div>
@@ -73,7 +74,7 @@ export function RoomHeader({
                 disabled={disabled}
                 onSelect={event => { event.preventDefault(); setConfirming(true); }}
               >
-                清空对话
+                {copy.action.clearChat}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

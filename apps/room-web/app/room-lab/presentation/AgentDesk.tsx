@@ -9,6 +9,7 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
 import { sectionLabel } from './ui';
+import { copy } from './copy';
 
 const availabilityVariant = {
   runnable: 'info',
@@ -36,18 +37,18 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
         <section className="rounded-lg border border-input bg-card">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-7 pt-[22px] pb-3.5">
             <div>
-              <h1 className="m-0 text-2xl font-bold leading-tight tracking-[-0.02em]">智能体</h1>
+              <h1 className="m-0 text-2xl font-bold leading-tight tracking-[-0.02em]">{copy.label.agents}</h1>
               <p className="mt-1 mb-0 text-sm leading-snug text-foreground/75">
-                这台机器上 {runnable} 位能跑，共 {desk.agents.length} 位。给每位写常驻提示，房间里叫到它时会带上。
+                {copy.say.agentsIntro(desk.agents.length, runnable)}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" asChild>
-                <Link to={backTo} className="no-underline">回房间</Link>
+                <Link to={backTo} className="no-underline">{copy.action.backToRoom}</Link>
               </Button>
               <Form method="post">
                 <input type="hidden" name="intent" value="scan" />
-                <Button type="submit" variant="outline" disabled={busy}>重新扫描</Button>
+                <Button type="submit" variant="outline" disabled={busy}>{copy.action.rescan}</Button>
               </Form>
             </div>
           </div>
@@ -78,12 +79,12 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                         </div>
                         <p className="m-0 mt-0.5 text-xs text-muted-foreground">{agentRoleLabels[agent.id]}</p>
                         <p className="m-0 mt-1 font-mono text-xs leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">
-                          {agent.command ?? 'PATH 上没有对应命令'}
+                          {agent.command ?? copy.say.noCommand}
                           {agent.version ? ` · ${agent.version}` : ''}
                         </p>
                         {agent.seatedIn.length > 0 ? (
                           <p className="m-0 mt-1.5 text-xs text-muted-foreground">
-                            在这些房间里：
+                            {copy.label.roomsIn}
                             {agent.seatedIn.map((room, index) => (
                               <span key={room.id}>
                                 {index > 0 ? '、' : ''}
@@ -92,7 +93,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                             ))}
                           </p>
                         ) : (
-                          <p className="m-0 mt-1.5 text-xs text-muted-foreground">还不在任何房间里</p>
+                          <p className="m-0 mt-1.5 text-xs text-muted-foreground">{copy.say.inNoRoom}</p>
                         )}
                       </div>
                     </div>
@@ -105,7 +106,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                 <input type="hidden" name="intent" value="save-prompt" />
                 <input type="hidden" name="agentId" value={current.id} />
                 <label className={sectionLabel} htmlFor="agent-system-prompt">
-                  {current.label} 的系统提示
+                  {copy.label.systemPrompt(current.label)}
                 </label>
                 <Textarea
                   key={current.id}
@@ -115,11 +116,11 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                   maxLength={4000}
                   disabled={busy}
                   defaultValue={current.systemPrompt ?? ''}
-                  placeholder="给这位的常驻说明。空着就按默认方式调用。"
+                  placeholder={copy.say.promptPlaceholder}
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
-                  <p className="m-0 text-xs text-muted-foreground">保存在这台机器上，所有房间共用。</p>
-                  <Button type="submit" disabled={busy}>保存</Button>
+                  <p className="m-0 text-xs text-muted-foreground">{copy.say.promptSaved}</p>
+                  <Button type="submit" disabled={busy}>{copy.action.save}</Button>
                 </div>
               </Form>
             )}

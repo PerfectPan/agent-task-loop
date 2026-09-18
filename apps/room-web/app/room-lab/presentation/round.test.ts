@@ -24,7 +24,7 @@ describe('deriveRound', () => {
       'claude-relay:done', 'claude:done', 'codex:now', 'opencode:queued', 'dsh:queued',
     ]);
     expect(round.live).toBe(true);
-    expect(roundSentence(round)).toBe('轮到 codex，后面还有 2 位');
+    expect(roundSentence(round)).toBe('当前 codex · 待回复 2 位');
     expect(behindWhom(round)).toBe('dsh');
   });
 
@@ -33,7 +33,7 @@ describe('deriveRound', () => {
     state.agents = state.agents.map(agent => agent.id === 'dsh' ? { ...agent, status: 'running', seenSeq: 5 } : agent);
     const round = deriveRound(state)!;
     expect(round.turns.map(turn => turn.agent.id)).toEqual(['dsh']);
-    expect(roundSentence(round)).toBe('轮到 dsh，这是最后一位');
+    expect(roundSentence(round)).toBe('当前 dsh · 最后一位');
   });
 
   it('is over when everyone has read the waking message and nobody runs', () => {

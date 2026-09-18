@@ -1,18 +1,19 @@
 import type { RoomLabAgentStatus } from '../read-model';
+import { copy } from './copy';
 
 /**
- * Status → what the person reads. The read-model words never reach the
- * screen. "held" is a draft waiting for the member to re-read the room, so it
- * is named as a draft, not as a blockage.
+ * Status → the word the person scans. Read-model words never reach the
+ * screen; the words live in copy.ts so every surface that shows a member's
+ * state shows the same one, and copy.test.ts keeps them noun phrases.
  */
 export const agentStatusLabels: Record<RoomLabAgentStatus, string> = {
-  idle: '在场',
-  running: '正在生成',
-  completed: '说完了',
-  posted: '说完了',
-  held: '草稿待唤醒',
-  silent: '读了，没说话',
-  error: '没跑起来',
+  idle: copy.status.idle,
+  running: copy.status.running,
+  completed: copy.status.completed,
+  posted: copy.status.posted,
+  held: copy.status.held,
+  silent: copy.status.silent,
+  error: copy.status.error,
 };
 
 export type StatusTone = 'quiet' | 'run' | 'held' | 'err';

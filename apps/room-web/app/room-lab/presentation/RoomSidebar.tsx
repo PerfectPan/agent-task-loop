@@ -5,6 +5,7 @@ import { RiverMark } from './AgentMark';
 import { formatAgo } from './format-time';
 import { PRODUCT_NAME } from './product';
 import { sectionLabel } from './ui';
+import { copy } from './copy';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 
@@ -133,13 +134,13 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
               id="new-room-title"
               value={title}
               maxLength={80}
-              placeholder="这间房要做什么"
+              placeholder={copy.label.roomNamePlaceholder}
               onChange={event => setTitle(event.currentTarget.value)}
               onKeyDown={event => { if (event.key === 'Escape') { setCreating(false); setTitle(''); } }}
             />
             <div className="flex items-center justify-between gap-2">
               <Button type="button" variant="ghost" size="xs" onClick={() => { setCreating(false); setTitle(''); }}>取消</Button>
-              <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>建房间</Button>
+              <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>{copy.action.create}</Button>
             </div>
           </form>
         )}
@@ -167,7 +168,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
 
       <footer className="mt-auto flex flex-col items-start gap-0.5 px-0.5 pt-2 text-xs leading-snug text-muted-foreground max-[820px]:hidden">
         <ThemeAction />
-        <span className="px-1.5">保存在这台机器上</span>
+        <span className="px-1.5">{copy.say.savedLocally}</span>
       </footer>
     </nav>
   );

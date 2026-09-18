@@ -1,13 +1,14 @@
 import type { CountOffSnapshot } from '../domain/count-off-run';
+import { copy } from './copy';
 
 export function CountOffStrip({ run }: { run: CountOffSnapshot }) {
   const headline = run.status === 'completed'
-    ? `${run.total} 位都答上了`
+    ? copy.say.countOffPassed(run.total)
     : run.status === 'failed'
-      ? `第 ${run.nextNumber} 位没答上`
-      : `等第 ${run.nextNumber} 位回答`;
+      ? copy.say.countOffFailed(run.nextNumber)
+      : copy.say.countOffWaiting(run.nextNumber);
   return (
-    <section className="rounded-lg bg-sidebar-accent p-2.5" aria-label={`检查记录 ${run.runId}`}>
+    <section className="rounded-lg bg-sidebar-accent p-2.5" aria-label={copy.label.countOffRecord(run.runId)}>
       <strong className="block text-sm font-medium" role="status" aria-live="polite">{headline}</strong>
       <ol className="m-0 mt-1.5 list-none p-0">
         {run.agentIds.map((id, index) => {
@@ -19,7 +20,9 @@ export function CountOffStrip({ run }: { run: CountOffSnapshot }) {
               <span className="tabular-nums w-3 text-xs text-muted-foreground">{index + 1}</span>
               <span className="flex-1">{id}</span>
               <small className={`tabular-nums text-xs ${failed ? 'text-destructive-soft-foreground' : active ? 'text-info-foreground' : 'text-muted-foreground'}`}>
-                {report ? `答了 · #${report.seq}` : failed ? '没答上' : active ? '回答中' : '等待'}
+                {report
+                  ? `${copy.status.answered} · #${report.seq}`
+                  : failed ? copy.status.replyFailed : active ? copy.status.answering : copy.status.waiting}
               </small>
             </li>
           );

@@ -17,6 +17,7 @@ import type { RoomLabActionResponse } from '../room-lab/read-model';
 import { parseRoomAction } from '../room-lab/application/parse-room-action';
 import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
 import { isRoomIdentity } from '../room-lab/domain/room-identity';
+import { copy } from '../room-lab/presentation/copy';
 import {
   LocalRequestError,
   assertLocalRuntime,
@@ -99,9 +100,9 @@ export function ErrorBoundary() {
   return (
     <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
       <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6" role="alert" aria-labelledby="room-unavailable-title">
-        <h1 id="room-unavailable-title" className="m-0 text-2xl font-bold tracking-[-0.02em]">这间房打不开</h1>
+        <h1 id="room-unavailable-title" className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.roomUnavailable}</h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
-        <a className="text-primary" href="/room">回到房间</a>
+        <a className="text-primary" href="/room">{copy.action.backToRooms}</a>
       </section>
     </main>
   );

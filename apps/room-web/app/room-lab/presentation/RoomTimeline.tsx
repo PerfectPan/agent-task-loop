@@ -5,6 +5,7 @@ import { AgentMark } from './AgentMark';
 import { RoomMessage } from './RoomMessage';
 import { formatElapsed } from './format-time';
 import type { Round } from './round';
+import { copy } from './copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 
@@ -58,15 +59,15 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
           if (atBottom.current) setUnseen(0);
         }}
       >
-        <span className="sr-only" role="status" aria-live="polite">已收到 {events.length} 条消息，最新序号 {head}。</span>
+        <span className="sr-only" role="status" aria-live="polite">{copy.say.received(events.length, head)}</span>
         {events.length === 0 ? (
           <div className="flex min-h-full flex-col justify-end pb-6">
             <div className="mb-3 flex items-center gap-1.5">
               {agents.map(agent => <AgentMark key={agent.id} agentId={agent.id} size={22} />)}
             </div>
-            <h2 className="m-0 mb-1 text-[18px] font-semibold">这间房还没有消息。</h2>
+            <h2 className="m-0 mb-1 text-[18px] font-semibold">{copy.say.emptyThreadTitle}</h2>
             <p className="m-0 max-w-[46ch] font-serif text-base leading-[1.7] text-foreground/75">
-              直接说，在场的 {agents.length} 位会按顺序接话。输入 @，只问其中一位。
+              {copy.say.emptyThread(agents.length)}
             </p>
           </div>
         ) : (
@@ -83,26 +84,26 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
                   <p className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground" role="status">
                     <span aria-hidden="true" className="animate-pulse-soft inline-block size-1.5 rounded-full bg-info-foreground" />
                     <b className="font-medium text-info-foreground">{agent.id}</b>
-                    正在生成
+                    {copy.status.running}
                     <ElapsedLabel seconds={elapsedOf(agent.id)} />
                   </p>
                 )}
                 {phase === 'queued' && (
                   <p className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground">
-                    <b className="font-medium text-foreground/75">{agent.id}</b>排队中
+                    <b className="font-medium text-foreground/75">{agent.id}</b>{copy.status.queued}
                   </p>
                 )}
                 {/* Status only. The draft and its one action live in the members column,
                     so the held state has a single home. */}
                 {phase === 'held' && (
                   <Badge variant="warning" className={statePill}>
-                    <span><b className="font-semibold">{agent.id}</b> 的草稿在等新消息，重读之后才会发出。去成员栏处理。</span>
+                    <span>{copy.say.heldInThread(agent.id)}</span>
                   </Badge>
                 )}
                 {phase === 'error' && (
                   <Badge variant="destructive-soft" className={`${statePill} [overflow-wrap:anywhere]`}>
                     <span>
-                      <b className="font-semibold">{agent.id}</b> 这一轮没跑起来
+                      {copy.say.errorInThread(agent.id)}
                       {agent.error ? <span className="block">{agent.error}</span> : null}
                     </span>
                   </Badge>
@@ -119,7 +120,7 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
           onClick={jump}
         >
           <ArrowDown size={13} weight="bold" />
-          {unseen} 条新消息
+          {copy.label.newMessages(unseen)}
         </Button>
       )}
     </div>

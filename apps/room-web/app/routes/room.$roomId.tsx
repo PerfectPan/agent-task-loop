@@ -59,10 +59,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (!roomId || !isRoomIdentity(roomId)) {
       throw new LocalRequestError(404, 'Unknown Room');
     }
+    const host = getRoomLabHost();
     const input = parseRoomAction(await request.json().catch(() => {
       throw new RoomLabInputError('Room action must be valid JSON');
-    }));
-    const host = getRoomLabHost();
+    }), host.agents);
     if (input.action === 'create') {
       const created = await host.create({
         title: input.title,

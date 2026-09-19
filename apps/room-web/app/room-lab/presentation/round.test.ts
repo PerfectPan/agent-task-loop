@@ -13,15 +13,15 @@ function human(seq: number, addressedTo: string[] = []): RoomLabEventView {
 describe('deriveRound', () => {
   it('reads done / now / queued from seenSeq and runningAgentIds', () => {
     const state = roomFixture({ events: [human(3)], runningAgentIds: ['codex'] });
-    // composition order: claude-relay, claude, codex, opencode, dsh
+    // composition order: relay, claude, codex, opencode, dsh
     state.agents = state.agents.map(agent => {
-      if (agent.id === 'claude-relay' || agent.id === 'claude') return { ...agent, status: 'posted', seenSeq: 3 };
+      if (agent.id === 'relay' || agent.id === 'claude') return { ...agent, status: 'posted', seenSeq: 3 };
       if (agent.id === 'codex') return { ...agent, status: 'running', seenSeq: 3 };
       return { ...agent, status: 'posted', seenSeq: 2 }; // said something last round, not yet this one
     });
     const round = deriveRound(state)!;
     expect(round.turns.map(turn => `${turn.agent.id}:${turn.phase}`)).toEqual([
-      'claude-relay:done', 'claude:done', 'codex:now', 'opencode:queued', 'dsh:queued',
+      'relay:done', 'claude:done', 'codex:now', 'opencode:queued', 'dsh:queued',
     ]);
     expect(round.live).toBe(true);
     expect(roundSentence(round)).toBe('当前 codex · 待回复 2 位');

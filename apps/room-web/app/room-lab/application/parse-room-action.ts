@@ -1,11 +1,14 @@
-import { isRoomLabAgentId } from '../domain/agent-roster';
+import type { KnownAgentIds } from '../domain/agent-registry';
 import type { RoomLabAction } from '../read-model';
 import { RoomLabInputError } from './room-lab-service.server';
 
-export function parseRoomAction(value: unknown): RoomLabAction {
+/** `known` is the registry: an id that is not a row is not an agent. */
+export function parseRoomAction(value: unknown, known: KnownAgentIds): RoomLabAction {
   if (!value || typeof value !== 'object' || !('action' in value)) {
     throw new RoomLabInputError('Room action is invalid');
   }
+  const isRoomLabAgentId = (candidate: unknown): candidate is string =>
+    typeof candidate === 'string' && known.has(candidate);
   const input = value as Record<string, unknown>;
   switch (input.action) {
     case 'message':

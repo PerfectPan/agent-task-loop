@@ -1,8 +1,8 @@
 import {
-  ROOM_AGENT_ROSTER,
-  isRoomLabAgentId,
+  isAgentId,
+  type KnownAgentIds,
   type RoomLabAgentId,
-} from './agent-roster';
+} from './agent-registry';
 import {
   RoomCatalogInvariantError,
   assertRoomIdentity,
@@ -23,7 +23,11 @@ export class RoomCatalog {
   private rooms: RoomRecord[];
   private lastOpenedId?: string;
 
-  constructor(rooms: readonly RoomRecord[] = [], lastOpenedId?: string) {
+  constructor(
+    rooms: readonly RoomRecord[] = [],
+    lastOpenedId?: string,
+    private readonly known?: KnownAgentIds,
+  ) {
     this.rooms = rooms.map(cloneRecord);
     this.lastOpenedId = lastOpenedId && this.rooms.some(room => room.id === lastOpenedId)
       ? lastOpenedId
@@ -47,7 +51,10 @@ export class RoomCatalog {
       createdAt: input.now,
       updatedAt: input.now,
       lastOpenedAt: input.now,
-      memberIds: new RoomComposition(input.memberIds ?? defaultMembers()).snapshot(),
+      memberIds: new RoomComposition(
+        input.memberIds ?? this.known?.ids() ?? [],
+        this.known,
+      ).snapshot(),
       ...(optionalGoal(input.goal) === undefined ? {} : { goal: optionalGoal(input.goal) }),
     };
     this.rooms.push(record);
@@ -85,7 +92,7 @@ export class RoomCatalog {
 
   replaceMembers(id: string, memberIds: readonly RoomLabAgentId[], now: string): RoomRecord {
     return this.update(id, room => {
-      room.memberIds = new RoomComposition(memberIds).snapshot();
+      room.memberIds = new RoomComposition(memberIds, this.known).snapshot();
       room.updatedAt = now;
     });
   }
@@ -108,10 +115,6 @@ export class RoomCatalog {
 }
 
 export { RoomCatalogInvariantError };
-
-function defaultMembers(): RoomLabAgentId[] {
-  return ROOM_AGENT_ROSTER.map(agent => agent.id);
-}
 
 function validateTitle(value: string): string {
   const title = value.trim().replace(/\s+/g, ' ');
@@ -136,5 +139,5 @@ function cloneRecord(room: RoomRecord): RoomRecord {
 }
 
 export function isRoomLabAgentIdList(value: unknown): value is RoomLabAgentId[] {
-  return Array.isArray(value) && value.every(isRoomLabAgentId);
+  return Array.isArray(value) && value.every(isAgentId);
 }

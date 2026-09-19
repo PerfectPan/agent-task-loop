@@ -4,68 +4,23 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ProcessRunner, SeatBind } from '@rivus/agent-orchestration';
 import type { AgentRunner } from '../application/ports';
-import type { RoomLabAgentId } from '../domain/agent-roster';
+import type { RoomLabAgentId } from '../domain/agent-registry';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_OUTPUT_CHARS = 12_000;
 const TERMINATION_GRACE_MS = 2_000;
 
-export function agentSeatBinding(agentId: RoomLabAgentId): SeatBind {
-  switch (agentId) {
-    case 'claude-relay':
-      return {
-        cmd: 'zsh',
-        args: [
-          '-lic',
-          'claude-relay -p --no-session-persistence --output-format text "$1"',
-          'rivus-room',
-        ],
-      };
-    case 'claude':
-      return {
-        cmd: 'claude',
-        args: [
-          '-p',
-          '--safe-mode',
-          '--restricted',
-          '--no-session-persistence',
-          '--output-format',
-          'text',
-        ],
-      };
-    case 'codex':
-      return {
-        cmd: 'codex',
-        args: [
-          'exec',
-          '--ignore-user-config',
-          '--ephemeral',
-          '--sandbox',
-          'read-only',
-          '--skip-git-repo-check',
-          '--ignore-rules',
-          '--color',
-          'never',
-        ],
-      };
-    case 'opencode':
-      return {
-        cmd: 'opencode',
-        args: [
-          'run',
-          '--pure',
-          '--model',
-          'opencode/ling-3.0-flash-fin-free',
-        ],
-        env: { NO_COLOR: '1' },
-      };
-    case 'dsh':
-      return {
-        cmd: 'dsh',
-        args: ['--profile', 'headless'],
-        env: { NO_COLOR: '1' },
-      };
-  }
+/**
+ * One shape for every member: the row's command run by an interactive login
+ * zsh, with the prompt as `$1`. A login shell is what makes an alias or a
+ * function on the person's machine a usable member, and passing the prompt as
+ * a positional argument keeps it out of the parsed command line.
+ */
+export function agentSeatBinding(command: string): SeatBind {
+  return {
+    cmd: 'zsh',
+    args: ['-lic', `${command} "$1"`, 'rivus-room'],
+  };
 }
 
 export const localAgentProcessRunner: ProcessRunner = input => runProcess({
@@ -77,31 +32,41 @@ export const localAgentProcessRunner: ProcessRunner = input => runProcess({
   onSpawn: input.onSpawn,
 });
 
-export const runLocalAgent: AgentRunner = async (agentId, prompt, signal) => {
-  const startedAt = Date.now();
-  const sandboxDir = await mkdtemp(path.join(os.tmpdir(), `rivus-room-${agentId}-`));
-  const binding = agentSeatBinding(agentId);
-  try {
-    const result = await runProcess({
-      command: binding.cmd,
-      args: [...(binding.args ?? []), prompt],
-      cwd: sandboxDir,
-      env: binding.env ?? {},
-      signal,
-    });
-    if (result.exitCode !== 0) {
-      throw new AgentRunError(
-        agentId,
-        processFailureMessage(result.exitCode, result.stderr),
-      );
+/**
+ * The runner reads the command off the registry at call time, so a row edited
+ * between two turns takes effect on the next one.
+ */
+export function createLocalAgentRunner(
+  commandOf: (agentId: RoomLabAgentId) => string | undefined,
+): AgentRunner {
+  return async (agentId, prompt, signal) => {
+    const startedAt = Date.now();
+    const command = commandOf(agentId);
+    if (!command) throw new AgentRunError(agentId, 'No command is registered for this agent');
+    const sandboxDir = await mkdtemp(path.join(os.tmpdir(), `rivus-room-${agentId}-`));
+    const binding = agentSeatBinding(command);
+    try {
+      const result = await runProcess({
+        command: binding.cmd,
+        args: [...(binding.args ?? []), prompt],
+        cwd: sandboxDir,
+        env: binding.env ?? {},
+        signal,
+      });
+      if (result.exitCode !== 0) {
+        throw new AgentRunError(
+          agentId,
+          processFailureMessage(result.exitCode, result.stderr),
+        );
+      }
+      const text = normalizeAgentOutput(result.stdout);
+      if (!text) throw new AgentRunError(agentId, 'CLI returned an empty response');
+      return { text, latencyMs: Date.now() - startedAt };
+    } finally {
+      await rm(sandboxDir, { recursive: true, force: true });
     }
-    const text = normalizeAgentOutput(agentId, result.stdout);
-    if (!text) throw new AgentRunError(agentId, 'CLI returned an empty response');
-    return { text, latencyMs: Date.now() - startedAt };
-  } finally {
-    await rm(sandboxDir, { recursive: true, force: true });
-  }
-};
+  };
+}
 
 export interface RunProcessInput {
   command: string;
@@ -227,12 +192,19 @@ function abortError(command: string, reason: unknown): Error {
   return reason instanceof Error ? reason : new Error(`${command} was aborted`);
 }
 
-export function normalizeAgentOutput(agentId: RoomLabAgentId, output: string): string {
+/**
+ * What a CLI wraps around the answer and no reader wants: colour escapes, a
+ * fence around the whole reply, and a tool banner line — `> build · <model>`
+ * and its relatives — which is the CLI talking about itself. The rule is the
+ * shape of such a line, not the name of the member that printed it.
+ */
+export function normalizeAgentOutput(output: string): string {
   const plain = output.replace(/\u001b\[[0-9;]*m/g, '').trim();
-  const providerText = agentId === 'opencode'
-    ? plain.split('\n').filter(line => !/^>\s+build\s+·/i.test(line.trim())).join('\n').trim()
-    : plain;
-  return providerText
+  return plain
+    .split('\n')
+    .filter(line => !/^>\s+[^\s·]+\s+·/.test(line.trim()))
+    .join('\n')
+    .trim()
     .replace(/^```(?:text|markdown)?\s*/i, '')
     .replace(/\s*```$/, '')
     .trim();

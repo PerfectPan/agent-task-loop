@@ -1,18 +1,13 @@
-import {
-  ROOM_AGENT_ROSTER,
-  type RoomLabAgentId,
-} from './agent-roster';
+import type { RoomLabAgentId } from './agent-registry';
 
-const KNOWN_MENTIONS = new Map<string, RoomLabAgentId>(
-  ROOM_AGENT_ROSTER.map(agent => [agent.id, agent.id]),
-);
 /**
  * The one mention grammar. Exported as a source string rather than a RegExp so
  * every reader builds its own object and no one inherits someone else's
  * lastIndex; the composer's string→document rebuild uses it so that what the
  * editor turns into a chip is exactly what the server will read as a mention.
+ * The word after `@` is an agent id, so it accepts exactly what an id may be.
  */
-export const ROOM_MENTION_SOURCE = String.raw`(?<![a-z0-9._%+-])@(all|[a-z][a-z-]*)(?=\s|$|[,.!?;:，。！？；：])`;
+export const ROOM_MENTION_SOURCE = String.raw`(?<![a-z0-9._%+-])@(all|[a-z][a-z0-9-]*)(?=\s|$|[,.!?;:，。！？；：])`;
 
 const MENTION_PATTERN = new RegExp(ROOM_MENTION_SOURCE, 'gi');
 
@@ -23,14 +18,22 @@ export interface RoomMessage {
   inactiveMentions: RoomLabAgentId[];
 }
 
+/**
+ * `knownAgentIds` is the registry: a mention outside it is not an address at
+ * all, while one inside it but outside the room is a member who has to be
+ * added first. Defaulting to the active crew keeps the two sets in step for
+ * callers that have only one of them.
+ */
 export function parseRoomMessage(
   body: string,
-  activeAgentIds: readonly RoomLabAgentId[] = ROOM_AGENT_ROSTER.map(agent => agent.id),
+  activeAgentIds: readonly RoomLabAgentId[],
+  knownAgentIds: readonly RoomLabAgentId[] = activeAgentIds,
 ): RoomMessage {
   const addressedTo = new Set<RoomLabAgentId>();
   const unknownMentions = new Set<string>();
   const inactiveMentions = new Set<RoomLabAgentId>();
   const activeAgents = new Set(activeAgentIds);
+  const knownAgents = new Set(knownAgentIds);
   for (const match of body.matchAll(MENTION_PATTERN)) {
     const mention = match[1]?.toLowerCase();
     if (!mention) continue;
@@ -38,9 +41,8 @@ export function parseRoomMessage(
       for (const agentId of activeAgentIds) addressedTo.add(agentId);
       continue;
     }
-    const agentId = KNOWN_MENTIONS.get(mention);
-    if (agentId && activeAgents.has(agentId)) addressedTo.add(agentId);
-    else if (agentId) inactiveMentions.add(agentId);
+    if (activeAgents.has(mention)) addressedTo.add(mention);
+    else if (knownAgents.has(mention)) inactiveMentions.add(mention);
     else unknownMentions.add(mention);
   }
   return {

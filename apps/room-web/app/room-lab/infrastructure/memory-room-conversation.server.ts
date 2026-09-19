@@ -4,8 +4,8 @@ import { StoredRoomConversation } from './stored-room-conversation.server';
 const DEFAULT_ROOM_ID: RoomId = { tenantId: 'local', conversationId: 'web-room' };
 
 export class MemoryRoomConversation extends StoredRoomConversation {
-  constructor(roomId: RoomId = DEFAULT_ROOM_ID) {
-    super(roomId, new MemoryRoomStreamStore());
+  constructor(roomId: RoomId = DEFAULT_ROOM_ID, agentIds: readonly string[] = []) {
+    super(roomId, new MemoryRoomStreamStore(), agentIds);
   }
 
   override reset(): void {

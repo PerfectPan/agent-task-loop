@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { RoomLabAgentId } from '../domain/agent-roster';
+import type { RoomLabAgentId } from '../domain/agent-registry';
 import { RoomCatalog, type RoomRecord } from '../domain/room-catalog';
 import { writeJsonAtomic } from './atomic-write.server';
 

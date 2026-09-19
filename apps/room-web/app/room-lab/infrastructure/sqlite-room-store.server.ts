@@ -4,14 +4,24 @@ import { DatabaseSync } from 'node:sqlite';
 import type { RoomId } from '@rivus/agent-room';
 import type { RoomLabWorkspaceSnapshot } from '../application/room-lab-service.server';
 import { RoomCatalog, type RoomRecord } from '../domain/room-catalog';
-import { isRoomLabAgentId, type RoomLabAgentId } from '../domain/agent-roster';
+import {
+  AgentRegistry,
+  type AgentDefinition,
+  type RoomLabAgentId,
+} from '../domain/agent-registry';
 import { defaultRoomHome } from './file-room-catalog.server';
-import { ROOM_SQLITE_SCHEMA } from './sqlite-schema.server';
+import { runMigrations } from './migrations';
 import { SqliteRoomConversation } from './sqlite-room-conversation.server';
 
 const TENANT = 'local';
 
 export class SqliteRoomStore {
+  /**
+   * Empty until `migrate()` has created and seeded the table; from then on it
+   * is the one registry every caller reads, and `reload()` re-reads the rows.
+   */
+  agents = new AgentRegistry();
+
   private constructor(
     readonly db: DatabaseSync,
     private readonly root: string,
@@ -21,6 +31,7 @@ export class SqliteRoomStore {
     mkdirSync(root, { recursive: true });
     const db = new DatabaseSync(join(root, 'rooms.sqlite'));
     db.exec('PRAGMA journal_mode = WAL');
+    configureConnection(db);
     const store = new SqliteRoomStore(db, root);
     store.migrate();
     store.importLegacyFiles();
@@ -29,6 +40,7 @@ export class SqliteRoomStore {
 
   static memory(): SqliteRoomStore {
     const db = new DatabaseSync(':memory:');
+    configureConnection(db);
     const store = new SqliteRoomStore(db, ':memory:');
     store.migrate();
     return store;
@@ -44,7 +56,7 @@ export class SqliteRoomStore {
     `).all() as unknown as MemberRow[];
     const membersByRoom = new Map<string, RoomLabAgentId[]>();
     for (const row of members) {
-      if (!isRoomLabAgentId(row.agent_id)) continue;
+      if (!this.agents.has(row.agent_id)) continue;
       const list = membersByRoom.get(row.room_id) ?? [];
       list.push(row.agent_id);
       membersByRoom.set(row.room_id, list);
@@ -55,11 +67,11 @@ export class SqliteRoomStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       lastOpenedAt: row.last_opened_at,
-      memberIds: membersByRoom.get(row.id) ?? ['codex'],
+      memberIds: membersByRoom.get(row.id) ?? this.agents.ids().slice(0, 1),
       ...(row.goal ? { goal: row.goal } : {}),
     }));
     const lastOpenedId = this.meta('last_opened_id');
-    return new RoomCatalog(records, lastOpenedId);
+    return new RoomCatalog(records, lastOpenedId, this.agents);
   }
 
   saveCatalog(catalog: RoomCatalog): void {
@@ -132,7 +144,7 @@ export class SqliteRoomStore {
     `).all() as unknown as Array<{ agent_id: string; prompt: string }>;
     const prompts = new Map<RoomLabAgentId, string>();
     for (const row of rows) {
-      if (!isRoomLabAgentId(row.agent_id) || !row.prompt.trim()) continue;
+      if (!this.agents.has(row.agent_id) || !row.prompt.trim()) continue;
       prompts.set(row.agent_id, row.prompt);
     }
     return prompts;
@@ -153,15 +165,26 @@ export class SqliteRoomStore {
 
   conversation(roomId: string): SqliteRoomConversation {
     const id: RoomId = { tenantId: TENANT, conversationId: roomId };
-    return new SqliteRoomConversation(this.db, id);
+    return new SqliteRoomConversation(this.db, id, this.agents.ids());
   }
 
   private migrate(): void {
-    this.db.exec(ROOM_SQLITE_SCHEMA);
-    const applied = this.db.prepare('SELECT version FROM schema_migrations WHERE version = 1').get();
-    if (!applied) {
-      this.db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)').run(new Date().toISOString());
-    }
+    runMigrations(this.db);
+    this.agents = new AgentRegistry(() => this.loadAgents());
+  }
+
+  loadAgents(): AgentDefinition[] {
+    const rows = this.db.prepare(`
+      SELECT id, label, role, command, color, position FROM agents ORDER BY position ASC
+    `).all() as unknown as AgentRow[];
+    return rows.map(row => ({
+      id: row.id,
+      label: row.label,
+      role: row.role,
+      command: row.command,
+      color: Number(row.color),
+      position: Number(row.position),
+    }));
   }
 
   private meta(key: string): string | undefined {
@@ -192,7 +215,7 @@ export class SqliteRoomStore {
       rooms?: RoomRecord[];
       lastOpenedId?: string;
     };
-    this.saveCatalog(new RoomCatalog(catalog.rooms ?? [], catalog.lastOpenedId));
+    this.saveCatalog(new RoomCatalog(catalog.rooms ?? [], catalog.lastOpenedId, this.agents));
     for (const room of catalog.rooms ?? []) {
       const directory = join(this.root, 'rooms', room.id);
       const conversation = this.conversation(room.id);
@@ -205,6 +228,15 @@ export class SqliteRoomStore {
     }
     this.setMeta('legacy_imported', '1');
   }
+}
+
+/**
+ * Per-connection settings, not schema: they are lost with the connection, so
+ * they are applied every time one is opened rather than recorded as a version.
+ */
+function configureConnection(db: DatabaseSync): void {
+  db.exec('PRAGMA foreign_keys = ON');
+  db.exec('PRAGMA busy_timeout = 5000');
 }
 
 interface RoomRow {
@@ -220,4 +252,13 @@ interface MemberRow {
   room_id: string;
   agent_id: string;
   seat_order: number;
+}
+
+interface AgentRow {
+  id: string;
+  label: string;
+  role: string;
+  command: string;
+  color: number;
+  position: number;
 }

@@ -7,22 +7,26 @@ import {
 } from './local-agent-runner.server';
 
 describe('agentSeatBinding', () => {
-  it('maps every Room seat to a headless local entry point', () => {
-    expect(agentSeatBinding('claude-relay')).toMatchObject({ cmd: 'zsh' });
-    expect(agentSeatBinding('claude')).toMatchObject({ cmd: 'claude' });
-    expect(agentSeatBinding('codex')).toMatchObject({ cmd: 'codex' });
-    expect(agentSeatBinding('opencode')).toMatchObject({ cmd: 'opencode' });
-    expect(agentSeatBinding('dsh')).toMatchObject({ cmd: 'dsh' });
-    expect(JSON.stringify(agentSeatBinding('claude-relay'))).not.toMatch(
-      /AUTH_TOKEN|API_KEY|https:\/\//,
-    );
+  it('runs every member through one interactive login shell with the prompt as $1', () => {
+    expect(agentSeatBinding('NO_COLOR=1 opencode run --pure')).toEqual({
+      cmd: 'zsh',
+      args: ['-lic', 'NO_COLOR=1 opencode run --pure "$1"', 'rivus-room'],
+    });
+    // The prompt is a positional argument, so its content is never parsed as
+    // part of the command line the shell runs.
+    const binding = agentSeatBinding('demo --flag');
+    expect([...(binding.args ?? []), '@all 报数; rm -rf /'].at(-1)).toBe('@all 报数; rm -rf /');
+    expect(JSON.stringify(binding)).not.toMatch(/AUTH_TOKEN|API_KEY|https:\/\//);
   });
 
-  it('removes the OpenCode model banner from the public Room reply', () => {
+  it('removes a tool banner line from the public Room reply whoever printed it', () => {
     expect(normalizeAgentOutput(
-      'opencode',
       '\u001b[0m\n> build · ling-3.0-flash-fin-free\n\u001b[0m\n5\n',
     )).toBe('5');
+    expect(normalizeAgentOutput('> session · headless\n结论在这里')).toBe('结论在这里');
+    // A quoted line in the answer is not a banner: no ` · ` after one word.
+    expect(normalizeAgentOutput('> 引用的一句话\n接着说')).toBe('> 引用的一句话\n接着说');
+    expect(normalizeAgentOutput('```text\n答案\n```')).toBe('答案');
   });
 });
 

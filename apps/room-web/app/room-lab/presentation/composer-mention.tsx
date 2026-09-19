@@ -2,14 +2,21 @@ import { Mention } from '@tiptap/extension-mention';
 import { ReactRenderer } from '@tiptap/react';
 import type { SuggestionOptions } from '@tiptap/suggestion';
 import type { RoomLabAgentId } from '../read-model';
-import { MENTION_CHIPS, mentionChip } from './mention-chip';
+import { mentionChip } from './mention-chip';
 import { MentionMenu, MENTION_LIST_ID, mentionOptionId, type MentionMenuHandle } from './MentionMenu';
-import { buildMentionOptions, mentionCompletion, type MentionOption } from './mention-completion';
+import {
+  buildMentionOptions,
+  mentionCompletion,
+  type MentionAgent,
+  type MentionOption,
+} from './mention-completion';
 
 /** What the composer needs to know to wire aria state to the popup. */
 export interface MentionBridge {
   /** Read at suggestion time, so changing the crew does not rebuild the editor. */
   activeAgentIds: () => readonly RoomLabAgentId[];
+  /** The members themselves, for the label, the role and the identity colour. */
+  agents: () => readonly MentionAgent[];
   onOpenChange: (open: boolean) => void;
   onActiveOptionChange: (id: string | undefined) => void;
 }
@@ -34,7 +41,10 @@ export function roomMentionSuggestion(bridge: MentionBridge): Omit<SuggestionOpt
   return {
     char: '@',
     items: ({ query }) =>
-      mentionCompletion.filter(query.toLowerCase(), buildMentionOptions(bridge.activeAgentIds())),
+      mentionCompletion.filter(
+        query.toLowerCase(),
+        buildMentionOptions(bridge.activeAgentIds(), bridge.agents()),
+      ),
     render: () => {
       let renderer: ReactRenderer<MentionMenuHandle, MentionMenuProps> | undefined;
       let container: HTMLDivElement | undefined;
@@ -99,7 +109,7 @@ export function roomMention(bridge: MentionBridge) {
     renderText: ({ node }) => `@${node.attrs.id}`,
     renderHTML: ({ options, node }) => {
       const id = String(node.attrs.id ?? '');
-      const chip = mentionChip(id) ?? MENTION_CHIPS.all;
+      const chip = mentionChip(id, bridge.agents().find(agent => agent.id === id)?.color);
       return [
         'span',
         { ...options.HTMLAttributes, class: chip.chipClass, 'data-id': id },

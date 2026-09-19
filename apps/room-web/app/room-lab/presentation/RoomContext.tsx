@@ -4,7 +4,6 @@ import type { RoomLabAgentId, RoomLabAgentView, RoomLabState } from '../read-mod
 import { AgentMark } from './AgentMark';
 import { CountOffStrip } from './CountOffStrip';
 import { CrewComposer } from './CrewComposer';
-import { agentRoleLabels } from './agent-role';
 import { agentStatusLabels, agentStatusTone, toneDot, toneText } from './agent-status';
 import { formatElapsed, formatLatency } from './format-time';
 import type { Round } from './round';
@@ -89,10 +88,10 @@ export function RoomContext({
               return (
                 <li key={agent.id} className="flex flex-col">
                   <div className="flex items-center gap-2.5 rounded-md px-1 py-[7px]">
-                    <AgentMark agentId={agent.id} size={22} />
+                    <AgentMark agentId={agent.id} color={agent.color} size={22} />
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {agent.id}
-                      <span className="ml-1.5 text-xs text-muted-foreground">{agentRoleLabels[agent.id]}</span>
+                      <span className="ml-1.5 text-xs text-muted-foreground">{agent.role}</span>
                     </span>
                     <span className={`flex shrink-0 items-center gap-1.5 text-xs ${queued ? 'text-muted-foreground' : toneText[tone]}`}>
                       <i aria-hidden="true" className={`inline-block size-1.5 rounded-full ${queued ? 'bg-transparent shadow-[inset_0_0_0_1px_currentColor]' : toneDot[tone]} ${agent.status === 'running' ? 'animate-pulse-soft' : ''}`} />

@@ -18,9 +18,10 @@ import type {
 import { CountOffRun, type CountOffSnapshot } from '../domain/count-off-run';
 import { HELD_RETRY_LIMIT } from '../domain/held-retry';
 import {
-  ROOM_AGENT_ROSTER,
+  AgentRegistry,
+  type AgentDefinition,
   type RoomLabAgentId,
-} from '../domain/agent-roster';
+} from '../domain/agent-registry';
 import { parseRoomMessage } from '../domain/room-message';
 import {
   RoomComposition,
@@ -41,6 +42,8 @@ export interface RoomLabServiceOptions {
   agentRunner: AgentRunner;
   taskDelivery: TaskDeliveryCoordinatorPort;
   textPresenter: RoomLabTextPresenterPort;
+  /** Who exists at all. Every seat in a snapshot is a row in this registry. */
+  registry: AgentRegistry;
   composition?: RoomComposition;
   onPersist?: (snapshot: RoomLabWorkspaceSnapshot) => void;
 }
@@ -58,7 +61,7 @@ export interface RoomLabWorkspaceSnapshot {
 export class RoomLabService {
   private readonly epoch = randomUUID();
   private readonly composition: RoomComposition;
-  private agentState = createInitialAgentState();
+  private agentState = new Map<RoomLabAgentId, AgentRuntimeState>();
   private countOff?: CountOffRun;
   private task?: RoomLabTaskView;
   private busy = false;
@@ -70,7 +73,8 @@ export class RoomLabService {
   private readonly runningAgents = new Set<RoomLabAgentId>();
 
   constructor(private readonly options: RoomLabServiceOptions) {
-    this.composition = options.composition ?? new RoomComposition();
+    this.composition = options.composition
+      ?? new RoomComposition(options.registry.ids(), options.registry);
   }
 
   async snapshot(): Promise<RoomLabState> {
@@ -89,10 +93,8 @@ export class RoomLabService {
         catalog: [],
         activeAgentIds,
         events: slice.events.map(event => this.eventView(event)),
-        agents: ROOM_AGENT_ROSTER.map(agent => this.agentView(
-          agent.id,
-          agent.label,
-          agent.role,
+        agents: this.options.registry.list().map(agent => this.agentView(
+          agent,
           this.composition.includes(agent.id),
         )),
         ...(this.countOff ? { countOff: this.countOff.snapshot() } : {}),
@@ -113,7 +115,7 @@ export class RoomLabService {
     const messageId = validateMessageId(clientMessageId)
       ?? `web:${String(++this.messageCounter).padStart(4, '0')}`;
     const activeAgentIds = this.composition.snapshot();
-    const parsed = parseRoomMessage(message, activeAgentIds);
+    const parsed = parseRoomMessage(message, activeAgentIds, this.options.registry.ids());
     if (parsed.unknownMentions.length > 0) {
       const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
       throw new RoomLabInputError(`Unknown Room mention: ${mentions}`);
@@ -417,7 +419,7 @@ export class RoomLabService {
     if (this.busy) throw new RoomLabBusyError();
     this.options.conversation.reset();
     this.options.taskDelivery.reset();
-    this.agentState = createInitialAgentState();
+    this.agentState = new Map();
     this.countOff = undefined;
     this.task = undefined;
     this.messageCounter = 0;
@@ -471,7 +473,7 @@ export class RoomLabService {
       );
       const generated = await this.options.agentRunner(
         agentId,
-        buildChatPrompt(agentId, roomSize, context),
+        buildChatPrompt(this.options.registry.get(agentId) ?? agentId, roomSize, context),
         signal,
       );
       const result = await this.mutateConversation(() =>
@@ -508,18 +510,15 @@ export class RoomLabService {
     });
   }
 
-  private agentView(
-    id: RoomLabAgentId,
-    label: string,
-    role: string,
-    active: boolean,
-  ): RoomLabAgentView {
+  private agentView(agent: AgentDefinition, active: boolean): RoomLabAgentView {
+    const id = agent.id;
     const runtime = this.agentState.get(id) ?? { status: 'idle' as const };
     const session = this.options.conversation.inspectAgent(id);
     return {
       id,
-      label,
-      role,
+      label: agent.label,
+      role: agent.role,
+      color: agent.color,
       active,
       status: runtime.status,
       availability: 'runnable',
@@ -609,10 +608,6 @@ export class RoomLabService {
   }
 }
 
-function createInitialAgentState(): Map<RoomLabAgentId, AgentRuntimeState> {
-  return new Map(ROOM_AGENT_ROSTER.map(agent => [agent.id, { status: 'idle' }]));
-}
-
 function withoutRetryProgress(state: AgentRuntimeState): AgentRuntimeState {
   const current = { ...state };
   delete current.retryAttempt;
@@ -620,13 +615,13 @@ function withoutRetryProgress(state: AgentRuntimeState): AgentRuntimeState {
 }
 
 function buildChatPrompt(
-  agentId: RoomLabAgentId,
+  agent: AgentDefinition | RoomLabAgentId,
   roomSize: number,
   events: RoomEvent[],
 ): string {
-  const agent = ROOM_AGENT_ROSTER.find(candidate => candidate.id === agentId);
-  const role = agent?.role ?? 'Independent room participant';
-  return `You are ${agent?.label ?? agentId}, the ${role} in a ${roomSize}-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+  const named = typeof agent === 'string' ? undefined : agent;
+  const role = named?.role ?? 'Independent room participant';
+  return `You are ${named?.label ?? agent}, the ${role} in a ${roomSize}-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
 }
 
 function buildCountOffPrompt(
@@ -666,6 +661,7 @@ function toTaskView(
   };
 }
 
+// TODO(agents-registry): task gate still names two agents; make seats configurable.
 function agentForSeat(seat: 'impl' | 'review'): RoomLabAgentId {
   return seat === 'impl' ? 'codex' : 'claude';
 }

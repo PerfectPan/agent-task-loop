@@ -1,34 +1,29 @@
 import type { RoomLabAgentId } from '../read-model';
+import { agentLetters } from './agent-letters';
+import { agentTile } from './agent-color';
 import { Avatar, AvatarFallback } from '~/components/ui/avatar';
 
 /**
  * One round mark per member: two capitals in that member's hue on a tile of the
- * same hue at 15%. Identity lives in --chart-1…5, in seating order, so the five
- * members occupy shadcn's own categorical ramp rather than a set of names this
- * project invented. The letters clear 4.5:1 against their own tile in both
- * themes, so the mark is self-sufficient wherever it lands. Identity is never
- * read as state; state lives in the dot beside the name.
- *
- * The classes are written out one per member because Tailwind resolves colours
- * by scanning the source for literal class names.
+ * same hue at 15%. Identity lives in --chart-1…5, which the member's row
+ * carries, so the ramp belongs to shadcn and the assignment belongs to the
+ * database — not to a table of names in this source. The letters clear 4.5:1
+ * against their own tile in both themes, so the mark is self-sufficient
+ * wherever it lands. Identity is never read as state; state lives in the dot
+ * beside the name.
  */
-const MARK: Record<RoomLabAgentId, { letters: string; tile: string }> = {
-  'claude-relay': { letters: 'CR', tile: 'bg-chart-1/15 text-chart-1' },
-  claude: { letters: 'CL', tile: 'bg-chart-2/15 text-chart-2' },
-  codex: { letters: 'CX', tile: 'bg-chart-3/15 text-chart-3' },
-  opencode: { letters: 'OC', tile: 'bg-chart-4/15 text-chart-4' },
-  dsh: { letters: 'DS', tile: 'bg-chart-5/15 text-chart-5' },
-};
 
 /** 11px letters at 30px and above, 10px on the 22px mark in the lists. */
 const letterSize = (size: number) => (size <= 22 ? 'text-[10px]' : 'text-[11px]');
 
-export function AgentMark({ agentId, size = 30, className = '' }: {
+export function AgentMark({ agentId, color, size = 30, className = '' }: {
   agentId: RoomLabAgentId;
+  color: number | undefined;
   size?: number;
   className?: string;
 }) {
-  const { letters, tile } = MARK[agentId];
+  const letters = agentLetters(agentId);
+  const tile = agentTile(color);
   return (
     <Avatar aria-hidden="true" className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
       <AvatarFallback className={`${tile} ${letterSize(size)} font-semibold tracking-[0.02em]`}>

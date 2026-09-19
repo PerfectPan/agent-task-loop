@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from '@phosphor-icons/react/dist/ssr/ArrowDown';
 import type { RoomLabAgentId, RoomLabAgentView, RoomLabEventView } from '../read-model';
 import { AgentMark } from './AgentMark';
-import { RoomMessage } from './RoomMessage';
+import { RoomMessage, type AgentColorLookup } from './RoomMessage';
 import { formatElapsed } from './format-time';
 import type { Round } from './round';
 import { copy } from './copy';
@@ -15,9 +15,11 @@ import { Button } from '~/components/ui/button';
  */
 const statePill = 'm-0 w-full justify-start gap-2 whitespace-normal px-2.5 py-[5px] text-left text-[13px] leading-snug';
 
-export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
+export function RoomTimeline({ events, head, agents, round, elapsedOf, colorOf }: {
   events: RoomLabEventView[]; head: number; agents: RoomLabAgentView[]; round: Round | undefined;
   elapsedOf: (agentId: RoomLabAgentId) => number | undefined;
+  /** Every member the registry knows, not only the ones seated here. */
+  colorOf: AgentColorLookup;
 }) {
   const scrollRef = useRef<HTMLElement>(null);
   const atBottom = useRef(true);
@@ -63,7 +65,7 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
         {events.length === 0 ? (
           <div className="flex min-h-full flex-col justify-end pb-6">
             <div className="mb-3 flex items-center gap-1.5">
-              {agents.map(agent => <AgentMark key={agent.id} agentId={agent.id} size={22} />)}
+              {agents.map(agent => <AgentMark key={agent.id} agentId={agent.id} color={agent.color} size={22} />)}
             </div>
             <h2 className="m-0 mb-1 text-[18px] font-semibold">{copy.say.emptyThreadTitle}</h2>
             <p className="m-0 max-w-[46ch] font-serif text-base leading-[1.7] text-foreground/75">
@@ -72,14 +74,14 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf }: {
           </div>
         ) : (
           <ol className="m-0 flex list-none flex-col gap-[22px] p-0">
-            {events.map(event => <RoomMessage key={event.messageId} event={event} />)}
+            {events.map(event => <RoomMessage key={event.messageId} event={event} colorOf={colorOf} />)}
           </ol>
         )}
         {turns.length > 0 && (
           <ol className="m-0 mt-[22px] flex list-none flex-col gap-3 p-0" aria-label="这一轮">
             {turns.map(({ agent, phase }) => (
               <li key={agent.id} className="grid grid-cols-[30px_minmax(0,1fr)] items-center gap-3">
-                <AgentMark agentId={agent.id} className={phase === 'queued' ? 'opacity-55' : ''} />
+                <AgentMark agentId={agent.id} color={agent.color} className={phase === 'queued' ? 'opacity-55' : ''} />
                 {phase === 'now' && (
                   <p className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground" role="status">
                     <span aria-hidden="true" className="animate-pulse-soft inline-block size-1.5 rounded-full bg-info-foreground" />

@@ -269,7 +269,7 @@ components:
 
 ### 三个需要知道的映射
 
-- **`--chart-1…5` 是五位成员的身份色**，按就座顺序：claude-relay / claude / codex / opencode / dsh。它既是作者名的字色，也是圆头像里两个字母的颜色，头像底是同色 15%（`bg-chart-N/15`）。用 shadcn 自己的分类色阶承担身份，而不是再造一组 `--id-*`。
+- **`--chart-1…5` 是成员的身份色**。哪位拿哪个色不由代码决定：`agents` 表建行时在 1…5 里随机取一个存下，之后这一行一直是这个色。它既是作者名的字色，也是圆头像里两个字母的颜色，头像底是同色 15%（`bg-chart-N/15`）。用 shadcn 自己的分类色阶承担身份，而不是再造一组 `--id-*`。
 - **`--accent` 是悬停与选中底**（`#efefec` / `#2a2a2a`）。它是上一轮那层 8% 墨的实色等价物：`rgb(55 53 47 / 0.08)` 压在白纸上算出来是 `#efefef`，所以换成实色后画面不变。栏里用 `sidebar-accent`（`#ebebe8`），同理对应 8% 墨压在 `#f7f7f5` 上。
 - **`--info` / `--warning` / `--success` / `--destructive-soft` 是补出来的四对**，沿用 shadcn 自己的配对写法：token 是洗底，`-foreground` 是落在它上面的墨。一枚状态药丸就是 `bg-warning text-warning-foreground`，一个变体名就交代完外观。`--destructive` 保持 shadcn 的原意——实色红，配白字，用在「确认清空」上；柔和的错误洗底另开 `--destructive-soft`，两者不混。
 
@@ -323,15 +323,19 @@ components:
 
 ### 身份色
 
-五位成员各一个 `chart-N`，一个值同时承担两件事：消息作者名的字色，和圆头像里两个字母的颜色。头像底是 `bg-chart-N/15`。
+一个 `chart-N` 同时承担两件事：消息作者名的字色，和圆头像里两个字母的颜色。头像底是 `bg-chart-N/15`。
 
-| 成员 | token | 字母 | 浅 | 深 |
-| --- | --- | --- | --- | --- |
-| claude-relay | `chart-1` | CR | `#6940a5` | `#b69be5` |
-| claude | `chart-2` | CL | `#a25207` | `#e8955a` |
-| codex | `chart-3` | CX | `#3a7351` | `#7cc29a` |
-| opencode | `chart-4` | OC | `#ac3e79` | `#e48cbc` |
-| dsh | `chart-5` | DS | `#636e0f` | `#b9c25a` |
+色**在建行时随机分配并持久化**——`agents` 表的 `color` 列，1…5，`crypto.randomInt` 取一次就不再变。成员多于五位时颜色会重复；身份靠字母和名字区分，色只是帮着一眼扫到同一个人。表外的 id（比如一条旧消息里 @ 到的、已经删掉的成员）落到 `bg-accent text-accent-foreground`，不冒充任何一位。
+
+字母**由 id 推出来**，不列表：按非字母数字切段，两段及以上取前两段的首字母，只有一段取前两个字母，大写。`claude-code → CC`、`dsh → DS`、`opencode → OP`。
+
+| token | 浅 | 深 |
+| --- | --- | --- |
+| `chart-1` | `#6940a5` | `#b69be5` |
+| `chart-2` | `#a25207` | `#e8955a` |
+| `chart-3` | `#3a7351` | `#7cc29a` |
+| `chart-4` | `#ac3e79` | `#e48cbc` |
+| `chart-5` | `#636e0f` | `#b9c25a` |
 
 它们落在纸上 ≥ 5.57 / ≥ 7.35，落在自己那层 15% 淡染底上 ≥ 4.53 / ≥ 5.67。
 
@@ -479,7 +483,7 @@ components:
 
 ### Avatar（`AgentMark` / `HumanMark`）
 
-`Avatar` + `AvatarFallback`，`AgentMark` 是薄封装：把 agentId 映射到 `bg-chart-N/15 text-chart-N` 和两个字母（CR / CL / CX / OC / DS）。直径 30（时间线）/ 22（成员栏、编辑列表、空状态）/ 36（智能体页）由 `style` 传，字 11px（22px 时 10px）/ 600 / 0.02em，`aria-hidden`。人的记号是 `foreground` 实底上一个 `background` 色的「我」字。状态永远不从记号读：运行中记号不变，排队中只降到 `opacity-55`。
+`Avatar` + `AvatarFallback`，`AgentMark` 是薄封装：把成员那一行的 `color` 映射到 `bg-chart-N/15 text-chart-N`，字母由 id 推出（`agent-letters.ts`）。直径 30（时间线）/ 22（成员栏、编辑列表、空状态）/ 36（智能体页）由 `style` 传，字 11px（22px 时 10px）/ 600 / 0.02em，`aria-hidden`。人的记号是 `foreground` 实底上一个 `background` 色的「我」字。状态永远不从记号读：运行中记号不变，排队中只降到 `opacity-55`。
 
 品牌标 `RiverMark` 不变：两条错位的正弦短线，`primary` 色。
 
@@ -487,9 +491,9 @@ components:
 
 一个提及在正在写的那条里和在已发出的那条里长得一模一样——它是同一个东西的两个时刻，不能有两套样式。所以胶囊的描述只有一份，被三处读：Tiptap 节点的 `renderHTML`（它产出的是 DOM spec，不是 JSX，所以共享的是数据而不是组件）、已发消息里的只读胶囊、以及提及菜单。
 
-`inline-flex` 的圆角胶囊，底 `bg-chart-N/15`、字 `text-chart-N`、15px / 600 黑体、`px-1.5`、`align-baseline`，前面一颗 14px 的圆点：`bg-chart-N` 底上 8px 的两个大写字母，和头像用同一张字母表（CR / CL / CX / OC / DS）。`@all` 用 `bg-accent text-accent-foreground`，圆点里是 `@`。
+`inline-flex` 的圆角胶囊，底 `bg-chart-N/15`、字 `text-chart-N`、15px / 600 黑体、`px-1.5`、`align-baseline`，前面一颗 14px 的圆点：`bg-chart-N` 底上 8px 的两个大写字母，和头像用同一套推导。`@all` 和注册表以外的 id 都用 `bg-accent text-accent-foreground`，`@all` 的圆点里是 `@`。
 
-id → class 的映射写成常量表（五个成员加 `all`），不拼串：Tailwind 只认源码里的字面 class。
+色号 → class 的映射写成五条字面常量（`agent-color.ts`），不拼串：Tailwind 只认源码里的字面 class。
 
 ### Separator
 
@@ -597,7 +601,7 @@ read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译成 `copy
 ### Do:
 - **Do** 用 shadcn 的 token 名字。要新表面先问：现有的 `background / card / popover / sidebar / muted / accent` 里有没有一个已经是这个角色。
 - **Do** 状态成对取用：`bg-<x> text-<x>-foreground`，写成 `Badge` 的一个 variant。
-- **Do** 身份用 `chart-1…5`，按就座顺序；作者名和头像字母取同一个。
+- **Do** 身份用 `chart-1…5`，取成员那一行存下的色；作者名和头像取同一个。
 - **Do** 圆角走 `rounded-sm / md / lg`（4 / 6 / 8px），它们从 `--radius` 派生。
 - **Do** 控件用 `~/components/ui/*` 的组件，不要再写 class 集群。
 - **Do** 改 shadcn 组件时在文件顶部写清为什么偏离 registry。

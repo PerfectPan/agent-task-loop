@@ -6,10 +6,7 @@ import {
 } from '@rivus/agent-room';
 import type { TaskDeliveryEvent } from '@rivus/agent-task-loop/task-delivery';
 import type { RoomConversationPort, RoomHumanAdmitResult } from '../application/ports';
-import {
-  ROOM_AGENT_ROSTER,
-  type RoomLabAgentId,
-} from '../domain/agent-roster';
+import type { RoomLabAgentId } from '../domain/agent-registry';
 import type { FileRoomStreamStore } from './file-room-stream-store.server';
 import type { SqliteRoomStreamStore } from './sqlite-room-unit-of-work.server';
 import { MemoryRoomStreamStore } from '@rivus/agent-room';
@@ -27,6 +24,8 @@ export class StoredRoomConversation implements RoomConversationPort {
   constructor(
     protected readonly roomId: RoomId,
     store: RoomSessionStore,
+    /** Registered members, so their sessions exist before anyone speaks. */
+    protected readonly agentIds: readonly RoomLabAgentId[] = [],
   ) {
     this.conversationId = roomId.conversationId;
     this.displayId = `${roomId.tenantId}/${roomId.conversationId}`;
@@ -171,8 +170,8 @@ export class StoredRoomConversation implements RoomConversationPort {
   }
 
   protected ensureSessions(): void {
-    for (const agent of ROOM_AGENT_ROSTER) {
-      this.store.ensureSession(this.sessionId(agent.id));
+    for (const agentId of this.agentIds) {
+      this.store.ensureSession(this.sessionId(agentId));
     }
   }
 }

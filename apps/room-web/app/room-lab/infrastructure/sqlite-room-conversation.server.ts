@@ -9,8 +9,9 @@ export class SqliteRoomConversation extends StoredRoomConversation {
   constructor(
     private readonly db: DatabaseSync,
     roomId: RoomId,
+    agentIds: readonly string[] = [],
   ) {
-    super(roomId, new SqliteRoomStreamStore(db, roomId));
+    super(roomId, new SqliteRoomStreamStore(db, roomId), agentIds);
   }
 
   override reset(): void {

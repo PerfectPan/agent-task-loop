@@ -18,6 +18,9 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
   const [editingCrew, setEditingCrew] = useState(false);
   const commandLocked = pending && !sending;
   const activeAgents = state.activeAgentIds.flatMap(id => state.agents.filter(agent => agent.id === id));
+  // Identity colour for anyone the registry knows, including a member who has
+  // since left this room but still speaks in its transcript.
+  const colorOf = (agentId: string) => state.agents.find(agent => agent.id === agentId)?.color;
   const round = deriveRound(state);
   const elapsedOf = useElapsed(state.runningAgentIds);
 
@@ -80,12 +83,13 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
           agents={activeAgents}
           round={round}
           elapsedOf={elapsedOf}
+          colorOf={colorOf}
         />
         <RunStrip round={round} elapsedOf={elapsedOf} />
         <RoomComposer
           value={value}
           sending={!!sending}
-          activeAgentIds={state.activeAgentIds}
+          agents={activeAgents}
           behind={behindWhom(round)}
           onValueChange={onValueChange}
           onSubmit={submit}

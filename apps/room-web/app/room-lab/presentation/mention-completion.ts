@@ -1,13 +1,20 @@
-import {
-  ROOM_AGENT_ROSTER,
-  type RoomLabAgentId,
-} from '../domain/agent-roster';
+import type { RoomLabAgentId } from '../read-model';
 import { copy } from './copy';
 
+/** What the menu needs about a member: who it is and what colour it wears. */
+export interface MentionAgent {
+  id: RoomLabAgentId;
+  label: string;
+  role: string;
+  color: number;
+}
+
 export interface MentionOption {
-  id: 'all' | (typeof ROOM_AGENT_ROSTER)[number]['id'];
+  id: 'all' | RoomLabAgentId;
   label: string;
   description: string;
+  /** Absent for `@all`, which is the room rather than a member. */
+  color?: number;
 }
 
 interface MentionQuery {
@@ -16,32 +23,38 @@ interface MentionQuery {
   query: string;
 }
 
-export function buildMentionOptions(activeAgentIds: readonly RoomLabAgentId[]): MentionOption[] {
-  const activeAgents = new Set(activeAgentIds);
+/**
+ * The room's own members, in the room's own order, plus `@all`. A member with
+ * no matching row still appears under its id: it is addressable because it sits
+ * in this room, and the menu is not the place to explain the gap.
+ */
+export function buildMentionOptions(
+  activeAgentIds: readonly RoomLabAgentId[],
+  agents: readonly MentionAgent[] = [],
+): MentionOption[] {
+  const byId = new Map(agents.map(agent => [agent.id, agent]));
   return [
     {
       id: 'all',
       label: `All ${activeAgentIds.length} active agents`,
       description: copy.say.everyoneDescription,
     },
-    ...ROOM_AGENT_ROSTER
-      .filter(agent => activeAgents.has(agent.id))
-      .sort((left, right) => activeAgentIds.indexOf(left.id) - activeAgentIds.indexOf(right.id))
-      .map(agent => ({
-        id: agent.id,
-        label: agent.label,
-        description: agent.role,
-      })),
+    ...activeAgentIds.map(id => {
+      const agent = byId.get(id);
+      return {
+        id,
+        label: agent?.label ?? id,
+        description: agent?.role ?? '',
+        ...(agent ? { color: agent.color } : {}),
+      };
+    }),
   ];
 }
 
-const defaultOptions = buildMentionOptions(ROOM_AGENT_ROSTER.map(agent => agent.id));
-
 export const mentionCompletion = {
-  options: defaultOptions,
   find(value: string, cursor: number): MentionQuery | undefined {
     const beforeCursor = value.slice(0, cursor);
-    const match = beforeCursor.match(/(^|[\s,.!?;:，。！？；：])@([a-z-]*)$/i);
+    const match = beforeCursor.match(/(^|[\s,.!?;:，。！？；：])@([a-z0-9-]*)$/i);
     if (!match) return undefined;
     const query = match[2] ?? '';
     return {
@@ -50,7 +63,7 @@ export const mentionCompletion = {
       query: query.toLowerCase(),
     };
   },
-  filter(query: string, options: readonly MentionOption[] = defaultOptions): MentionOption[] {
+  filter(query: string, options: readonly MentionOption[]): MentionOption[] {
     if (!query) return [...options];
     return options.filter(option =>
       option.id.includes(query) || option.label.toLowerCase().includes(query),

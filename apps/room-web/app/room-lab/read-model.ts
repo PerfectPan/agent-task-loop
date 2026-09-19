@@ -1,7 +1,7 @@
 import type { CountOffSnapshot } from './domain/count-off-run';
-import type { RoomLabAgentId } from './domain/agent-roster';
+import type { RoomLabAgentId } from './domain/agent-registry';
 
-export type { RoomLabAgentId } from './domain/agent-roster';
+export type { RoomLabAgentId } from './domain/agent-registry';
 
 export type RoomLabAgentStatus =
   | 'idle'
@@ -27,21 +27,28 @@ export interface RoomLabEventView {
   failed?: boolean;
 }
 
+/**
+ * `found` — installed but not runnable — is no longer produced: one shell
+ * lookup either resolves the command or it does not. The word stays in the
+ * union so a stored view from before the registry still reads.
+ */
 export type RoomAgentAvailability = 'runnable' | 'found' | 'missing';
 
 export interface RoomAgentInventoryItem {
   id: RoomLabAgentId;
   label: string;
   role: string;
+  /** 1…5, the identity hue stored on the agent's row. */
+  color: number;
   availability: RoomAgentAvailability;
   command?: string;
-  version?: string;
 }
 
 export interface RoomLabAgentView {
   id: RoomLabAgentId;
   label: string;
   role: string;
+  color: number;
   active: boolean;
   status: RoomLabAgentStatus;
   availability: RoomAgentAvailability;
@@ -52,7 +59,6 @@ export interface RoomLabAgentView {
   retryAttempt?: number;
   error?: string;
   command?: string;
-  version?: string;
 }
 
 export type RoomLabTaskStatus =

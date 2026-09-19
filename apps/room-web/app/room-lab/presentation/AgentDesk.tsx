@@ -3,7 +3,6 @@ import { Form, Link, useNavigation } from 'react-router';
 import type { AgentDeskView, RoomLabAgentId } from '../read-model';
 import { AgentMark, RiverMark } from './AgentMark';
 import { agentAvailabilityLabels } from './agent-availability';
-import { agentRoleLabels } from './agent-role';
 import { PRODUCT_NAME } from './product';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -71,16 +70,15 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                         }
                       }}
                     >
-                      <AgentMark agentId={agent.id} size={36} />
+                      <AgentMark agentId={agent.id} color={agent.color} size={36} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong className="text-sm font-medium">{agent.label}</strong>
                           <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
                         </div>
-                        <p className="m-0 mt-0.5 text-xs text-muted-foreground">{agentRoleLabels[agent.id]}</p>
+                        <p className="m-0 mt-0.5 text-xs text-muted-foreground">{agent.role}</p>
                         <p className="m-0 mt-1 font-mono text-xs leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">
                           {agent.command ?? copy.say.noCommand}
-                          {agent.version ? ` · ${agent.version}` : ''}
                         </p>
                         {agent.seatedIn.length > 0 ? (
                           <p className="m-0 mt-1.5 text-xs text-muted-foreground">

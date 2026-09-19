@@ -6,7 +6,7 @@ import {
   listRoomAgentInventory,
   runnableInventory,
 } from './room-agent-inventory.server';
-import { runLocalAgent } from '../infrastructure/local-agent-runner.server';
+import { createLocalAgentRunner } from '../infrastructure/local-agent-runner.server';
 import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server';
 import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
 import {
@@ -16,7 +16,11 @@ import {
 import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
 import { RoomCatalog, RoomCatalogInvariantError } from '../domain/room-catalog';
 import { RoomComposition } from '../domain/room-composition';
-import type { RoomLabAgentId } from '../domain/agent-roster';
+import type {
+  AgentDefinition,
+  AgentRegistry,
+  RoomLabAgentId,
+} from '../domain/agent-registry';
 import type {
   AgentDeskView,
   RoomAgentInventoryItem,
@@ -31,15 +35,25 @@ export class RoomLabHost {
   private inventoryCache?: RoomAgentInventoryItem[];
   private systemPrompts: Map<RoomLabAgentId, string>;
 
+  /** The one registry: every service, route and view reads members from here. */
+  readonly agents: AgentRegistry;
+
   constructor(
     private readonly store: SqliteRoomStore = SqliteRoomStore.open(),
     private readonly bindings: {
       agentRunner?: AgentRunner;
-      listAgents?: () => RoomAgentInventoryItem[];
+      listAgents?: (agents: readonly AgentDefinition[]) => RoomAgentInventoryItem[];
     } = {},
   ) {
+    this.agents = store.agents;
     this.catalog = store.loadCatalog();
     this.systemPrompts = store.loadSystemPrompts();
+  }
+
+  /** Re-reads the `agents` table; the next probe re-runs against the new rows. */
+  reloadAgents(): void {
+    this.agents.reload();
+    this.inventoryCache = undefined;
   }
 
   list() {
@@ -51,7 +65,9 @@ export class RoomLabHost {
   }
 
   inventory(): RoomAgentInventoryItem[] {
-    return this.inventoryCache ??= this.bindings.listAgents?.() ?? listRoomAgentInventory();
+    const agents = this.agents.list();
+    return this.inventoryCache ??= this.bindings.listAgents?.(agents)
+      ?? listRoomAgentInventory(agents);
   }
 
   refreshInventory(): RoomAgentInventoryItem[] {
@@ -139,14 +155,20 @@ export class RoomLabHost {
     const existing = this.workspaces.get(roomId);
     if (existing) return existing;
     const record = this.catalog.get(roomId);
-    const run = this.bindings.agentRunner ?? runLocalAgent;
+    const run = this.bindings.agentRunner
+      ?? createLocalAgentRunner(agentId => this.agents.get(agentId)?.command);
     const service = new RoomLabService({
       conversation: this.store.conversation(roomId),
       agentRunner: (agentId, prompt, signal) =>
         run(agentId, withSystemPrompt(this.systemPrompts.get(agentId), prompt), signal),
-      taskDelivery: new LocalTaskDelivery(),
+      taskDelivery: new LocalTaskDelivery(undefined, {
+        // TODO(agents-registry): task gate still names two agents; make seats configurable.
+        impl: this.agents.get('codex')?.command ?? 'codex',
+        review: this.agents.get('claude')?.command ?? 'claude',
+      }),
       textPresenter: new LocalTextPresenter(),
-      composition: new RoomComposition(record.memberIds),
+      registry: this.agents,
+      composition: new RoomComposition(record.memberIds, this.agents),
       onPersist: snapshot => {
         this.store.saveWorkspace(roomId, snapshot, nowIso());
         const current = this.catalog.get(roomId);
@@ -177,7 +199,6 @@ export class RoomLabHost {
           ...agent,
           availability: listed?.availability ?? 'missing',
           ...(listed?.command ? { command: listed.command } : {}),
-          ...(listed?.version ? { version: listed.version } : {}),
         };
       }),
     };

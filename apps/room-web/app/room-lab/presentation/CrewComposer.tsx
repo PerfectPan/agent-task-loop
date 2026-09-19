@@ -5,7 +5,6 @@ import { Minus } from '@phosphor-icons/react/dist/ssr/Minus';
 import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
 import { AgentMark } from './AgentMark';
 import { agentAvailabilityLabels } from './agent-availability';
-import { agentRoleLabels } from './agent-role';
 import { copy } from './copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -42,12 +41,12 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
         {activeAgents.map((agent, index) => (
           <li key={agent.id} className="flex items-center gap-2 border-b border-border py-2">
             <span className="tabular-nums w-3 text-xs text-muted-foreground">{index + 1}</span>
-            <AgentMark agentId={agent.id} size={22} />
+            <AgentMark agentId={agent.id} color={agent.color} size={22} />
             <div className="min-w-0 flex-1">
               <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
               <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
-                <span>{agentRoleLabels[agent.id]}</span>
+                <span>{agent.role}</span>
               </small>
             </div>
             <div className="flex gap-1">
@@ -68,12 +67,12 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
           {agents.filter(agent => !activeAgentIds.includes(agent.id)).map(agent => (
             <li key={agent.id} className="flex items-center gap-2 border-b border-border py-2 last:border-b-0">
               <span className="w-3" aria-hidden="true" />
-              <AgentMark agentId={agent.id} size={22} className="opacity-70" />
+              <AgentMark agentId={agent.id} color={agent.color} size={22} className="opacity-70" />
               <div className="min-w-0 flex-1">
                 <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
                 <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
-                  <span>{agentRoleLabels[agent.id]}</span>
+                  <span>{agent.role}</span>
                 </small>
               </div>
               <Button variant="outline" size="icon-sm" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}

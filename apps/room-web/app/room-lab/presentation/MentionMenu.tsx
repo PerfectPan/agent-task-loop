@@ -1,6 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import type { MentionOption } from './mention-completion';
-import { isRoomLabAgentId } from '../domain/agent-roster';
 import { AgentMark } from './AgentMark';
 
 export const MENTION_LIST_ID = 'room-mention-options';
@@ -66,7 +65,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           <p className="m-0 p-2 text-[13px] text-muted-foreground">没有匹配的成员</p>
         ) : options.map((option, index) => {
           const active = index === activeIndex;
-          const agentId = isRoomLabAgentId(option.id) ? option.id : undefined;
+          const agentId = option.id === 'all' ? undefined : option.id;
           return (
             <button
               key={option.id}
@@ -82,7 +81,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               onClick={() => onSelect(option)}
             >
               {agentId
-                ? <AgentMark agentId={agentId} size={22} />
+                ? <AgentMark agentId={agentId} color={option.color} size={22} />
                 : (
                   <span
                     aria-hidden="true"

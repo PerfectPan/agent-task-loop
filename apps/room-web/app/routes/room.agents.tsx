@@ -10,7 +10,6 @@ import {
 } from 'react-router';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { AgentDesk } from '../room-lab/presentation/AgentDesk';
-import { isRoomLabAgentId } from '../room-lab/domain/agent-roster';
 import { RoomLabInputError } from '../room-lab/application/room-lab-service.server';
 import {
   LocalRequestError,
@@ -46,11 +45,12 @@ export async function action({ request }: ActionFunctionArgs) {
     const form = await request.formData();
     const intent = String(form.get('intent') ?? 'scan');
     if (intent === 'save-prompt') {
-      const agentId = form.get('agentId');
-      if (!isRoomLabAgentId(agentId)) throw new RoomLabInputError('Unknown agent');
+      const agentId = String(form.get('agentId') ?? '');
+      if (!host.agents.has(agentId)) throw new RoomLabInputError('Unknown agent');
       host.saveSystemPrompt(agentId, String(form.get('systemPrompt') ?? ''));
       return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
     }
+    host.reloadAgents();
     host.refreshInventory();
     return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
   } catch (error) {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { parseRoomMessage } from '../domain/room-message';
 
-const ACTIVE: MentionId[] = ['all', 'claude-relay', 'claude', 'codex', 'opencode', 'dsh'];
+const ACTIVE: MentionId[] = ['all', 'relay', 'claude', 'codex', 'opencode', 'dsh'];
 const roundTrip = (value: string) => docToText(textToDoc(value, ACTIVE));
 
 describe('composer document', () => {
@@ -18,7 +18,7 @@ describe('composer document', () => {
     for (const value of [
       '@codex 先别写代码',
       '@all 都看一下',
-      '先说结论 @claude-relay 再展开',
+      '先说结论 @relay 再展开',
       '两位都来：@codex 和 @claude',
       '没有提及的一句话',
       '行一\n行二',
@@ -35,7 +35,7 @@ describe('composer document', () => {
       .filter(node => node.type === 'mention')
       .map(node => node.attrs?.id);
     expect(chips).toEqual(['codex', 'claude']);
-    expect(parseRoomMessage(value).addressedTo.sort()).toEqual(['claude', 'codex']);
+    expect(parseRoomMessage(value, ['claude', 'codex']).addressedTo.sort()).toEqual(['claude', 'codex']);
   });
 
   it('leaves an unknown handle as plain text so it cannot look addressable', () => {

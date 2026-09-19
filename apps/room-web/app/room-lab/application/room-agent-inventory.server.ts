@@ -1,75 +1,72 @@
-import { existsSync } from 'node:fs';
-import { delimiter } from 'node:path';
-import {
-  collectHostProbe,
-  discover,
-  resolveCommand,
-  type DiscoveryReport,
-} from '@rivus/agent-finder-core';
-import {
-  ROOM_AGENT_ROSTER,
-  type RoomLabAgentId,
-} from '../domain/agent-roster';
+import { spawnSync } from 'node:child_process';
+import type { AgentDefinition } from '../domain/agent-registry';
 import type { RoomAgentAvailability, RoomAgentInventoryItem } from '../read-model';
 
-const ROOM_TO_FINDER: Partial<Record<RoomLabAgentId, string>> = {
-  claude: 'claude-code',
-  codex: 'codex',
-  opencode: 'opencode',
-};
+/**
+ * One probe for every member, because every member is the same kind of thing: a
+ * shell command. The first word of the command that is not a `KEY=value` prefix
+ * is looked up with `whence -w` inside an interactive login zsh — the same
+ * shell the runner will use — so an alias or a shell function counts as
+ * installed exactly when it will actually run.
+ *
+ * What is shown is the row's own command text. An alias body is never expanded:
+ * the person's alias may carry a token, and the desk is a page, not a vault.
+ */
+const RUNNABLE_KINDS = new Set(['command', 'alias', 'function', 'builtin']);
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
-const ROOM_COMMAND: Record<RoomLabAgentId, string> = {
-  'claude-relay': 'claude-relay',
-  claude: 'claude',
-  codex: 'codex',
-  opencode: 'opencode',
-  dsh: 'dsh',
-};
+export type WhenceProbe = (word: string) => string;
 
 export function listRoomAgentInventory(
-  report: DiscoveryReport = discover(collectHostProbe({ readVersion: () => null })),
-  resolveExtra: (command: string) => string | null = resolveOnPath,
+  agents: readonly AgentDefinition[],
+  probe: WhenceProbe = probeWithWhence,
 ): RoomAgentInventoryItem[] {
-  const byFinderId = new Map(report.agents.map(agent => [agent.id, agent]));
-  return ROOM_AGENT_ROSTER.map(agent => {
-    const finderId = ROOM_TO_FINDER[agent.id];
-    const found = finderId ? byFinderId.get(finderId) : undefined;
-    const extraPath = found ? null : resolveExtra(ROOM_COMMAND[agent.id]);
-    const availability = availabilityOf(found, extraPath);
+  return agents.map(agent => {
+    const word = commandWord(agent.command);
     return {
       id: agent.id,
       label: agent.label,
       role: agent.role,
-      availability,
-      ...(found?.command || extraPath ? { command: found?.command ?? extraPath ?? undefined } : {}),
-      ...(found?.version ? { version: found.version } : {}),
+      color: agent.color,
+      availability: word ? readWhence(probe(word), word) : 'missing',
+      command: agent.command,
     };
   });
 }
 
-export function runnableInventory(): RoomAgentInventoryItem[] {
-  return ROOM_AGENT_ROSTER.map(agent => ({
+export function runnableInventory(agents: readonly AgentDefinition[]): RoomAgentInventoryItem[] {
+  return agents.map(agent => ({
     id: agent.id,
     label: agent.label,
     role: agent.role,
+    color: agent.color,
     availability: 'runnable' as const,
+    command: agent.command,
   }));
 }
 
-function availabilityOf(
-  found: DiscoveryReport['agents'][number] | undefined,
-  extraPath: string | null,
-): RoomAgentAvailability {
-  if (found?.status === 'runnable' || extraPath || found?.command) return 'runnable';
-  if (found?.status === 'found') return 'found';
+/** The executable in a command line, past any `KEY=value` prefixes. */
+export function commandWord(command: string): string | undefined {
+  return command.trim().split(/\s+/).find(word => word && !ASSIGNMENT.test(word));
+}
+
+/**
+ * `whence -w <word>` answers `<word>: <kind>`, where kind is one of command,
+ * alias, function, builtin, hashed, reserved or none.
+ */
+export function readWhence(output: string, word: string): RoomAgentAvailability {
+  for (const line of output.split('\n')) {
+    const [name, kind] = line.split(':');
+    if (name?.trim() !== word) continue;
+    if (RUNNABLE_KINDS.has(kind?.trim() ?? '')) return 'runnable';
+  }
   return 'missing';
 }
 
-function resolveOnPath(command: string): string | null {
-  return resolveCommand(command, {
-    path: process.env.PATH ?? '',
-    pathExt: process.env.PATHEXT,
-    delimiter,
-    fileExists: existsSync,
+function probeWithWhence(word: string): string {
+  const result = spawnSync('zsh', ['-lic', 'whence -w -- "$1"', 'rivus-room', word], {
+    encoding: 'utf8',
+    timeout: 5_000,
   });
+  return result.stdout ?? '';
 }

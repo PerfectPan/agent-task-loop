@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { buildMentionOptions, mentionCompletion } from './mention-completion';
+import { TEST_AGENTS, TEST_AGENT_IDS } from './testing/test-agents';
+
+const OPTIONS = buildMentionOptions(TEST_AGENT_IDS, TEST_AGENTS);
 
 describe('mentionCompletion', () => {
   it('finds a mention at the caret and inserts the selected agent', () => {
     const value = '请 @cla';
     const query = mentionCompletion.find(value, value.length);
     expect(query).toMatchObject({ query: 'cla' });
-    expect(mentionCompletion.filter(query?.query ?? '').map(option => option.id)).toEqual([
-      'claude-relay',
+    expect(mentionCompletion.filter(query?.query ?? '', OPTIONS).map(option => option.id)).toEqual([
       'claude',
     ]);
-    expect(mentionCompletion.insert(value, query!, mentionCompletion.options[1]!)).toEqual({
-      value: '请 @claude-relay ',
-      cursor: 16,
+    expect(mentionCompletion.insert(value, query!, OPTIONS[1]!)).toEqual({
+      value: '请 @relay ',
+      cursor: 9,
     });
   });
 
@@ -30,10 +32,17 @@ describe('mentionCompletion', () => {
     });
   });
 
-  it('offers only the active composition in its configured order', () => {
-    const options = buildMentionOptions(['dsh', 'codex']);
+  it('offers only the active composition in its configured order, with its colours', () => {
+    const options = buildMentionOptions(['dsh', 'codex'], TEST_AGENTS);
 
     expect(options.map(option => option.id)).toEqual(['all', 'dsh', 'codex']);
     expect(options[0]?.label).toBe('All 2 active agents');
+    expect(options[1]).toMatchObject({ label: 'DSH', description: '分析', color: 5 });
+  });
+
+  it('still offers a seated member the registry no longer describes', () => {
+    const options = buildMentionOptions(['ghost'], TEST_AGENTS);
+
+    expect(options[1]).toEqual({ id: 'ghost', label: 'ghost', description: '' });
   });
 });

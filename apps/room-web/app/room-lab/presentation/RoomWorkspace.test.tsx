@@ -72,7 +72,7 @@ describe('Room workspace', () => {
       seq: 4, messageId: 'web:4', author: { kind: 'human', id: 'director' }, kind: 'human',
       body: '大家看看', addressedTo: [], at: '2026-09-17T00:00:00Z',
     }] });
-    state.agents = state.agents.map(agent => agent.id === 'claude-relay'
+    state.agents = state.agents.map(agent => agent.id === 'relay'
       ? { ...agent, status: 'held', seenSeq: 3, heldUpToSeq: 4, lastDraft: 'PRIVATE_DRAFT' }
       : { ...agent, status: 'posted', seenSeq: 4 });
     const onAction = vi.fn();
@@ -83,7 +83,7 @@ describe('Room workspace', () => {
     const aside = screen.getByRole('complementary', { name: '成员与连接' });
     expect(within(aside).getByText('PRIVATE_DRAFT')).toBeTruthy();
     fireEvent.click(within(aside).getByRole('button', { name: '读取更新并重答' }));
-    expect(onAction).toHaveBeenCalledWith({ action: 'retry', agentId: 'claude-relay' });
+    expect(onAction).toHaveBeenCalledWith({ action: 'retry', agentId: 'relay' });
   });
 
   it('tells the reader whose turn it is and whom a new message would wait behind', () => {
@@ -95,7 +95,7 @@ describe('Room workspace', () => {
       runningAgentIds: ['codex'],
     });
     state.agents = state.agents.map(agent => {
-      if (agent.id === 'claude-relay' || agent.id === 'claude') return { ...agent, status: 'posted', seenSeq: 2 };
+      if (agent.id === 'relay' || agent.id === 'claude') return { ...agent, status: 'posted', seenSeq: 2 };
       if (agent.id === 'codex') return { ...agent, status: 'running', seenSeq: 2 };
       return { ...agent, seenSeq: 0 };
     });

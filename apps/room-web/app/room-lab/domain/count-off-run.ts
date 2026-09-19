@@ -1,7 +1,4 @@
-import {
-  ROOM_AGENT_ROSTER,
-  type RoomLabAgentId,
-} from './agent-roster';
+import type { RoomLabAgentId } from './agent-registry';
 import { RoomComposition } from './room-composition';
 
 export type CountOffStatus = 'running' | 'completed' | 'failed';
@@ -32,7 +29,7 @@ export class CountOffRun {
 
   constructor(
     readonly runId: string,
-    agentIds: readonly RoomLabAgentId[] = ROOM_AGENT_ROSTER.map(agent => agent.id),
+    agentIds: readonly RoomLabAgentId[],
   ) {
     this.agentIds = new RoomComposition(agentIds).snapshot();
   }

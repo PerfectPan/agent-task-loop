@@ -11,6 +11,7 @@ import { History } from '@tiptap/extension-history';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import type { RoomLabAgentId } from '../read-model';
+import type { MentionAgent } from './mention-completion';
 import { copy } from './copy';
 import { Button } from '~/components/ui/button';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
@@ -28,8 +29,10 @@ const MAX_CHARACTERS = 2_000;
  * the time it leaves. The document exists so that a mention can be one object
  * you delete in one keystroke instead of nine characters you can half-delete.
  */
-export function RoomComposer({ value, sending, activeAgentIds, behind, onValueChange, onSubmit }: {
-  value: string; sending: boolean; activeAgentIds: RoomLabAgentId[];
+export function RoomComposer({ value, sending, agents, behind, onValueChange, onSubmit }: {
+  value: string; sending: boolean;
+  /** The room's members, in speaking order: who can be mentioned, and in what colour. */
+  agents: readonly MentionAgent[];
   behind?: RoomLabAgentId;
   onValueChange: (value: string) => void; onSubmit: () => void;
 }) {
@@ -38,8 +41,8 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
 
   // Read by the editor's own handlers, which are created once and must not
   // close over a stale render.
-  const agentsRef = useRef(activeAgentIds);
-  agentsRef.current = activeAgentIds;
+  const agentsRef = useRef(agents);
+  agentsRef.current = agents;
   const menuOpenRef = useRef(false);
   const sendingRef = useRef(sending);
   sendingRef.current = sending;
@@ -48,7 +51,14 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
   /** The last string this component put on the wire, to break the update loop. */
   const lastTextRef = useRef(value);
 
-  const mentionable = useMemo<MentionId[]>(() => ['all', ...activeAgentIds], [activeAgentIds]);
+  // Keyed by the ids themselves: the crew arrives as a fresh array every render,
+  // and rebuilding this list would re-run the effect that sets the document and
+  // drop the caret mid-sentence.
+  const mentionKey = agents.map(agent => agent.id).join(',');
+  const mentionable = useMemo<MentionId[]>(
+    () => ['all', ...mentionKey.split(',').filter(Boolean)],
+    [mentionKey],
+  );
 
   const setMenu = useCallback((open: boolean) => {
     menuOpenRef.current = open;
@@ -70,12 +80,13 @@ export function RoomComposer({ value, sending, activeAgentIds, behind, onValueCh
       // chip is one character here and eight on the wire.
       CharacterCount.configure({ limit: MAX_CHARACTERS }),
       roomMention({
-        activeAgentIds: () => agentsRef.current,
+        activeAgentIds: () => agentsRef.current.map(agent => agent.id),
+        agents: () => agentsRef.current,
         onOpenChange: setMenu,
         onActiveOptionChange: setActiveOptionId,
       }),
     ],
-    content: textToDoc(value, ['all', ...activeAgentIds]),
+    content: textToDoc(value, mentionable),
     editorProps: {
       attributes: {
         id: 'room-command',

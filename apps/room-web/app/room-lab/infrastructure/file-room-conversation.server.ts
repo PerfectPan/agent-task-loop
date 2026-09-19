@@ -8,8 +8,9 @@ export class FileRoomConversation extends StoredRoomConversation {
   constructor(
     private readonly directory: string,
     roomId: RoomId,
+    agentIds: readonly string[] = [],
   ) {
-    super(roomId, new FileRoomStreamStore(directory, roomId));
+    super(roomId, new FileRoomStreamStore(directory, roomId), agentIds);
   }
 
   override reset(): void {

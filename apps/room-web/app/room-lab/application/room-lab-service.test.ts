@@ -5,6 +5,7 @@ import { RoomLabService } from './room-lab-service.server';
 import { MemoryRoomConversation } from '../infrastructure/memory-room-conversation.server';
 import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server';
 import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
+import { testRegistry } from '../presentation/testing/test-agents';
 
 describe('RoomLabService', () => {
   it('posts the first concurrent answer and holds the other four stale drafts', async () => {
@@ -25,20 +26,20 @@ describe('RoomLabService', () => {
 
     expect(state.events.map(event => [event.seq, event.author.id])).toEqual([
       [1, 'director'],
-      [2, 'claude-relay'],
+      [2, 'relay'],
       [3, 'claude'],
       [4, 'codex'],
       [5, 'opencode'],
       [6, 'dsh'],
     ]);
     expect(state.agents.filter(agent => agent.status === 'posted')).toHaveLength(5);
-    expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
+    expect(state.agents.find(agent => agent.id === 'relay')).toMatchObject({
       status: 'posted',
     });
 
     await service.compose(['codex']);
-    await expect(service.retryHeld('claude-relay')).rejects.toThrow(
-      'Add claude-relay to the Room before retrying its held draft',
+    await expect(service.retryHeld('relay')).rejects.toThrow(
+      'Add relay to the Room before retrying its held draft',
     );
   });
 
@@ -141,7 +142,7 @@ describe('RoomLabService', () => {
 
   it('runs a five-seat count-off through one monotonic Room stream', async () => {
     const numberByAgent = new Map([
-      ['claude-relay', '1'],
+      ['relay', '1'],
       ['claude', '2'],
       ['codex', '3'],
       ['opencode', '4'],
@@ -159,7 +160,7 @@ describe('RoomLabService', () => {
       status: 'completed',
       total: 5,
       reports: [
-        { agentId: 'claude-relay', number: 1, seq: 2 },
+        { agentId: 'relay', number: 1, seq: 2 },
         { agentId: 'claude', number: 2, seq: 3 },
         { agentId: 'codex', number: 3, seq: 4 },
         { agentId: 'opencode', number: 4, seq: 5 },
@@ -181,7 +182,7 @@ describe('RoomLabService', () => {
     let relayCalls = 0;
     const service = createService(async agentId => {
       if (agentId === 'codex') return { text: 'Codex public answer', latencyMs: 1 };
-      if (agentId === 'claude-relay') {
+      if (agentId === 'relay') {
         relayCalls += 1;
         if (relayCalls === 1) {
           await delay(10);
@@ -199,15 +200,15 @@ describe('RoomLabService', () => {
 
     expect(state.countOff).toMatchObject({
       status: 'failed',
-      failedAgentId: 'claude-relay',
+      failedAgentId: 'relay',
       reports: [],
     });
-    expect(state.agents.find(agent => agent.id === 'claude-relay')).toMatchObject({
-      id: 'claude-relay',
+    expect(state.agents.find(agent => agent.id === 'relay')).toMatchObject({
+      id: 'relay',
       status: 'error',
       error: 'relay unavailable during count-off',
     });
-    await expect(service.retryHeld('claude-relay')).rejects.toThrow('has no held draft');
+    await expect(service.retryHeld('relay')).rejects.toThrow('has no held draft');
   });
 
   it('returns as soon as the human message is admitted', async () => {
@@ -496,7 +497,7 @@ describe('RoomLabService', () => {
   it('runs the Task Delivery application and projects its results into Room', async () => {
     let reviewRound = 0;
     const processRunner: ProcessRunner = async input => {
-      if (input.cmd === 'codex') {
+      if (isSeat(input, 'codex')) {
         return {
           stdout: input.args.some(arg => arg.includes('Round 2'))
             ? 'Reworked deliverable with explicit acceptance checks.'
@@ -519,6 +520,7 @@ describe('RoomLabService', () => {
       agentRunner: async () => ({ text: 'unused', latencyMs: 0 }),
       taskDelivery: new LocalTaskDelivery(processRunner),
       textPresenter: new LocalTextPresenter(),
+      registry: testRegistry(),
     });
 
     const state = await service.runTask('Define a verifiable Room acceptance contract');
@@ -564,7 +566,7 @@ describe('RoomLabService', () => {
       releaseReview = resolve;
     });
     const processRunner: ProcessRunner = async input => {
-      if (input.cmd === 'codex') {
+      if (isSeat(input, 'codex')) {
         return { stdout: 'Implementation result.', stderr: '', exitCode: 0 };
       }
       reviewStarted = true;
@@ -576,6 +578,7 @@ describe('RoomLabService', () => {
       agentRunner,
       taskDelivery: new LocalTaskDelivery(processRunner),
       textPresenter: new LocalTextPresenter(),
+      registry: testRegistry(),
     });
     await holdClaudeReply(service, conversation, () => claudeCalls >= 1);
     const retried = await service.retryHeld('claude');
@@ -607,6 +610,7 @@ describe('RoomLabService', () => {
       agentRunner: async () => ({ text: 'unused', latencyMs: 0 }),
       taskDelivery: new LocalTaskDelivery(processRunner),
       textPresenter: new LocalTextPresenter(),
+      registry: testRegistry(),
     });
 
     const state = await service.runTask('Exercise the failing seat');
@@ -620,7 +624,7 @@ describe('RoomLabService', () => {
 
   it('keeps Task PASS while exposing a failed Room projection as completed, not posted', async () => {
     const processRunner: ProcessRunner = async input => ({
-      stdout: input.cmd === 'codex'
+      stdout: isSeat(input, 'codex')
         ? 'Deliverable completed outside Room.'
         : 'VERDICT: PASS\nThe deliverable satisfies the task.',
       stderr: '',
@@ -632,6 +636,7 @@ describe('RoomLabService', () => {
       agentRunner: async () => ({ text: 'unused', latencyMs: 0 }),
       taskDelivery: new LocalTaskDelivery(processRunner),
       textPresenter: new LocalTextPresenter(),
+      registry: testRegistry(),
     });
 
     const state = await service.runTask('Keep Task success independent from Room projection');
@@ -675,6 +680,7 @@ function createService(
     agentRunner,
     taskDelivery: new LocalTaskDelivery(noTaskProcess),
     textPresenter: new LocalTextPresenter(),
+    registry: testRegistry(),
   });
 }
 
@@ -682,6 +688,14 @@ class ProjectionFailingConversation extends MemoryRoomConversation {
   override async project(): Promise<void> {
     throw new Error('Room unavailable');
   }
+}
+
+/**
+ * Every seat runs through one login shell, so the seat is told apart by the
+ * command inside the shell argument rather than by the executable.
+ */
+function isSeat(input: { cmd: string; args: string[] }, command: string): boolean {
+  return input.cmd === 'zsh' && input.args.some(arg => arg.startsWith(`${command} `));
 }
 
 function delay(ms: number): Promise<void> {

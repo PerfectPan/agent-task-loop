@@ -1,8 +1,37 @@
 # @rivus/room-web — composable local agent workspace
 
 A local-only React Router 7 (framework mode) application for composing authenticated coding agents into
-one shared Room. The catalog currently includes Claude Relay, Claude, Codex,
-OpenCode, and DSH; a Room may use any non-empty subset in any order.
+one shared Room. A Room may use any non-empty subset of the registered agents,
+in any order.
+
+## Agents
+
+An agent is a row in the `agents` table of `~/.rivus/room-web/v1/rooms.sqlite`.
+The code knows no agent by name: it reads the id, the display label, the role
+word, the shell command to run, and an identity colour drawn at random when the
+row is created. The first time this app opens a library it seeds rows for the
+four commands it ships with — `claude`, `codex`, `opencode`, `dsh` — plus one
+row for every agent id an older library already seats.
+
+Until the agents page can add one, add an agent with `sqlite3`:
+
+```sql
+INSERT INTO agents (id, label, role, command, color, position, created_at)
+VALUES (
+  'gemini',                              -- also the word after @, ^[a-z][a-z0-9-]*$
+  'Gemini',                              -- display name
+  '调研',                                 -- role word, free text
+  'gemini --prompt-interactive false',   -- run as: zsh -lic '<command> "$1"'
+  2,                                     -- 1..5, maps to --chart-1..5
+  4,                                     -- default seating order
+  '2026-09-18T00:00:00.000Z'
+);
+```
+
+Then press 重新扫描 on the agents page, which re-reads the table and re-probes
+each command. A member's availability is one `whence -w` lookup in the same
+interactive login shell the runner uses, so an alias or a shell function counts
+as installed exactly when it will actually run; the alias body is never read.
 
 ## Run
 
@@ -12,7 +41,7 @@ pnpm --filter @rivus/room-web dev
 
 Open <http://127.0.0.1:3210/room>.
 
-- **Manage members / 管理成员** adds, removes, and reorders supported agents. The selected
+- **Manage members / 管理成员** adds, removes, and reorders registered agents. The selected
   order is a domain invariant, not presentation-only state.
 - **Room chat** broadcasts unmentioned messages to the active composition.
   `@agent` targets an active seat, while `@all` explicitly addresses the current

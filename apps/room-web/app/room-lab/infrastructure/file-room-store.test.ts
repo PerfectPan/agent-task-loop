@@ -117,6 +117,14 @@ describe('sqlite Room persistence', () => {
     expect(desk.agents.find(agent => agent.id === 'claude')?.seatedIn).toEqual([]);
   });
 
+  it('keeps the connection settings the schema string used to carry', () => {
+    // They left the schema when it became a migration: a pragma is per
+    // connection, so an already-migrated library would never see one again.
+    const store = SqliteRoomStore.open(mkdtempSync(join(tmpdir(), 'rivus-room-web-')));
+    expect(store.db.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
+    expect(store.db.prepare('PRAGMA busy_timeout').get()).toMatchObject({ timeout: 5000 });
+  });
+
   it('imports a legacy JSON catalog into sqlite once', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     mkdirSync(join(root, 'rooms', 'r_aaaaaaaaaa'), { recursive: true });

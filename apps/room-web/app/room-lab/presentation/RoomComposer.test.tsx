@@ -3,12 +3,17 @@ import { useState, type ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { RoomComposer } from './RoomComposer';
+import { TEST_AGENTS } from './testing/test-agents';
+
+/** The two members every composer test seats, with their identity colours. */
+const CREW = TEST_AGENTS.filter(agent => agent.id === 'claude' || agent.id === 'codex');
+const CODEX = TEST_AGENTS.filter(agent => agent.id === 'codex');
 
 afterEach(cleanup);
 type Props = ComponentProps<typeof RoomComposer>;
 function Harness(props: Partial<Props> & { onSubmit: () => void }) {
   const [value, setValue] = useState(props.value ?? '');
-  return <RoomComposer sending={false} activeAgentIds={['claude', 'codex']}
+  return <RoomComposer sending={false} agents={CREW}
     {...props} value={value} onValueChange={setValue} />;
 }
 
@@ -77,7 +82,7 @@ describe('Room composer', () => {
 
   it('serialises the selected mention back to @codex for the server', async () => {
     const changes: string[] = [];
-    render(<RoomComposer value="" sending={false} activeAgentIds={['claude', 'codex']}
+    render(<RoomComposer value="" sending={false} agents={CREW}
       onValueChange={value => changes.push(value)} onSubmit={vi.fn()} />);
     await settle(() => fireEvent.click(screen.getByRole('button', { name: '提及' })));
     await settle(() => fireEvent.click(screen.getByRole('option', { name: /codex/ })));
@@ -115,16 +120,16 @@ describe('Room composer', () => {
   });
 
   it('counts characters against the 2000 limit only once there are any', () => {
-    const { rerender } = render(<RoomComposer value="" sending={false} activeAgentIds={['codex']}
+    const { rerender } = render(<RoomComposer value="" sending={false} agents={CODEX}
       onValueChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.queryByText(/\/ 2000/)).toBeNull();
-    rerender(<RoomComposer value="四个字符" sending={false} activeAgentIds={['codex']}
+    rerender(<RoomComposer value="四个字符" sending={false} agents={CODEX}
       onValueChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.getByText('4 / 2000')).toBeTruthy();
   });
 
   it('counts a mention at its wire length, which is what the server limits', () => {
-    render(<RoomComposer value="@codex 先别写代码" sending={false} activeAgentIds={['claude', 'codex']}
+    render(<RoomComposer value="@codex 先别写代码" sending={false} agents={CREW}
       onValueChange={vi.fn()} onSubmit={vi.fn()} />);
     // The chip is one object on screen and eight characters on the wire; the
     // server rejects a body over 2000 characters, so the counter speaks its
@@ -133,16 +138,18 @@ describe('Room composer', () => {
   });
 
   it('refuses to send a body the server would reject as too long', () => {
-    render(<RoomComposer value={'字'.repeat(2001)} sending={false} activeAgentIds={['codex']}
+    render(<RoomComposer value={'字'.repeat(2001)} sending={false} agents={CODEX}
       onValueChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(sendButton().disabled).toBe(true);
   });
 
   it('rebuilds a restored draft as a chip, not as loose text', () => {
-    render(<RoomComposer value="@codex 先别写代码" sending={false} activeAgentIds={['claude', 'codex']}
+    render(<RoomComposer value="@codex 先别写代码" sending={false} agents={CREW}
       onValueChange={vi.fn()} onSubmit={vi.fn()} />);
     const chip = editorEl().querySelector('[data-mention]');
     expect(chip).not.toBeNull();
     expect(chip?.getAttribute('data-id')).toBe('codex');
+    // The chip wears the colour stored on that member's row.
+    expect(chip?.getAttribute('class')).toContain('text-chart-3');
   });
 });

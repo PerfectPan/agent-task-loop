@@ -6,7 +6,7 @@ import type {
   TaskDeliveryEvent,
   TaskDeliveryView,
 } from '@rivus/agent-task-loop/task-delivery';
-import type { RoomLabAgentId } from '../domain/agent-roster';
+import type { RoomLabAgentId } from '../domain/agent-registry';
 
 export interface RoomHumanAdmitResult {
   event: RoomEvent;

@@ -291,6 +291,33 @@ describe('GitHubIssuesTaskProvider', () => {
     expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer ghp_fallback' });
   });
 
+  it('tries a common absolute gh path when PATH lookup yields no token', async () => {
+    delete process.env.GITHUB_TOKEN;
+    execaMock.mockImplementation(async (command: string) => {
+      if (command === 'gh') {
+        return { stdout: '', stderr: 'env: gh: No such file or directory', exitCode: 127, failed: true };
+      }
+      if (command === '/opt/homebrew/bin/gh') {
+        return { stdout: 'ghp_absolute\n', stderr: '', exitCode: 0, failed: false };
+      }
+      return { stdout: '', stderr: 'not found', exitCode: 127, failed: true };
+    });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new GitHubIssuesTaskProvider(tokenlessConfig).listTasks();
+
+    expect(execaMock).toHaveBeenNthCalledWith(1, 'gh', ['auth', 'token'], expect.objectContaining({ reject: false }));
+    expect(execaMock).toHaveBeenNthCalledWith(
+      2,
+      '/opt/homebrew/bin/gh',
+      ['auth', 'token'],
+      expect.objectContaining({ reject: false }),
+    );
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer ghp_absolute' });
+  });
+
   it('degrades to an unauthenticated request when `gh` is unavailable', async () => {
     delete process.env.GITHUB_TOKEN;
     execaMock.mockRejectedValue(new Error('gh: command not found'));
@@ -301,6 +328,26 @@ describe('GitHubIssuesTaskProvider', () => {
 
     const [, init] = fetchMock.mock.calls[0];
     expect((init as RequestInit).headers).not.toHaveProperty('Authorization');
+  });
+
+  it('explains rate-limit failures when no GitHub token was resolved', async () => {
+    delete process.env.GITHUB_TOKEN;
+    execaMock.mockRejectedValue(new Error('gh: command not found'));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for 203.0.113.10.' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new GitHubIssuesTaskProvider(tokenlessConfig).listTasks()).rejects.toThrow(
+      /no GitHub token resolved.*unauthenticated/i,
+    );
+  });
+
+  it('explains rate-limit failures when an authenticated token is exhausted', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for user ID 1.' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new GitHubIssuesTaskProvider(config).listTasks()).rejects.toThrow(
+      /authenticated GitHub token from config/i,
+    );
   });
 
   it('throws a clear error when writing without an issue number', async () => {

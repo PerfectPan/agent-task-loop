@@ -1,8 +1,8 @@
 /**
  * The two capitals in a member's mark, derived from its id rather than kept in
- * a table: an id added tonight has a mark tonight. A hyphenated or dotted id
- * gives one letter per part (`claude-code` → CC); a single word gives its
- * first two letters (`dsh` → DS, `opencode` → OP).
+ * a name table, so no registry update is needed for a new id. A hyphenated or
+ * dotted id gives one letter per part (`claude-code` → CC); a single word
+ * gives its first two letters (`dsh` → DS, `opencode` → OP).
  */
 export function agentLetters(id: string): string {
   const parts = id.split(/[^A-Za-z0-9]+/).filter(Boolean);

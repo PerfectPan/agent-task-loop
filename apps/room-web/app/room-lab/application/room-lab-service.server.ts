@@ -619,10 +619,9 @@ function buildChatPrompt(
 ): string {
   // Room facts only: who you are here, how many of you there are, and what has
   // been said. How a member should answer — and what it may use to answer — is
-  // that member's own metadata: its system prompt and its command, both columns
-  // on its row. A sentence here applied to everyone and held no one: three of
-  // the five ignored "do not use tools" while the other two obeyed, so one room
-  // answered one request two different ways.
+  // that member's own metadata: its system prompt and its command, both
+  // columns on its row. A rule written here addresses every member equally
+  // and is enforced by none of them, so it cannot be relied on.
   const named = typeof agent === 'string' ? undefined : agent;
   const id: string = named?.id ?? (agent as string);
   const label: string = named?.label ?? id;
@@ -677,7 +676,7 @@ function toTaskView(
   };
 }
 
-// TODO(agents-registry): task gate still names two agents; make seats configurable.
+// TODO(agents-registry)
 function agentForSeat(seat: 'impl' | 'review'): RoomLabAgentId {
   return seat === 'impl' ? 'codex' : 'claude';
 }

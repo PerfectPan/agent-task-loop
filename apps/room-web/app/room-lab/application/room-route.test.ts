@@ -88,7 +88,7 @@ describe('Room action boundary', () => {
   it('reads the origin as a URL, so a hostname that merely starts with one is not local', () => {
     expect(isLocalOrigin('http://127.0.0.1:3210')).toBe(true);
     expect(isLocalOrigin('http://localhost:3210')).toBe(true);
-    // These pass a `startsWith` test, which is what the form actions used to do.
+    // Prefix matching admits these hostnames; the guard must parse the origin.
     expect(isLocalOrigin('http://localhost.attacker.example')).toBe(false);
     expect(isLocalOrigin('http://127.0.0.1.attacker.example')).toBe(false);
     expect(isLocalOrigin('https://127.0.0.1')).toBe(false);

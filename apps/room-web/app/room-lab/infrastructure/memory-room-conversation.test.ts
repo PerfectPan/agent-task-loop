@@ -75,7 +75,7 @@ describe('MemoryRoomConversation', () => {
     expect(context.at(0)?.seq).toBe(11);
     expect(context.at(-1)?.seq).toBe(60);
     expect(context.at(-1)?.body).toBe('第 60 条');
-    // Behind-ness is still measured against head, not against what fit.
+    // Behind-ness is measured against head, not against the truncated context.
     expect(conversation.inspectAgent('codex').seenSeq).toBe(60);
   });
 

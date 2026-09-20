@@ -49,7 +49,7 @@ export class AgentRegistry implements KnownAgentIds {
     return new AgentRegistry(() => definitions);
   }
 
-  /** Re-reads the table. Today only the migration writes it; the GUI will. */
+  /** Re-reads the table and replaces the in-memory rows. */
   reload(): void {
     this.definitions = [...this.load()]
       .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))

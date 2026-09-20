@@ -58,8 +58,6 @@ describe('RoomLabService', () => {
     await service.waitForIdle();
 
     const second = prompts.at(-1)!;
-    // The core of this change: the member's own words are in front of it on the
-    // next turn, and so is the message that prompted them.
     expect(second).toContain('codex 的方案 A：按用量计费。');
     expect(second).toContain('先聊定价');
     expect(second).toContain('把你刚才的方案再说一遍');
@@ -86,9 +84,8 @@ describe('RoomLabService', () => {
     }
 
     const last = prompts.at(-1)!;
-    // Measured at 1378 characters when this was written, against a 48000 budget.
-    // Ten messages of 120 characters: the transcript is what dominates, and the
-    // whole turn is an order of magnitude inside the budget.
+    // Ten messages of 120 characters each: the transcript dominates the
+    // prompt, and a turn must stay an order of magnitude inside the budget.
     expect(last.length).toBeLessThan(TURN_BUDGET.maxChars / 10);
     expect(prompts).toHaveLength(5);
     expect(last).toContain('第 1 个问题');

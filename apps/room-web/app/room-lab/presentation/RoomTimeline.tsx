@@ -50,9 +50,8 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf, colorOf }
     <div className="relative flex min-h-0 flex-1 flex-col">
       <section
         ref={scrollRef}
-        // `relative` makes this the containing block for anything positioned
-        // inside a message; without it their overflow escapes the scroll clip
-        // and stretches the whole document (measured: 6913px tall page).
+        // Containing block for anything positioned inside a message; without
+        // it their overflow escapes the scroll clip and stretches the page.
         className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-7 pt-[22px] pb-3"
         aria-label={copy.label.thread}
         onScroll={event => {

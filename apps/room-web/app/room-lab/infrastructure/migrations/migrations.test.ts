@@ -102,7 +102,6 @@ describe('runMigrations', () => {
     expect(promptOf.get('dsh')).toBe(DEFAULT_AGENT_SYSTEM_PROMPT);
     expect(promptOf.get('claude')).toBe(DEFAULT_AGENT_SYSTEM_PROMPT);
     expect([...promptOf.values()].every(prompt => prompt.length > 0)).toBe(true);
-    // The old table is gone: its contents are on the rows now.
     expect(tables(db)).not.toContain('agent_system_prompts');
   });
 

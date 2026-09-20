@@ -27,8 +27,8 @@ export function createVersionOneLibrary(
 }
 
 /**
- * A library as it stood while members were rows but their instructions were
- * still a separate table: the same runner, stopped after version 2.
+ * A library at version 2: members are rows but their instructions still live
+ * in a separate table. The same runner, stopped after version 2.
  */
 export function createVersionTwoLibrary(
   root: string,

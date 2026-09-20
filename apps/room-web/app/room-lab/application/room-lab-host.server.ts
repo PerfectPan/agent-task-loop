@@ -167,7 +167,7 @@ export class RoomLabHost {
       agentRunner: (agentId, prompt, signal) =>
         run(agentId, withSystemPrompt(this.agents.get(agentId)?.systemPrompt, prompt), signal),
       taskDelivery: new LocalTaskDelivery(undefined, {
-        // TODO(agents-registry): task gate still names two agents; make seats configurable.
+        // TODO(agents-registry)
         impl: this.agents.get('codex')?.command ?? 'codex',
         review: this.agents.get('claude')?.command ?? 'claude',
       }),

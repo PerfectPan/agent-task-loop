@@ -177,9 +177,9 @@ describe('sqlite Room persistence', () => {
     expect(desk.agents.find(agent => agent.id === 'claude')?.seatedIn).toEqual([]);
   });
 
-  it('keeps the connection settings the schema string used to carry', () => {
-    // They left the schema when it became a migration: a pragma is per
-    // connection, so an already-migrated library would never see one again.
+  it('sets connection pragmas when opening a library', () => {
+    // Pragmas are per-connection; migration SQL cannot set them, so opening
+    // must.
     const store = SqliteRoomStore.open(mkdtempSync(join(tmpdir(), 'rivus-room-web-')));
     expect(store.db.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
     expect(store.db.prepare('PRAGMA busy_timeout').get()).toMatchObject({ timeout: 5000 });

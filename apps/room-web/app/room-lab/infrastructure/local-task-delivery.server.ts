@@ -12,9 +12,8 @@ import {
 } from './local-agent-runner.server';
 
 /**
- * TODO(agents-registry): task gate still names two agents; make seats
- * configurable. The commands come from the registry when the host builds this;
- * the defaults are the bare CLI names so a test can stand one up alone.
+ * Shell commands for the two task seats. The defaults are the bare CLI names
+ * so a test can stand one up alone; the host builds these from the registry.
  */
 export interface TaskSeatCommands {
   impl: string;

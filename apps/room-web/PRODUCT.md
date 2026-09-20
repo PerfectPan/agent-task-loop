@@ -48,7 +48,7 @@ Rivus room-web 是本地多 agent 的聊天室。一句话发给房间，在场�
 ## Brand Commitments
 
 - 产品名 Rivus。
-- 头像重做：不再使用 `public/images/crew/*.png` 的手绘同事像，也不用 `spirit.png`、`garden.jpg`。新头像由本次设计提供，每位 agent 一个可辨识的标识。
+- 头像由代码生成，不用插画素材：首字母取自 agent id，底色取自它在 `agents` 表里的那一列。早先的手绘同事像已从 `public/` 删除。
 - 文案纪律（使用者已确认）：一个词若使用者在界面之外碰不到，就不能出现在界面上；模板不得写死数据；按钮文字来自动作本身。
 
 ## Evidence on Hand

@@ -27,12 +27,8 @@ export interface RoomLabEventView {
   failed?: boolean;
 }
 
-/**
- * `found` — installed but not runnable — is no longer produced: one shell
- * lookup either resolves the command or it does not. The word stays in the
- * union so a stored view from before the registry still reads.
- */
-export type RoomAgentAvailability = 'runnable' | 'found' | 'missing';
+/** One shell lookup either resolves a member's command or it does not. */
+export type RoomAgentAvailability = 'runnable' | 'missing';
 
 export interface RoomAgentInventoryItem {
   id: RoomLabAgentId;

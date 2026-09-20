@@ -9,7 +9,6 @@ import {
 import type { TaskDeliveryEvent } from '@rivus/agent-task-loop/task-delivery';
 import type { RoomConversationPort, RoomHumanAdmitResult } from '../application/ports';
 import type { RoomLabAgentId } from '../domain/agent-registry';
-import type { FileRoomStreamStore } from './file-room-stream-store.server';
 import type { SqliteRoomStreamStore } from './sqlite-room-unit-of-work.server';
 import { MemoryRoomStreamStore } from '@rivus/agent-room';
 
@@ -17,7 +16,7 @@ import { MemoryRoomStreamStore } from '@rivus/agent-room';
 export const TURN_BUDGET = { maxEvents: 50, maxChars: 48_000 } as const;
 const RETRY_EVENT_BUDGET = { maxEvents: 50, maxChars: 30_000 } as const;
 
-export type RoomSessionStore = MemoryRoomStreamStore | FileRoomStreamStore | SqliteRoomStreamStore;
+export type RoomSessionStore = MemoryRoomStreamStore | SqliteRoomStreamStore;
 
 export class StoredRoomConversation implements RoomConversationPort {
   readonly conversationId: string;

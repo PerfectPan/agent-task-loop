@@ -9,7 +9,7 @@ import {
   type AgentDefinition,
   type RoomLabAgentId,
 } from '../domain/agent-registry';
-import { defaultRoomHome } from './file-room-catalog.server';
+import { defaultRoomHome } from './room-home.server';
 import { runMigrations } from './migrations';
 import { SqliteRoomConversation } from './sqlite-room-conversation.server';
 

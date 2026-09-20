@@ -1,8 +1,4 @@
-import {
-  isAgentId,
-  type KnownAgentIds,
-  type RoomLabAgentId,
-} from './agent-registry';
+import type { KnownAgentIds, RoomLabAgentId } from './agent-registry';
 import {
   RoomCatalogInvariantError,
   assertRoomIdentity,
@@ -136,8 +132,4 @@ function cloneRecord(room: RoomRecord): RoomRecord {
     ...room,
     memberIds: [...room.memberIds],
   };
-}
-
-export function isRoomLabAgentIdList(value: unknown): value is RoomLabAgentId[] {
-  return Array.isArray(value) && value.every(isAgentId);
 }

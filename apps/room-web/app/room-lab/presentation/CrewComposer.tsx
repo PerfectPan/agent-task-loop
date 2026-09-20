@@ -10,11 +10,10 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { sectionLabel } from './ui';
 
-/** CLI availability, not member state: runnable reads as info, installed-but-
- *  not-runnable as warning, absent as the neutral chip. */
+/** CLI availability, not member state: runnable reads as info, absent as the
+ *  neutral chip. */
 const availabilityVariant = {
   runnable: 'info',
-  found: 'warning',
   missing: 'muted',
 } as const;
 

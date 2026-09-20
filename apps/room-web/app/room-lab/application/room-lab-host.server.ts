@@ -12,7 +12,7 @@ import { LocalTextPresenter } from '../infrastructure/local-text-presenter.serve
 import {
   createRoomRecordInput,
   nowIso,
-} from '../infrastructure/file-room-catalog.server';
+} from '../infrastructure/room-home.server';
 import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
 import { RoomCatalog, RoomCatalogInvariantError } from '../domain/room-catalog';
 import { RoomComposition } from '../domain/room-composition';

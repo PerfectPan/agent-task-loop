@@ -12,7 +12,6 @@ import { copy } from './copy';
 
 const availabilityVariant = {
   runnable: 'info',
-  found: 'warning',
   missing: 'muted',
 } as const;
 

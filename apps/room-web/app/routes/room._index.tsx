@@ -25,8 +25,7 @@ import {
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { RiverMark } from '../room-lab/presentation/AgentMark';
-import { PRODUCT_NAME } from '../room-lab/presentation/product';
-import { copy } from '../room-lab/presentation/copy';
+import { copy } from '../room-lab/copy';
 import { Button } from '../components/ui/button';
 
 /** Single fetch reads response headers off this export, not off the loader. */
@@ -106,8 +105,8 @@ export default function RoomHome() {
       <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6">
         <div className="mb-5 flex items-center gap-2">
           <RiverMark size={18} />
-          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
-          <span className="text-xs leading-none text-muted-foreground">本地工作台</span>
+          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
+          <span className="text-xs leading-none text-muted-foreground">{copy.label.tagline}</span>
         </div>
         <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">{copy.say.createTitle}</h1>
         <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">

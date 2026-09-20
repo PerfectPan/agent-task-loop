@@ -12,7 +12,7 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import type { RoomLabAgentId } from '../read-model';
 import type { MentionAgent } from './mention-completion';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Button } from '~/components/ui/button';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mention';

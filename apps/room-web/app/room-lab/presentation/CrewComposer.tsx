@@ -4,8 +4,7 @@ import { Plus } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Minus } from '@phosphor-icons/react/dist/ssr/Minus';
 import type { RoomLabAgentId, RoomLabAgentView } from '../read-model';
 import { AgentMark } from './AgentMark';
-import { agentAvailabilityLabels } from './agent-availability';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { sectionLabel } from './ui';
@@ -32,7 +31,7 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
     onCompose(next);
   };
   return (
-    <section aria-label="成员与发言顺序" className="flex flex-col gap-2">
+    <section aria-label={copy.label.membersOrder} className="flex flex-col gap-2">
       <p className="m-0 text-[13px] leading-relaxed text-foreground/75">
         {copy.say.crewExplain}
       </p>
@@ -44,18 +43,18 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
             <div className="min-w-0 flex-1">
               <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
               <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
+                <Badge variant={availabilityVariant[agent.availability]}>{copy.availability[agent.availability]}</Badge>
                 <span>{agent.role}</span>
               </small>
             </div>
             <div className="flex gap-1">
               <Button variant="outline" size="icon-sm" disabled={disabled || index === 0} onClick={() => move(index, -1)}
-                aria-label={`将 ${agent.label} 上移`}><ArrowUp size={15} /></Button>
+                aria-label={copy.action.moveUp(agent.label)}><ArrowUp size={15} /></Button>
               <Button variant="outline" size="icon-sm" disabled={disabled || index === activeAgents.length - 1} onClick={() => move(index, 1)}
-                aria-label={`将 ${agent.label} 下移`}><ArrowDown size={15} /></Button>
+                aria-label={copy.action.moveDown(agent.label)}><ArrowDown size={15} /></Button>
               <Button variant="outline" size="icon-sm" disabled={disabled || activeAgents.length === 1}
                 onClick={() => onCompose(activeAgentIds.filter(id => id !== agent.id))}
-                aria-label={`移除 ${agent.label}`}><Minus size={15} /></Button>
+                aria-label={copy.action.remove(agent.label)}><Minus size={15} /></Button>
             </div>
           </li>
         ))}
@@ -70,12 +69,12 @@ export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
               <div className="min-w-0 flex-1">
                 <strong className="block text-sm font-medium [overflow-wrap:anywhere]">{agent.label}</strong>
                 <small className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
+                  <Badge variant={availabilityVariant[agent.availability]}>{copy.availability[agent.availability]}</Badge>
                   <span>{agent.role}</span>
                 </small>
               </div>
               <Button variant="outline" size="icon-sm" disabled={disabled} onClick={() => onCompose([...activeAgentIds, agent.id])}
-                aria-label={`加入 ${agent.label}`}><Plus size={15} /></Button>
+                aria-label={copy.action.add(agent.label)}><Plus size={15} /></Button>
             </li>
           ))}
         </ul>

@@ -5,7 +5,7 @@ import { AgentMark } from './AgentMark';
 import { RoomMessage, type AgentColorLookup } from './RoomMessage';
 import { formatElapsed } from './format-time';
 import type { Round } from './round';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 
@@ -54,7 +54,7 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf, colorOf }
         // inside a message; without it their overflow escapes the scroll clip
         // and stretches the whole document (measured: 6913px tall page).
         className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-7 pt-[22px] pb-3"
-        aria-label="房间对话"
+        aria-label={copy.label.thread}
         onScroll={event => {
           const pane = event.currentTarget;
           atBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 100;
@@ -78,7 +78,7 @@ export function RoomTimeline({ events, head, agents, round, elapsedOf, colorOf }
           </ol>
         )}
         {turns.length > 0 && (
-          <ol className="m-0 mt-[22px] flex list-none flex-col gap-3 p-0" aria-label="这一轮">
+          <ol className="m-0 mt-[22px] flex list-none flex-col gap-3 p-0" aria-label={copy.label.thisRound}>
             {turns.map(({ agent, phase }) => (
               <li key={agent.id} className="grid grid-cols-[30px_minmax(0,1fr)] items-center gap-3">
                 <AgentMark agentId={agent.id} color={agent.color} className={phase === 'queued' ? 'opacity-55' : ''} />

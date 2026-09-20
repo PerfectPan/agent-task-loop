@@ -1,5 +1,5 @@
 import type { RoomLabAgentStatus } from '../read-model';
-import { copy } from './copy';
+import { copy } from '../copy';
 
 /**
  * Status → the word the person scans. Read-model words never reach the

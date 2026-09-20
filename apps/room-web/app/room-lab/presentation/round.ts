@@ -1,5 +1,5 @@
 import type { RoomLabAgentId, RoomLabAgentView, RoomLabEventView, RoomLabState } from '../read-model';
-import { copy } from './copy';
+import { copy } from '../copy';
 
 export type TurnPhase = 'done' | 'now' | 'queued' | 'held' | 'error';
 

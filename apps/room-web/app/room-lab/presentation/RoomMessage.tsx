@@ -4,9 +4,7 @@ import { AgentMark, HumanMark } from './AgentMark';
 import { agentInk } from './agent-color';
 import { formatClock } from './format-time';
 import { mentionChip } from './mention-chip';
-import { copy } from './copy';
-
-export const HUMAN_LABEL = '你';
+import { copy } from '../copy';
 
 /** Which colour a member wears, looked up on the registry the loader sent. */
 export type AgentColorLookup = (agentId: string) => number | undefined;
@@ -27,7 +25,7 @@ export function RoomMessage({ event, colorOf = () => undefined }: {
   const human = event.author.kind === 'human';
   const control = event.author.kind === 'control-plane';
   const agentId = human || control ? undefined : event.author.id;
-  const name = human ? HUMAN_LABEL : control ? 'Room' : event.author.id;
+  const name = human ? copy.label.human : control ? 'Room' : event.author.id;
 
   if (control) {
     return (

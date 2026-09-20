@@ -1,5 +1,6 @@
 import type { RoomLabAgentId } from '../read-model';
 import { agentLetters } from './agent-letters';
+import { copy } from '../copy';
 import { agentTile } from './agent-color';
 import { Avatar, AvatarFallback } from '~/components/ui/avatar';
 
@@ -38,7 +39,7 @@ export function HumanMark({ size = 30, className = '' }: { size?: number; classN
   return (
     <Avatar aria-hidden="true" className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
       <AvatarFallback className={`bg-foreground text-background ${letterSize(size)} font-semibold`}>
-        我
+        {copy.label.humanMark}
       </AvatarFallback>
     </Avatar>
   );

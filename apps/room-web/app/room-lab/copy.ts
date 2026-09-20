@@ -7,10 +7,16 @@
  * - `label`   names a place or a thing: section titles, nav, form labels.
  * - `say`     is read for meaning: a full sentence stating a fact and, where
  *             there is one, the next step.
+ * - `availability` is a label keyed by a domain state, so the mapping is
+ *             exhaustive rather than a lookup that can miss.
  *
  * Components import keys, never literals, so one state can only ever have one
- * word. `copy.test.ts` enforces the grammar of each group.
+ * word — including the strings the server writes into a room. `copy.test.ts`
+ * enforces the grammar of each group and fails if a Chinese literal reappears
+ * anywhere on the room surface.
  */
+import type { RoomAgentAvailability } from './read-model';
+
 export const copy = {
   status: {
     idle: '在场',
@@ -52,11 +58,19 @@ export const copy = {
     save: '保存',
     backToRoom: '返回房间',
     backToRooms: '返回房间列表',
+    doneMembers: '完成成员编辑',
+    skipToComposer: '跳到消息输入框',
     moveUp: (name: string) => `将 ${name} 上移`,
     moveDown: (name: string) => `将 ${name} 下移`,
     remove: (name: string) => `移除 ${name}`,
     add: (name: string) => `加入 ${name}`,
   },
+
+  /** A member's CLI, keyed by what one shell lookup can answer. */
+  availability: {
+    runnable: '可运行',
+    missing: '未安装',
+  } satisfies Record<RoomAgentAvailability, string>,
 
   label: {
     product: 'Rivus',
@@ -67,6 +81,8 @@ export const copy = {
     membersAndConnection: '成员与连接',
     members: (count: number) => `成员 · ${count}`,
     membersOrder: '成员与发言顺序',
+    mentionList: '选择要提及的成员',
+    speakingOrder: '发言顺序',
     joinable: '可加入',
     connection: '检查连接',
     thread: '房间对话',
@@ -93,6 +109,10 @@ export const copy = {
     memberCount: (count: number) => `${count} 位成员`,
     charCount: (used: number, limit: number) => `${used} / ${limit}`,
     countOffRecord: (runId: string) => `检查记录 ${runId}`,
+    justNow: '刚刚',
+    minutesAgo: (n: number) => `${n} 分钟前`,
+    hoursAgo: (n: number) => `${n} 小时前`,
+    daysAgo: (n: number) => `${n} 天前`,
   },
 
   say: {
@@ -109,6 +129,7 @@ export const copy = {
     retried: (times: number) => `已重试 ${times} 次。`,
     connectionExplain: '按成员顺序依次回复一个数字，验证每位都能读写这段对话。在场不代表连接可用。',
     noCountOff: '还没有检查记录。',
+    noMentionMatch: '没有匹配的成员',
     countOffPassed: (total: number) => `${total} 位全部通过`,
     countOffFailed: (n: number) => `第 ${n} 位未通过`,
     countOffWaiting: (n: number) => `等待第 ${n} 位回复`,
@@ -133,6 +154,9 @@ export const copy = {
     serviceUnavailable: '房间服务不可用',
     agentsUnavailable: '智能体页面不可用',
     metaDescription: '在本机开一间房，让几个本地 agent 在同一条对话里依次回复。',
+    /** Posted into the room by the product itself, so it lives here too. */
+    countOffOpen: (total: number) => `@all 报数开始：请按席位顺序只回复自己的数字（1–${total}）。`,
+    runInterrupted: '上次执行被中断，不会自动重跑',
   },
 } as const;
 

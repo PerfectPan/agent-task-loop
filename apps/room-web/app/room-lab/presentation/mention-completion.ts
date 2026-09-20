@@ -1,5 +1,5 @@
 import type { RoomLabAgentId } from '../read-model';
-import { copy } from './copy';
+import { copy } from '../copy';
 
 /** What the menu needs about a member: who it is and what colour it wears. */
 export interface MentionAgent {

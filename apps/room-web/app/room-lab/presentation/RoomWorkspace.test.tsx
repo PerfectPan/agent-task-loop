@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { copy } from '../copy';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 vi.mock('react-router', () => ({
@@ -8,8 +9,7 @@ vi.mock('react-router', () => ({
   useLocation: () => ({ pathname: '/room/r_aaaaaaaaaa' }),
 }));
 import { RoomWorkspace } from './RoomWorkspace';
-import { HUMAN_LABEL, RoomMessage } from './RoomMessage';
-import { PRODUCT_NAME } from './product';
+import { RoomMessage } from './RoomMessage';
 import { roomFixture } from './testing/room-fixture';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -18,8 +18,8 @@ describe('Room workspace', () => {
   it('uses Rivus as the product wordmark, not 房间', () => {
     render(<RoomWorkspace state={roomFixture()} pending={false} value=""
       onValueChange={vi.fn()} onAction={vi.fn()} />);
-    expect(PRODUCT_NAME).not.toBe('房间');
-    const brand = screen.getByText(PRODUCT_NAME);
+    expect(copy.label.product).not.toBe(copy.label.rooms);
+    const brand = screen.getByText(copy.label.product);
     expect(brand.tagName).toBe('STRONG');
   });
 
@@ -116,7 +116,7 @@ describe('Room workspace', () => {
     }} /></ol>);
     expect(container.querySelector('img')).toBeNull();
     expect(container.textContent).toContain('<img src=x onerror=alert(1)>');
-    expect(HUMAN_LABEL).toBe('你');
-    expect(screen.getByText(HUMAN_LABEL)).toBeTruthy();
+    expect(copy.label.human).toBe('你');
+    expect(screen.getByText(copy.label.human)).toBeTruthy();
   });
 });

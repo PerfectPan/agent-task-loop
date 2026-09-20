@@ -1,5 +1,6 @@
 import type { RoomLabAgentId } from '../read-model';
 import { formatElapsed } from './format-time';
+import { copy } from '../copy';
 import type { Round, TurnPhase } from './round';
 import { Separator } from '~/components/ui/separator';
 
@@ -30,7 +31,7 @@ export function RunStrip({ round, elapsedOf }: {
 }) {
   if (!round?.live) return null;
   return (
-    <div className="mx-7 shrink-0 text-xs" aria-label="发言顺序">
+    <div className="mx-7 shrink-0 text-xs" aria-label={copy.label.speakingOrder}>
       <Separator />
       <ol className="m-0 flex list-none flex-wrap items-center gap-x-3.5 gap-y-1.5 p-0 pt-2">
         {round.turns.map(({ agent, phase }) => {

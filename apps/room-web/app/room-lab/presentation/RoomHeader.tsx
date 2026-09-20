@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DotsThree } from '@phosphor-icons/react/dist/ssr/DotsThree';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Button } from '~/components/ui/button';
 import {
   DropdownMenu,
@@ -26,17 +26,17 @@ export function RoomHeader({
       <div className="min-w-0">
         <h1 id="room-heading" className="m-0 text-2xl font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{title}</h1>
         <p className="mt-1 mb-0 text-sm leading-snug text-foreground/75">
-          {memberCount} 位成员
+          {copy.label.memberCount(memberCount)}
           {sentence ? <> · <span className="font-medium text-info-foreground">{sentence}</span></> : null}
           {goal ? <> · <span className="[overflow-wrap:anywhere]">{goal}</span></> : null}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        {/* Under 1180 the member list is a drawer that already carries 编辑, so one
-            button opens it; above, the column is always visible and the button
-            jumps straight into editing. */}
+        {/* Under 1180 the member list is a drawer that already carries an edit
+            control, so one button opens it; above, the column is always visible
+            and the button jumps straight into editing. */}
         <Button variant="outline" className="min-[1180px]:hidden" onClick={onMembers}>
-          成员
+          {copy.action.members}
         </Button>
         <Button variant="outline" className="max-[1180px]:hidden" onClick={onManage}>
           {copy.action.manageMembers}

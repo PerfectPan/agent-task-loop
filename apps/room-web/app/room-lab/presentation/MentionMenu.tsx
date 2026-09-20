@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import type { MentionOption } from './mention-completion';
 import { AgentMark } from './AgentMark';
+import { copy } from '../copy';
 
 export const MENTION_LIST_ID = 'room-mention-options';
 export const mentionOptionId = (id: string) => `room-mention-${id}`;
@@ -59,10 +60,10 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         id={MENTION_LIST_ID}
         className="max-h-[min(260px,40dvh)] w-[min(340px,100%)] overflow-y-auto rounded-lg border border-input bg-popover p-1 shadow-card"
         role="listbox"
-        aria-label="选择要提及的成员"
+        aria-label={copy.label.mentionList}
       >
         {options.length === 0 ? (
-          <p className="m-0 p-2 text-[13px] text-muted-foreground">没有匹配的成员</p>
+          <p className="m-0 p-2 text-[13px] text-muted-foreground">{copy.say.noMentionMatch}</p>
         ) : options.map((option, index) => {
           const active = index === activeIndex;
           const agentId = option.id === 'all' ? undefined : option.id;
@@ -93,7 +94,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               <span className="min-w-0 truncate">
                 {option.id}
                 <span className="ml-1.5 text-xs text-muted-foreground">
-                  {option.id === 'all' ? '所有在场成员' : option.description}
+                  {option.id === 'all' ? copy.label.everyone : option.description}
                 </span>
               </span>
               {active && (

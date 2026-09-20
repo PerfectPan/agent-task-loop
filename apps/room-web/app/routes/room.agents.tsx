@@ -17,7 +17,7 @@ import {
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
 import type { AgentDeskView } from '../room-lab/read-model';
-import { copy } from '../room-lab/presentation/copy';
+import { copy } from '../room-lab/copy';
 
 /** Single fetch reads response headers off this export, not off the loader. */
 export const headers: HeadersFunction = () => noStoreHeaders;

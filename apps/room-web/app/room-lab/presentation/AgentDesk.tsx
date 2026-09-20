@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { Form, Link, useNavigation } from 'react-router';
 import type { AgentDeskView, RoomLabAgentId } from '../read-model';
 import { AgentMark, RiverMark } from './AgentMark';
-import { agentAvailabilityLabels } from './agent-availability';
-import { PRODUCT_NAME } from './product';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
 import { sectionLabel } from './ui';
-import { copy } from './copy';
+import { copy } from '../copy';
 
 const availabilityVariant = {
   runnable: 'info',
@@ -29,8 +27,8 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
       <div className="mx-auto w-[min(760px,100%)]">
         <div className="mb-4 flex items-center gap-2 px-1">
           <RiverMark size={18} />
-          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
-          <span className="text-xs leading-none text-muted-foreground">本地工作台</span>
+          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
+          <span className="text-xs leading-none text-muted-foreground">{copy.label.tagline}</span>
         </div>
         <section className="rounded-lg border border-input bg-card">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-7 pt-[22px] pb-3.5">
@@ -51,7 +49,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
             </div>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] max-[720px]:grid-cols-1">
-            <ul className="m-0 flex list-none flex-col p-0 border-r border-border max-[720px]:border-r-0 max-[720px]:border-b" aria-label="本机智能体">
+            <ul className="m-0 flex list-none flex-col p-0 border-r border-border max-[720px]:border-r-0 max-[720px]:border-b" aria-label={copy.label.localAgents}>
               {desk.agents.map(agent => {
                 const active = current?.id === agent.id;
                 return (
@@ -73,7 +71,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong className="text-sm font-medium">{agent.label}</strong>
-                          <Badge variant={availabilityVariant[agent.availability]}>{agentAvailabilityLabels[agent.availability]}</Badge>
+                          <Badge variant={availabilityVariant[agent.availability]}>{copy.availability[agent.availability]}</Badge>
                         </div>
                         <p className="m-0 mt-0.5 text-xs text-muted-foreground">{agent.role}</p>
                         <p className="m-0 mt-1 font-mono text-xs leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">

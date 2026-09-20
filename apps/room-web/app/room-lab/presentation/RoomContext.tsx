@@ -8,7 +8,7 @@ import { agentStatusLabels, agentStatusTone, toneDot, toneText } from './agent-s
 import { formatElapsed, formatLatency } from './format-time';
 import type { Round } from './round';
 import { sectionLabel } from './ui';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Separator } from '~/components/ui/separator';
@@ -67,7 +67,7 @@ export function RoomContext({
         <div className="flex h-6 items-center justify-between">
           <h2 id="members-title" className={sectionLabel}>{copy.label.members(agents.length)}</h2>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="xs" onClick={() => onEditingChange(!editing)} aria-label={editing ? '完成成员编辑' : copy.action.manageMembers}>
+            <Button variant="ghost" size="xs" onClick={() => onEditingChange(!editing)} aria-label={editing ? copy.action.doneMembers : copy.action.manageMembers}>
               {editing ? copy.action.done : copy.action.edit}
             </Button>
             <Button variant="ghost" size="icon-xs" className="min-[1180px]:hidden" onClick={onClose} aria-label={copy.action.closeMembers}>
@@ -158,7 +158,7 @@ export function RoomContext({
           side="right"
           showCloseButton={false}
           className="gap-0 bg-sidebar text-sidebar-foreground"
-          aria-label="成员与连接"
+          aria-label={copy.label.membersAndConnection}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{copy.label.membersAndConnection}</SheetTitle>
@@ -175,7 +175,7 @@ export function RoomContext({
   return (
     <aside
       className="flex min-h-0 min-w-0 flex-col border-l border-sidebar-border bg-sidebar text-sidebar-foreground"
-      aria-label="成员与连接"
+      aria-label={copy.label.membersAndConnection}
     >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 px-4 py-[18px]">{panel}</div>

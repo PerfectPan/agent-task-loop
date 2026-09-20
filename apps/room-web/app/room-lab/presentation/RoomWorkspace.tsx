@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RoomLabAction, RoomLabState } from '../read-model';
 import { RoomSidebar } from './RoomSidebar';
+import { copy } from '../copy';
 import { RoomHeader } from './RoomHeader';
 import { RoomComposer } from './RoomComposer';
 import { RoomContext } from './RoomContext';
@@ -53,7 +54,7 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
         className="fixed top-2 left-2 z-50 -translate-y-[160%] rounded-lg border border-input bg-popover px-3 py-2 text-sm text-popover-foreground shadow-card focus:translate-y-0"
         href="#room-command"
       >
-        跳到消息输入框
+        {copy.action.skipToComposer}
       </a>
       <RoomSidebar
         rooms={state.catalog}

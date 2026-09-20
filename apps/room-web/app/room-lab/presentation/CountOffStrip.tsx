@@ -1,5 +1,5 @@
 import type { CountOffSnapshot } from '../domain/count-off-run';
-import { copy } from './copy';
+import { copy } from '../copy';
 
 export function CountOffStrip({ run }: { run: CountOffSnapshot }) {
   const headline = run.status === 'completed'

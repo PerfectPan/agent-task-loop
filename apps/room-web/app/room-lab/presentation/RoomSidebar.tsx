@@ -3,9 +3,8 @@ import { Link, useLocation } from 'react-router';
 import type { RoomCatalogItemView } from '../read-model';
 import { RiverMark } from './AgentMark';
 import { formatAgo } from './format-time';
-import { PRODUCT_NAME } from './product';
 import { sectionLabel } from './ui';
-import { copy } from './copy';
+import { copy } from '../copy';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 
@@ -14,7 +13,11 @@ const navLink =
 
 type ThemeChoice = 'light' | 'dark' | undefined;
 const THEME_KEY = 'rivus-theme';
-const themeLabels = { system: '跟随系统', light: '亮色', dark: '暗色' } as const;
+const themeLabels = {
+  system: copy.label.themeSystem,
+  light: copy.label.themeLight,
+  dark: copy.label.themeDark,
+} as const;
 
 const SYSTEM_DARK = '(prefers-color-scheme: dark)';
 
@@ -56,7 +59,7 @@ function ThemeAction() {
   };
   return (
     <Button variant="ghost" size="xs" onClick={cycle}>
-      主题：{themeLabels[choice ?? 'system']}
+      {copy.label.theme(themeLabels[choice ?? 'system'])}
     </Button>
   );
 }
@@ -77,15 +80,15 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
   return (
     <nav
       className="flex min-h-0 flex-col gap-[18px] overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground px-2.5 py-3.5 max-[820px]:flex-row max-[820px]:items-center max-[820px]:gap-4 max-[820px]:overflow-x-auto max-[820px]:border-r-0 max-[820px]:border-b max-[820px]:py-2.5"
-      aria-label="房间"
+      aria-label={copy.label.rooms}
     >
       <div className="flex items-center gap-2 px-2 pt-1 max-[820px]:shrink-0 max-[820px]:pt-0">
         <RiverMark size={18} />
-        <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{PRODUCT_NAME}</strong>
-        <span className="text-xs leading-none text-muted-foreground max-[820px]:hidden">本地工作台</span>
+        <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
+        <span className="text-xs leading-none text-muted-foreground max-[820px]:hidden">{copy.label.tagline}</span>
       </div>
 
-      <div className="flex flex-col gap-0.5 max-[820px]:flex-row max-[820px]:shrink-0" aria-label="页面">
+      <div className="flex flex-col gap-0.5 max-[820px]:flex-row max-[820px]:shrink-0" aria-label={copy.label.pages}>
         <Link
           to={`/room/${currentRoomId}`}
           prefetch="intent"
@@ -93,7 +96,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
           aria-current={!onAgents ? 'page' : undefined}
           className={navLink}
         >
-          房间
+          {copy.label.rooms}
           <span className="tabular-nums text-xs text-muted-foreground">{rooms.length}</span>
         </Link>
         <Link
@@ -103,16 +106,16 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
           aria-current={onAgents ? 'page' : undefined}
           className={navLink}
         >
-          智能体
+          {copy.label.agents}
         </Link>
       </div>
 
       <div className="flex min-h-0 flex-col max-[820px]:min-w-0 max-[820px]:flex-1 max-[820px]:flex-row max-[820px]:items-center max-[820px]:gap-2">
         <div className="mb-1 flex h-6 items-center justify-between px-2 max-[820px]:mb-0 max-[820px]:shrink-0 max-[820px]:px-0">
-          <h2 className={`${sectionLabel} max-[820px]:hidden`}>房间</h2>
+          <h2 className={`${sectionLabel} max-[820px]:hidden`}>{copy.label.rooms}</h2>
           {!creating && (
             <Button variant="ghost" size="xs" disabled={disabled} onClick={() => setCreating(true)}>
-              新建
+              {copy.action.newRoom}
             </Button>
           )}
         </div>
@@ -128,7 +131,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
               setCreating(false);
             }}
           >
-            <label className="sr-only" htmlFor="new-room-title">房间名</label>
+            <label className="sr-only" htmlFor="new-room-title">{copy.label.roomName}</label>
             <Input
               ref={inputRef}
               id="new-room-title"
@@ -139,7 +142,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
               onKeyDown={event => { if (event.key === 'Escape') { setCreating(false); setTitle(''); } }}
             />
             <div className="flex items-center justify-between gap-2">
-              <Button type="button" variant="ghost" size="xs" onClick={() => { setCreating(false); setTitle(''); }}>取消</Button>
+              <Button type="button" variant="ghost" size="xs" onClick={() => { setCreating(false); setTitle(''); }}>{copy.action.cancel}</Button>
               <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>{copy.action.create}</Button>
             </div>
           </form>
@@ -158,7 +161,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
                 {/* Relative time is read off the clock at render; the server and the
                     browser render seconds apart, so the two strings may differ. */}
                 <span className="mt-0.5 block text-xs leading-tight text-muted-foreground max-[820px]:hidden" suppressHydrationWarning>
-                  {room.memberCount} 位成员 · {formatAgo(room.updatedAt)}
+                  {copy.label.memberCount(room.memberCount)} · {formatAgo(room.updatedAt)}
                 </span>
               </Link>
             </li>

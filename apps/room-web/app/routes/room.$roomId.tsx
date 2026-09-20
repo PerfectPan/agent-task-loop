@@ -17,7 +17,7 @@ import type { RoomLabActionResponse } from '../room-lab/read-model';
 import { parseRoomAction } from '../room-lab/application/parse-room-action';
 import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
 import { isRoomIdentity } from '../room-lab/domain/room-identity';
-import { copy } from '../room-lab/presentation/copy';
+import { copy } from '../room-lab/copy';
 import {
   LocalRequestError,
   assertLocalRuntime,

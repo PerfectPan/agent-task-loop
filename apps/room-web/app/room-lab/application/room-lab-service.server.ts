@@ -23,6 +23,7 @@ import {
   type RoomLabAgentId,
 } from '../domain/agent-registry';
 import { parseRoomMessage } from '../domain/room-message';
+import { copy } from '../copy';
 import {
   RoomComposition,
   RoomCompositionInvariantError,
@@ -186,7 +187,7 @@ export class RoomLabService {
       await this.mutateConversation(() =>
         this.options.conversation.admitHuman({
           messageId: `web:${++this.messageCounter}`,
-          body: `@all 报数开始：请按席位顺序只回复自己的数字（1–${activeAgentIds.length}）。`,
+          body: copy.say.countOffOpen(activeAgentIds.length),
           addressedTo: activeAgentIds,
         }),
       );
@@ -705,7 +706,7 @@ function recoverAgentState(state: AgentRuntimeState): AgentRuntimeState {
   return {
     ...state,
     status: 'error',
-    error: '上次执行被中断，不会自动重跑',
+    error: copy.say.runInterrupted,
   };
 }
 

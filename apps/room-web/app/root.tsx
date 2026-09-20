@@ -1,8 +1,7 @@
 import type { LinksFunction, MetaFunction } from 'react-router';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
 import globalStyles from './styles/global.css?url';
-import { PRODUCT_NAME } from './room-lab/presentation/product';
-import { copy } from './room-lab/presentation/copy';
+import { copy } from './room-lab/copy';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: globalStyles },
@@ -10,7 +9,7 @@ export const links: LinksFunction = () => [
 ];
 
 export const meta: MetaFunction = () => [
-  { title: `${PRODUCT_NAME} 房间` },
+  { title: `${copy.label.product} ${copy.label.rooms}` },
   {
     name: 'description',
     content: copy.say.metaDescription,

@@ -10,10 +10,8 @@
  * - `availability` is a label keyed by a domain state, so the mapping is
  *             exhaustive rather than a lookup that can miss.
  *
- * Components import keys, never literals, so one state can only ever have one
- * word — including the strings the server writes into a room. `copy.test.ts`
- * enforces the grammar of each group and fails if a Chinese literal reappears
- * anywhere on the room surface.
+ * Every caller imports a key, the server included, so one state can only ever
+ * have one word. `copy.test.ts` enforces it.
  */
 import type { RoomAgentAvailability } from './read-model';
 

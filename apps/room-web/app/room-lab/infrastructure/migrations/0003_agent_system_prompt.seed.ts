@@ -13,16 +13,12 @@ export const DEFAULT_AGENT_SYSTEM_PROMPT =
   '你在一个多人房间里发言。回答前先读完所有公开消息，然后用中文给出具体、简洁的回答，只讲你自己视角下的判断。';
 
 /**
- * The data half of migration 3, in the order the move has to happen:
+ * The data half of migration 3. Order matters: prompts move off
+ * `agent_system_prompts` onto their rows, rows still without one take the
+ * default, and only then is the old table dropped.
  *
- *  1. Whatever `agent_system_prompts` held moves onto the matching row. A
- *     library where that table is empty — which is the common case — simply
- *     moves nothing.
- *  2. Every row still without a prompt gets the default.
- *  3. The old table is dropped: its contents are now on the rows.
- *
- * A blank or whitespace-only stored prompt is treated as no prompt, which is
- * what the old `saveSystemPrompt` meant by deleting the row.
+ * A whitespace-only stored prompt counts as none, which is what deleting the
+ * row meant in the old table.
  */
 export function adoptSystemPrompts(
   db: DatabaseSync,

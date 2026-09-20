@@ -20,11 +20,10 @@ export interface MentionMenuProps {
 }
 
 /**
- * The mention list. It keeps the listbox semantics the composer has always had
- * — `role="listbox"`, one `role="option"` per member, `aria-selected` on the
- * active one — but the arrow keys now arrive from the editor through the
- * imperative handle rather than from a textarea's own key handler, because with
- * Tiptap the caret lives inside ProseMirror and the list never takes focus.
+ * The mention list: `role="listbox"`, one `role="option"` per member,
+ * `aria-selected` on the active one. The caret stays in ProseMirror and this
+ * list never takes focus, so arrow keys reach it through the imperative handle
+ * rather than a key handler of its own.
  */
 export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
   function MentionMenu({ options, onSelect, onActiveChange }, ref) {

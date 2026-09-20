@@ -42,10 +42,7 @@ export const toneText: Record<StatusTone, string> = {
   err: 'text-destructive',
 };
 
-/**
- * A member's CLI as a Badge variant. The desk and the members column render
- * the same chip, so the mapping is stated once.
- */
+/** A member's CLI as a Badge variant. */
 export const availabilityVariant = {
   runnable: 'info',
   missing: 'muted',

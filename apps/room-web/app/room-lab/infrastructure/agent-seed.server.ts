@@ -2,18 +2,13 @@ import { randomInt } from 'node:crypto';
 import { AGENT_COLOR_COUNT } from '../domain/agent-registry';
 
 /**
- * Migration 2 turns the five members that used to be a constant table in the
- * source into rows. Two groups of rows are written, once, into an empty table:
+ * The rows migration 2 writes: the agents this project ships a command for, plus
+ * any id an existing library already seats or holds a prompt for, so a crew that
+ * predates the table keeps answering. An inherited row's command is the id run
+ * as a headless CLI — enough until the person edits it.
  *
- *  - The four agents this project ships a headless command for.
- *  - Every agent id an existing library already refers to — a room member or a
- *    saved system prompt — that the first group does not cover. Those are
- *    whatever the person had seated before; the fallback command is the id run
- *    as a headless CLI, which is enough for an already-seated member to keep
- *    answering until the person edits the row.
- *
- * Colour is drawn at creation and persisted, so the identity hue is a fact
- * about the row rather than a function of seating order.
+ * Colour is drawn once and stored, so a member's hue is a fact about its row
+ * rather than a function of seating order.
  */
 export interface AgentSeed {
   id: string;

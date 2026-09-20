@@ -4,16 +4,14 @@ import { seedAgents } from './0002_agents.seed';
 import { adoptSystemPrompts } from './0003_agent_system_prompt.seed';
 
 /**
- * The library's schema as an ordered list of versions, the way Flyway and
- * golang-migrate hold one: each version is applied at most once, in order, and
- * `schema_migrations` records which ones a given library has seen. A version
- * already recorded is never re-run, which is why the SQL files can say
- * `CREATE TABLE` rather than `CREATE TABLE IF NOT EXISTS` — the statement is a
- * change from one known state to the next, not a description of the end state.
+ * The schema as an ordered list of versions, each applied at most once and
+ * recorded in `schema_migrations`. A recorded version is never re-run, which is
+ * why the SQL says `CREATE TABLE` rather than `CREATE TABLE IF NOT EXISTS`:
+ * each file is a step between two known states, not a description of the end
+ * state.
  *
  * Connection settings (`foreign_keys`, `busy_timeout`, `journal_mode`) are not
- * migrations: they have to be set on every connection, so they stay with the
- * store that opens one.
+ * migrations — they are lost with the connection, so they stay with the store.
  */
 export interface Migration {
   version: number;

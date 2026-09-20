@@ -45,10 +45,7 @@ export function buildMentionOptions(
   ];
 }
 
-/**
- * Tiptap's suggestion plugin finds the query and performs the insert, so
- * narrowing the list is all this module still does.
- */
+/** Tiptap's suggestion plugin owns finding the query and inserting; this narrows the list. */
 export const mentionCompletion = {
   filter(query: string, options: readonly MentionOption[]): MentionOption[] {
     if (!query) return [...options];

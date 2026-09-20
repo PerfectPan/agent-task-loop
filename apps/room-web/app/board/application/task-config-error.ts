@@ -1,7 +1,4 @@
-/**
- * The task-loop package reports a missing config as prose, so both board
- * loaders had to sniff the same three substrings. One reading, one message.
- */
+/** The task-loop package reports a missing config as prose, so it is matched by phrase. */
 const MISSING_CONFIG = ['No config found', 'Config file not found', 'agent-task-loop init'];
 
 const MISSING_CONFIG_MESSAGE =

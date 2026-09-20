@@ -645,11 +645,10 @@ function buildRetryPrompt(agentId: RoomLabAgentId, draft: string, newer: RoomEve
 }
 
 /**
- * The transcript, one line per event. A turn now carries the whole room rather
- * than a member's unread mail, so a member sees its own earlier answers and has
- * to be able to tell them apart. The mark goes on each line rather than in a
- * sentence above the transcript, because it stays true wherever the transcript
- * is cut, and because two members can share a name prefix but never an id.
+ * The transcript, one line per event, with the reader's own lines marked. The
+ * mark sits on each line rather than in a sentence above them, so it survives
+ * the transcript being cut at either end; it keys on id because two members can
+ * share a name prefix but never an id.
  */
 function formatEvents(events: RoomEvent[], selfId?: string): string {
   if (events.length === 0) return '(no events yet)';

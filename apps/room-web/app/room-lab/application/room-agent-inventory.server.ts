@@ -3,18 +3,14 @@ import type { AgentDefinition } from '../domain/agent-registry';
 import type { RoomAgentAvailability, RoomAgentInventoryItem } from '../read-model';
 
 /**
- * One probe for every member, because every member is the same kind of thing: a
- * shell command. The first word of the command that is not a `KEY=value` prefix
- * is looked up with `whence -w` inside an interactive login zsh — the same
- * shell the runner will use — so an alias or a shell function counts as
- * installed exactly when it will actually run.
+ * Every member is the same kind of thing: a shell command. Its first word past
+ * any `KEY=value` prefix is looked up with `whence -w` inside the interactive
+ * login zsh the runner will use, so an alias or a shell function counts as
+ * installed exactly when it will actually run. All the words go to one shell,
+ * since starting that shell costs far more than the lookups.
  *
- * All the words go to one shell. `whence -w` answers one line per word, which
- * is the shape this file already reads, and starting an interactive login zsh
- * costs ~0.3s on its own — once, not once per member.
- *
- * What is shown is the row's own command text. An alias body is never expanded:
- * the person's alias may carry a token, and the desk is a page, not a vault.
+ * An alias body is never expanded: it may carry a token, and the desk is a
+ * page, not a vault. What is shown is the row's own command text.
  */
 const RUNNABLE_KINDS = new Set(['command', 'alias', 'function', 'builtin']);
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;

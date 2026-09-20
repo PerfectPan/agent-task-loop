@@ -3,10 +3,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { MIGRATIONS, runMigrations } from '../migrations';
 
 /**
- * A library as it stood before members were rows: migration 1 applied and
- * recorded, nothing else. The version-1 DDL from git is not reachable from a
- * test, so it is reproduced the only honest way — by applying the first
- * migration, which is that DDL.
+ * A library at version 1: the first migration applied and recorded, nothing
+ * else. Built by running that migration, which is the version-1 DDL itself.
  */
 export function createVersionOneLibrary(
   root: string,

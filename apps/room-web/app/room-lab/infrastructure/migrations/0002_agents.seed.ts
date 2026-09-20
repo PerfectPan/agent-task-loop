@@ -2,14 +2,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import { buildAgentSeedRows } from '../agent-seed.server';
 
 /**
- * The data half of migration 2. `0002_agents.sql` makes the table; this fills
- * it once, and only while it is empty, so re-running the migration on a library
- * whose rows have since been edited cannot overwrite them.
- *
- * Ids that only an older library refers to — a room member or a saved system
- * prompt from before members were rows — get a row too, so an existing Room
- * keeps the crew it was saved with. The row data itself comes from
- * `agent-seed.server.ts`, which is where the shipped agents are written down.
+ * The data half of migration 2: it fills the table only while it is empty, so a
+ * re-run cannot overwrite rows the person has since edited. Which rows get
+ * written is `agent-seed.server.ts`.
  */
 export function seedAgents(db: DatabaseSync, now = new Date().toISOString()): void {
   const existing = db.prepare('SELECT COUNT(*) AS n FROM agents').get() as unknown as { n: number };

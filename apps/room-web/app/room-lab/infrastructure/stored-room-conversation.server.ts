@@ -61,19 +61,13 @@ export class StoredRoomConversation implements RoomConversationPort {
   }
 
   /**
-   * A turn is handed the room's conversation, not the member's unread mail.
+   * A turn carries the room's recent events, not this member's unread ones:
+   * the CLIs keep no session, so the transcript is the only memory they have,
+   * and a member that read from its own cursor would never see its own answers.
    *
-   * The cursor used to do both jobs, and reading from it meant a member never
-   * saw anything it had already been shown — including its own last answer,
-   * since posting marks a member as caught up. With every CLI running without
-   * session persistence, that left each member with no memory of the room at
-   * all: measured in a real room, all five had a cursor sitting exactly at
-   * their own last message.
-   *
-   * So the turn carries the most recent events within budget, and `seenSeq`
-   * keeps only its other job: saying whether this member is behind. It is
-   * advanced to head here, as it was before, so a message admitted while the
-   * member is generating still makes its draft HELD.
+   * `seenSeq` is not that cursor. It answers only whether the member is behind,
+   * and is advanced to head here so a message admitted while the member is
+   * generating still makes the draft HELD.
    */
   async prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]> {
     const session = this.sessionId(agentId);
@@ -83,18 +77,12 @@ export class StoredRoomConversation implements RoomConversationPort {
   }
 
   /**
-   * The newest events that fit the budget, oldest first.
+   * The newest events that fit the budget, oldest first. Built on `readSlice`
+   * because every stream store loads the whole room to serve any read, so
+   * walking that list backwards costs nothing extra.
    *
-   * It is built on `readSlice` here rather than added to each stream store
-   * because one of the three — the in-memory one — lives in `@rivus/agent-room`,
-   * which this task may not change; and because all three already load the
-   * whole room to serve any read, so walking that list backwards costs nothing
-   * they were not paying.
-   *
-   * An event whose own body exceeds the character budget can never be shown.
-   * That used to surface as "the next event does not fit"; it still has to be
-   * said out loud rather than quietly handing over a transcript with a hole in
-   * it, so the newest event not fitting is an error.
+   * An event whose own body exceeds `maxChars` can never be shown. That is an
+   * error rather than a silent gap in the transcript.
    */
   protected async readTail(budget: SliceBudget): Promise<RoomSlice> {
     const whole = await this.store.readSlice(this.roomId, 0, { maxEvents: Number.MAX_SAFE_INTEGER });

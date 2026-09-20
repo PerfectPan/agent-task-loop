@@ -69,10 +69,7 @@ export function RiverMark({ size = 22, className = '' }: { size?: number; classN
   );
 }
 
-/**
- * The mark plus the product's name, which the rail, the create page and the
- * agent desk all put in the same place at the same size.
- */
+/** The mark plus the product's name, at the size every header uses. */
 export function Wordmark({ taglineClassName = '' }: { taglineClassName?: string }) {
   return (
     <>

@@ -21,6 +21,20 @@ export function assertSameOriginJson(request: Request): void {
   if (!contentType.startsWith('application/json')) {
     throw new LocalRequestError(415, 'Room actions require application/json');
   }
+  assertSameOrigin(request);
+}
+
+/**
+ * A form post carries no `Content-Type` this app chose, so only the origin can
+ * be checked. Browsers omit `Origin` on some same-origin form posts, which is
+ * why a missing header is allowed here and refused for JSON.
+ */
+export function assertSameOriginForm(request: Request): void {
+  const origin = request.headers.get('Origin');
+  if (origin) assertSameOrigin(request);
+}
+
+function assertSameOrigin(request: Request): void {
   const origin = request.headers.get('Origin');
   if (!origin || !isLocalOrigin(origin)) {
     throw new LocalRequestError(403, 'Room actions require a same-origin browser request');

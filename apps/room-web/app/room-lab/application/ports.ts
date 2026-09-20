@@ -15,7 +15,6 @@ export interface RoomHumanAdmitResult {
 
 export interface RoomConversationPort {
   readonly conversationId: string;
-  readonly displayId: string;
   admitHuman(input: {
     messageId: string;
     body: string;

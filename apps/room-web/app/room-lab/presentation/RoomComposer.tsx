@@ -10,6 +10,7 @@ import { HardBreak } from '@tiptap/extension-hard-break';
 import { History } from '@tiptap/extension-history';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
+import { ROOM_MESSAGE_LIMIT } from '../domain/room-message';
 import type { RoomLabAgentId } from '../read-model';
 import type { MentionAgent } from './mention-completion';
 import { copy } from '../copy';
@@ -17,7 +18,7 @@ import { Button } from '~/components/ui/button';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mention';
 
-const MAX_CHARACTERS = 2_000;
+
 
 /**
  * The composer is never disabled. A round in progress only changes where a
@@ -78,7 +79,7 @@ export function RoomComposer({ value, sending, agents, behind, onValueChange, on
       // number the person reads, and the one that gates sending, is the length
       // of the serialised string, because that is what the server measures: a
       // chip is one character here and eight on the wire.
-      CharacterCount.configure({ limit: MAX_CHARACTERS }),
+      CharacterCount.configure({ limit: ROOM_MESSAGE_LIMIT }),
       roomMention({
         activeAgentIds: () => agentsRef.current.map(agent => agent.id),
         agents: () => agentsRef.current,
@@ -124,7 +125,7 @@ export function RoomComposer({ value, sending, agents, behind, onValueChange, on
   }, []);
 
   const characters = value.length;
-  const canSend = !sending && !!value.trim() && characters <= MAX_CHARACTERS;
+  const canSend = !sending && !!value.trim() && characters <= ROOM_MESSAGE_LIMIT;
   const canSendRef = useRef(canSend);
   canSendRef.current = canSend;
 
@@ -191,8 +192,8 @@ export function RoomComposer({ value, sending, agents, behind, onValueChange, on
             : copy.say.composerHint}
         </span>
         {characters > 0 && (
-          <span className={`ml-auto text-xs tabular-nums ${characters > MAX_CHARACTERS ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {characters} / {MAX_CHARACTERS}
+          <span className={`ml-auto text-xs tabular-nums ${characters > ROOM_MESSAGE_LIMIT ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {characters} / {ROOM_MESSAGE_LIMIT}
           </span>
         )}
         <Button

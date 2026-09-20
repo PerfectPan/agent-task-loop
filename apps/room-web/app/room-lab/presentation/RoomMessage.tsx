@@ -5,6 +5,7 @@ import { agentInk } from './agent-color';
 import { formatClock } from './format-time';
 import { mentionChip } from './mention-chip';
 import { copy } from '../copy';
+import { cn } from '~/lib/utils';
 
 /** Which colour a member wears, looked up on the registry the loader sent. */
 export type AgentColorLookup = (agentId: string) => number | undefined;
@@ -14,8 +15,11 @@ export type AgentColorLookup = (agentId: string) => number | undefined;
  * and a mention there are the same fact. The captured group is the id without
  * its `@`, which is why the odd positions of the split are ids.
  */
+const MENTION_PATTERN = new RegExp(ROOM_MENTION_SOURCE, 'gi');
+
 function mentionParts(body: string): string[] {
-  return body.split(new RegExp(ROOM_MENTION_SOURCE, 'gi'));
+  // `split` ignores `lastIndex`, so one shared instance is safe.
+  return body.split(MENTION_PATTERN);
 }
 
 export function RoomMessage({ event, colorOf = () => undefined }: {
@@ -42,11 +46,11 @@ export function RoomMessage({ event, colorOf = () => undefined }: {
 
   return (
     <li
-      className={[
+      className={cn(
         'grid grid-cols-[30px_minmax(0,1fr)] gap-3',
-        event.pending ? 'opacity-70' : '',
-        event.failed ? 'rounded-sm outline outline-1 outline-destructive outline-offset-4' : '',
-      ].filter(Boolean).join(' ')}
+        event.pending && 'opacity-70',
+        event.failed && 'rounded-sm outline outline-1 outline-destructive outline-offset-4',
+      )}
     >
       {human ? <HumanMark /> : agentId ? <AgentMark agentId={agentId} color={colorOf(agentId)} /> : <span aria-hidden="true" className="size-[30px] rounded-full bg-border" />}
       <article className="min-w-0">

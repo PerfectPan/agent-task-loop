@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { afterEach, describe, expect, it } from 'vitest';
 import { action, loader } from '../../routes/room.$roomId';
+import { action as agentsAction } from '../../routes/room.agents';
+import { isLocalOrigin } from '../infrastructure/local-guard.server';
 import { getRoomLabHost } from '../composition.server';
 import { RoomLabHost, runnableInventory } from './room-lab-host.server';
 import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
@@ -81,6 +83,28 @@ describe('Room action boundary', () => {
       ok: false,
       error: 'A Room needs at least one active agent',
     });
+  });
+
+  it('reads the origin as a URL, so a hostname that merely starts with one is not local', () => {
+    expect(isLocalOrigin('http://127.0.0.1:3210')).toBe(true);
+    expect(isLocalOrigin('http://localhost:3210')).toBe(true);
+    // These pass a `startsWith` test, which is what the form actions used to do.
+    expect(isLocalOrigin('http://localhost.attacker.example')).toBe(false);
+    expect(isLocalOrigin('http://127.0.0.1.attacker.example')).toBe(false);
+    expect(isLocalOrigin('https://127.0.0.1')).toBe(false);
+  });
+
+  it('refuses a form post to the agent desk from a host that only looks local', async () => {
+    const rejected = agentsAction(args(new Request('http://127.0.0.1:3210/room/agents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Origin: 'http://localhost.attacker.example',
+      },
+      body: 'intent=scan',
+    })));
+
+    await expect(rejected).rejects.toMatchObject({ init: { status: 403 } });
   });
 
   it('returns an explicit 403 response when the loader is not local', async () => {

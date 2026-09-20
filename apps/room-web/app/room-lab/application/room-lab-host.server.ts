@@ -85,7 +85,9 @@ export class RoomLabHost {
    */
   saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
     this.store.saveSystemPrompt(agentId, prompt);
-    this.reloadAgents();
+    // Re-read the rows, but keep the probe: a prompt has nothing to do with
+    // whether a command resolves, and re-probing costs a login shell.
+    this.agents.reload();
   }
 
   agentDesk(): AgentDeskView {

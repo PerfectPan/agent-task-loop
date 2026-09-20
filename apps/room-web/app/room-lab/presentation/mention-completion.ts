@@ -17,12 +17,6 @@ export interface MentionOption {
   color?: number;
 }
 
-interface MentionQuery {
-  start: number;
-  end: number;
-  query: string;
-}
-
 /**
  * The room's own members, in the room's own order, plus `@all`. A member with
  * no matching row still appears under its id: it is addressable because it sits
@@ -51,32 +45,15 @@ export function buildMentionOptions(
   ];
 }
 
+/**
+ * Tiptap's suggestion plugin finds the query and performs the insert, so
+ * narrowing the list is all this module still does.
+ */
 export const mentionCompletion = {
-  find(value: string, cursor: number): MentionQuery | undefined {
-    const beforeCursor = value.slice(0, cursor);
-    const match = beforeCursor.match(/(^|[\s,.!?;:，。！？；：])@([a-z0-9-]*)$/i);
-    if (!match) return undefined;
-    const query = match[2] ?? '';
-    return {
-      start: cursor - query.length - 1,
-      end: cursor,
-      query: query.toLowerCase(),
-    };
-  },
   filter(query: string, options: readonly MentionOption[]): MentionOption[] {
     if (!query) return [...options];
     return options.filter(option =>
       option.id.includes(query) || option.label.toLowerCase().includes(query),
     );
-  },
-  insert(value: string, query: MentionQuery, option: MentionOption): {
-    value: string;
-    cursor: number;
-  } {
-    const mention = `@${option.id} `;
-    return {
-      value: value.slice(0, query.start) + mention + value.slice(query.end),
-      cursor: query.start + mention.length,
-    };
   },
 };

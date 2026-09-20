@@ -1,17 +1,13 @@
 import { useState } from 'react';
 import { Form, Link, useNavigation } from 'react-router';
 import type { AgentDeskView, RoomLabAgentId } from '../read-model';
-import { AgentMark, RiverMark } from './AgentMark';
+import { AgentMark, Wordmark } from './AgentMark';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
 import { sectionLabel } from './ui';
+import { availabilityVariant } from './agent-status';
 import { copy } from '../copy';
-
-const availabilityVariant = {
-  runnable: 'info',
-  missing: 'muted',
-} as const;
 
 export function AgentDesk({ desk }: { desk: AgentDeskView }) {
   const backTo = desk.lastOpenedId ? `/room/${desk.lastOpenedId}` : '/room';
@@ -26,9 +22,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
     <main className="min-h-dvh bg-background px-4 py-8 font-sans text-foreground">
       <div className="mx-auto w-[min(760px,100%)]">
         <div className="mb-4 flex items-center gap-2 px-1">
-          <RiverMark size={18} />
-          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
-          <span className="text-xs leading-none text-muted-foreground">{copy.label.tagline}</span>
+          <Wordmark />
         </div>
         <section className="rounded-lg border border-input bg-card">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-7 pt-[22px] pb-3.5">

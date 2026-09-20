@@ -2,7 +2,6 @@ import {
   Form,
   Link,
   data,
-  isRouteErrorResponse,
   redirect,
   useActionData,
   useRouteError,
@@ -11,20 +10,17 @@ import {
   type LoaderFunctionArgs,
 } from 'react-router';
 import { getRoomLabHost } from '../room-lab/composition.server';
-import {
-  RoomLabBusyError,
-  RoomLabInputError,
-} from '../room-lab/application/room-lab-service.server';
-import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
+import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import {
   LocalRequestError,
   assertLocalRuntime,
-  assertSameOriginJson,
+  assertSameOriginForm,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
+import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/RoomErrorPage';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { RiverMark } from '../room-lab/presentation/AgentMark';
+import { Wordmark } from '../room-lab/presentation/AgentMark';
 import { copy } from '../room-lab/copy';
 import { Button } from '../components/ui/button';
 
@@ -48,54 +44,20 @@ export async function loader(_args: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   try {
     assertLocalRuntime();
-    const created = await createRoomFromRequest(request);
-    if (wantsJson(request)) {
-      return data({ ok: true as const, redirectTo: `/room/${created.roomId}` }, { headers: noStoreHeaders });
-    }
+    assertSameOriginForm(request);
+    const form = await request.formData();
+    const goal = String(form.get('goal') ?? '');
+    const created = await getRoomLabHost().create({
+      title: String(form.get('title') ?? ''),
+      ...(goal.trim() ? { goal } : {}),
+    });
     return redirect(`/room/${created.roomId}`);
   } catch (error) {
-    const status = error instanceof RoomLabBusyError
-      ? 409
-      : error instanceof RoomLabInputError || error instanceof RoomCatalogInvariantError
-        ? 400
-        : error instanceof LocalRequestError
-          ? error.status
-          : 500;
-    const message = error instanceof Error ? error.message : 'Room action failed';
-    return data({ ok: false as const, error: message }, { status, headers: noStoreHeaders });
+    return data(
+      { ok: false as const, error: roomActionMessage(error) },
+      { status: roomActionStatus(error), headers: noStoreHeaders },
+    );
   }
-}
-
-async function createRoomFromRequest(request: Request) {
-  const contentType = request.headers.get('Content-Type')?.toLowerCase() ?? '';
-  if (contentType.startsWith('application/json')) {
-    assertSameOriginJson(request);
-    const input = await request.json().catch(() => {
-      throw new RoomLabInputError('Room action must be valid JSON');
-    });
-    if (!input || typeof input !== 'object' || input.action !== 'create' || typeof input.title !== 'string') {
-      throw new RoomLabInputError('Room action payload is invalid');
-    }
-    return getRoomLabHost().create({
-      title: input.title,
-      ...(typeof input.goal === 'string' ? { goal: input.goal } : {}),
-    });
-  }
-  const origin = request.headers.get('Origin');
-  if (origin && !origin.startsWith('http://127.0.0.1') && !origin.startsWith('http://localhost')) {
-    throw new LocalRequestError(403, 'Room actions require a same-origin browser request');
-  }
-  const form = await request.formData();
-  const title = String(form.get('title') ?? '');
-  const goal = String(form.get('goal') ?? '');
-  return getRoomLabHost().create({
-    title,
-    ...(goal.trim() ? { goal } : {}),
-  });
-}
-
-function wantsJson(request: Request): boolean {
-  return (request.headers.get('Content-Type') ?? '').toLowerCase().startsWith('application/json');
 }
 
 export default function RoomHome() {
@@ -104,9 +66,7 @@ export default function RoomHome() {
     <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
       <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6">
         <div className="mb-5 flex items-center gap-2">
-          <RiverMark size={18} />
-          <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
-          <span className="text-xs leading-none text-muted-foreground">{copy.label.tagline}</span>
+          <Wordmark />
         </div>
         <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">{copy.say.createTitle}</h1>
         <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">
@@ -136,18 +96,13 @@ export default function RoomHome() {
 }
 
 export function ErrorBoundary() {
-  const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? (typeof (error.data as { error?: unknown })?.error === 'string'
-      ? (error.data as { error: string }).error
-      : `${error.status} ${error.statusText}`.trim())
-    : error instanceof Error ? error.message : copy.say.serviceUnavailable;
+  const message = routeErrorMessage(useRouteError(), copy.say.serviceUnavailable);
   return (
-    <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
+    <RoomErrorPage>
       <section className="w-[min(480px,100%)]" role="alert">
         <h1 className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.serviceUnavailable}</h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
       </section>
-    </main>
+    </RoomErrorPage>
   );
 }

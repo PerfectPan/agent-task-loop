@@ -68,3 +68,17 @@ export function RiverMark({ size = 22, className = '' }: { size?: number; classN
     </svg>
   );
 }
+
+/**
+ * The mark plus the product's name, which the rail, the create page and the
+ * agent desk all put in the same place at the same size.
+ */
+export function Wordmark({ taglineClassName = '' }: { taglineClassName?: string }) {
+  return (
+    <>
+      <RiverMark size={18} />
+      <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
+      <span className={`text-xs leading-none text-muted-foreground ${taglineClassName}`}>{copy.label.tagline}</span>
+    </>
+  );
+}

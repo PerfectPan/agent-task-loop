@@ -22,7 +22,7 @@ import {
   type AgentDefinition,
   type RoomLabAgentId,
 } from '../domain/agent-registry';
-import { parseRoomMessage } from '../domain/room-message';
+import { ROOM_MESSAGE_LIMIT, parseRoomMessage } from '../domain/room-message';
 import { copy } from '../copy';
 import {
   RoomComposition,
@@ -686,7 +686,9 @@ function agentForSeat(seat: 'impl' | 'review'): RoomLabAgentId {
 function validateText(value: string, label: string): string {
   const text = value.trim();
   if (!text) throw new RoomLabInputError(`${label} is required`);
-  if (text.length > 2_000) throw new RoomLabInputError(`${label} must be at most 2000 characters`);
+  if (text.length > ROOM_MESSAGE_LIMIT) {
+    throw new RoomLabInputError(`${label} must be at most ${ROOM_MESSAGE_LIMIT} characters`);
+  }
   return text;
 }
 

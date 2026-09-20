@@ -3,6 +3,7 @@ import {
   loadConfig,
   type TaskProvider,
 } from '@rivus/agent-task-loop/task-management';
+import { formatTaskLoadError } from './task-config-error';
 import { groupIntoLanes, type Lane } from '../domain/lanes';
 
 export interface BoardView {
@@ -26,18 +27,6 @@ function extractSources(tasks: { source?: string }[]): string[] {
   return Array.from(sourceSet).sort((a, b) => a.localeCompare(b));
 }
 
-function formatErrorMessage(err: unknown): string {
-  const raw = err instanceof Error ? err.message : String(err);
-  if (
-    raw.includes('No config found') ||
-    raw.includes('Config file not found') ||
-    raw.includes('agent-task-loop init')
-  ) {
-    return '未找到任务后端配置。请运行 `agent-task-loop init` 初始化配置，或设置环境变量 AGENT_TASK_LOOP_CONFIG。';
-  }
-  return `无法加载任务看板：${raw}`;
-}
-
 /** Loads the board. Pass a provider to bypass config resolution in tests. */
 export async function loadBoard(provider?: TaskProvider): Promise<BoardView> {
   try {
@@ -51,7 +40,7 @@ export async function loadBoard(provider?: TaskProvider): Promise<BoardView> {
     return {
       lanes: groupIntoLanes([]),
       sources: [],
-      error: formatErrorMessage(err),
+      error: formatTaskLoadError(err, '任务看板'),
     };
   }
 }

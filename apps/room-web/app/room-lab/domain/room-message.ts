@@ -7,6 +7,9 @@ import type { RoomLabAgentId } from './agent-registry';
  * editor turns into a chip is exactly what the server will read as a mention.
  * The word after `@` is an agent id, so it accepts exactly what an id may be.
  */
+/** The longest message a room accepts, enforced by the server and shown by the composer. */
+export const ROOM_MESSAGE_LIMIT = 2_000;
+
 export const ROOM_MENTION_SOURCE = String.raw`(?<![a-z0-9._%+-])@(all|[a-z][a-z0-9-]*)(?=\s|$|[,.!?;:，。！？；：])`;
 
 const MENTION_PATTERN = new RegExp(ROOM_MENTION_SOURCE, 'gi');

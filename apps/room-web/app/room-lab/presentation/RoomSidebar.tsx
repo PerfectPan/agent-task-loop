@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { RoomCatalogItemView } from '../read-model';
-import { RiverMark } from './AgentMark';
+import { Wordmark } from './AgentMark';
 import { formatAgo } from './format-time';
 import { sectionLabel } from './ui';
 import { copy } from '../copy';
@@ -83,9 +83,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
       aria-label={copy.label.rooms}
     >
       <div className="flex items-center gap-2 px-2 pt-1 max-[820px]:shrink-0 max-[820px]:pt-0">
-        <RiverMark size={18} />
-        <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
-        <span className="text-xs leading-none text-muted-foreground max-[820px]:hidden">{copy.label.tagline}</span>
+        <Wordmark taglineClassName="max-[820px]:hidden" />
       </div>
 
       <div className="flex flex-col gap-0.5 max-[820px]:flex-row max-[820px]:shrink-0" aria-label={copy.label.pages}>

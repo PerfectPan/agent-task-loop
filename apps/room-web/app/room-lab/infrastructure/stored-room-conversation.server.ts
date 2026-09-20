@@ -20,7 +20,6 @@ export type RoomSessionStore = MemoryRoomStreamStore | SqliteRoomStreamStore;
 
 export class StoredRoomConversation implements RoomConversationPort {
   readonly conversationId: string;
-  readonly displayId: string;
   protected store: RoomSessionStore;
 
   constructor(
@@ -30,7 +29,6 @@ export class StoredRoomConversation implements RoomConversationPort {
     protected readonly agentIds: readonly RoomLabAgentId[] = [],
   ) {
     this.conversationId = roomId.conversationId;
-    this.displayId = `${roomId.tenantId}/${roomId.conversationId}`;
     this.store = store;
     this.ensureSessions();
   }

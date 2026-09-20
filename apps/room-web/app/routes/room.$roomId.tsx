@@ -1,6 +1,5 @@
 import {
   data,
-  isRouteErrorResponse,
   useLoaderData,
   useRouteError,
   type ActionFunctionArgs,
@@ -9,15 +8,16 @@ import {
 } from 'react-router';
 import { RoomLab } from '../room-lab/presentation/RoomLab';
 import { getRoomLabHost } from '../room-lab/composition.server';
-import {
-  RoomLabBusyError,
-  RoomLabInputError,
-} from '../room-lab/application/room-lab-service.server';
+import { RoomLabInputError } from '../room-lab/application/room-lab-service.server';
+import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import type { RoomLabActionResponse } from '../room-lab/read-model';
 import { parseRoomAction } from '../room-lab/application/parse-room-action';
+// The loader answers 404 for a room that is not in the catalog, which is a
+// different question from the action ladder's "this request was invalid".
 import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
 import { isRoomIdentity } from '../room-lab/domain/room-identity';
 import { copy } from '../room-lab/copy';
+import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/RoomErrorPage';
 import {
   LocalRequestError,
   assertLocalRuntime,
@@ -74,17 +74,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const state = await host.act(roomId, input, request.signal);
     return data<RoomLabActionResponse>({ ok: true, state }, { headers: noStoreHeaders });
   } catch (error) {
-    const status = error instanceof RoomLabBusyError
-      ? 409
-      : error instanceof RoomLabInputError || error instanceof RoomCatalogInvariantError
-        ? 400
-        : error instanceof LocalRequestError
-          ? error.status
-          : 500;
-    const message = error instanceof Error ? error.message : 'Room action failed';
     return data<RoomLabActionResponse>(
-      { ok: false, error: message },
-      { status, headers: noStoreHeaders },
+      { ok: false, error: roomActionMessage(error) },
+      { status: roomActionStatus(error), headers: noStoreHeaders },
     );
   }
 }
@@ -95,24 +87,14 @@ export default function RoomRoute() {
 }
 
 export function ErrorBoundary() {
-  const error = useRouteError();
-  const message = routeErrorMessage(error);
+  const message = routeErrorMessage(useRouteError(), copy.say.serviceUnavailable);
   return (
-    <main className="grid min-h-dvh place-items-center bg-background px-4 py-12 font-sans text-foreground">
+    <RoomErrorPage>
       <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6" role="alert" aria-labelledby="room-unavailable-title">
         <h1 id="room-unavailable-title" className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.roomUnavailable}</h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
         <a className="text-primary" href="/room">{copy.action.backToRooms}</a>
       </section>
-    </main>
+    </RoomErrorPage>
   );
-}
-
-function routeErrorMessage(error: unknown): string {
-  if (isRouteErrorResponse(error)) {
-    const data = error.data as { error?: unknown } | undefined;
-    if (typeof data?.error === 'string') return data.error;
-    return `${error.status} ${error.statusText}`.trim();
-  }
-  return error instanceof Error ? error.message : 'The local Room service did not respond.';
 }

@@ -8,13 +8,7 @@ import { copy } from '../copy';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { sectionLabel } from './ui';
-
-/** CLI availability, not member state: runnable reads as info, absent as the
- *  neutral chip. */
-const availabilityVariant = {
-  runnable: 'info',
-  missing: 'muted',
-} as const;
+import { availabilityVariant } from './agent-status';
 
 export function CrewComposer({ agents, activeAgentIds, disabled, onCompose }: {
   agents: RoomLabAgentView[]; activeAgentIds: RoomLabAgentId[];

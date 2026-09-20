@@ -14,21 +14,22 @@ const AGENTS: AgentDefinition[] = [
 ];
 
 describe('room agent inventory', () => {
-  it('probes the command word of every member the same way and shows the row it came from', () => {
-    const probed: string[] = [];
+  it('asks one shell about every member and shows the row each answer came from', () => {
+    const calls: string[][] = [];
     const answers: Record<string, string> = {
-      codex: 'codex: command\n',
-      opencode: 'opencode: command\n',
-      relay: 'relay: alias\n',
-      dsh: 'dsh: none\n',
+      codex: 'codex: command',
+      opencode: 'opencode: command',
+      relay: 'relay: alias',
+      dsh: 'dsh: none',
     };
-    const inventory = listRoomAgentInventory(AGENTS, word => {
-      probed.push(word);
-      return answers[word] ?? '';
+    const inventory = listRoomAgentInventory(AGENTS, words => {
+      calls.push([...words]);
+      return words.map(word => answers[word] ?? `${word}: none`).join('\n');
     });
 
-    // The `KEY=value` prefix is not the executable.
-    expect(probed).toEqual(['codex', 'opencode', 'relay', 'dsh']);
+    // One interactive login shell for the whole desk, and the `KEY=value`
+    // prefix is not the executable.
+    expect(calls).toEqual([['codex', 'opencode', 'relay', 'dsh']]);
     expect(inventory).toEqual([
       { id: 'codex', label: 'Codex', role: '实施', color: 3, availability: 'runnable', command: 'codex exec --color never' },
       { id: 'opencode', label: 'OpenCode', role: '搭建', color: 4, availability: 'runnable', command: 'NO_COLOR=1 opencode run --pure' },

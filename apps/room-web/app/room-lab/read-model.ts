@@ -40,20 +40,25 @@ export interface RoomAgentInventoryItem {
   command?: string;
 }
 
-export interface RoomLabAgentView {
+/** A seat as the room itself knows it: who is in it and what they did. */
+export interface RoomSeatView {
   id: RoomLabAgentId;
   label: string;
   role: string;
   color: number;
   active: boolean;
   status: RoomLabAgentStatus;
-  availability: RoomAgentAvailability;
   seenSeq: number;
   heldUpToSeq?: number;
   lastDraft?: string;
   latencyMs?: number;
   retryAttempt?: number;
   error?: string;
+}
+
+/** The seat plus what this machine knows about the CLI behind it. */
+export interface RoomLabAgentView extends RoomSeatView {
+  availability: RoomAgentAvailability;
   command?: string;
 }
 
@@ -102,10 +107,13 @@ export interface AgentDeskView {
   agents: AgentDeskItem[];
 }
 
-export interface RoomLabState {
+/**
+ * What one room can state about itself. It knows its transcript and its seats;
+ * it does not know the room's title, the other rooms, or which CLIs this
+ * machine has — those are the host's, added in `RoomLabHost.decorate`.
+ */
+export interface RoomView {
   roomId: string;
-  title: string;
-  goal?: string;
   epoch: string;
   head: number;
   revision: number;
@@ -113,10 +121,17 @@ export interface RoomLabState {
   runningAgentIds: RoomLabAgentId[];
   activeAgentIds: RoomLabAgentId[];
   events: RoomLabEventView[];
-  agents: RoomLabAgentView[];
-  catalog: RoomCatalogItemView[];
+  agents: RoomSeatView[];
   countOff?: CountOffSnapshot;
   task?: RoomLabTaskView;
+}
+
+/** The room as a page can render it: the host's facts folded in. */
+export interface RoomLabState extends RoomView {
+  title: string;
+  goal?: string;
+  agents: RoomLabAgentView[];
+  catalog: RoomCatalogItemView[];
 }
 
 export type RoomLabAction =

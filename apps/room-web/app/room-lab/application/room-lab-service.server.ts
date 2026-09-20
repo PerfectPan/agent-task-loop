@@ -10,10 +10,10 @@ import type {
 } from './ports';
 import type {
   RoomLabAgentStatus,
-  RoomLabAgentView,
   RoomLabEventView,
-  RoomLabState,
   RoomLabTaskView,
+  RoomSeatView,
+  RoomView,
 } from '../read-model';
 import { CountOffRun, type CountOffSnapshot } from '../domain/count-off-run';
 import { HELD_RETRY_LIMIT } from '../domain/held-retry';
@@ -78,20 +78,18 @@ export class RoomLabService {
       ?? new RoomComposition(options.registry.ids(), options.registry);
   }
 
-  async snapshot(): Promise<RoomLabState> {
+  async snapshot(): Promise<RoomView> {
     while (true) {
       const revision = this.revision;
       const slice = await this.options.conversation.snapshot();
       const activeAgentIds = this.composition.snapshot();
-      const state: RoomLabState = {
+      const state: RoomView = {
         roomId: this.options.conversation.conversationId,
-        title: this.options.conversation.conversationId,
         epoch: this.epoch,
         head: slice.head,
         revision,
         busy: this.busy || this.runningAgents.size > 0,
         runningAgentIds: [...this.runningAgents],
-        catalog: [],
         activeAgentIds,
         events: slice.events.map(event => this.eventView(event)),
         agents: this.options.registry.list().map(agent => this.agentView(
@@ -109,7 +107,7 @@ export class RoomLabService {
     body: string,
     signal?: AbortSignal,
     clientMessageId?: string,
-  ): Promise<RoomLabState> {
+  ): Promise<RoomView> {
     if (this.busy) throw new RoomLabBusyError();
     signal?.throwIfAborted();
     const message = validateText(body, 'Message');
@@ -149,12 +147,12 @@ export class RoomLabService {
     return this.snapshot();
   }
 
-  async waitForIdle(): Promise<RoomLabState> {
+  async waitForIdle(): Promise<RoomView> {
     await this.turnChain;
     return this.snapshot();
   }
 
-  async compose(agentIds: readonly RoomLabAgentId[]): Promise<RoomLabState> {
+  async compose(agentIds: readonly RoomLabAgentId[]): Promise<RoomView> {
     await this.exclusive(async () => {
       try {
         this.composition.replace(agentIds);
@@ -174,7 +172,7 @@ export class RoomLabService {
     return this.snapshot();
   }
 
-  async runCountOff(signal?: AbortSignal): Promise<RoomLabState> {
+  async runCountOff(signal?: AbortSignal): Promise<RoomView> {
     await this.exclusive(async () => {
       signal?.throwIfAborted();
       const activeAgentIds = this.composition.snapshot();
@@ -262,7 +260,7 @@ export class RoomLabService {
     return this.snapshot();
   }
 
-  async retryHeld(agentId: RoomLabAgentId, signal?: AbortSignal): Promise<RoomLabState> {
+  async retryHeld(agentId: RoomLabAgentId, signal?: AbortSignal): Promise<RoomView> {
     await this.exclusive(async () => {
       signal?.throwIfAborted();
       if (!this.composition.includes(agentId)) {
@@ -358,7 +356,7 @@ export class RoomLabService {
     return this.snapshot();
   }
 
-  async runTask(title: string): Promise<RoomLabState> {
+  async runTask(title: string): Promise<RoomView> {
     await this.exclusive(async () => {
       if (!this.composition.supportsTaskGate()) {
         throw new RoomLabInputError(
@@ -416,7 +414,7 @@ export class RoomLabService {
     return this.snapshot();
   }
 
-  async reset(): Promise<RoomLabState> {
+  async reset(): Promise<RoomView> {
     if (this.busy) throw new RoomLabBusyError();
     this.options.conversation.reset();
     this.options.taskDelivery.reset();
@@ -511,7 +509,7 @@ export class RoomLabService {
     });
   }
 
-  private agentView(agent: AgentDefinition, active: boolean): RoomLabAgentView {
+  private agentView(agent: AgentDefinition, active: boolean): RoomSeatView {
     const id = agent.id;
     const runtime = this.agentState.get(id) ?? { status: 'idle' as const };
     const session = this.options.conversation.inspectAgent(id);
@@ -522,7 +520,6 @@ export class RoomLabService {
       color: agent.color,
       active,
       status: runtime.status,
-      availability: 'runnable',
       seenSeq: session.seenSeq,
       ...(runtime.heldUpToSeq === undefined ? {} : { heldUpToSeq: runtime.heldUpToSeq }),
       ...(runtime.lastDraft

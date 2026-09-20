@@ -9,26 +9,33 @@ import type { RoomAgentAvailability, RoomAgentInventoryItem } from '../read-mode
  * shell the runner will use — so an alias or a shell function counts as
  * installed exactly when it will actually run.
  *
+ * All the words go to one shell. `whence -w` answers one line per word, which
+ * is the shape this file already reads, and starting an interactive login zsh
+ * costs ~0.3s on its own — once, not once per member.
+ *
  * What is shown is the row's own command text. An alias body is never expanded:
  * the person's alias may carry a token, and the desk is a page, not a vault.
  */
 const RUNNABLE_KINDS = new Set(['command', 'alias', 'function', 'builtin']);
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
-export type WhenceProbe = (word: string) => string;
+export type WhenceProbe = (words: readonly string[]) => string;
 
 export function listRoomAgentInventory(
   agents: readonly AgentDefinition[],
   probe: WhenceProbe = probeWithWhence,
 ): RoomAgentInventoryItem[] {
-  return agents.map(agent => {
-    const word = commandWord(agent.command);
+  const words = agents.map(agent => commandWord(agent.command));
+  const asked = [...new Set(words.filter((word): word is string => word !== undefined))];
+  const answer = asked.length > 0 ? probe(asked) : '';
+  return agents.map((agent, index) => {
+    const word = words[index];
     return {
       id: agent.id,
       label: agent.label,
       role: agent.role,
       color: agent.color,
-      availability: word ? readWhence(probe(word), word) : 'missing',
+      availability: word ? readWhence(answer, word) : 'missing',
       command: agent.command,
     };
   });
@@ -63,8 +70,8 @@ export function readWhence(output: string, word: string): RoomAgentAvailability 
   return 'missing';
 }
 
-function probeWithWhence(word: string): string {
-  const result = spawnSync('zsh', ['-lic', 'whence -w -- "$1"', 'rivus-room', word], {
+function probeWithWhence(words: readonly string[]): string {
+  const result = spawnSync('zsh', ['-lic', 'whence -w -- "$@"', 'rivus-room', ...words], {
     encoding: 'utf8',
     timeout: 5_000,
   });

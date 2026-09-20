@@ -27,6 +27,7 @@ import type {
   RoomCatalogItemView,
   RoomLabAction,
   RoomLabState,
+  RoomView,
 } from '../read-model';
 
 export class RoomLabHost {
@@ -127,7 +128,7 @@ export class RoomLabHost {
     signal?: AbortSignal,
   ): Promise<RoomLabState> {
     const service = this.open(roomId);
-    let state: RoomLabState;
+    let state: RoomView;
     switch (input.action) {
       case 'message':
         state = await service.sendMessage(input.body, undefined, input.clientMessageId);
@@ -186,7 +187,7 @@ export class RoomLabHost {
     return service;
   }
 
-  decorate(state: RoomLabState, roomId: string): RoomLabState {
+  decorate(state: RoomView, roomId: string): RoomLabState {
     const record = this.catalog.get(roomId);
     const inventory = new Map(this.inventory().map(agent => [agent.id, agent]));
     return {

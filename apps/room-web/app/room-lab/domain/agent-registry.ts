@@ -12,6 +12,11 @@ export interface AgentDefinition {
   role: string;
   /** One shell command; the runner executes `zsh -lic '<command> "$1"'`. */
   command: string;
+  /**
+   * What this member is told about how to behave, prepended to every turn it
+   * takes. Empty means the turn carries the room's facts and nothing else.
+   */
+  systemPrompt: string;
   /** 1…5, the identity hue, drawn at random when the row is created. */
   color: number;
   position: number;

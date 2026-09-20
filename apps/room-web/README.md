@@ -8,15 +8,20 @@ in any order.
 
 An agent is a row in the `agents` table of `~/.rivus/room-web/v1/rooms.sqlite`.
 The code knows no agent by name: it reads the id, the display label, the role
-word, the shell command to run, and an identity colour drawn at random when the
-row is created. The first time this app opens a library it seeds rows for the
+word, the shell command to run, an identity colour drawn at random when the row
+is created, and the system prompt prepended to every turn that member takes.
+The room's own prompt carries facts only — who you are, how many of you there
+are, what has been said — so how a member answers is its row's business, and
+the agents page edits it.
+
+The first time this app opens a library it seeds rows for the
 four commands it ships with — `claude`, `codex`, `opencode`, `dsh` — plus one
 row for every agent id an older library already seats.
 
 Until the agents page can add one, add an agent with `sqlite3`:
 
 ```sql
-INSERT INTO agents (id, label, role, command, color, position, created_at)
+INSERT INTO agents (id, label, role, command, color, position, created_at, system_prompt)
 VALUES (
   'gemini',                              -- also the word after @, ^[a-z][a-z0-9-]*$
   'Gemini',                              -- display name
@@ -24,7 +29,8 @@ VALUES (
   'gemini --prompt-interactive false',   -- run as: zsh -lic '<command> "$1"'
   2,                                     -- 1..5, maps to --chart-1..5
   4,                                     -- default seating order
-  '2026-09-18T00:00:00.000Z'
+  '2026-09-20T00:00:00.000Z',
+  '用中文给出具体、简洁的回答。'              -- prepended to every turn; '' adds nothing
 );
 ```
 

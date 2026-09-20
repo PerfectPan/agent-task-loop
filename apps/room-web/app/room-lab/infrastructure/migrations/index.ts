@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { DatabaseSync } from 'node:sqlite';
 import { seedAgents } from './0002_agents.seed';
+import { adoptSystemPrompts } from './0003_agent_system_prompt.seed';
 
 /**
  * The library's schema as an ordered list of versions, the way Flyway and
@@ -26,6 +27,7 @@ export interface Migration {
  */
 const ROOMS_SQL = readFileSync(new URL('./0001_rooms.sql', import.meta.url), 'utf8');
 const AGENTS_SQL = readFileSync(new URL('./0002_agents.sql', import.meta.url), 'utf8');
+const SYSTEM_PROMPT_SQL = readFileSync(new URL('./0003_agent_system_prompt.sql', import.meta.url), 'utf8');
 
 export const MIGRATIONS: readonly Migration[] = [
   {
@@ -39,6 +41,14 @@ export const MIGRATIONS: readonly Migration[] = [
     up: db => {
       db.exec(AGENTS_SQL);
       seedAgents(db);
+    },
+  },
+  {
+    version: 3,
+    name: 'agent_system_prompt',
+    up: db => {
+      db.exec(SYSTEM_PROMPT_SQL);
+      adoptSystemPrompts(db);
     },
   },
 ];

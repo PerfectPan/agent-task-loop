@@ -1,8 +1,5 @@
 import { randomInt } from 'node:crypto';
-import {
-  AGENT_COLOR_COUNT,
-  type AgentDefinition,
-} from '../domain/agent-registry';
+import { AGENT_COLOR_COUNT } from '../domain/agent-registry';
 
 /**
  * Migration 2 turns the five members that used to be a constant table in the
@@ -23,6 +20,17 @@ export interface AgentSeed {
   label: string;
   role: string;
   command: string;
+}
+
+/**
+ * A row as migration 2 writes it. Deliberately not `AgentDefinition`: an
+ * applied migration is frozen, and the columns a later version adds — the
+ * system prompt — are that version's to fill.
+ */
+export interface AgentSeedRow extends AgentSeed {
+  color: number;
+  position: number;
+  createdAt: string;
 }
 
 export const DEFAULT_AGENT_SEEDS: readonly AgentSeed[] = [
@@ -74,7 +82,7 @@ export function buildAgentSeedRows(
   inheritedIds: readonly string[],
   now: string,
   color: () => number = randomAgentColor,
-): Array<AgentDefinition & { createdAt: string }> {
+): AgentSeedRow[] {
   const seeded = new Set(DEFAULT_AGENT_SEEDS.map(agent => agent.id));
   const inherited = [...new Set(inheritedIds)].filter(id => !seeded.has(id));
   return [...DEFAULT_AGENT_SEEDS, ...inherited.map(inheritedAgentSeed)].map((agent, index) => ({

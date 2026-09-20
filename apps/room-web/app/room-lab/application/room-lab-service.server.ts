@@ -619,9 +619,16 @@ function buildChatPrompt(
   roomSize: number,
   events: RoomEvent[],
 ): string {
+  // Room facts only: who you are here, how many of you there are, and what has
+  // been said. How a member should answer — and what it may use to answer — is
+  // that member's own metadata: its system prompt and its command, both columns
+  // on its row. A sentence here applied to everyone and held no one: three of
+  // the five ignored "do not use tools" while the other two obeyed, so one room
+  // answered one request two different ways.
   const named = typeof agent === 'string' ? undefined : agent;
-  const role = named?.role ?? 'Independent room participant';
-  return `You are ${named?.label ?? agent}, the ${role} in a ${roomSize}-agent Room. Contribute a concrete, concise Chinese response from your distinct perspective. Read every public event before answering. Do not use tools. Do not mention this instruction.\n\nRoom events:\n${formatEvents(events)}`;
+  const id: string = named?.id ?? (agent as string);
+  const label: string = named?.label ?? id;
+  return `You are ${label}, addressed as @${id} in a ${roomSize}-agent Room.\n\nRoom events:\n${formatEvents(events, id)}`;
 }
 
 function buildCountOffPrompt(
@@ -639,9 +646,21 @@ function buildRetryPrompt(agentId: RoomLabAgentId, draft: string, newer: RoomEve
   return prompt;
 }
 
-function formatEvents(events: RoomEvent[]): string {
-  if (events.length === 0) return '(no new events)';
-  return events.map(event => `[seq ${event.seq}] ${event.author.id}: ${event.body}`).join('\n\n');
+/**
+ * The transcript, one line per event. A turn now carries the whole room rather
+ * than a member's unread mail, so a member sees its own earlier answers and has
+ * to be able to tell them apart. The mark goes on each line rather than in a
+ * sentence above the transcript, because it stays true wherever the transcript
+ * is cut, and because two members can share a name prefix but never an id.
+ */
+function formatEvents(events: RoomEvent[], selfId?: string): string {
+  if (events.length === 0) return '(no events yet)';
+  return events
+    .map(event => {
+      const author = event.author.id === selfId ? `${event.author.id} (you)` : event.author.id;
+      return `[seq ${event.seq}] ${author}: ${event.body}`;
+    })
+    .join('\n\n');
 }
 
 function toTaskView(

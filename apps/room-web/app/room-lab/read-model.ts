@@ -97,7 +97,8 @@ export interface AgentDeskSeat {
 
 export interface AgentDeskItem extends RoomAgentInventoryItem {
   seatedIn: AgentDeskSeat[];
-  systemPrompt?: string;
+  /** The member's own row; empty when it adds nothing to a turn. */
+  systemPrompt: string;
 }
 
 export interface AgentDeskView {

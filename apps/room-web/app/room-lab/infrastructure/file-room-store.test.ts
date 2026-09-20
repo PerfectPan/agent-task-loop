@@ -1,9 +1,11 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 import { RoomLabHost, runnableInventory } from '../application/room-lab-host.server';
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from './migrations/0003_agent_system_prompt.seed';
 
 describe('sqlite Room persistence', () => {
   it('keeps rooms and messages after a new host is opened', async () => {
@@ -77,7 +79,8 @@ describe('sqlite Room persistence', () => {
     });
     expect(restored.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt).toBe('SENTINEL_SYS_PROMPT');
     restored.saveSystemPrompt('codex', '   ');
-    expect(restored.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt).toBeUndefined();
+    // The row stays; it just carries nothing to prepend.
+    expect(restored.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt).toBe('');
     restored.saveSystemPrompt('codex', 'SENTINEL_SYS_PROMPT');
     await restored.open(created.roomId).sendMessage('比较三档价格', undefined, 'client:sys-1');
     await restored.open(created.roomId).waitForIdle();
@@ -85,7 +88,7 @@ describe('sqlite Room persistence', () => {
     expect(prompts.at(-1)).toContain('比较三档价格');
   });
 
-  it('does not change the invoke prompt when no system prompt is saved', async () => {
+  it('prepends the row\'s seeded prompt, and nothing once it is emptied', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const prompts: string[] = [];
     const host = new RoomLabHost(SqliteRoomStore.open(root), {
@@ -98,9 +101,66 @@ describe('sqlite Room persistence', () => {
     const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
     await host.open(created.roomId).sendMessage('比较三档价格', undefined, 'client:sys-none');
     await host.open(created.roomId).waitForIdle();
-    expect(prompts.at(-1)).toBeDefined();
-    expect(prompts.at(-1)).not.toContain('SENTINEL_SYS_PROMPT');
-    expect(prompts.at(-1)?.startsWith('You are Codex')).toBe(true);
+
+    // Every row is seeded with a default, so a turn carries it without anyone
+    // having saved anything.
+    expect(prompts.at(-1)?.startsWith(DEFAULT_AGENT_SYSTEM_PROMPT)).toBe(true);
+    // Nothing sits between the identity line and the transcript: the room's
+    // half of the turn is facts, and behaviour arrived from the row above it.
+    const roomHalf = prompts.at(-1)!.slice(DEFAULT_AGENT_SYSTEM_PROMPT.length + 2);
+    expect(roomHalf.startsWith('You are Codex, addressed as @codex in a 1-agent Room.\n\nRoom events:'))
+      .toBe(true);
+
+    host.saveSystemPrompt('codex', '');
+    await host.open(created.roomId).sendMessage('再比一次', undefined, 'client:sys-none-2');
+    await host.open(created.roomId).waitForIdle();
+    expect(prompts.at(-1)?.startsWith('You are Codex, addressed as @codex')).toBe(true);
+  });
+
+  it('uses a saved system prompt on the next turn, without reopening the library', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const prompts: string[] = [];
+    const host = new RoomLabHost(SqliteRoomStore.open(root), {
+      agentRunner: async (_agentId, prompt) => {
+        prompts.push(prompt);
+        return { text: '收到', latencyMs: 1 };
+      },
+      listAgents: runnableInventory,
+    });
+    const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
+
+    // Saving re-reads the table, so the same host — the same process the page
+    // is being served from — sees the new prompt on the very next turn.
+    host.saveSystemPrompt('codex', 'SENTINEL_LIVE_PROMPT');
+    expect(host.agents.get('codex')?.systemPrompt).toBe('SENTINEL_LIVE_PROMPT');
+    expect(host.agentDesk().agents.find(agent => agent.id === 'codex')?.systemPrompt)
+      .toBe('SENTINEL_LIVE_PROMPT');
+
+    await host.open(created.roomId).sendMessage('比较三档价格', undefined, 'client:live-1');
+    await host.open(created.roomId).waitForIdle();
+    expect(prompts.at(-1)?.startsWith('SENTINEL_LIVE_PROMPT')).toBe(true);
+  });
+
+  it('re-reads the agents table when the desk is rescanned', () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const host = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    expect(host.agents.get('dsh')?.command).toBe('NO_COLOR=1 dsh --profile headless');
+
+    // Someone edits the row with sqlite3 while the server is running: a second
+    // connection to the same file, not this host's own.
+    const editor = new DatabaseSync(join(root, 'rooms.sqlite'));
+    editor.prepare('UPDATE agents SET command = ?, label = ? WHERE id = ?')
+      .run('dsh --profile other', 'DSH 2', 'dsh');
+    editor.close();
+    expect(host.agents.get('dsh')?.command).toBe('NO_COLOR=1 dsh --profile headless');
+
+    const inventory = host.refreshInventory();
+
+    expect(host.agents.get('dsh')?.command).toBe('dsh --profile other');
+    expect(inventory.find(agent => agent.id === 'dsh')).toMatchObject({
+      label: 'DSH 2',
+      command: 'dsh --profile other',
+    });
   });
 
   it('lists which rooms an agent is seated in', async () => {

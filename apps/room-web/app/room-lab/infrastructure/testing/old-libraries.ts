@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { MIGRATIONS } from '../migrations';
+import { MIGRATIONS, runMigrations } from '../migrations';
 
 /**
  * A library as it stood before members were rows: migration 1 applied and
@@ -23,6 +23,22 @@ export function createVersionOneLibrary(
   MIGRATIONS[0]!.up(db);
   db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)')
     .run('2026-09-14T19:27:31.456Z');
+  fill(db);
+  db.close();
+  return file;
+}
+
+/**
+ * A library as it stood while members were rows but their instructions were
+ * still a separate table: the same runner, stopped after version 2.
+ */
+export function createVersionTwoLibrary(
+  root: string,
+  fill: (db: DatabaseSync) => void = () => {},
+): string {
+  const file = join(root, 'rooms.sqlite');
+  const db = new DatabaseSync(file);
+  runMigrations(db, { migrations: MIGRATIONS.filter(migration => migration.version <= 2) });
   fill(db);
   db.close();
   return file;

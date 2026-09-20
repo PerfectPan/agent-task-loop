@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 import { buildAgentSeedRows, DEFAULT_AGENT_SEEDS } from './agent-seed.server';
-import { createVersionOneLibrary } from './testing/version-one-library';
+import { createVersionOneLibrary } from './testing/old-libraries';
 
 function root(): string {
   return mkdtempSync(join(tmpdir(), 'rivus-room-agents-'));

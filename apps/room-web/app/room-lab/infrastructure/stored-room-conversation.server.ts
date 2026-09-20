@@ -3,6 +3,8 @@ import {
   type AgentSessionId,
   type RoomEvent,
   type RoomId,
+  type RoomSlice,
+  type SliceBudget,
 } from '@rivus/agent-room';
 import type { TaskDeliveryEvent } from '@rivus/agent-task-loop/task-delivery';
 import type { RoomConversationPort, RoomHumanAdmitResult } from '../application/ports';
@@ -11,7 +13,8 @@ import type { FileRoomStreamStore } from './file-room-stream-store.server';
 import type { SqliteRoomStreamStore } from './sqlite-room-unit-of-work.server';
 import { MemoryRoomStreamStore } from '@rivus/agent-room';
 
-const TURN_BUDGET = { maxEvents: 50, maxChars: 48_000 } as const;
+/** What one turn may carry: the newest 50 events, up to 48k characters. */
+export const TURN_BUDGET = { maxEvents: 50, maxChars: 48_000 } as const;
 const RETRY_EVENT_BUDGET = { maxEvents: 50, maxChars: 30_000 } as const;
 
 export type RoomSessionStore = MemoryRoomStreamStore | FileRoomStreamStore | SqliteRoomStreamStore;
@@ -60,19 +63,57 @@ export class StoredRoomConversation implements RoomConversationPort {
     });
   }
 
+  /**
+   * A turn is handed the room's conversation, not the member's unread mail.
+   *
+   * The cursor used to do both jobs, and reading from it meant a member never
+   * saw anything it had already been shown — including its own last answer,
+   * since posting marks a member as caught up. With every CLI running without
+   * session persistence, that left each member with no memory of the room at
+   * all: measured in a real room, all five had a cursor sitting exactly at
+   * their own last message.
+   *
+   * So the turn carries the most recent events within budget, and `seenSeq`
+   * keeps only its other job: saying whether this member is behind. It is
+   * advanced to head here, as it was before, so a message admitted while the
+   * member is generating still makes its draft HELD.
+   */
   async prepareTurn(agentId: RoomLabAgentId): Promise<RoomEvent[]> {
     const session = this.sessionId(agentId);
-    const seenSeq = this.store.inspectSession(session)?.seenSeq ?? 0;
-    const slice = await this.store.readSlice(this.roomId, seenSeq, TURN_BUDGET);
-    const consumedSeq = slice.events.at(-1)?.seq;
-    if (consumedSeq !== undefined) {
-      this.store.advanceSeen(session, consumedSeq);
-      return slice.events;
+    const tail = await this.readTail(TURN_BUDGET);
+    if (tail.head > 0) this.store.advanceSeen(session, tail.head);
+    return tail.events;
+  }
+
+  /**
+   * The newest events that fit the budget, oldest first.
+   *
+   * It is built on `readSlice` here rather than added to each stream store
+   * because one of the three — the in-memory one — lives in `@rivus/agent-room`,
+   * which this task may not change; and because all three already load the
+   * whole room to serve any read, so walking that list backwards costs nothing
+   * they were not paying.
+   *
+   * An event whose own body exceeds the character budget can never be shown.
+   * That used to surface as "the next event does not fit"; it still has to be
+   * said out loud rather than quietly handing over a transcript with a hole in
+   * it, so the newest event not fitting is an error.
+   */
+  protected async readTail(budget: SliceBudget): Promise<RoomSlice> {
+    const whole = await this.store.readSlice(this.roomId, 0, { maxEvents: Number.MAX_SAFE_INTEGER });
+    const events: RoomEvent[] = [];
+    let chars = 0;
+    for (let index = whole.events.length - 1; index >= 0; index -= 1) {
+      const event = whole.events[index]!;
+      if (events.length >= budget.maxEvents) break;
+      if (budget.maxChars !== undefined && chars + event.body.length > budget.maxChars) break;
+      events.unshift(event);
+      chars += event.body.length;
     }
-    if (slice.head > seenSeq) {
+    if (whole.events.length > 0 && events.length === 0) {
       throw new Error('The next Room event exceeds the agent context budget');
     }
-    return [];
+    return { events, head: whole.head };
   }
 
   async prepareHeldRetry(

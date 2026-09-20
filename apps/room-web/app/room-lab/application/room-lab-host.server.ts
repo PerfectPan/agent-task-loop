@@ -33,7 +33,6 @@ export class RoomLabHost {
   private readonly workspaces = new Map<string, RoomLabService>();
   private catalog: RoomCatalog;
   private inventoryCache?: RoomAgentInventoryItem[];
-  private systemPrompts: Map<RoomLabAgentId, string>;
 
   /** The one registry: every service, route and view reads members from here. */
   readonly agents: AgentRegistry;
@@ -47,7 +46,6 @@ export class RoomLabHost {
   ) {
     this.agents = store.agents;
     this.catalog = store.loadCatalog();
-    this.systemPrompts = store.loadSystemPrompts();
   }
 
   /** Re-reads the `agents` table; the next probe re-runs against the new rows. */
@@ -70,16 +68,23 @@ export class RoomLabHost {
       ?? listRoomAgentInventory(agents);
   }
 
+  /**
+   * What 重新扫描 does: re-read the table, then probe it again. Both halves are
+   * needed — a row edited outside this process is as much a change as a CLI
+   * that has since been installed.
+   */
   refreshInventory(): RoomAgentInventoryItem[] {
-    this.inventoryCache = undefined;
+    this.reloadAgents();
     return this.inventory();
   }
 
+  /**
+   * Writes the prompt onto the member's row and re-reads the table, so the next
+   * turn in any open room uses it without restarting the server.
+   */
   saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
-    const trimmed = prompt.trim();
-    this.store.saveSystemPrompt(agentId, trimmed, nowIso());
-    if (trimmed) this.systemPrompts.set(agentId, trimmed);
-    else this.systemPrompts.delete(agentId);
+    this.store.saveSystemPrompt(agentId, prompt);
+    this.reloadAgents();
   }
 
   agentDesk(): AgentDeskView {
@@ -87,16 +92,13 @@ export class RoomLabHost {
     const lastOpenedId = this.lastOpened()?.id;
     return {
       ...(lastOpenedId === undefined ? {} : { lastOpenedId }),
-      agents: this.inventory().map(agent => {
-        const systemPrompt = this.systemPrompts.get(agent.id);
-        return {
-          ...agent,
-          seatedIn: rooms
-            .filter(room => room.memberIds.includes(agent.id))
-            .map(room => ({ id: room.id, title: room.title })),
-          ...(systemPrompt === undefined ? {} : { systemPrompt }),
-        };
-      }),
+      agents: this.inventory().map(agent => ({
+        ...agent,
+        seatedIn: rooms
+          .filter(room => room.memberIds.includes(agent.id))
+          .map(room => ({ id: room.id, title: room.title })),
+        systemPrompt: this.agents.get(agent.id)?.systemPrompt ?? '',
+      })),
     };
   }
 
@@ -160,7 +162,7 @@ export class RoomLabHost {
     const service = new RoomLabService({
       conversation: this.store.conversation(roomId),
       agentRunner: (agentId, prompt, signal) =>
-        run(agentId, withSystemPrompt(this.systemPrompts.get(agentId), prompt), signal),
+        run(agentId, withSystemPrompt(this.agents.get(agentId)?.systemPrompt, prompt), signal),
       taskDelivery: new LocalTaskDelivery(undefined, {
         // TODO(agents-registry): task gate still names two agents; make seats configurable.
         impl: this.agents.get('codex')?.command ?? 'codex',

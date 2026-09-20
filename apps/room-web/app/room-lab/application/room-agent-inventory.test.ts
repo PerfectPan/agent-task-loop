@@ -7,10 +7,10 @@ import {
 } from './room-agent-inventory.server';
 
 const AGENTS: AgentDefinition[] = [
-  { id: 'codex', label: 'Codex', role: '实施', command: 'codex exec --color never', color: 3, position: 0 },
-  { id: 'opencode', label: 'OpenCode', role: '搭建', command: 'NO_COLOR=1 opencode run --pure', color: 4, position: 1 },
-  { id: 'relay', label: 'relay', role: '成员', command: 'relay -p --output-format text', color: 1, position: 2 },
-  { id: 'dsh', label: 'DSH', role: '分析', command: 'dsh --profile headless', color: 5, position: 3 },
+  { id: 'codex', label: 'Codex', role: '实施', command: 'codex exec --color never', color: 3, position: 0, systemPrompt: '' },
+  { id: 'opencode', label: 'OpenCode', role: '搭建', command: 'NO_COLOR=1 opencode run --pure', color: 4, position: 1, systemPrompt: '' },
+  { id: 'relay', label: 'relay', role: '成员', command: 'relay -p --output-format text', color: 1, position: 2, systemPrompt: '' },
+  { id: 'dsh', label: 'DSH', role: '分析', command: 'dsh --profile headless', color: 5, position: 3, systemPrompt: '' },
 ];
 
 describe('room agent inventory', () => {

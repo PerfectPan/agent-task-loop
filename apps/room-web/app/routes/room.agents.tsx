@@ -50,7 +50,6 @@ export async function action({ request }: ActionFunctionArgs) {
       host.saveSystemPrompt(agentId, String(form.get('systemPrompt') ?? ''));
       return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
     }
-    host.reloadAgents();
     host.refreshInventory();
     return data<AgentDeskView>(host.agentDesk(), { headers: noStoreHeaders });
   } catch (error) {

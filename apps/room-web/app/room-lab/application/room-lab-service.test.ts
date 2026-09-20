@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentRunner } from './ports';
 import { RoomLabService } from './room-lab-service.server';
 import { MemoryRoomConversation } from '../infrastructure/memory-room-conversation.server';
+import { TURN_BUDGET } from '../infrastructure/stored-room-conversation.server';
 import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server';
 import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
 import { testRegistry } from '../presentation/testing/test-agents';
@@ -41,6 +42,57 @@ describe('RoomLabService', () => {
     await expect(service.retryHeld('relay')).rejects.toThrow(
       'Add relay to the Room before retrying its held draft',
     );
+  });
+
+  it('gives a member its own earlier answer back, marked as its own', async () => {
+    const prompts: string[] = [];
+    const service = createService(async (agentId, prompt) => {
+      prompts.push(prompt);
+      return { text: `${agentId} 的方案 A：按用量计费。`, latencyMs: 1 };
+    });
+    await service.compose(['codex']);
+
+    await service.sendMessage('先聊定价');
+    await service.waitForIdle();
+    await service.sendMessage('把你刚才的方案再说一遍');
+    await service.waitForIdle();
+
+    const second = prompts.at(-1)!;
+    // The core of this change: the member's own words are in front of it on the
+    // next turn, and so is the message that prompted them.
+    expect(second).toContain('codex 的方案 A：按用量计费。');
+    expect(second).toContain('先聊定价');
+    expect(second).toContain('把你刚才的方案再说一遍');
+    // Its own line is marked, everyone else's is not.
+    expect(second).toContain('codex (you): codex 的方案 A');
+    expect(second).toContain('director: 先聊定价');
+    expect(second).not.toContain('director (you)');
+    // The first turn could only carry what existed then.
+    expect(prompts[0]).toContain('先聊定价');
+    expect(prompts[0]).not.toContain('方案 A');
+  });
+
+  it('keeps a ten-message room well inside the turn budget', async () => {
+    const prompts: string[] = [];
+    const service = createService(async (_agentId, prompt) => {
+      prompts.push(prompt);
+      // 120 characters each, which is a long line for this room.
+      return { text: '答'.repeat(120), latencyMs: 1 };
+    });
+    await service.compose(['codex']);
+    for (let turn = 1; turn <= 5; turn += 1) {
+      await service.sendMessage(`第 ${turn} 个问题：${'问'.repeat(120)}`);
+      await service.waitForIdle();
+    }
+
+    const last = prompts.at(-1)!;
+    // Measured at 1378 characters when this was written, against a 48000 budget.
+    // Ten messages of 120 characters: the transcript is what dominates, and the
+    // whole turn is an order of magnitude inside the budget.
+    expect(last.length).toBeLessThan(TURN_BUDGET.maxChars / 10);
+    expect(prompts).toHaveLength(5);
+    expect(last).toContain('第 1 个问题');
+    expect(last).toContain('第 5 个问题');
   });
 
   it('wakes only explicitly mentioned agents and preserves addressedTo', async () => {

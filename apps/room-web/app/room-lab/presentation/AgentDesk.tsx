@@ -113,7 +113,7 @@ export function AgentDesk({ desk }: { desk: AgentDeskView }) {
                   rows={9}
                   maxLength={4000}
                   disabled={busy}
-                  defaultValue={current.systemPrompt ?? ''}
+                  defaultValue={current.systemPrompt}
                   placeholder={copy.say.promptPlaceholder}
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">

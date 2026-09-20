@@ -138,29 +138,15 @@ export class SqliteRoomStore {
     };
   }
 
-  loadSystemPrompts(): Map<RoomLabAgentId, string> {
-    const rows = this.db.prepare(`
-      SELECT agent_id, prompt FROM agent_system_prompts
-    `).all() as unknown as Array<{ agent_id: string; prompt: string }>;
-    const prompts = new Map<RoomLabAgentId, string>();
-    for (const row of rows) {
-      if (!this.agents.has(row.agent_id) || !row.prompt.trim()) continue;
-      prompts.set(row.agent_id, row.prompt);
-    }
-    return prompts;
-  }
-
-  saveSystemPrompt(agentId: RoomLabAgentId, prompt: string, now: string): void {
-    const trimmed = prompt.trim();
-    if (!trimmed) {
-      this.db.prepare('DELETE FROM agent_system_prompts WHERE agent_id = ?').run(agentId);
-      return;
-    }
-    this.db.prepare(`
-      INSERT INTO agent_system_prompts (agent_id, prompt, updated_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(agent_id) DO UPDATE SET prompt = excluded.prompt, updated_at = excluded.updated_at
-    `).run(agentId, trimmed, now);
+  /**
+   * The prompt is a column on the member's own row, so saving it is an update
+   * to that row. An empty prompt is stored as empty rather than deleted: the
+   * row still exists, it just adds nothing to a turn.
+   */
+  saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
+    this.db
+      .prepare('UPDATE agents SET system_prompt = ? WHERE id = ?')
+      .run(prompt.trim(), agentId);
   }
 
   conversation(roomId: string): SqliteRoomConversation {
@@ -175,7 +161,8 @@ export class SqliteRoomStore {
 
   loadAgents(): AgentDefinition[] {
     const rows = this.db.prepare(`
-      SELECT id, label, role, command, color, position FROM agents ORDER BY position ASC
+      SELECT id, label, role, command, color, position, system_prompt
+      FROM agents ORDER BY position ASC
     `).all() as unknown as AgentRow[];
     return rows.map(row => ({
       id: row.id,
@@ -184,6 +171,7 @@ export class SqliteRoomStore {
       command: row.command,
       color: Number(row.color),
       position: Number(row.position),
+      systemPrompt: row.system_prompt ?? '',
     }));
   }
 
@@ -261,4 +249,5 @@ interface AgentRow {
   command: string;
   color: number;
   position: number;
+  system_prompt: string;
 }

@@ -25,7 +25,7 @@ it('shows a system-prompt field per selected agent and does not send CLI probes'
           systemPrompt: '先给结论。',
           seatedIn: [{ id: 'r_aaaaaaaaaa', title: 'Q3 定价方案' }],
         },
-        { id: 'dsh', label: 'DSH', role: '分析', color: 5, availability: 'missing', seatedIn: [] },
+        { id: 'dsh', label: 'DSH', role: '分析', color: 5, availability: 'missing', seatedIn: [], systemPrompt: '' },
       ],
     }} />,
   );

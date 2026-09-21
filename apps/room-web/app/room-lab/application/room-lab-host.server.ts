@@ -111,14 +111,14 @@ export class RoomLabHost {
     memberIds?: readonly RoomLabAgentId[];
   }): Promise<RoomLabState> {
     const record = this.catalog.create(createRoomRecordInput(input));
-    this.store.saveCatalog(this.catalog);
+    this.store.saveRoom(record);
+    this.store.saveLastOpened(record);
     return this.snapshot(record.id);
   }
 
   async snapshot(roomId: string): Promise<RoomLabState> {
     if (this.catalog.lastOpened()?.id !== roomId) {
-      this.catalog.touch(roomId, nowIso());
-      this.store.saveCatalog(this.catalog);
+      this.store.saveLastOpened(this.catalog.touch(roomId, nowIso()));
     }
     const service = this.open(roomId);
     return this.decorate(await service.snapshot(), roomId);
@@ -178,8 +178,7 @@ export class RoomLabHost {
         this.store.saveWorkspace(roomId, snapshot, nowIso());
         const current = this.catalog.get(roomId);
         if (current.memberIds.join(',') !== snapshot.composition.join(',')) {
-          this.catalog.replaceMembers(roomId, snapshot.composition, nowIso());
-          this.store.saveCatalog(this.catalog);
+          this.store.saveRoom(this.catalog.replaceMembers(roomId, snapshot.composition, nowIso()));
         }
       },
     });

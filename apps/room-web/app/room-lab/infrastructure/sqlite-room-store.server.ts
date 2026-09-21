@@ -67,6 +67,9 @@ export class SqliteRoomStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       lastOpenedAt: row.last_opened_at,
+      // A seat whose agent has no row is dropped for this read only, and a room
+      // left with none falls back to one agent so it can still be opened. Both
+      // are display values: `saveRoom` is the only writer of seating.
       memberIds: membersByRoom.get(row.id) ?? this.agents.ids().slice(0, 1),
       ...(row.goal ? { goal: row.goal } : {}),
     }));
@@ -74,26 +77,49 @@ export class SqliteRoomStore {
     return new RoomCatalog(records, lastOpenedId, this.agents);
   }
 
-  saveCatalog(catalog: RoomCatalog): void {
-    const snapshot = catalog.snapshot();
-    this.db.exec('BEGIN IMMEDIATE');
-    try {
-      const upsert = this.db.prepare(`
-        INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-          title = excluded.title,
-          goal = excluded.goal,
-          updated_at = excluded.updated_at,
-          last_opened_at = excluded.last_opened_at
-      `);
-      const deleteMembers = this.db.prepare('DELETE FROM room_members WHERE room_id = ?');
+  /**
+   * One room's row and its seating.
+   *
+   * Seating is written only from a caller that actually changed it. What
+   * `loadCatalog` hands out has had ids without an `agents` row filtered off it,
+   * and writing that back would delete the seating for good: `room_members` has
+   * no foreign key to `agents`, so a row removed by hand leaves its seat behind
+   * on purpose, and the seat comes back when the row does.
+   */
+  saveRoom(record: RoomRecord): void {
+    this.inTransaction(() => {
+      this.upsertRoom(record);
+      this.db.prepare('DELETE FROM room_members WHERE room_id = ?').run(record.id);
       const insertMember = this.db.prepare(`
         INSERT INTO room_members (room_id, agent_id, seat_order) VALUES (?, ?, ?)
       `);
+      record.memberIds.forEach((agentId, index) => {
+        insertMember.run(record.id, agentId, index);
+      });
+    });
+  }
+
+  /** Which room was opened last, and when. Touches no seating. */
+  saveLastOpened(record: RoomRecord): void {
+    this.inTransaction(() => {
+      this.upsertRoom(record);
+      this.db.prepare(`
+        INSERT INTO app_meta (key, value) VALUES ('last_opened_id', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `).run(record.id);
+    });
+  }
+
+  /** Every room at once. For the one-time import of a pre-sqlite library. */
+  saveCatalog(catalog: RoomCatalog): void {
+    const snapshot = catalog.snapshot();
+    this.inTransaction(() => {
       for (const room of snapshot.rooms) {
-        upsert.run(room.id, room.title, room.goal ?? null, room.createdAt, room.updatedAt, room.lastOpenedAt);
-        deleteMembers.run(room.id);
+        this.upsertRoom(room);
+        this.db.prepare('DELETE FROM room_members WHERE room_id = ?').run(room.id);
+        const insertMember = this.db.prepare(`
+          INSERT INTO room_members (room_id, agent_id, seat_order) VALUES (?, ?, ?)
+        `);
         room.memberIds.forEach((agentId, index) => {
           insertMember.run(room.id, agentId, index);
         });
@@ -104,6 +130,25 @@ export class SqliteRoomStore {
           ON CONFLICT(key) DO UPDATE SET value = excluded.value
         `).run(snapshot.lastOpenedId);
       }
+    });
+  }
+
+  private upsertRoom(room: RoomRecord): void {
+    this.db.prepare(`
+      INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        goal = excluded.goal,
+        updated_at = excluded.updated_at,
+        last_opened_at = excluded.last_opened_at
+    `).run(room.id, room.title, room.goal ?? null, room.createdAt, room.updatedAt, room.lastOpenedAt);
+  }
+
+  private inTransaction(work: () => void): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      work();
       this.db.exec('COMMIT');
     } catch (error) {
       this.db.exec('ROLLBACK');

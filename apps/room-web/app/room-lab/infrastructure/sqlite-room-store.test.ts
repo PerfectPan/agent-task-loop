@@ -177,6 +177,61 @@ describe('sqlite Room persistence', () => {
     expect(desk.agents.find(agent => agent.id === 'claude')?.seatedIn).toEqual([]);
   });
 
+  it('keeps a room\'s stored crew when one of its agents has no row', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const host = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    const crew = await host.create({ title: '两人房', memberIds: ['codex', 'dsh'] });
+    const other = await host.create({ title: '另一间', memberIds: ['codex'] });
+
+    // A row removed outside this process: `room_members` has no foreign key to
+    // `agents`, so the seating is left behind and only the catalog filters it.
+    const db = new DatabaseSync(join(root, 'rooms.sqlite'));
+    db.prepare('DELETE FROM agents WHERE id = ?').run('dsh');
+    db.close();
+
+    // Switching rooms is enough to write the catalog back. `other` was created
+    // last, so it is already the last opened; opening `crew` is the switch.
+    const reopened = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    expect(reopened.lastOpened()?.id).toBe(other.roomId);
+    await reopened.snapshot(crew.roomId);
+
+    const check = new DatabaseSync(join(root, 'rooms.sqlite'));
+    const seated = check.prepare(
+      'SELECT agent_id FROM room_members WHERE room_id = ? ORDER BY seat_order',
+    ).all(crew.roomId) as unknown as { agent_id: string }[];
+    check.close();
+
+    expect(seated.map(row => row.agent_id)).toEqual(['codex', 'dsh']);
+  });
+
+  it('seats a room again once the missing agent row comes back', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
+    const host = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    const crew = await host.create({ title: '两人房', memberIds: ['codex', 'dsh'] });
+
+    const db = new DatabaseSync(join(root, 'rooms.sqlite'));
+    const row = db.prepare('SELECT * FROM agents WHERE id = ?').get('dsh') as unknown as Record<string, unknown>;
+    db.prepare('DELETE FROM agents WHERE id = ?').run('dsh');
+    db.close();
+
+    const without = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    expect((await without.snapshot(crew.roomId)).activeAgentIds).toEqual(['codex']);
+
+    const restore = new DatabaseSync(join(root, 'rooms.sqlite'));
+    restore.prepare(`
+      INSERT INTO agents (id, label, role, command, color, position, created_at, system_prompt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      row.id as string, row.label as string, row.role as string, row.command as string,
+      row.color as number, row.position as number, row.created_at as string,
+      row.system_prompt as string,
+    );
+    restore.close();
+
+    const back = new RoomLabHost(SqliteRoomStore.open(root), { listAgents: runnableInventory });
+    expect((await back.snapshot(crew.roomId)).activeAgentIds).toEqual(['codex', 'dsh']);
+  });
+
   it('sets connection pragmas when opening a library', () => {
     // Pragmas are per-connection; migration SQL cannot set them, so opening
     // must.

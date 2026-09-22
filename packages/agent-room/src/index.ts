@@ -7,6 +7,8 @@ export {
 } from './agent-session/domain/errors';
 
 export type { RoomAdmissionStore, RoomStreamStore } from './room/application/room-stream-store';
+export { RoomStreamService } from './room/application/room-stream-service';
+export type { RoomUnitOfWork } from './room/application/room-unit-of-work';
 
 export {
   ROOM_VALIDATION_CODE,
@@ -41,4 +43,8 @@ export {
 } from './room/infrastructure/memory-room-stream-store';
 
 export type { RoomReplyCommand, RoomReplyResult } from './room/domain/reply-in-serial';
+export type {
+  CompleteSilentlyCommand,
+  CompleteSilentlyResult,
+} from './room/domain/complete-silently-in-serial';
 export { shouldWake, type WakePolicy } from './wake/domain/wake-policy';

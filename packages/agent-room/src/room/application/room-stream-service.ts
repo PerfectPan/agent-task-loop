@@ -9,6 +9,11 @@ import type {
   SliceBudget,
 } from '../domain/model';
 import { postControlPlane } from '../domain/post-control-plane';
+import {
+  completeSilentlyInSerial,
+  type CompleteSilentlyCommand,
+  type CompleteSilentlyResult,
+} from '../domain/complete-silently-in-serial';
 import { replyInSerial, type RoomReplyCommand, type RoomReplyResult } from '../domain/reply-in-serial';
 
 export class RoomStreamService implements RoomStreamStore {
@@ -45,6 +50,14 @@ export class RoomStreamService implements RoomStreamStore {
         },
         this.isoNow(),
       ),
+    );
+  }
+
+  async completeSilentlyInSerial(
+    input: CompleteSilentlyCommand,
+  ): Promise<CompleteSilentlyResult> {
+    return this.unitOfWork.withRoomAndSession(input.session, (room, session) =>
+      completeSilentlyInSerial(room, session, input.ackHeldUpToSeq),
     );
   }
 

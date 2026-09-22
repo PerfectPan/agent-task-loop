@@ -1,0 +1,225 @@
+import type { RoomLabWorkspaceSnapshot } from './room-lab-service.server';
+import { RoomLabService } from './room-lab-service.server';
+import type { AgentRunner } from './ports';
+import { withSystemPrompt } from './system-prompt';
+import {
+  listRoomAgentInventory,
+  runnableInventory,
+} from './room-agent-inventory.server';
+import { createLocalAgentRunner } from '../infrastructure/local-agent-runner.server';
+import { LocalTaskDelivery } from '../infrastructure/local-task-delivery.server';
+import { LocalTextPresenter } from '../infrastructure/local-text-presenter.server';
+import {
+  createRoomRecordInput,
+  nowIso,
+} from '../infrastructure/room-home.server';
+import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
+import { RoomCatalog, RoomCatalogInvariantError } from '../domain/room-catalog';
+import { RoomComposition } from '../domain/room-composition';
+import type {
+  AgentDefinition,
+  AgentRegistry,
+  RoomLabAgentId,
+} from '../domain/agent-registry';
+import type {
+  AgentDeskView,
+  RoomAgentInventoryItem,
+  RoomCatalogItemView,
+  RoomLabAction,
+  RoomLabState,
+  RoomView,
+} from '../read-model';
+
+export class RoomLabHost {
+  private readonly workspaces = new Map<string, RoomLabService>();
+  private catalog: RoomCatalog;
+  private inventoryCache?: RoomAgentInventoryItem[];
+
+  /** The one registry: every service, route and view reads members from here. */
+  readonly agents: AgentRegistry;
+
+  constructor(
+    private readonly store: SqliteRoomStore = SqliteRoomStore.open(),
+    private readonly bindings: {
+      agentRunner?: AgentRunner;
+      listAgents?: (agents: readonly AgentDefinition[]) => RoomAgentInventoryItem[];
+    } = {},
+  ) {
+    this.agents = store.agents;
+    this.catalog = store.loadCatalog();
+  }
+
+  /** Re-reads the `agents` table; the next probe re-runs against the new rows. */
+  private reloadAgents(): void {
+    this.agents.reload();
+    this.inventoryCache = undefined;
+  }
+
+  list() {
+    return this.catalog.list();
+  }
+
+  lastOpened() {
+    return this.catalog.lastOpened();
+  }
+
+  inventory(): RoomAgentInventoryItem[] {
+    const agents = this.agents.list();
+    return this.inventoryCache ??= this.bindings.listAgents?.(agents)
+      ?? listRoomAgentInventory(agents);
+  }
+
+  /**
+   * What 重新扫描 does: re-read the table, then probe it again. Both halves are
+   * needed — a row edited outside this process is as much a change as a CLI
+   * that has since been installed.
+   */
+  refreshInventory(): RoomAgentInventoryItem[] {
+    this.reloadAgents();
+    return this.inventory();
+  }
+
+  /**
+   * Writes the prompt onto the member's row and re-reads the table, so the next
+   * turn in any open room uses it without restarting the server.
+   */
+  saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
+    this.store.saveSystemPrompt(agentId, prompt);
+    // Re-read the rows, but keep the probe: a prompt has nothing to do with
+    // whether a command resolves, and re-probing costs a login shell.
+    this.agents.reload();
+  }
+
+  agentDesk(): AgentDeskView {
+    const rooms = this.list();
+    const lastOpenedId = this.lastOpened()?.id;
+    return {
+      ...(lastOpenedId === undefined ? {} : { lastOpenedId }),
+      agents: this.inventory().map(agent => ({
+        ...agent,
+        seatedIn: rooms
+          .filter(room => room.memberIds.includes(agent.id))
+          .map(room => ({ id: room.id, title: room.title })),
+        systemPrompt: this.agents.get(agent.id)?.systemPrompt ?? '',
+      })),
+    };
+  }
+
+  async create(input: {
+    title: string;
+    goal?: string;
+    memberIds?: readonly RoomLabAgentId[];
+  }): Promise<RoomLabState> {
+    const record = this.catalog.create(createRoomRecordInput(input));
+    this.store.saveRoom(record);
+    this.store.saveLastOpened(record);
+    return this.snapshot(record.id);
+  }
+
+  async snapshot(roomId: string): Promise<RoomLabState> {
+    if (this.catalog.lastOpened()?.id !== roomId) {
+      this.store.saveLastOpened(this.catalog.touch(roomId, nowIso()));
+    }
+    const service = this.open(roomId);
+    return this.decorate(await service.snapshot(), roomId);
+  }
+
+  async act(
+    roomId: string,
+    input: Exclude<RoomLabAction, { action: 'create' }>,
+    signal?: AbortSignal,
+  ): Promise<RoomLabState> {
+    const service = this.open(roomId);
+    let state: RoomView;
+    switch (input.action) {
+      case 'message':
+        state = await service.sendMessage(input.body, undefined, input.clientMessageId);
+        break;
+      case 'compose':
+        state = await service.compose(input.agentIds);
+        break;
+      case 'count-off':
+        state = await service.runCountOff(signal);
+        break;
+      case 'retry':
+        state = await service.retryHeld(input.agentId, signal);
+        break;
+      case 'task':
+        state = await service.runTask(input.title);
+        break;
+      case 'reset':
+        state = await service.reset();
+        break;
+      default:
+        throw new Error('Unknown Room action');
+    }
+    return this.decorate(state, roomId);
+  }
+
+  open(roomId: string): RoomLabService {
+    const existing = this.workspaces.get(roomId);
+    if (existing) return existing;
+    const record = this.catalog.get(roomId);
+    const run = this.bindings.agentRunner
+      ?? createLocalAgentRunner(agentId => this.agents.get(agentId)?.command);
+    const service = new RoomLabService({
+      conversation: this.store.conversation(roomId),
+      agentRunner: (agentId, prompt, signal) =>
+        run(agentId, withSystemPrompt(this.agents.get(agentId)?.systemPrompt, prompt), signal),
+      taskDelivery: new LocalTaskDelivery(undefined, {
+        // TODO(agents-registry)
+        impl: this.agents.get('codex')?.command ?? 'codex',
+        review: this.agents.get('claude')?.command ?? 'claude',
+      }),
+      textPresenter: new LocalTextPresenter(),
+      registry: this.agents,
+      composition: new RoomComposition(record.memberIds, this.agents),
+      onPersist: snapshot => {
+        this.store.saveWorkspace(roomId, snapshot, nowIso());
+        const current = this.catalog.get(roomId);
+        if (current.memberIds.join(',') !== snapshot.composition.join(',')) {
+          this.store.saveRoom(this.catalog.replaceMembers(roomId, snapshot.composition, nowIso()));
+        }
+      },
+    });
+    const saved = this.store.loadWorkspace(roomId);
+    if (saved) service.restore(saved);
+    this.workspaces.set(roomId, service);
+    return service;
+  }
+
+  decorate(state: RoomView, roomId: string): RoomLabState {
+    const record = this.catalog.get(roomId);
+    const inventory = new Map(this.inventory().map(agent => [agent.id, agent]));
+    return {
+      ...state,
+      roomId,
+      title: record.title,
+      ...(record.goal === undefined ? {} : { goal: record.goal }),
+      catalog: this.catalogView(),
+      agents: state.agents.map(agent => {
+        const listed = inventory.get(agent.id);
+        return {
+          ...agent,
+          availability: listed?.availability ?? 'missing',
+          ...(listed?.command ? { command: listed.command } : {}),
+        };
+      }),
+    };
+  }
+
+  catalogView(): RoomCatalogItemView[] {
+    return this.catalog.list().map(room => {
+      const preview = this.store.preview(room.id);
+      return {
+        id: room.id,
+        title: room.title,
+        updatedAt: preview.lastAt ?? room.updatedAt,
+        memberCount: room.memberIds.length,
+        ...(preview.lastLine === undefined ? {} : { lastLine: preview.lastLine }),
+      };
+    });
+  }
+}
+
+export { RoomCatalogInvariantError, runnableInventory };

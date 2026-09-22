@@ -30,6 +30,10 @@
       "types": "./dist/task-delivery.d.ts",
       "import": "./dist/task-delivery.js"
     },
+    "./task-management": {
+      "types": "./dist/task-management.d.ts",
+      "import": "./dist/task-management.js"
+    },
     "./rivus-plugin": {
       "types": "./dist/rivus-plugin.d.ts",
       "import": "./dist/rivus-plugin.js"

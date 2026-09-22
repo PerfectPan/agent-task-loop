@@ -13,6 +13,10 @@ import type {
   SliceBudget,
 } from '../domain/model';
 import type { RoomReplyCommand, RoomReplyResult } from '../domain/reply-in-serial';
+import type {
+  CompleteSilentlyCommand,
+  CompleteSilentlyResult,
+} from '../domain/complete-silently-in-serial';
 import { Room } from '../domain/room';
 
 export interface MemoryRoomStreamStoreOptions {
@@ -63,6 +67,12 @@ export class MemoryRoomStreamStore implements RoomStreamStore {
 
   async replyInSerial(input: RoomReplyCommand): Promise<RoomReplyResult> {
     return this.service.replyInSerial(input);
+  }
+
+  async completeSilentlyInSerial(
+    input: CompleteSilentlyCommand,
+  ): Promise<CompleteSilentlyResult> {
+    return this.service.completeSilentlyInSerial(input);
   }
 }
 

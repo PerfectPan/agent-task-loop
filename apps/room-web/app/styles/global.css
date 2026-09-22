@@ -1,25 +1,336 @@
+@import "tailwindcss";
+
+/*
+ * Self-hosted, no network at runtime. @fontsource/noto-serif-sc ships ~100
+ * unicode-range slices per weight, so a page that never renders a glyph never
+ * fetches the slice it lives in; `font-display: swap` is fontsource's default,
+ * so the first paint uses the fallback and swaps once rather than holding text
+ * blank. Inter carries the interface, Noto Serif SC the prose.
+ */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/noto-serif-sc/400.css";
+@import "@fontsource/noto-serif-sc/600.css";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant hover (&:hover);
+
+/*
+ * 宣纸 — warm white paper, written in shadcn's token vocabulary.
+ *
+ * The page is paper and the text is the subject. The rails (--sidebar) are one
+ * step darker than the sheet (--background) and are told apart from it by a
+ * hairline (--sidebar-border), not by a field of colour; the thread between
+ * them is the paper itself. There is no solid field of colour anywhere, no
+ * stacked shadows, and exactly one object that floats: the composer card.
+ * Members are round, softly tinted, and carry two letters. States are quiet
+ * pills. Type is large and loosely set.
+ *
+ * The names are shadcn's, the values are 宣纸's. Three mappings are worth
+ * knowing:
+ *
+ *   --chart-1…5   the five members' identity colours, in seating order:
+ *                 claude-relay, claude, codex, opencode, dsh. They colour the
+ *                 author name and the two capitals in the mark, whose tile is
+ *                 the same hue at 15%.
+ *   --accent      the hover/selected fill. It is the solid equivalent of the
+ *                 8% ink wash the previous round used, so rows read as text
+ *                 with a tint behind them rather than as filled chips.
+ *   --info /      three added pairs, following shadcn's own pattern: the token
+ *   --warning /   is the wash and -foreground is the ink that lands on it.
+ *   --success     A status pill is exactly `bg-warning text-warning-foreground`.
+ *                 --destructive-soft is the same idea for the error pill, kept
+ *                 separate from --destructive, which stays the solid red that
+ *                 carries white text on the 确认清空 button.
+ *
+ * Contrast, measured with a WCAG relative-luminance script over every text
+ * token on every surface it lands on, both themes, pill text on its own pill
+ * included. Every pair is ≥ 4.50. Do not lighten a text token or darken a
+ * surface without re-running the check; several values sit within 0.15 of the
+ * floor. Decoration (muted-foreground/60 for rules, dots and disabled states)
+ * is not text and is not in the table.
+ */
+
 :root {
   color-scheme: light;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  --radius: 0.5rem;
+
+  --background: #ffffff;
+  --foreground: #37352f;
+
+  --card: #ffffff;
+  --card-foreground: #37352f;
+  --popover: #ffffff;
+  --popover-foreground: #37352f;
+
+  --primary: #1a6fd1;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f7f5;
+  --secondary-foreground: #37352f;
+  --muted: #f7f7f5;
+  --muted-foreground: #676664;
+  --accent: #efefec;
+  --accent-foreground: #37352f;
+  --destructive: #b0322d;
+  --destructive-foreground: #ffffff;
+
+  --border: #e9e9e7;
+  --input: #dedddb;
+  --ring: #1a6fd1;
+
+  /* The five members, in seating order. */
+  --chart-1: #6940a5;
+  --chart-2: #a25207;
+  --chart-3: #3a7351;
+  --chart-4: #ac3e79;
+  --chart-5: #636e0f;
+
+  --sidebar: #f7f7f5;
+  --sidebar-foreground: #37352f;
+  --sidebar-primary: #1a6fd1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ebebe8;
+  --sidebar-accent-foreground: #37352f;
+  --sidebar-border: #e9e9e7;
+  --sidebar-ring: #1a6fd1;
+
+  /* Added pairs: wash + the ink that lands on it. */
+  --info: #e7f3f8;
+  --info-foreground: #2b6c92;
+  --warning: #fbeedc;
+  --warning-foreground: #8a5a10;
+  --success: #ebf6f1;
+  --success-foreground: #3d7a56;
+  --destructive-soft: #fbe4e4;
+  --destructive-soft-foreground: #b0322d;
+
+  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.04);
 }
 
-* {
-  box-sizing: border-box;
+.dark {
+  color-scheme: dark;
+
+  --background: #191919;
+  --foreground: #d4d4d4;
+
+  --card: #252525;
+  --card-foreground: #d4d4d4;
+  --popover: #252525;
+  --popover-foreground: #d4d4d4;
+
+  --primary: #529cca;
+  --primary-foreground: #191919;
+  --secondary: #202020;
+  --secondary-foreground: #d4d4d4;
+  --muted: #202020;
+  --muted-foreground: #9e9e9e;
+  --accent: #2a2a2a;
+  --accent-foreground: #d4d4d4;
+  --destructive: #e88080;
+  --destructive-foreground: #191919;
+
+  --border: #2f2f2f;
+  --input: #3a3a3a;
+  --ring: #529cca;
+
+  --chart-1: #b69be5;
+  --chart-2: #e8955a;
+  --chart-3: #7cc29a;
+  --chart-4: #e48cbc;
+  --chart-5: #b9c25a;
+
+  --sidebar: #202020;
+  --sidebar-foreground: #d4d4d4;
+  --sidebar-primary: #529cca;
+  --sidebar-primary-foreground: #191919;
+  --sidebar-accent: #2a2a2a;
+  --sidebar-accent-foreground: #d4d4d4;
+  --sidebar-border: #2f2f2f;
+  --sidebar-ring: #529cca;
+
+  --info: #1c2b35;
+  --info-foreground: #7fb6dc;
+  --warning: #33290f;
+  --warning-foreground: #d9a94a;
+  --success: #1c2f25;
+  --success-foreground: #6fb58b;
+  --destructive-soft: #3a1f1f;
+  --destructive-soft-foreground: #e88080;
+
+  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 14px rgb(0 0 0 / 0.4);
 }
 
-html,
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100%;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-soft-foreground: var(--destructive-soft-foreground);
+
+  /* 4px on controls and pills, 6px on rows, 8px on the things that float. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-card: var(--card-shadow);
+
+  /* Interface words are sans, prose is serif. See DESIGN.md → Typography. */
+  --font-sans: Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-body {
-  background: #dce4e8;
+@theme {
+  /* The one animation: the dot beside a member who is generating right now. */
+  --animate-pulse-soft: rivus-pulse 1.4s ease-in-out infinite;
+
+  @keyframes rivus-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
 }
 
-button,
-textarea {
-  font: inherit;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--foreground);
+  }
+
+  button,
+  textarea,
+  input {
+    font: inherit;
+  }
+
+  /* macOS Chrome paints UA buttonface over author colours unless the control is fully unset. */
+  button,
+  input:where([type='button'], [type='reset'], [type='submit']) {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* `all: unset` above also drops the UA focus ring, and the shadcn components
+     only carry their own on [data-slot]. Bare buttons get one back here. */
+  button:focus-visible,
+  input:where([type='button'], [type='reset'], [type='submit']):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  button:disabled,
+  input:where([type='button'], [type='reset'], [type='submit']):disabled,
+  [data-slot='button']:disabled {
+    cursor: default;
+  }
+
+  /* Scrollbars belong to the palette, not to the platform. */
+  * {
+    scrollbar-color: var(--input) transparent;
+    scrollbar-width: thin;
+  }
+
+  a {
+    color: var(--primary);
+    text-underline-offset: 3px;
+  }
+
+  /* The composer's editor. The card around it is the field, so the editable
+     area itself carries no border, fill or focus ring of its own. */
+  .tiptap:focus,
+  .tiptap:focus-visible {
+    outline: none;
+  }
+
+  /* Tiptap's Placeholder extension marks the empty first paragraph and hands
+     the text over as an attribute; it is the only way to show a placeholder in
+     a contenteditable. */
+  .tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* A mention is one object: clicking it selects the whole chip rather than
+     dropping a caret inside the name. */
+  .tiptap [data-mention] {
+    cursor: default;
+    user-select: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }

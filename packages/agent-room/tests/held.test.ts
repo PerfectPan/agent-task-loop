@@ -166,6 +166,34 @@ describe('replyInSerial HELD', () => {
   });
 });
 
+describe('completeSilentlyInSerial HELD', () => {
+  it('atomically holds a silent completion behind a newer Room event', async () => {
+    const store = new MemoryRoomStreamStore();
+    store.ensureSession(botA);
+    await store.admit({
+      roomId: room,
+      messageId: 'human:before-generation',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'first fact',
+    });
+    store.advanceSeen(botA, 1);
+    await store.admit({
+      roomId: room,
+      messageId: 'human:during-generation',
+      author: { kind: 'human', id: 'alice' },
+      kind: 'human',
+      body: 'newer fact',
+    });
+
+    await expect(store.completeSilentlyInSerial({
+      session: botA,
+      ackHeldUpToSeq: 1,
+    })).resolves.toMatchObject({ outcome: 'held', heldUpToSeq: 2 });
+    expect(store.inspectSession(botA)).toMatchObject({ seenSeq: 1, heldUpToSeq: 2 });
+  });
+});
+
 describe('readSlice', () => {
   it('does not invoke the commit hook for head or slice queries', async () => {
     let commits = 0;

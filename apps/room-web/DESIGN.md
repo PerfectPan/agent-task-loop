@@ -317,7 +317,7 @@ components:
 | 对 | 墨（浅 / 深） | 洗底（浅 / 深） | 用在 |
 | --- | --- | --- | --- |
 | `info` | `#2b6c92` / `#7fb6dc` | `#e7f3f8` / `#1c2b35` | 生成中：脉冲点、页头「当前 X」、发言顺序条亮项、报数「回复中」；Badge `info` 标 CLI 可运行 |
-| `warning` | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待更新：时间线药丸、成员栏草稿块与其按钮；Badge `warning` 标 CLI 已安装 |
+| `warning` | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待更新：时间线药丸、成员栏草稿块与其按钮 |
 | `success` | `#3d7a56` / `#6fb58b` | `#ebf6f1` / `#1c2f25` | 静止状态的实心点。洗底目前只作为 Badge `success` 变体存在，房间界面未用到 |
 | `destructive-soft` | `#b0322d` / `#e88080` | `#fbe4e4` / `#3a1f1f` | 错误横幅、成员错误块、时间线错误药丸、报数「回复失败」 |
 
@@ -469,7 +469,7 @@ components:
 
 ### Badge
 
-4px 圆角，`px-2 py-0.5`，12px / 500。变体：`muted`（`accent` 底 + `muted-foreground`，标 CLI 未安装）、`info`（可运行）、`warning`（已安装）、`success`、`destructive-soft`，加上 registry 自带的 `default` / `secondary` / `destructive` / `outline` / `ghost` / `link`。
+4px 圆角，`px-2 py-0.5`，12px / 500。变体：`muted`（`accent` 底 + `muted-foreground`，标 CLI 未安装）、`info`（可运行）、`warning`、`success`、`destructive-soft`，加上 registry 自带的 `default` / `secondary` / `destructive` / `outline` / `ghost` / `link`。
 
 **状态药丸**也是 `Badge`：时间线里 held 的那一行是 `variant="warning"`，error 的那一块是 `variant="destructive-soft"`，外加一个 `statePill` 类把它拉到宣纸的药丸尺寸（13px、`px-2.5 py-[5px]`）、允许换行、并在网格列里铺满宽度（stock Badge 是 `w-fit`）。
 
@@ -534,12 +534,15 @@ components:
 
 ### Copy（`copy.ts`）
 
-所有上屏文字都在 `app/room-lab/presentation/copy.ts` 一个字典里，按**被读的方式**分四组；组件只引用 key，不写字面量。`copy.test.ts` 用几条正则守着每组的语法，所以口语状态词（「说完了」）或者写成句子的标签回不来。
+所有上屏文字都在 `app/room-lab/copy.ts` 一个字典里，按**被读的方式**分组；每一个调用方都只引用 key，服务端写进房间的那几句也一样。字典放在 feature 根而不是 `presentation/` 下，就是因为服务端也要用。
+
+`copy.test.ts` 守两件事：用几条正则守每组的语法，所以口语状态词（「说完了」）或者写成句子的标签回不来；再扫一遍房间面的全部源码，只要还有中文字面量就失败并报出文件和行号。
 
 | 组 | 读法 | 语法 | 例 |
 | --- | --- | --- | --- |
 | `status` | 扫：在列表里和圆点、数字并排 | 名词短语，只有四种构词：**已X · X中 · 待X · X失败**（加裸状态「在场」「等待」） | 已回复 · 生成中 · 排队中 · 草稿待更新 · 运行失败 · 已读未答 |
 | `action` | 做：按钮、菜单项 | 动词短语，不带句号 | 发送 · 创建房间 · 读取更新并重答 · 开始报数 |
+| `availability` | 认：按领域状态取键的标签，映射保持穷尽 | 名词 | 可运行 · 未安装 |
 | `label` | 认：节标题、导航、表单标签、占位 | 名词，不带句号 | 成员 · 5 · 检查连接 · 房间名 |
 | `say` | 懂：说明、空状态、错误、页头那一句 | 完整陈述句：事实 + 下一步 | 发送失败，内容已保留在输入框 |
 

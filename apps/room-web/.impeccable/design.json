@@ -477,7 +477,7 @@
         "canonical": "#fbeedc",
         "dark": "#33290f",
         "cssVar": "--warning",
-        "usage": "草稿待唤醒的洗底；Badge warning（CLI 已安装）。",
+        "usage": "草稿待唤醒的洗底。",
         "pairedForeground": "warning-foreground"
       },
       "warning-foreground": {
@@ -827,7 +827,7 @@
         "(composer: Tiptap, not shadcn — shadcn has no editor primitive)"
       ],
       "divergences": [
-        "forwardRef：本仓库在 React 18，registry 现在产出 React 19 的写法（ref 当普通 prop）。所有渲染 DOM 节点的包装都转成 React.forwardRef，否则 Radix 会丢掉它用来定位、锁焦点、还焦点的节点。",
+        "forwardRef：registry 产出的 React 19 写法（ref 当普通 prop）原样保留，本仓库也在 React 19。shadcn 组件里没有 forwardRef 包装。",
         "尺度：圆角 6px → 4px，控件高 36px → 30px，去掉 shadow-xs。",
         "动效：删掉 slide-in / zoom-in / fade-in（tw-animate-css 未安装）。",
         "图标：lucide-react 换成 components.json 指定的 phosphor。",

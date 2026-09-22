@@ -65,7 +65,9 @@ Open <http://127.0.0.1:3210/room>.
   Task state is persisted before it is projected into Room, so a Room failure
   cannot change the Task verdict.
   A model PASS is shown as awaiting human acceptance, never as human approval.
-- State is memory-only and resets with the server. Set
+- Rooms, their seating, the transcript and each member's cursor live in
+  `~/.rivus/room-web/v1/rooms.sqlite` and survive a restart. Set
+  `RIVUS_ROOM_HOME` to put that library somewhere else, and
   `ROOM_AGENT_TIMEOUT_MS` to change the default 120-second CLI timeout.
 
 Both development and production scripts bind to `127.0.0.1`; the production
@@ -76,9 +78,11 @@ deployment.
 
 ## Interface
 
-The Room uses the yellow Studio direction: a persistent crew sidebar, illustrated
-portraits and an open conversation stream. Task and run details stay secondary to
-chat. Narrow screens move member management into the header.
+The Room is chat first, in three columns: a rail of rooms, the conversation, and
+the members with their connection check. Each member wears a round mark built
+from its id and the colour on its row, so a new member needs no artwork. Below
+1180px the members column becomes a drawer; below 820px the rail becomes a
+header strip. `/board` and `/task/:id` exist but are not linked from the room.
 
 Enter sends, Shift+Enter inserts a line break, and Enter or Tab selects an open
 mention suggestion. IME composition does not submit. Escape closes dialogs and

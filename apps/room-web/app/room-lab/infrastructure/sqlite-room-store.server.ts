@@ -110,8 +110,8 @@ export class SqliteRoomStore {
     });
   }
 
-  /** Every room at once. For the one-time import of a pre-sqlite library. */
-  saveCatalog(catalog: RoomCatalog): void {
+  /** Every room at once. Only the one-time import of a pre-sqlite library needs this. */
+  private saveCatalog(catalog: RoomCatalog): void {
     const snapshot = catalog.snapshot();
     this.inTransaction(() => {
       for (const room of snapshot.rooms) {

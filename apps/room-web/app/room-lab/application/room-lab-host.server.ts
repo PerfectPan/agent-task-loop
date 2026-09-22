@@ -50,7 +50,7 @@ export class RoomLabHost {
   }
 
   /** Re-reads the `agents` table; the next probe re-runs against the new rows. */
-  reloadAgents(): void {
+  private reloadAgents(): void {
     this.agents.reload();
     this.inventoryCache = undefined;
   }

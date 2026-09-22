@@ -286,9 +286,8 @@ real backend and must not run unattended.
 
 - The bitable is live user data. Any unattended work stays read-only, or targets
   GitHub Issues where a wrong write is visible and revertible.
-- Replacing the visual world discards committed design work. `design-qa.md`
-  records two iterations against a mock that was chosen for the wrong register;
-  it is evidence, not authority.
+- Replacing the visual world discards committed design work. The QA record of
+  the discarded world was evidence, not authority, and went with it.
 - Five lanes over ten statuses hides a distinction the loop depends on. The lane
   is the grouping; the card still shows the exact status.
 - `apps/web` and `apps/room-web` remain two apps. This RFC adds surface to one of

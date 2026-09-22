@@ -1,5 +1,21 @@
 # @rivus/agent-task-loop
 
+## 0.11.0
+
+### Minor Changes
+
+- 766b5f3: Start occupies `@rivus/agent-orchestration` (`task:<id>`) before the review loop. A second concurrent start loses with a stable conflict and does not claim the task backend.
+- ed9045a: Expose the Task Delivery bounded context with its aggregate, independent review
+  gate, fenced repository writes, and orchestration-backed local runtime.
+- f42e6c1: Expose the task-management boundary as `@rivus/agent-task-loop/task-management`:
+  the task provider factory, the `TaskRecord` / `TaskStatus` vocabulary and the
+  status ordering, so a UI such as room-web can read the real task backends
+  without importing the CLI entry point.
+
+### Patch Changes
+
+- 29a7b22: Resolve GitHub Issues tokens more reliably in subprocesses and clarify rate-limit errors.
+
 ## 0.10.0
 
 ### Minor Changes

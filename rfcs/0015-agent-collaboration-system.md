@@ -71,7 +71,7 @@ Each principle fixes a rule:
 | 5 | One lease per (room, member) in the control plane. A wake for a member that holds a lease is coalesced into one pending wake: not dropped, not queued |
 | 6 | `shouldWake` is a broadcast. The endpoint's `serial` switch runs the woken set one member at a time in seat order; the protocol does not change |
 | 7 | Every event carries a wake depth. Two bounds apply: a depth ceiling and a turn budget per round |
-| 8 | Record, cursor, write points, wake rule: `agent-room`. Lease, connection: `agent-orchestration`. Count-off, roles, system prompts, the serial switch: endpoint |
+| 8 | Record, cursor, write points, wake rule: `agent-room`. Agent registry, probe, lease, connection, harness slots: `agent-orchestration`. Count-off, roles, the candidate catalog, what fills the harness, the serial switch: endpoint |
 
 ## Vocabulary
 
@@ -80,7 +80,8 @@ Each principle fixes a rule:
 | Room | One named group chat: a record plus a member list |
 | Record | The Room's ordered events. `seq` is identity |
 | Event | One entry: a human message, a member post, or a control-plane notice |
-| Member | A participant with a cursor. A person, or a row in the `agents` table |
+| Agent | Something that can be started and talked to: an id, a binding, a system prompt. The control plane's noun |
+| Member | An agent seated in a Room, with a cursor. A person is a member too |
 | Wake | The decision that a member should look at the record after an event |
 | Turn | One member session started by a wake. It ends in speak or pass |
 | Speak | The write point that appends a member post |
@@ -90,6 +91,8 @@ Each principle fixes a rule:
 | Depth | Distance from the human event that opened the round |
 | Lease | The control plane's record that one session of a member is running |
 | Connector | How the control plane talks to an agent process. ACP |
+| Probe | One handshake that tells whether a binding is missing, needs login, or is ready, and what it can do |
+| Harness | The injection points of one turn: cwd, system prompt, input, tools, permissions, hooks |
 | Endpoint | A projection of the Room with storage and UI. `apps/room-web` |
 
 ## Architecture
@@ -100,8 +103,8 @@ Each principle fixes a rule:
                   │ routes · dispatcher · Room tools · rooms.sqlite │
                   └──────────┬──────────────────────┬─────────────┘
                              │                      │
-              record, cursors, write points,   lease, connection
-              wake rule                        (control plane)
+              record, cursors, write points,   agents, probe, lease,
+              wake rule                        connection, harness
                              │                      │
                 ┌────────────▼──────────┐  ┌────────▼──────────────────┐
                 │ @rivus/agent-room     │  │ @rivus/agent-orchestration│
@@ -122,7 +125,7 @@ Each package answers one question:
 | Package | Question | Stores |
 | --- | --- | --- |
 | `@rivus/agent-room` | What was said, who has read up to where, who should look next | Nothing. Ports |
-| `@rivus/agent-orchestration` | Who may run right now, and how to talk to it | Nothing. Ports |
+| `@rivus/agent-orchestration` | Which agents exist, whether each can be reached, who may run right now, and how a turn is delivered | Nothing. Ports |
 | `@rivus/agent-task-loop` | Where is this task in its pipeline | Its own |
 | `apps/room-web` | Everything with a product name: member rows, settings, the Room tools, scheduling, UI, storage for the two ports above | `rooms.sqlite` |
 
@@ -234,7 +237,64 @@ waking for that round. A person's next message opens a new round.
 
 ## `@rivus/agent-orchestration`: the control plane
 
-Two capabilities. Ports only.
+The control plane manages agents: which agents exist, whether each one can be
+reached, who may run right now, and how a turn is assembled and delivered.
+Its noun is **Agent**. The Room's noun is **Member**: an agent id plus a
+cursor and a seat. A member references an agent; the control plane never
+hears about rooms.
+
+Four capabilities. Ports only; the endpoint supplies storage.
+
+### Agent and registry
+
+```ts
+export interface Agent {
+  id: AgentId;                 // also the word after @
+  label: string;
+  binding: AgentBinding;       // command, args, env: how to start its ACP process
+  systemPrompt: string;        // the agent's own behaviour, room-independent
+  timeoutMs?: number;
+}
+
+export interface AgentRegistry {
+  list(): Promise<Agent[]>;
+  get(id: AgentId): Promise<Agent | undefined>;
+  save(agent: Agent): Promise<void>;
+  remove(id: AgentId): Promise<void>;
+}
+```
+
+The registry is the one roster RFC 0014 asked for. room-web's `agents` table
+becomes its sqlite implementation, the way `member_leases` implements
+`LeaseStore`; columns the endpoint adds for itself (`color`, `position`,
+`role`) ride along in the same row and stay invisible to the port. When
+`agent-task-loop` needs a `targetAgent` roster it reads the same port through
+its own adapter instead of a hardcoded list.
+
+`systemPrompt` is on the agent, not on the room, because how a member answers
+is the member's own metadata: RFC 0013's decision, kept.
+
+### Probe
+
+```ts
+export interface AgentConnector {
+  connect(binding: AgentBinding): Promise<AgentConnection>;
+  probe(binding: AgentBinding, signal?: AbortSignal): Promise<AgentProbe>;
+}
+
+export type AgentProbe =
+  | { status: 'missing'; error: string }                       // the process did not start
+  | { status: 'needs-login'; authMethods: AuthMethod[] }       // initialize ok, session/new refused
+  | { status: 'ready'; capabilities: AgentCapabilities; agentInfo?: { name: string; version: string } };
+```
+
+Discovery is a handshake, not an inventory. Under ACP the only fact that
+matters about an agent is whether this binding answers `initialize` and opens
+a session; the probe asks it directly and gets back what no filesystem scan
+can give: whether the agent is logged in, and its capabilities
+(`mcpCapabilities.http` decides how the Room tools are delivered). The
+`whence -w` probe in room-web and the unused `@rivus/agent-finder-core`
+dependency go. `agent-finder` itself stays for `agent-task-loop`.
 
 ### Lease
 
@@ -262,23 +322,59 @@ minutes, and the lease can be lost across that await. The write into the
 record runs inside `runFenced`; a holder that lost its lease gets
 `{ executed: false }` and its result never lands.
 
-### Connection
+### Connection and harness
 
 ```ts
 export interface AgentBinding { command: string; args?: string[]; env?: Record<string, string> }
 
-export interface AgentConnector {
-  connect(binding: AgentBinding): Promise<AgentConnection>;
-}
-
 export interface AgentConnection {
-  newSession(input: { cwd: string; mcpServers?: McpServer[] }): Promise<SessionId>;
+  newSession(input: { cwd: string; mcpServers?: McpServer[]; meta?: Record<string, unknown> }): Promise<SessionId>;
   prompt(session: SessionId, blocks: ContentBlock[], signal?: AbortSignal): Promise<{ stopReason: StopReason }>;
   cancel(session: SessionId): Promise<void>;
   onUpdate(handler: (update: SessionUpdate) => void): Unsubscribe;
+  onPermissionRequest(handler: (request: PermissionRequest) => Promise<PermissionOutcome>): Unsubscribe;
   close(): Promise<void>;
 }
 ```
+
+A turn is described by a **Harness**: the injection points the control plane
+offers, filled by the endpoint. The control plane owns the slots; the endpoint
+owns what goes in them.
+
+```ts
+export interface Harness {
+  cwd: string;
+  systemPrompt?: string;                       // native channel when the agent has one, else the first prompt block
+  blocks: ContentBlock[];                      // this turn's input
+  tools: McpServer[];                          // Room tools and anything else the endpoint adds
+  permissions: PermissionPolicy;               // how session/request_permission is answered
+  hooks?: {
+    onUpdate?(update: SessionUpdate): void;
+    onToolCall?(call: ToolCall): 'allow' | 'deny';   // vetoed before the permission answer
+    afterTurn?(result: TurnResult): void;
+  };
+  workspaceFiles?: Record<string, string>;     // files the connector drops into cwd before the session
+}
+```
+
+Each connector carries a **profile** that translates the generic slots into
+that agent's channels. Verified on `claude-agent-acp` 0.81.0:
+`session/new` reads `_meta.systemPrompt` (a string, or a preset object with
+`append`) and `_meta.claudeCode.options` (built-in tool selection and other
+SDK options), so the system prompt is a real system prompt there, not a first
+user message. An agent with no such channel gets the system prompt as the
+first block. `workspaceFiles` is how agent-native configuration
+(`.claude/settings.json`, `AGENTS.md`, `.codex/config.toml`) reaches an agent;
+it is a profile detail, not a promise of the port, because each agent reads
+different files.
+
+`PermissionPolicy` is the hook the control plane owns regardless of agent:
+ACP routes every `session/request_permission` to the client, so the connector
+answers it. The default policy for a Room turn allows writes inside `cwd` and
+denies them outside it.
+
+A Harness is assembled per turn and never stored. What is stored is the agent
+row and the room settings; the Harness is their projection for one turn.
 
 `AcpConnector` is the one implementation on the main path, built on
 `@agentclientprotocol/sdk` 1.5.0. Verified against the published schema on
@@ -288,39 +384,37 @@ export interface AgentConnection {
 streams `agent_message_chunk`, `tool_call_update`, `plan_update`, and the
 rest.
 
-| Member | Channel | Verified 2026-09-23 |
+| Agent | Channel | Verified 2026-09-23 |
 | --- | --- | --- |
 | claude | `@agentclientprotocol/claude-agent-acp` | 0.81.0, built on the Claude Agent SDK, README lists client MCP servers |
 | codex | `@agentclientprotocol/codex-acp` | 1.13.0, maintained by the ACP organisation |
 | opencode | `opencode acp` | native subcommand in the installed binary |
 
-The process is long-lived per member and reused across turns. The session is
+The process is long-lived per agent and reused across turns. The session is
 new for every turn, so the record is the only context a turn carries in.
 A persistent session would be a second memory the record cannot show;
 see Alternatives.
 
-A member whose command has no ACP channel cannot receive the Room tools, so
-it cannot speak, so it cannot be seated. The agents page shows such a row as
-不可入座 rather than seating a member that can only listen. `dsh` is in that
-position until it has a channel; see Risks.
+An agent whose binding has no ACP channel cannot receive the Room tools, so
+it cannot speak, so it cannot be seated. The agents page shows such a row by
+its probe status rather than seating an agent that can only listen. `dsh` is
+in that position until it has a channel; see Risks.
 
 ### AgentRuntime
 
 ```ts
 runTurn(input: {
   leaseKey: string;
-  binding: AgentBinding;
-  cwd: string;
-  mcpServers: McpServer[];
-  blocks: ContentBlock[];
+  agent: Agent;
+  harness: Harness;
   signal?: AbortSignal;
-  onUpdate?: (update: SessionUpdate) => void;
-}): Promise<{ stopReason: StopReason } | { skipped: 'lease-held' }>
+}): Promise<{ stopReason: StopReason; token: FencingToken } | { skipped: 'lease-held' }>
 ```
 
-Acquire the lease, connect or reuse the process, `newSession`, `prompt`,
-release. Heartbeats run while `prompt` is pending. The caller wraps its writes
-in `runFenced` with the token `runTurn` hands back.
+Acquire the lease, connect or reuse the process, apply the profile to the
+harness, `newSession`, `prompt`, release. Heartbeats run while `prompt` is
+pending. The caller wraps its writes in `runFenced` with the token `runTurn`
+hands back.
 
 ### What leaves the package
 
@@ -335,16 +429,25 @@ in `runFenced` with the token `runTurn` hands back.
 
 ```text
 packages/agent-orchestration/src/
+  contracts/agent.ts           Agent, AgentBinding, AgentRegistry
   contracts/lease.ts           LeaseStore, LeaseRecord, FencingToken, FencedResult
-  contracts/connection.ts      AgentBinding, AgentConnector, AgentConnection, SessionUpdate
+  contracts/connection.ts      AgentConnector, AgentConnection, AgentProbe, SessionUpdate
+  contracts/harness.ts         Harness, PermissionPolicy, ToolCall, TurnResult
   domain/lock.ts               isLockFresh, holdsLock (unchanged)
   application/lease-manager.ts acquire, heartbeat, fence, release
   application/agent-runtime.ts runTurn
   infrastructure/acp-connector.ts
+  infrastructure/profiles/{claude,codex,opencode}.ts
+  infrastructure/memory-agent-registry.ts
   infrastructure/memory-lease-store.ts
   infrastructure/file-lease-store.ts
   infrastructure/node-{clock,identity,liveness,scheduler}.ts
 ```
+
+The package still owns no database. `AgentRegistry` and `LeaseStore` are
+ports; `rooms.sqlite` implements both for room-web, and a file store
+implements the lease for the multi-process CLI and TUI. A second database in
+this package would be a second roster and a second lease to reconcile.
 
 ## `@rivus/agent-task-loop`
 
@@ -356,16 +459,31 @@ participants is a later RFC.
 
 ## `apps/room-web`: the endpoint
 
-### Member row
+### Agent rows
 
-`agents` gains two columns. `command` becomes the ACP command line
-(`claude-agent-acp`, `codex-acp`, `opencode acp`), still run through the
-person's login shell so an alias counts.
+`agents` becomes the sqlite implementation of the control plane's
+`AgentRegistry`. `command` becomes the ACP command line (`claude-agent-acp`,
+`codex-acp`, `opencode acp`), still run through the person's login shell so an
+alias counts. The endpoint's own columns (`color`, `position`, `role`) stay in
+the row and are not part of the port.
 
 | Column | Meaning |
 | --- | --- |
-| `connector` | `acp`. Reserved for a second connector kind; there is none today |
-| `timeout_ms` | Per-member turn timeout. NULL means the room default |
+| `timeout_ms` | Per-agent turn timeout. NULL means the room default |
+
+The seed rows become a **candidate catalog**: the ACP adapters this repository
+knows how to start, with their dependencies.
+
+| Candidate | Binding | Needs | Adapter comes from |
+| --- | --- | --- | --- |
+| claude | `claude-agent-acp` | a logged-in Claude Code | room-web depends on `@agentclientprotocol/claude-agent-acp` |
+| codex | `codex-acp` | `codex` installed and logged in | room-web depends on `@agentclientprotocol/codex-acp` |
+| opencode | `opencode acp` | `opencode` on PATH | the person's own install |
+
+The catalog is product knowledge, so it lives here and not in a package. An
+ACP agent the catalog has never heard of is one more row. 重新扫描 on the
+agents page runs `probe` on every row; the states it shows are 缺失, 待登录,
+可入座, 已入座.
 
 ### Room settings
 
@@ -481,7 +599,6 @@ ALTER TABLE rooms  ADD COLUMN serial        INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE rooms  ADD COLUMN depth_ceiling INTEGER;
 ALTER TABLE rooms  ADD COLUMN round_budget  INTEGER;
 ALTER TABLE rooms  ADD COLUMN cwd           TEXT;
-ALTER TABLE agents ADD COLUMN connector     TEXT    NOT NULL DEFAULT 'acp';
 ALTER TABLE agents ADD COLUMN timeout_ms    INTEGER;
 
 -- 0006: control plane and turn log
@@ -603,6 +720,7 @@ Room and the Room did not relay it; principle 4.
 | `RoomLabService.runCountOff`, `retryHeld`, `runTask`, the `busy` flag, `turnChain`, `workspaceSnapshot`, `restore` | The loop, its retry, and its snapshot |
 | `apps/room-web/app/room-lab/infrastructure/local-agent-runner.server.ts`, `local-task-delivery.server.ts` | Replaced by `AcpConnector`; the fake task loop was already slated for removal by RFC 0014 |
 | `count-off`, `retry`, `task` in `RoomLabAction` | No such actions |
+| `apps/room-web/app/room-lab/application/room-agent-inventory.server.ts` and the `@rivus/agent-finder-core` dependency | Discovery is `probe` |
 | `packages/agent-room/src/wake/domain/wake-policy.ts` `WakePolicy` | One rule remains |
 | `packages/agent-orchestration/src/domain/run.ts`, `template.ts`, `execa-runner.ts`, `application/orchestration.ts` | Moved to `agent-task-loop` or replaced |
 | `room_workspace` table | Accounted for above |
@@ -614,8 +732,8 @@ Each is one pull request. Slices 1 and 2 are independent; slice 3 needs both.
 | Slice | Package | Content | Proof |
 | --- | --- | --- | --- |
 | 1 | `agent-room` | `wakeDepth` on the event, `speak` with `addressedTo` and `readUpToSeq`, `pass` without HELD, broadcast `shouldWake` with ceiling, `companion` and `WakePolicy` deleted | Memory store tests: two members speaking concurrently yield one post and one HELD; a depth-`n` chain stops at the ceiling |
-| 2 | `agent-orchestration` | `LeaseStore` and `AgentConnector` ports, `AcpConnector`, `AgentRuntime`, memory and file lease stores; `Run`, templates, `ProcessRunner` move to `agent-task-loop` | `agent-task-loop` tests still pass on the moved code; package-boundary test still forbids importing `agent-room` |
-| 3 | `room-web` | Migrations 0004–0007, `SqliteLeaseStore`, Room tools endpoint and stdio shim, dispatcher with coalescing and budgets, `turns` log, statuses, room settings, deletions | Three real members, one question and one count-off, `turns` shows the outcomes; typecheck, vitest, build |
+| 2 | `agent-orchestration` | `AgentRegistry`, `LeaseStore`, `AgentConnector` (with `probe`) and `Harness` ports; `AcpConnector` with the three profiles; `AgentRuntime`; memory registry, memory and file lease stores; `Run`, templates, `ProcessRunner` move to `agent-task-loop` | A probe against each of the three adapters returns `ready`, `needs-login` or `missing` as expected; `agent-task-loop` tests still pass on the moved code; package-boundary test still forbids importing `agent-room` |
+| 3 | `room-web` | Migrations 0004–0007, `SqliteAgentRegistry` and `SqliteLeaseStore`, Room tools endpoint and stdio shim, dispatcher with coalescing and budgets, per-turn Harness assembly, `turns` log, statuses, room settings, agents page on `probe`, deletions | Three real members, one question and one count-off, `turns` shows the outcomes; typecheck, vitest, build |
 | 4 | measurement | Turn count, wall time, and token cost per round under `broadcast` and `serial` with three members | Numbers in the PR, and the default of `serial` decided from them |
 
 ## Alternatives considered
@@ -676,3 +794,11 @@ Settled during the 2026-09-22 review, so they are not reopened here:
 | Agents connect through ACP. Connection is a base capability and belongs in `agent-orchestration` |
 | No backward compatibility with the current room-web data path; nobody depends on it |
 | Count-off is not a feature. A member knows its number from the room facts and reads before it speaks |
+
+Settled during the 2026-09-23 review of this document:
+
+| Decision |
+| --- |
+| `agent-orchestration` manages agents: the `Agent` entity and its registry, probe, lease, connection, harness. It does not know rooms and owns no database |
+| Injection is offered as slots (`Harness`), filled by the endpoint. Content stays out of the package |
+| Discovery is a probe, not an inventory. `agent-finder` is not used by the Room |

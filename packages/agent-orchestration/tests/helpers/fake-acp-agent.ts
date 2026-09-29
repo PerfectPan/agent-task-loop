@@ -20,11 +20,17 @@ export interface FakeAgentConfig {
   /** newSession refuses with the ACP auth_required error. */
   authRequired?: boolean;
   newSessionError?: string;
+  /** newSession never answers, as one waiting on a login does. */
+  hangNewSession?: boolean;
   stopReason?: StopReason;
   /** prompt never resolves until cancel arrives. */
   hangPrompt?: boolean;
   /** prompt asks the client for permission before finishing. */
   requestPermission?: boolean;
+  /** A hung prompt keeps hanging after session/cancel, as a stuck adapter does. */
+  ignoreCancel?: boolean;
+  /** prompt exercises the client-side fs on these paths, recording each outcome. */
+  clientFs?: { inside: string; outside: string; content: string; via?: string };
 }
 
 export class FakeAcpAgent {
@@ -33,6 +39,8 @@ export class FakeAcpAgent {
   readonly prompts: PromptRequest[] = [];
   readonly cancels: unknown[] = [];
   readonly permissionResponses: unknown[] = [];
+  /** One line per client-fs attempt, `ok` or the error the client answered. */
+  readonly fsResults: string[] = [];
 
   private pendingPrompt: { resolve: (result: PromptResponse) => void } | undefined;
 
@@ -59,6 +67,9 @@ export class FakeAcpAgent {
 
   async newSession(params: NewSessionRequest): Promise<{ sessionId: string }> {
     this.newSessionRequests.push(params);
+    if (this.config.hangNewSession) {
+      return new Promise<{ sessionId: string }>(() => undefined);
+    }
     if (this.config.authRequired) throw RequestError.authRequired();
     if (this.config.newSessionError) throw new Error(this.config.newSessionError);
     return { sessionId: `fake-session-${this.newSessionRequests.length}` };
@@ -70,6 +81,34 @@ export class FakeAcpAgent {
       return new Promise((resolve) => {
         this.pendingPrompt = { resolve };
       });
+    }
+    const fs = this.config.clientFs;
+    if (fs) {
+      const attempts: Array<{ op: 'readTextFile' | 'writeTextFile'; path: string }> = [
+        { op: 'readTextFile', path: fs.inside },
+        { op: 'readTextFile', path: fs.outside },
+        { op: 'writeTextFile', path: fs.inside },
+        { op: 'writeTextFile', path: fs.outside },
+        ...(fs.via ? [{ op: 'writeTextFile' as const, path: fs.via }] : []),
+      ];
+      for (const attempt of attempts) {
+        try {
+          if (attempt.op === 'readTextFile') {
+            await this.connection.readTextFile({ sessionId: params.sessionId, path: attempt.path });
+          } else {
+            await this.connection.writeTextFile({
+              sessionId: params.sessionId,
+              path: attempt.path,
+              content: fs.content,
+            });
+          }
+          this.fsResults.push(`${attempt.op} ${attempt.path}: ok`);
+        } catch {
+          // The SDK answers a throwing client handler with an opaque internal
+          // error; the distinction the tests need is served versus refused.
+          this.fsResults.push(`${attempt.op} ${attempt.path}: refused`);
+        }
+      }
     }
     if (this.config.requestPermission) {
       const response = await this.connection.requestPermission({
@@ -110,6 +149,7 @@ export class FakeAcpAgent {
 
   async cancel(params: { sessionId: string }): Promise<void> {
     this.cancels.push(params);
+    if (this.config.ignoreCancel) return;
     this.pendingPrompt?.resolve({ stopReason: 'cancelled' });
     this.pendingPrompt = undefined;
   }

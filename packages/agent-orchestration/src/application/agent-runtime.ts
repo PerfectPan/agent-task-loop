@@ -38,6 +38,9 @@ export interface Inbox {
 
 export type ActivateHandler = (key: string) => Promise<Harness>;
 
+/** An activation that died before it was a turn: no lease, no agent, no harness. */
+export type ActivationFailureHandler = (key: string, error: string) => void | Promise<void>;
+
 export interface AgentRuntimeOptions {
   connector: AgentConnector;
   registry: AgentRegistry;
@@ -82,6 +85,7 @@ export class AgentRuntime {
   private readonly inboxes = new Map<string, InboxRecord>();
   private activateHandler: ActivateHandler | undefined;
   private sessionDiscardHandler: ((key: string) => void | Promise<void>) | undefined;
+  private activationFailureHandler: ActivationFailureHandler | undefined;
 
   constructor(options: AgentRuntimeOptions) {
     this.connector = options.connector;
@@ -107,6 +111,16 @@ export class AgentRuntime {
    */
   onSessionDiscard(handler: (key: string) => void | Promise<void>): void {
     this.sessionDiscardHandler = handler;
+  }
+
+  /**
+   * What the endpoint hears about an activation that failed before it was a
+   * turn — the lease could not be taken, the agent row was missing, the
+   * harness threw. No afterTurn follows these, so an endpoint whose serial
+   * rooms wait on every activation ending needs this to keep moving.
+   */
+  onActivationFailure(handler: ActivationFailureHandler): void {
+    this.activationFailureHandler = handler;
   }
 
   /** Coalesces; never blocks the caller. */
@@ -169,29 +183,16 @@ export class AgentRuntime {
     let heartbeatHandle: IntervalHandle | undefined;
     let timedOut = false;
     /** The turn's closing hook; the release in the finally waits for it. */
-    let afterTurn: Promise<void> = Promise.resolve();
+    let afterTurn = Promise.resolve();
+    /** The pre-harness failure hook; awaited with the same ordering. */
+    let activationFailed = Promise.resolve();
     try {
       record = this.lease.acquire(key);
       agent = await this.requireAgent(key);
-      harness = await this.requireHarness(key);
-      connection = await this.connectionFor(inbox, agent);
-      const profile = this.profileFor(agent);
-
-      let blocks: ContentBlock[];
-      if (inbox.session) {
-        blocks = profile.promptBlocks(harness);
-      } else {
-        profile.prepareWorkspace?.(harness);
-        const request = profile.newSession(harness);
-        inbox.session = await connection.newSession({
-          cwd: request.cwd,
-          mcpServers: request.mcpServers,
-          meta: request.meta,
-        });
-        blocks = profile.promptBlocks(harness);
-      }
-
-      unwire = this.wire(connection, harness);
+      // The watchdog and the heartbeat start with the lease, not with the
+      // prompt: a slow `initialize` or a `session/new` waiting on a login is
+      // as much the activation's time as the turn itself, and the lease must
+      // not read stale while the process is still starting.
       const timerMs = agent.timeoutMs ?? this.defaultTimeoutMs;
       timeoutHandle = this.scheduler.setInterval(() => {
         timedOut = true;
@@ -212,6 +213,30 @@ export class AgentRuntime {
       }, this.heartbeatIntervalMs);
       heartbeatHandle.unref?.();
 
+      harness = await this.requireHarness(key);
+      connection = await this.connectionFor(inbox, agent, controller.signal);
+      const profile = this.profileFor(agent);
+
+      let blocks: ContentBlock[];
+      if (inbox.session) {
+        blocks = profile.promptBlocks(harness);
+      } else {
+        profile.prepareWorkspace?.(harness);
+        const request = profile.newSession(harness);
+        inbox.session = await raceAborted(
+          connection.newSession({
+            cwd: request.cwd,
+            mcpServers: request.mcpServers,
+            meta: request.meta,
+          }),
+          controller.signal,
+          'session/new',
+        );
+        blocks = profile.promptBlocks(harness);
+      }
+
+      unwire = this.wire(connection, harness);
+
       const prompt = await connection.prompt(inbox.session, blocks, controller.signal);
       afterTurn = this.emitAfterTurn(harness, timedOut, prompt?.stopReason ?? null, record, undefined);
     } catch (error) {
@@ -220,14 +245,23 @@ export class AgentRuntime {
       // turn; everything after the harness exists is that turn's failure.
       if (harness && record && !(error instanceof OrchestrationConflictError)) {
         afterTurn = this.emitAfterTurn(harness, timedOut, null, record, error);
+      } else if (!(error instanceof OrchestrationConflictError)) {
+        activationFailed = Promise.resolve(
+          this.activationFailureHandler?.(key, errorText(error)),
+        ).catch((handlerError: unknown) => {
+          inbox.lastError ??= errorText(handlerError);
+        });
       }
       if (connection) {
         // The process or session is of unknown health after a failure; the
-        // next activation starts fresh — and what the endpoint hosted for
-        // the session goes with it, released before that next activation
-        // can host its own.
+        // next activation starts fresh — the process is closed rather than
+        // left behind, and what the endpoint hosted for the session goes
+        // with it, released before that next activation can host its own.
         inbox.connection = undefined;
         inbox.session = undefined;
+        await connection.close().catch((closeError: unknown) => {
+          inbox.lastError ??= errorText(closeError);
+        });
         try {
           await this.sessionDiscardHandler?.(key);
         } catch (discardError) {
@@ -245,6 +279,7 @@ export class AgentRuntime {
       await afterTurn.catch((error: unknown) => {
         inbox.lastError ??= errorText(error);
       });
+      await activationFailed;
       if (heartbeatHandle) this.scheduler.clearInterval(heartbeatHandle);
       if (record) this.lease.release(key);
       inbox.controller = undefined;
@@ -288,9 +323,10 @@ export class AgentRuntime {
       holderId: record.holderId,
     };
     const result: TurnResult = timedOut
-      ? { stopReason: null, token, error: errorText(error) || 'turn timed out' }
+      ? { stopReason: null, timedOut: true, token, error: errorText(error) || 'turn timed out' }
       : {
           stopReason,
+          timedOut: false,
           token,
           ...(error !== undefined || stopReason === null ? { error: errorText(error) } : {}),
         };
@@ -310,12 +346,31 @@ export class AgentRuntime {
     return this.activateHandler(key);
   }
 
-  private async connectionFor(inbox: InboxRecord, agent: Agent): Promise<AgentConnection> {
+  private async connectionFor(
+    inbox: InboxRecord,
+    agent: Agent,
+    signal?: AbortSignal,
+  ): Promise<AgentConnection> {
     // The process is long-lived: reuse it across activations of this key.
     if (inbox.connection) return inbox.connection;
-    const connection = await this.connector.connect(agent.binding);
+    const connection = await this.connector.connect(agent.binding, signal);
     inbox.connection = connection;
     return connection;
+  }
+
+  /**
+   * Stops every inbox: aborts the running activations — their turns end as
+   * cancelled or failed, never silently — and closes the processes they hold.
+   * Shutdown only; a live runtime keeps its processes across turns.
+   */
+  async close(): Promise<void> {
+    const inboxes = [...this.inboxes.values()];
+    for (const inbox of inboxes) {
+      inbox.pending = false;
+      inbox.controller?.abort();
+    }
+    await Promise.all(inboxes.map(inbox => inbox.activation?.catch(() => undefined)));
+    await Promise.all(inboxes.map(inbox => inbox.connection?.close().catch(() => undefined)));
   }
 }
 
@@ -324,6 +379,34 @@ function denyOutcome(request: PermissionRequest): PermissionOutcome {
     request.options.find((option) => option.kind === 'reject_once') ??
     request.options.find((option) => option.kind === 'reject_always');
   return reject ? { outcome: 'selected', optionId: reject.optionId } : { outcome: 'cancelled' };
+}
+
+/**
+ * Ends a pending step with the abort rather than waiting out whatever the
+ * other side is doing: the step's own promise keeps running, but the
+ * activation moves on to discard the connection it was running on.
+ */
+function raceAborted<T>(promise: Promise<T>, signal: AbortSignal, label: string): Promise<T> {
+  if (signal.aborted) return Promise.reject(abortError(signal, label));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError(signal, label));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      value => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      error => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+function abortError(signal: AbortSignal, label: string): Error {
+  const reason = signal.reason;
+  return reason instanceof Error ? reason : new Error(`${label} aborted`);
 }
 
 function errorText(error: unknown): string {

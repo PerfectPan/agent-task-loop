@@ -46,6 +46,8 @@ class FakeConnection implements AgentConnection {
   promptCalls = 0;
   /** The test flips this to make the next `prompt` fail, as a lost session does. */
   failNextPrompt = false;
+  /** How many times the runtime closed this process behind a failure. */
+  closed = 0;
   updateHandler: ((update: SessionUpdate) => void) | undefined;
   permissionHandler: ((request: PermissionRequest) => Promise<PermissionOutcome>) | undefined;
   private pendingPrompt: { resolve: (result: { stopReason: StopReason }) => void } | undefined;
@@ -113,7 +115,9 @@ class FakeConnection implements AgentConnection {
     };
   }
 
-  async close(): Promise<void> {}
+  async close(): Promise<void> {
+    this.closed += 1;
+  }
 }
 
 class FakeConnector implements AgentConnector {
@@ -209,6 +213,7 @@ describe('Inbox and runtime', () => {
     expect(afterTurns).toHaveLength(1);
     expect(afterTurns[0]).toMatchObject({
       stopReason: 'end_turn',
+      timedOut: false,
       token: { key, holderPid: process.pid, holderId: 'runtime-holder' },
     });
     expect(lease.read(key)).toBeUndefined();
@@ -322,9 +327,73 @@ describe('Inbox and runtime', () => {
     await settled(runtime, key);
 
     expect(afterTurns[0]?.stopReason).toBeNull();
+    expect(afterTurns[0]?.timedOut).toBe(true);
     expect(afterTurns[0]?.error).toMatch(/timed out/);
     expect(connector.connections[0]?.cancelledSessions).toContain('session-1');
     expect(lease.read(key)).toBeUndefined();
+  }, 15_000);
+
+  it('reports a failed prompt as a failure, not a timeout, and closes the process it failed on', async () => {
+    const afterTurns: TurnResult[] = [];
+    const { runtime, connector, lease } = await runtimeWith({
+      onActivate: async () =>
+        harness({
+          hooks: {
+            afterTurn: (result) => { afterTurns.push(result); },
+          },
+        }),
+    });
+    runtime.wake(key);
+    await settled(runtime, key);
+    const first = connector.connections[0]!;
+
+    // The next turn's prompt dies the way a lost session does.
+    first.failNextPrompt = true;
+    runtime.wake(key);
+    await settled(runtime, key);
+
+    expect(afterTurns[1]).toMatchObject({
+      stopReason: null,
+      timedOut: false,
+      error: 'session lost',
+    });
+    // The process of unknown health is closed, not merely forgotten.
+    expect(first.closed).toBe(1);
+    expect(runtime.inbox(key)?.session).toBeUndefined();
+    expect(lease.read(key)).toBeUndefined();
+
+    // The next wake starts a fresh process, which stays up through its turn.
+    runtime.wake(key);
+    await settled(runtime, key);
+    expect(connector.connections).toHaveLength(2);
+    expect(connector.connections[1]!.closed).toBe(0);
+  });
+
+  it('tells the endpoint about an activation that failed before it was a turn', async () => {
+    const failures: { key: string; error: string }[] = [];
+    const { runtime, lease } = await runtimeWith({
+      onActivate: async () => {
+        throw new Error('no agent claude in the registry');
+      },
+    });
+    runtime.onActivationFailure((failedKey, error) => { failures.push({ key: failedKey, error }); });
+    runtime.wake(key);
+    await settled(runtime, key);
+
+    expect(failures).toEqual([{ key, error: 'no agent claude in the registry' }]);
+    expect(runtime.lastError(key)).toMatch(/no agent claude/);
+    expect(lease.read(key)).toBeUndefined();
+  });
+
+  it('close aborts the running activation and closes the processes it holds', async () => {
+    const { runtime, connector } = await runtimeWith({ connectorOptions: { hangPrompt: true } });
+    runtime.wake(key);
+    await vi.waitFor(() => expect(connector.connections[0]?.promptCalls).toBe(1));
+
+    await runtime.close();
+    expect(connector.connections[0]?.closed).toBe(1);
+    await settled(runtime, key);
+    expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
   }, 15_000);
 
   it('routes the tool veto ahead of the permission policy', async () => {

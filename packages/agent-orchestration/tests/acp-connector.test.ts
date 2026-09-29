@@ -1,3 +1,7 @@
+import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { AgentBinding } from '../src/contracts/agent';
 import { AcpConnector } from '../src/infrastructure/acp-connector';
@@ -5,9 +9,9 @@ import { fakeAcpProcess, type FakeAgentConfig } from './helpers/fake-acp-agent';
 
 const binding: AgentBinding = { command: 'fake-agent-acp' };
 
-function connectorWith(config: FakeAgentConfig) {
+function connectorWith(config: FakeAgentConfig, cancelGraceMs = 5_000) {
   const fake = fakeAcpProcess(config);
-  const connector = new AcpConnector({ spawnProcess: () => fake.handle });
+  const connector = new AcpConnector({ spawnProcess: () => fake.handle, cancelGraceMs });
   return { connector, agent: fake.agent };
 }
 
@@ -94,6 +98,46 @@ describe('AcpConnector', () => {
     await connection.close();
   });
 
+  it('never prompts a turn whose signal is already aborted', async () => {
+    const { connector, agent } = connectorWith({});
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: '/tmp/fake-room' });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      connection.prompt(session, [{ type: 'text', text: 'too late' }], controller.signal),
+    ).rejects.toThrow();
+    expect(agent()?.prompts).toHaveLength(0);
+    await connection.close();
+  });
+
+  it('gives up on a prompt whose agent ignores session/cancel once the grace runs out', async () => {
+    const { connector, agent } = connectorWith({ hangPrompt: true, ignoreCancel: true }, 30);
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: '/tmp/fake-room' });
+    const controller = new AbortController();
+    const turn = connection.prompt(session, [{ type: 'text', text: 'work' }], controller.signal);
+    await vi.waitFor(() => expect(agent()?.prompts).toHaveLength(1));
+    controller.abort();
+    // The SDK hands the abort reason through; what matters is that the
+    // promise ends at all once the grace runs out.
+    await expect(turn).rejects.toThrow();
+    expect(agent()?.cancels).toHaveLength(1);
+    await connection.close();
+  });
+
+  it('bounds session/new with its own timeout instead of waiting on a login forever', async () => {
+    const fake = fakeAcpProcess({ hangNewSession: true });
+    const connector = new AcpConnector({
+      spawnProcess: () => fake.handle,
+      sessionTimeoutMs: 30,
+    });
+    const connection = await connector.connect(binding);
+    await expect(connection.newSession({ cwd: '/tmp/fake-room' }))
+      .rejects.toThrow(/session\/new timed out after 30ms/);
+    await connection.close();
+  });
+
   it('surfaces a lost process on the next call', async () => {
     const fake = fakeAcpProcess({ newSessionError: 'process died' });
     const connector = new AcpConnector({ spawnProcess: () => fake.handle });
@@ -141,5 +185,68 @@ describe('probe', () => {
     });
     const probe = await connector.probe(binding);
     expect(probe).toEqual({ status: 'missing', error: 'spawn ENOENT' });
+  });
+});
+
+
+describe('client-side fs', () => {
+  it('serves the session cwd only: outside paths and symlinks out are refused', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-'));
+    writeFileSync(join(root, 'inside.txt'), 'the room owns this', 'utf8');
+    const outside = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-out-'));
+    writeFileSync(join(outside, 'secret.txt'), 'nothing to see', 'utf8');
+    // A symlink that lives inside the root but points out of it.
+    symlinkSync(join(outside, 'secret.txt'), join(root, 'escape.txt'));
+
+    // The escape hatch to catch: a link inside the root that dangles out —
+    // writing through it would create the file at the far end.
+    const { connector, agent } = connectorWith({
+      clientFs: {
+        inside: join(root, 'inside.txt'),
+        outside: join(outside, 'secret.txt'),
+        via: join(root, 'escape.txt'),
+        content: 'written through the client',
+      },
+    });
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: root });
+    await connection.prompt(session, [{ type: 'text', text: 'use the client fs' }]);
+
+    expect(agent()?.fsResults).toEqual([
+      `readTextFile ${join(root, 'inside.txt')}: ok`,
+      `readTextFile ${join(outside, 'secret.txt')}: refused`,
+      `writeTextFile ${join(root, 'inside.txt')}: ok`,
+      `writeTextFile ${join(outside, 'secret.txt')}: refused`,
+      `writeTextFile ${join(root, 'escape.txt')}: refused`,
+    ]);
+
+    // The allowed write landed; the refused ones changed nothing.
+    expect(await readFile(join(root, 'inside.txt'), 'utf8')).toBe('written through the client');
+    expect(await readFile(join(outside, 'secret.txt'), 'utf8')).toBe('nothing to see');
+    await connection.close();
+  });
+
+  it('judges a not-yet-existing file by its nearest existing directory', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-new-'));
+    const outside = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-new-out-'));
+    const { connector, agent } = connectorWith({
+      clientFs: {
+        inside: join(root, 'new-file.txt'),
+        outside: join(outside, 'new-file.txt'),
+        content: 'new content',
+      },
+    });
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: root });
+    await connection.prompt(session, [{ type: 'text', text: 'write new files' }]);
+
+    expect(agent()?.fsResults).toEqual([
+      `readTextFile ${join(root, 'new-file.txt')}: refused`,
+      `readTextFile ${join(outside, 'new-file.txt')}: refused`,
+      `writeTextFile ${join(root, 'new-file.txt')}: ok`,
+      `writeTextFile ${join(outside, 'new-file.txt')}: refused`,
+    ]);
+    expect(await readFile(join(root, 'new-file.txt'), 'utf8')).toBe('new content');
+    await connection.close();
   });
 });

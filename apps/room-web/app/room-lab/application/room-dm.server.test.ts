@@ -205,6 +205,9 @@ class FakeRuntime implements RoomMemberRuntime {
       end: async (result?: { stopReason?: string | null; error?: string }) => {
         harness.hooks?.afterTurn?.({
           stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
+          // `null` with no error is the runtime's watchdog, the only way a
+          // turn ends as timeout; anything else ended as itself.
+          timedOut: result?.stopReason === null && !result?.error,
           token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
@@ -247,6 +250,10 @@ class WaitingTurnLog implements TurnLog {
 
   listByRoom(roomId: string): RoomTurnView[] {
     return this.inner.listByRoom(roomId);
+  }
+
+  clear(roomId: string): void {
+    this.inner.clear(roomId);
   }
 
   waitFor(count: number): Promise<void> {

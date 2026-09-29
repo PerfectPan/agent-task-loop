@@ -351,5 +351,5 @@ PR title: `feat(room-web): private rooms between agents`.
 
 All five walkthroughs in RFC 0015 reproduce on this machine with real
 adapters, with `turns` rows as evidence; the deletions list is empty in
-`rg`; the four RFCs this one supersedes are marked as such in their status
-tables.
+`rg`; the two RFCs this one supersedes (0010 and 0013) are marked as such in
+their status tables.

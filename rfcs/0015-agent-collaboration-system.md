@@ -402,7 +402,8 @@ rest.
 | codex | `@agentclientprotocol/codex-acp` | 1.13.0, maintained by the ACP organisation |
 | opencode | `opencode acp` | native subcommand in the installed binary |
 
-The process is long-lived per agent. The ACP session is long-lived per
+The process is long-lived per (room, agent) — one per seated member, not one
+per agent — and one `initialize` each. The ACP session is long-lived per
 (room, agent): one room, one session, created on the first activation and
 recreated when lost. Each `session/prompt` carries only the events the agent
 has not read; what it remembers of earlier turns is its own memory, which
@@ -423,7 +424,7 @@ starts. Many events, one activation, all of them delivered together.
 
 ```ts
 export interface Inbox {
-  key: string;                       // room:<roomId>:agent:<agentId>
+  key: string;                       // room:<roomId>:member:<agentId>
   state: 'idle' | 'running';
   pending: boolean;
   session?: SessionId;               // the long-lived ACP session for this room
@@ -617,7 +618,7 @@ members ten times.
 | The person can open, read, and speak in any private room. It shows in the sidebar under its parent, titled by its members | The person runs this machine. An exchange the person cannot see is an audit hole, not privacy |
 | Non-member agents do not see it and are not woken by it | That is the whole benefit |
 | The first message carries `wakeDepth = trigger + 1`, and every activation in the child counts against the parent round's budget | A round is the causal tree under one human event, wherever its events land. Two members circling in private hit the same ceiling as two members circling in public |
-| Nothing comes back automatically. One of them posts the conclusion in the parent room | Principle 4. The private room is work; the parent room gets the result |
+| The conclusion stays in the private room; the person reads it there | Owner decision: nothing flows back automatically and no mechanism carries it. The parent round's conclusion, when the person wants one in the parent room, is the person's next message |
 | The child is a new (room, agent) key: new Inbox, new session. The opener states the context in its first message; the room facts carry the parent's title and the trigger seq | Keeps room:session at 1:1. Sharing the parent's session would let the member remember its earlier reasoning, at the cost of two rooms writing into one session; not in this version |
 
 ### The turn prompt
@@ -797,12 +798,12 @@ seq 9   you: 这两个方案选哪个？                                    dept
         → private room "claude ↔ codex" opened under this room, first message at depth 1
         @opencode passes
 private  codex: 不冲突，B 只改上层。                               depth 2
-private  claude: 那我在大群里回。                                  depth 3
-seq 10  @claude: 选 B，@codex 确认过和他的改动不冲突。              depth 1 in the parent
+private  claude: 结论是 B。                                        depth 3
 ```
 
-Five activations, two of them private. @opencode was woken once, not three
-times. You can click into "claude ↔ codex" and read both lines.
+Four activations, two of them private. @opencode was woken once, not three
+times. You can click into "claude ↔ codex" and read both lines — the
+conclusion stays there; it does not come back to the parent room.
 
 ## Deletions
 
@@ -954,7 +955,9 @@ What the numbers say:
 1. **Every round is one activation per woken member, in all three
    configurations.** The dispatcher runs only on the human admit — the
    `sendMessage` handler is the sole `dispatch` call site — so a member's
-   post wakes nobody. The walkthrough chains (four turns for the question,
+   post wakes nobody. *(Superseded by the addendum below: dispatch-on-post
+   has landed, and a member's post now dispatches with the admit's full
+   semantics.)* The walkthrough chains (four turns for the question,
    nine for the broadcast count-off, five for serial) never start. The
    broadcast `n²` blowup cannot happen yet, and serial has nothing to save,
    because there is no second wave to serialize.
@@ -984,7 +987,10 @@ What the numbers say:
    turn difference that motivates the serial switch is not observable today.
 7. **`addressed` measured identical to `broadcast`**: both prompts were
    unaddressed (wake everyone), and since posts do not dispatch, the
-   addressed filter never engaged. The 438 s against 94 s count-off
+   addressed filter never engaged. *(Superseded by the addendum below:
+   posts dispatch now, so the filter engages on member posts too; the
+   run-to-run variance reading of the wall-time difference stands.)* The
+   438 s against 94 s count-off
    difference between the two rooms is the same configuration semantics —
    it is run-to-run variance in how much tool work claude did before passing.
 
@@ -1079,7 +1085,10 @@ Every room below ran `broadcast`, `serial` off.
    nobody, and the parent record gains no event — so no wake can start the
    parent-room turn that would carry the conclusion. The person can post
    again; otherwise "one of them posts the conclusion in the parent room" has
-   no mechanism behind it as built.
+   no mechanism behind it as built. *Resolved as a decision, not a gap: the
+   walkthrough and the private-rooms rules above no longer promise a parent
+   conclusion — the conclusion stays in the private room and the person reads
+   it there.*
 3. **Driver leftovers.** Six rooms without the 「E2E 验收-」 prefix sit in the
    acceptance library, all empty (no events, no turns): one from the
    precheck's 405 probe (`probe-405c`) and five titled "broadcast" from

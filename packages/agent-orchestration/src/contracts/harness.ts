@@ -44,6 +44,12 @@ export type ToolCall = ToolCallUpdate;
 export interface TurnResult {
   /** null when the prompt never resolved (timeout, lost process). */
   stopReason: StopReason | null;
+  /**
+   * True only when the turn ended by its own watchdog. A lost process, a
+   * refused prompt or a dropped connection also reports `stopReason: null`;
+   * this flag is what tells a timeout from a failure.
+   */
+  timedOut: boolean;
   /** The lease the turn ran under; writes it fences with. */
   token: FencingToken;
   error?: string;

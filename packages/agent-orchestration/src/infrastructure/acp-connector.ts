@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { lstat, readFile, readlink, writeFile } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import os from 'node:os';
 import { Readable, Writable } from 'node:stream';
 import {
@@ -43,12 +44,18 @@ export interface AcpConnectorOptions {
   shell?: string;
   initializeTimeoutMs?: number;
   sessionTimeoutMs?: number;
+  /**
+   * How long an aborted prompt waits for the agent to honor `session/cancel`
+   * before the client gives up on it; the runtime then discards the process.
+   */
+  cancelGraceMs?: number;
   /** Test seam: start the process yourself instead of through the login shell. */
   spawnProcess?: AcpProcessSpawner;
 }
 
 const DEFAULT_INITIALIZE_TIMEOUT_MS = 45_000;
 const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
+const DEFAULT_CANCEL_GRACE_MS = 5_000;
 const STDERR_TAIL_BYTES = 8_192;
 
 /**
@@ -60,20 +67,22 @@ export class AcpConnector implements AgentConnector {
   private readonly shell: string;
   private readonly initializeTimeoutMs: number;
   private readonly sessionTimeoutMs: number;
+  private readonly cancelGraceMs: number;
   private readonly spawnProcess: AcpProcessSpawner;
 
   constructor(options: AcpConnectorOptions = {}) {
     this.shell = options.shell ?? '/bin/zsh';
     this.initializeTimeoutMs = options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS;
     this.sessionTimeoutMs = options.sessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
+    this.cancelGraceMs = options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS;
     this.spawnProcess = options.spawnProcess ?? ((binding) => loginShellProcess(binding, this.shell));
   }
 
-  async connect(binding: AgentBinding): Promise<AgentConnection> {
+  async connect(binding: AgentBinding, signal?: AbortSignal): Promise<AgentConnection> {
     const handle = this.spawnProcess(binding);
     try {
-      const opened = await this.openClient(handle);
-      return new AcpConnection(handle, opened);
+      const opened = await this.openClient(handle, signal);
+      return new AcpConnection(handle, opened, this.sessionTimeoutMs, this.cancelGraceMs);
     } catch (error) {
       handle.kill();
       throw error;
@@ -133,6 +142,7 @@ export class AcpConnector implements AgentConnector {
     const runtime: ConnectionRuntime = {
       updateHandlers: new Set(),
       permissionHandler: undefined,
+      sessionRoots: new Map(),
     };
     const client: Client = {
       sessionUpdate: (params) => {
@@ -148,9 +158,17 @@ export class AcpConnector implements AgentConnector {
         if (!handler) return { outcome: { outcome: 'cancelled' } as const };
         return { outcome: await handler(request) };
       },
-      readTextFile: async (params) => ({ content: await readFile(params.path, 'utf8') }),
+      // The advertised fs is the session's cwd and nothing else: the handler
+      // resolves the path against the root the session opened with, so an
+      // agent cannot read or write through the client to somewhere the room
+      // never gave it (RFC 0015: writes stay inside the room's cwd).
+      readTextFile: async (params) => {
+        const path = await scopedPath(runtime, params.sessionId, params.path, 'fs/read_text_file');
+        return { content: await readFile(path, 'utf8') };
+      },
       writeTextFile: async (params) => {
-        await writeFile(params.path, params.content, 'utf8');
+        const path = await scopedPath(runtime, params.sessionId, params.path, 'fs/write_text_file');
+        await writeFile(path, params.content, 'utf8');
         return {};
       },
     };
@@ -176,6 +194,71 @@ export class AcpConnector implements AgentConnector {
 interface ConnectionRuntime {
   updateHandlers: Set<(update: SessionUpdate) => void>;
   permissionHandler: ((request: PermissionRequest) => Promise<PermissionOutcome>) | undefined;
+  /** Each session's cwd, resolved: the root its client-fs calls are scoped to. */
+  sessionRoots: Map<string, string>;
+}
+
+/**
+ * The path an fs call may touch: inside the named session's root, symlinks
+ * resolved, or an error the agent reads. Resolution walks every component
+ * and follows each link — a link that lives inside the root but points out
+ * is judged by where it points — and past the first component that does not
+ * exist nothing below can exist either, so the rest hangs off the last real
+ * directory as written.
+ */
+async function scopedPath(
+  runtime: ConnectionRuntime,
+  sessionId: string,
+  target: string,
+  label: string,
+): Promise<string> {
+  const root = runtime.sessionRoots.get(sessionId);
+  if (!root) throw new Error(`${label}: no session root for ${sessionId}`);
+  const resolved = await resolveReal(target, label);
+  const within = relative(root, resolved);
+  if (within === '' || (!within.startsWith('..') && !isAbsolute(within))) return resolved;
+  throw new Error(`${label}: ${target} is outside the session cwd`);
+}
+
+async function resolveReal(target: string, label: string): Promise<string> {
+  let current = resolve(target);
+  for (let hops = 0; hops < 40; hops += 1) {
+    const parts = current.split(sep);
+    let walked: string = sep;
+    let followed = false;
+    for (let index = 1; index < parts.length; index += 1) {
+      const part = parts[index]!;
+      if (!part) continue;
+      const next = join(walked, part);
+      let stat: { isSymbolicLink(): boolean };
+      try {
+        stat = await lstat(next);
+      } catch {
+        return join(walked, ...parts.slice(index).filter(Boolean));
+      }
+      if (!stat.isSymbolicLink()) {
+        walked = next;
+        continue;
+      }
+      let linkTarget: string;
+      try {
+        linkTarget = await readlink(next);
+      } catch {
+        throw new Error(`${label}: ${next} cannot be resolved`);
+      }
+      // The link's own target may hold links of its own: walk it next pass,
+      // with the rest of the original path hanging off it.
+      const rest = parts.slice(index + 1).filter(Boolean);
+      current = join(
+        isAbsolute(linkTarget) ? linkTarget : resolve(walked, linkTarget),
+        ...rest,
+      );
+      followed = true;
+      break;
+    }
+    if (!followed) return walked;
+  }
+  return current;
 }
 
 interface OpenedClient {
@@ -193,16 +276,28 @@ class AcpConnection implements AgentConnection {
   constructor(
     private readonly handle: AcpProcessHandle,
     private readonly opened: OpenedClient,
+    private readonly sessionTimeoutMs: number,
+    private readonly cancelGraceMs: number,
   ) {
     void this.handle.exit.catch(() => undefined);
   }
 
   async newSession(input: { cwd: string; mcpServers?: McpServer[]; meta?: Record<string, unknown> }): Promise<string> {
-    const response = await this.opened.connection.newSession({
-      cwd: input.cwd,
-      mcpServers: input.mcpServers ?? [],
-      ...(input.meta ? { _meta: input.meta } : {}),
-    });
+    const response = await withTimeout(
+      this.opened.connection.newSession({
+        cwd: input.cwd,
+        mcpServers: input.mcpServers ?? [],
+        ...(input.meta ? { _meta: input.meta } : {}),
+      }),
+      this.sessionTimeoutMs,
+      'session/new',
+    );
+    // The root the session's client-fs calls are scoped to; the resolved
+    // path, so a symlinked cwd cannot smuggle a different root in.
+    this.opened.runtime.sessionRoots.set(
+      response.sessionId,
+      await resolveReal(input.cwd, 'session/new').catch(() => input.cwd),
+    );
     return response.sessionId;
   }
 
@@ -211,18 +306,39 @@ class AcpConnection implements AgentConnection {
     blocks: ContentBlock[],
     signal?: AbortSignal,
   ): Promise<{ stopReason: StopReason }> {
-    if (signal?.aborted) {
-      await this.cancel(session);
-    }
-    const abort = () => {
-      void this.opened.connection.cancel({ sessionId: session }).catch(() => undefined);
-    };
-    signal?.addEventListener('abort', abort, { once: true });
-    try {
+    // A turn already cancelled never prompts: the runtime is discarding this
+    // connection, and nobody would wait for the answer.
+    signal?.throwIfAborted();
+    if (!signal) {
       const result = await this.opened.connection.prompt({ sessionId: session, prompt: blocks });
       return { stopReason: result.stopReason };
+    }
+    let grace: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    const aborted = new Promise<never>((_, reject) => {
+      onAbort = () => {
+        void this.opened.connection.cancel({ sessionId: session }).catch(() => undefined);
+        // An adapter that ignores session/cancel would hold the turn forever;
+        // past the grace the prompt rejects, the runtime discards the
+        // process, and the next activation starts a fresh one.
+        grace = setTimeout(
+          () => reject(abortReason(signal, `session/prompt in ${session} survived session/cancel`)),
+          this.cancelGraceMs,
+        );
+        grace.unref?.();
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+    void aborted.catch(() => undefined);
+    try {
+      const result = await Promise.race([
+        this.opened.connection.prompt({ sessionId: session, prompt: blocks }),
+        aborted,
+      ]);
+      return { stopReason: result.stopReason };
     } finally {
-      signal?.removeEventListener('abort', abort);
+      signal.removeEventListener('abort', onAbort!);
+      if (grace) clearTimeout(grace);
     }
   }
 
@@ -283,6 +399,10 @@ export function isAuthRequiredError(error: unknown): boolean {
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+function abortReason(signal: AbortSignal, fallback: string): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error(fallback);
 }
 
 function tailStream(stream: Readable | undefined, maxBytes = STDERR_TAIL_BYTES): () => string {

@@ -29,7 +29,8 @@ export type Unsubscribe = () => void;
  * whether this binding answers `initialize` and opens a session.
  */
 export interface AgentConnector {
-  connect(binding: AgentBinding): Promise<AgentConnection>;
+  /** `signal` bounds the connect: an abort rejects it and kills the child. */
+  connect(binding: AgentBinding, signal?: AbortSignal): Promise<AgentConnection>;
   probe(binding: AgentBinding, signal?: AbortSignal): Promise<AgentProbe>;
 }
 
@@ -59,7 +60,10 @@ export interface AgentConnection {
   close(): Promise<void>;
 }
 
-/** A `session/update` notification body, after the connector scopes it to a session. */
+/**
+ * A `session/update` notification body. Not filtered by session id: one
+ * connection serves one (room, agent) key, so its stream is one session's.
+ */
 export type SessionUpdate = import('@agentclientprotocol/sdk').SessionUpdate;
 
 /** A `session/request_permission` call, as the control plane answers it. */

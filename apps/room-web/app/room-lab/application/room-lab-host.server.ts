@@ -108,15 +108,24 @@ export class RoomLabHost {
     });
     this.runtime.onActivate(key => this.activateKey(key));
     this.runtime.onSessionDiscard(key => this.discardKey(key));
+    this.runtime.onActivationFailure((key, error) => this.activationFailed(key, error));
   }
 
   /** The runtime's activate handler: one key, one room's member. */
   private activateKey(key: string): Promise<Harness> {
-    const marker = ':member:';
-    const at = key.lastIndexOf(marker);
-    const roomId = key.slice('room:'.length, at);
-    const agentId = key.slice(at + marker.length);
+    const { roomId, agentId } = parseRuntimeKey(key);
     return this.open(roomId).activate(agentId);
+  }
+
+  /**
+   * The runtime's report of an activation that died before it was a turn —
+   * the failed row the UI reads instead of 在场, and the serial queue moving
+   * on. Only a room this host has opened can have activations.
+   */
+  private activationFailed(key: string, error: string): void {
+    const { roomId, agentId } = parseRuntimeKey(key);
+    if (!this.services.has(roomId)) return;
+    this.open(roomId).activationFailed(agentId, error);
   }
 
   /**
@@ -312,11 +321,15 @@ export class RoomLabHost {
     if (existing) return existing;
     // A room that is not in the catalog has no service; get throws first.
     this.catalog.get(roomId);
+    const isPrivate = this.catalog.get(roomId).parentRoomId !== undefined;
     const service = new RoomService({
       roomId: { tenantId: 'local', conversationId: roomId },
       store: this.store.stream(roomId),
       registry: this.controlRegistry,
-      runtime: this.runtime,
+      runtime: {
+        wake: key => this.runtime.wake(key),
+        cancel: key => void this.runtime.cancel(key),
+      },
       lease: this.lease,
       turnLog: this.turnLog,
       members: () => this.catalog.get(roomId).memberIds,
@@ -334,7 +347,10 @@ export class RoomLabHost {
       workRoot: defaultWorkRoot,
       toolHost: ({ agentId, tools, authorize }) =>
         this.hostSessionTools(roomId, agentId, tools, authorize),
-      dm: this.dm,
+      // A private room offers no room_dm: its two members are already alone,
+      // and a dm between them would open a grandchild room the person cannot
+      // see (RFC 0015: private rooms hang one level under their parent).
+      ...(isPrivate ? {} : { dm: this.dm }),
       parentTitle: this.parentTitleOf(roomId),
       ledgerOf: ancestor => this.open(ancestor),
       childRooms: () => this.catalog.list()
@@ -343,6 +359,19 @@ export class RoomLabHost {
     });
     this.services.set(roomId, service);
     return service;
+  }
+
+  /**
+   * Stops the lab: the tool endpoints its sessions carry, then the runtime —
+   * whose close aborts every running activation and closes the ACP processes
+   * they hold. A hot reload or a shutdown that skips this leaks one child
+   * process and one port per session.
+   */
+  async close(): Promise<void> {
+    const hosted = [...this.sessionTools.values()];
+    this.sessionTools.clear();
+    await Promise.all(hosted.map(tools => tools.close().catch(() => undefined)));
+    await this.runtime.close();
   }
 
   /** What a private room's turn facts call the room it was opened from. */
@@ -414,3 +443,19 @@ export class RoomLabHost {
 
 export { RoomCatalogInvariantError };
 export { RoomInputError };
+
+/**
+ * `room:<roomId>:member:<agentId>` back into its two ids. The split is the
+ * last `:member:` marker, so a room id containing colons still parses.
+ */
+function parseRuntimeKey(key: string): { roomId: string; agentId: RoomLabAgentId } {
+  const marker = ':member:';
+  const at = key.lastIndexOf(marker);
+  if (at === -1 || !key.startsWith('room:')) {
+    throw new Error(`runtime key ${key} does not name a room member`);
+  }
+  return {
+    roomId: key.slice('room:'.length, at),
+    agentId: key.slice(at + marker.length) as RoomLabAgentId,
+  };
+}

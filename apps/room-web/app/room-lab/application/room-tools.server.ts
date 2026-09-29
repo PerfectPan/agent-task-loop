@@ -161,7 +161,13 @@ export function roomReadTool(
       const limit = typeof input.limit === 'number' ? Math.min(200, Math.max(1, Math.floor(input.limit))) : undefined;
       const slice = await deps.read({ afterSeq, ...(limit === undefined ? {} : { limit }) });
       const last = slice.events.at(-1)?.seq;
-      if (last !== undefined && last > handle.readUpToSeq) handle.readUpToSeq = last;
+      // The handle advances only over a read that continues from what the
+      // turn already read. A member that starts past its cursor skips events
+      // on purpose — the gap stays unread, and the pass stands on the older
+      // seq rather than blessing what was never read.
+      if (last !== undefined && afterSeq <= handle.readUpToSeq && last > handle.readUpToSeq) {
+        handle.readUpToSeq = last;
+      }
       return { events: slice.events.map(toToolEvent), head: slice.head };
     },
   };

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { lstatSync, mkdirSync, readlinkSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   AgentSessionId,
@@ -74,6 +74,8 @@ interface RoundBudgetState {
 
 interface OpenTurn {
   handle: RoomTurnHandle;
+  /** Set by a reset: the record this turn is running against is going away. */
+  invalidated?: boolean;
 }
 
 export interface RoomServiceOptions {
@@ -124,8 +126,14 @@ export class RoomService {
   private revision = 0;
   private readonly rounds = new Map<number, RoundBudgetState>();
   private readonly budgetNotices = new Set<number>();
-  /** The serial switch's queues: the rest of a round's woken set, in seat order. */
-  private readonly serialQueues = new Map<string, { round: RoomRound; queue: RoomLabAgentId[] }>();
+  /**
+   * The serial switch's queue — the room's, not each round's. Every entry
+   * carries the round its wake was dispatched for; a later round's message
+   * waits behind the running turn instead of running beside it.
+   */
+  private readonly serialQueue: { round: RoomRound; agentId: RoomLabAgentId }[] = [];
+  /** A wake issued whose activation has not opened its turn yet. */
+  private wakeInFlight = false;
   private readonly openTurns = new Map<RoomLabAgentId, OpenTurn>();
   /** Members whose running turn has already called a tool. */
   private readonly toolCallSeen = new Set<RoomLabAgentId>();
@@ -191,6 +199,12 @@ export class RoomService {
     const cursor = this.options.store.inspectSession(session)?.seenSeq ?? 0;
     const unread = record.events.filter(event => event.seq > cursor);
     const inbox = boundedInbox(unread);
+    // The cursor moves only over what the turn actually carried. A truncated
+    // inbox leaves the rest ahead of it: `room_read` brings the events in,
+    // a later speak is HELD against what was never read, and the pass stands
+    // on the last seq the member saw (RFC 0015: seeing is not speaking).
+    const readUpToSeq = inbox.at(-1)?.seq ?? cursor;
+    const inboxTruncated = unread.length - inbox.length;
     const trigger = record.events.at(-1);
     if (!trigger) throw new Error(`room ${roomId.conversationId} has no record to read`);
     const round = this.resolveRound(record.events, head);
@@ -206,7 +220,7 @@ export class RoomService {
         roundSeq: round.seq,
         ...(round.roomId === this.homeRoomId ? {} : { roundRoomId: round.roomId }),
         triggerSeq: head,
-        readUpToSeq: head,
+        readUpToSeq,
         spoke: false,
         heldCount: 0,
         closed: false,
@@ -241,7 +255,11 @@ export class RoomService {
           }),
         }),
       ];
-      if (this.options.dm) {
+      // A private room offers no room_dm: its two members are already alone,
+      // and the room a dm between them would open hangs one level further
+      // down, where the person never sees it (RFC 0015: private rooms hang
+      // under the room they were opened from, one level).
+      if (this.options.dm && !this.options.parentTitle) {
         const gateway = this.options.dm;
         tools.push(roomDmTool(turn.handle, {
           isOpen,
@@ -272,6 +290,7 @@ export class RoomService {
     }
 
     this.openTurns.set(agentId, turn);
+    this.wakeInFlight = false;
     const harness: Harness = {
       cwd,
       ...(agent.systemPrompt.trim() ? { systemPrompt: agent.systemPrompt } : {}),
@@ -283,6 +302,7 @@ export class RoomService {
         roomTitle: this.options.roomTitle(),
         members: this.options.members(),
         inbox,
+        ...(inboxTruncated > 0 ? { inboxTruncated } : {}),
         trigger,
         ...(this.options.parentTitle ? { parent: this.options.parentTitle() } : {}),
       }),
@@ -302,16 +322,18 @@ export class RoomService {
   /** One member's turn ended; the runtime hands the outcome over here. */
   private async afterTurn(
     turn: OpenTurn,
-    result: { stopReason: string | null; error?: string },
+    result: { stopReason: string | null; timedOut: boolean; error?: string },
   ): Promise<void> {
     const handle = turn.handle;
     this.openTurns.delete(handle.agentId);
 
     // Nothing spoken: the write point is pass, fenced so a lost lease lands
     // nothing. Events past what the turn read stay ahead of the cursor; the
-    // pending-wake rule brings the member back for them.
+    // pending-wake rule brings the member back for them. A turn a reset
+    // invalidated passes nowhere: its seq numbers belong to a record that is
+    // gone, and the new record's events stay unread.
     let passError: string | undefined;
-    if (!handle.spoke) {
+    if (!handle.spoke && !turn.invalidated) {
       const wakeKey = runtimeKey(handle.roomId.conversationId, handle.agentId);
       try {
         await this.options.lease.fence(wakeKey, () =>
@@ -327,15 +349,16 @@ export class RoomService {
         );
       }
     }
-    // The runtime ends a turn it had to cancel with no stop reason at all
-    // (the watchdog, a lost process); a resolved prompt that still reported an
-    // error is a failure. The two share `stopReason: null` in `TurnResult`,
-    // so the first split below reads as timeout — and a pass that lost its
-    // cursor write fails the row, however cleanly the prompt itself ended.
-    const error = [result.error, passError].filter(Boolean).join('; ') || undefined;
-    const outcome = handle.spoke
+    // The runtime reports `stopReason: null` both for a turn its watchdog
+    // ended and for a prompt that died another way; `timedOut` is what
+    // separates a timeout from a failure, and a pass that lost its cursor
+    // write fails the row, however cleanly the prompt itself ended. A turn
+    // the reset invalidated fails with why, whatever it managed to do.
+    const resetError = turn.invalidated ? 'room was reset during this turn' : undefined;
+    const error = [result.error, passError, resetError].filter(Boolean).join('; ') || undefined;
+    const outcome = handle.spoke && !turn.invalidated
       ? 'posted'
-      : result.stopReason === null
+      : result.timedOut
         ? 'timeout'
         : error
           ? 'failed'
@@ -344,7 +367,10 @@ export class RoomService {
       id: randomUUID(),
       roomId: handle.roomId.conversationId,
       agentId: handle.agentId,
-      roundSeq: handle.roundSeq,
+      // A turn the reset invalidated charges no round: its round died with
+      // the record it ran against, and the rows that land after the clear
+      // must not eat the budget of the rounds that follow the reset.
+      roundSeq: turn.invalidated ? 0 : handle.roundSeq,
       triggerSeq: handle.triggerSeq,
       readUpToSeq: handle.readUpToSeq,
       startedAt: handle.startedAt,
@@ -364,7 +390,34 @@ export class RoomService {
 
     // The serial switch starts the next wake only now that this activation
     // ended and its writes have landed.
-    this.wakeNextInQueue({ roomId: handle.roundRoomId ?? this.homeRoomId, seq: handle.roundSeq });
+    this.wakeNextInQueue();
+  }
+
+  /**
+   * The runtime's answer to an activation of this room's member that died
+   * before it was a turn — no lease, no agent row, no harness. The row keeps
+   * the failure from reading as 在场, and the serial queue moves on: every
+   * activation ends somewhere, and this is one of the ends.
+   */
+  activationFailed(agentId: RoomLabAgentId, error: string): void {
+    this.openTurns.delete(agentId);
+    this.wakeInFlight = false;
+    this.options.turnLog.append({
+      id: randomUUID(),
+      roomId: this.homeRoomId,
+      agentId,
+      // No round was ever resolved: the row says the activation never became
+      // a turn, and round 0 is never a round a budget counts.
+      roundSeq: 0,
+      triggerSeq: 0,
+      readUpToSeq: 0,
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      outcome: 'failed',
+      error,
+    });
+    this.touch();
+    this.wakeNextInQueue();
   }
 
   /** A member's state for the person: derived, never stored. */
@@ -406,12 +459,32 @@ export class RoomService {
     };
   }
 
-  /** Clears the record, the cursors and the turn log. Seating is kept. */
+  /**
+   * Clears the record, the cursors, the turn log and the round bookkeeping,
+   * and stops the turns still running against the old record. Seating and
+   * settings are kept.
+   */
   async reset(): Promise<RoomView> {
+    // A turn still running speaks or passes against a record that is about to
+    // be empty: mark it so its end neither posts into the new record nor
+    // moves a cursor over events it never read, then cancel it.
+    for (const turn of this.openTurns.values()) {
+      turn.invalidated = true;
+      void this.options.runtime.cancel?.(
+        runtimeKey(this.options.roomId.conversationId, turn.handle.agentId),
+      );
+    }
     this.options.store.clear();
+    // The log describes the record; a round spans its children, so their rows
+    // describe this room's rounds and go with it.
+    this.options.turnLog.clear(this.homeRoomId);
+    for (const childId of this.options.childRooms?.() ?? []) {
+      this.options.turnLog.clear(childId);
+    }
     this.rounds.clear();
     this.budgetNotices.clear();
-    this.serialQueues.clear();
+    this.serialQueue.length = 0;
+    this.wakeInFlight = false;
     for (const agentId of this.options.members()) {
       this.options.store.ensureSession(this.sessionId(agentId));
     }
@@ -444,14 +517,16 @@ export class RoomService {
       wanted = wanted.filter(memberId => event.addressedTo.includes(memberId));
     }
     if (settings.serial) {
-      const key = roundKey(round);
-      const entry = this.serialQueues.get(key) ?? { round, queue: [] };
       // One entry per member: a post that dispatches while its woken set is
       // still queued collapses, the way a wake collapses in the runtime's
-      // inbox.
-      entry.queue.push(...wanted.filter(memberId => !entry.queue.includes(memberId)));
-      this.serialQueues.set(key, entry);
-      this.wakeNextInQueue(round);
+      // inbox. The entry keeps the round it was dispatched for — the budget
+      // it charges is the round's, not whichever round the record has reached
+      // by the time its turn starts.
+      for (const memberId of wanted) {
+        if (this.serialQueue.some(entry => entry.agentId === memberId)) continue;
+        this.serialQueue.push({ round, agentId: memberId });
+      }
+      this.wakeNextInQueue();
       return;
     }
     for (const memberId of wanted) {
@@ -481,37 +556,34 @@ export class RoomService {
   }
 
   /**
-   * Serial mode: wake the queue's head, one activation at a time. The next
-   * wake is issued from the previous turn's `afterTurn`, so it starts only
-   * once that activation's writes have landed.
+   * Serial mode: wake the queue's head, one activation at a time. The queue
+   * is the room's — a second round's members wait behind the running turn
+   * rather than waking beside it — and the gate is the room's too: any open
+   * turn, or a wake whose activation has not opened one yet, holds the line.
+   * Every activation ends somewhere that calls back here: afterTurn, a
+   * reset, an activation that failed before it was a turn.
    */
-  private wakeNextInQueue(round: RoomRound): void {
-    const key = roundKey(round);
-    const entry = this.serialQueues.get(key);
-    if (!entry || entry.queue.length === 0) {
-      this.serialQueues.delete(key);
+  private wakeNextInQueue(): void {
+    while (this.serialQueue.length > 0) {
+      if (this.openTurns.size > 0 || this.wakeInFlight) return;
+      const entry = this.serialQueue[0]!;
+      if (!this.chargeRound(entry.round)) {
+        // The round is spent: its remaining entries go together, with the
+        // round's one notice, and the queue moves to whatever follows.
+        const spent = entry.round;
+        for (let index = this.serialQueue.length - 1; index >= 0; index -= 1) {
+          if (roundKey(this.serialQueue[index]!.round) === roundKey(spent)) {
+            this.serialQueue.splice(index, 1);
+          }
+        }
+        this.notifyRound(spent);
+        continue;
+      }
+      this.serialQueue.shift();
+      this.wakeInFlight = true;
+      this.options.runtime.wake(runtimeKey(this.options.roomId.conversationId, entry.agentId));
       return;
     }
-    // The queue moves between activations, never during one: a post that
-    // dispatches while a turn of its own round is still running waits, and
-    // that turn's afterTurn calls back here once its writes have landed.
-    if (this.roundHasOpenTurn(round)) return;
-    if (!this.chargeRound(entry.round)) {
-      this.serialQueues.delete(key);
-      this.notifyRound(entry.round);
-      return;
-    }
-    const next = entry.queue.shift()!;
-    this.options.runtime.wake(runtimeKey(this.options.roomId.conversationId, next));
-  }
-
-  /** Whether a running activation belongs to this round, this room included. */
-  private roundHasOpenTurn(round: RoomRound): boolean {
-    for (const turn of this.openTurns.values()) {
-      if (turn.handle.roundSeq !== round.seq) continue;
-      if ((turn.handle.roundRoomId ?? this.homeRoomId) === round.roomId) return true;
-    }
-    return false;
   }
 
   /**
@@ -691,6 +763,8 @@ function turnBlocks(input: {
   roomTitle: string;
   members: readonly RoomLabAgentId[];
   inbox: RoomEvent[];
+  /** Unread events the budget left out of the inbox, when it cut any. */
+  inboxTruncated?: number;
   trigger: RoomEvent;
   /** Set in a private room: the title of the room it was opened from. */
   parent?: string;
@@ -701,9 +775,13 @@ function turnBlocks(input: {
     (input.parent ? ` This is a private room under "${input.parent}".` : '') +
     ` Members in seat order: ${input.members.map(member => `@${member}`).join(', ')}.` +
     ` You were woken by seq ${input.trigger.seq} from @${input.trigger.author.id}.`;
+  const lastShown = input.inbox.at(-1)?.seq;
   const transcript = input.inbox.length === 0
     ? '(nothing new since your last turn)'
-    : input.inbox.map(event => inboxLine(event, input.agentId)).join('\n');
+    : input.inbox.map(event => inboxLine(event, input.agentId)).join('\n')
+      + (input.inboxTruncated && lastShown !== undefined
+        ? `\n(${input.inboxTruncated} more unread events follow seq ${lastShown}; call room_read to read them before you speak.)`
+        : '');
   const instruction =
     'Read first. If you have something to add, call room_speak once.' +
     ' To settle something with one member alone, call room_dm instead.' +
@@ -731,15 +809,22 @@ function inboxLine(event: RoomEvent, selfId: RoomLabAgentId): string {
 
 /**
  * The default policy for a Room turn: writes inside `cwd` are allowed, writes
- * outside it are denied.
+ * outside it are denied. Paths are resolved before the comparison — a symlink
+ * pointing out of `cwd` is out of `cwd` — and a write-kind call that names no
+ * location is denied rather than assumed harmless.
  */
 function cwdPermissionPolicy(cwd: string): PermissionPolicy {
+  const root = realPathOf(cwd) ?? cwd;
   return request => {
-    const paths = (request.toolCall.locations ?? [])
+    const call = request.toolCall;
+    const paths = (call.locations ?? [])
       .map(location => location.path)
       .filter((value): value is string => typeof value === 'string');
-    const outside = paths.some(candidate => !isInside(cwd, candidate));
-    const wanted = outside ? ['reject_once', 'reject_always'] : ['allow_once', 'allow_always'];
+    const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
+    const outside = paths.some(candidate => !isInside(root, resolvedTarget(candidate)));
+    const wanted = outside || (writeKind && paths.length === 0)
+      ? ['reject_once', 'reject_always']
+      : ['allow_once', 'allow_always'];
     for (const kind of wanted) {
       const option = request.options.find(candidate => candidate.kind === kind);
       if (option) return { outcome: 'selected', optionId: option.optionId };
@@ -751,6 +836,64 @@ function cwdPermissionPolicy(cwd: string): PermissionPolicy {
 function isInside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function realPathOf(target: string): string | undefined {
+  try {
+    return realpathSync(target);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Where a call's path really points, symlinks included: every component is
+ * walked and each link followed, so a link that lives inside the root but
+ * points out is judged by where it points. Past the first component that
+ * does not exist nothing below can exist either — there is no link left to
+ * hide in — so the rest hangs off the last real directory as written. A
+ * path that cannot be resolved at all is itself the answer, and the caller
+ * compares it against the root.
+ */
+function resolvedTarget(target: string): string {
+  let current = path.resolve(target);
+  for (let hops = 0; hops < 40; hops += 1) {
+    const parts = current.split(path.sep);
+    let walked: string = path.sep;
+    let followed = false;
+    for (let index = 1; index < parts.length; index += 1) {
+      const part = parts[index]!;
+      if (!part) continue;
+      const next = path.join(walked, part);
+      let stat: { isSymbolicLink(): boolean };
+      try {
+        stat = lstatSync(next);
+      } catch {
+        return path.join(walked, ...parts.slice(index).filter(Boolean));
+      }
+      if (!stat.isSymbolicLink()) {
+        walked = next;
+        continue;
+      }
+      let linkTarget: string;
+      try {
+        linkTarget = readlinkSync(next);
+      } catch {
+        return next;
+      }
+      // The link's own target may hold links of its own: walk it next pass,
+      // with the rest of the original path hanging off it.
+      const rest = parts.slice(index + 1).filter(Boolean);
+      current = path.join(
+        path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget),
+        ...rest,
+      );
+      followed = true;
+      break;
+    }
+    if (!followed) return walked;
+  }
+  return current;
 }
 
 function defaultWorkRoot(): string {

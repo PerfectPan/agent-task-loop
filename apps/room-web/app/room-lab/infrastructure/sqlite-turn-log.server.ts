@@ -65,6 +65,11 @@ export class SqliteTurnLog {
     `).all(roomId) as unknown as TurnRow[];
     return rows.map(toRecord);
   }
+
+  /** A room's rows, gone: a reset clears the log with the record it describes. */
+  clear(roomId: string): void {
+    this.db.prepare('DELETE FROM turns WHERE room_id = ?').run(roomId);
+  }
 }
 
 interface TurnRow {

@@ -22,10 +22,22 @@ import {
   type SpeakResult,
 } from '@rivus/agent-room';
 
+/**
+ * One room's record and cursors over the sqlite tables. A unit of work is one
+ * `BEGIN IMMEDIATE` around three steps — re-read the room's rows, run the
+ * domain work, write back only what changed — so two instances of this class
+ * on the same room (the service keeps one, the private-room gateway opens one
+ * per post) cannot overwrite each other's events, and an append's HELD check
+ * cannot race another writer: it runs inside the same write lock the append
+ * commits under. Nothing is cached across units of work; every one starts
+ * from the rows as committed.
+ */
 export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
   private events: RoomEvent[];
   private readonly sessions = new Map<string, AgentSession>();
-  private loaded = false;
+  /** What the rows held when they were last read: the diff base of the next write. */
+  private dbHead = 0;
+  private readonly dbSessions = new Map<string, AgentSession>();
 
   constructor(
     private readonly db: DatabaseSync,
@@ -35,40 +47,44 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
   }
 
   readRoom<T>(id: RoomId, query: (room: Room) => T): T {
-    return query(this.loadRoom(id));
+    this.assertRoom(id);
+    this.reload();
+    return query(new Room(id, this.events));
   }
 
   withRoom<T>(id: RoomId, work: (room: Room) => T): T {
-    const room = this.loadRoom(id);
-    const result = work(room);
-    this.events = room.snapshot();
-    this.persist();
-    return result;
+    return this.transact(() => {
+      const room = this.openRoom(id);
+      const result = work(room);
+      this.events = room.snapshot();
+      return result;
+    });
   }
 
   withRoomAndSession<T>(
     id: AgentSessionId,
     work: (room: Room, session: AgentSessionAggregate) => T,
   ): T {
-    const room = this.loadRoom(id.roomId);
-    const session = this.loadSession(id);
-    const result = work(room, session);
-    this.events = room.snapshot();
-    this.sessions.set(sessionKey(id), session.snapshot());
-    this.persist();
-    return result;
+    return this.transact(() => {
+      const room = this.openRoom(id.roomId);
+      const session = this.loadSession(id);
+      const result = work(room, session);
+      this.events = room.snapshot();
+      this.sessions.set(sessionKey(id), session.snapshot());
+      return result;
+    });
   }
 
   ensureSession(id: AgentSessionId): AgentSession {
-    this.hydrate();
-    const snapshot = this.loadSession(id).snapshot();
-    this.sessions.set(sessionKey(id), snapshot);
-    this.persist();
-    return snapshot;
+    return this.transact(() => {
+      const snapshot = this.loadSession(id).snapshot();
+      this.sessions.set(sessionKey(id), snapshot);
+      return snapshot;
+    });
   }
 
   inspectSession(id: AgentSessionId): AgentSession | undefined {
-    this.hydrate();
+    this.reload();
     const snapshot = this.sessions.get(sessionKey(id));
     return snapshot ? cloneSession(snapshot) : undefined;
   }
@@ -86,23 +102,40 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
     }
     this.events = [];
     this.sessions.clear();
-    this.loaded = true;
+    this.dbHead = 0;
+    this.dbSessions.clear();
   }
 
-  private loadRoom(id: RoomId): Room {
+  private transact<T>(work: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    let result: T;
+    try {
+      this.reload();
+      result = work();
+      this.write();
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      // A failed unit of work leaves nothing of itself behind: the cache is
+      // rebuilt off the rows, so an append that never committed is never
+      // served as if it had been.
+      this.reload();
+      throw error;
+    }
+    return result;
+  }
+
+  private openRoom(id: RoomId): Room {
     this.assertRoom(id);
-    this.hydrate();
     return new Room(id, this.events);
   }
 
   private loadSession(id: AgentSessionId): AgentSessionAggregate {
-    this.hydrate();
     const existing = this.sessions.get(sessionKey(id));
     return new AgentSessionAggregate(id, existing ? { seenSeq: existing.seenSeq } : undefined);
   }
 
-  private hydrate(): void {
-    if (this.loaded) return;
+  private reload(): void {
     const roomId = this.roomId.conversationId;
     const eventRows = this.db.prepare(`
       SELECT seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
@@ -113,58 +146,68 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
       SELECT tenant_id, agent_id, room_id, runtime_generation_id, seen_seq
       FROM agent_sessions WHERE room_id = ?
     `).all(roomId) as unknown as SessionRow[];
+    this.sessions.clear();
     for (const row of sessionRows) {
       const session = toSession(row);
       this.sessions.set(sessionKey(session.id), session);
     }
-    this.loaded = true;
+    this.dbHead = this.events.at(-1)?.seq ?? 0;
+    this.dbSessions.clear();
+    for (const session of this.sessions.values()) {
+      this.dbSessions.set(sessionKey(session.id), cloneSession(session));
+    }
   }
 
-  private persist(): void {
+  /**
+   * The diff against `reload`'s read: events past the head the rows held —
+   * the record is append-only, so a seq is either already stored or this
+   * unit's — and sessions whose cursor moved. Another instance's events sit
+   * below the diff line and survive untouched.
+   */
+  private write(): void {
     const roomId = this.roomId.conversationId;
-    this.db.exec('BEGIN IMMEDIATE');
-    try {
-      this.db.prepare('DELETE FROM room_events WHERE room_id = ?').run(roomId);
-      const insertEvent = this.db.prepare(`
-        INSERT INTO room_events (
-          room_id, seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      for (const event of this.events) {
-        insertEvent.run(
-          roomId,
-          event.seq,
-          event.messageId,
-          event.transportMessageId ?? null,
-          event.author.kind,
-          event.author.id,
-          event.kind,
-          event.body,
-          JSON.stringify(event.addressedTo),
-          event.origin,
-          event.wakeDepth,
-          event.at,
-        );
-      }
-      this.db.prepare('DELETE FROM agent_sessions WHERE room_id = ?').run(roomId);
-      const insertSession = this.db.prepare(`
-        INSERT INTO agent_sessions (
-          tenant_id, agent_id, room_id, runtime_generation_id, seen_seq
-        ) VALUES (?, ?, ?, ?, ?)
-      `);
-      for (const session of this.sessions.values()) {
-        insertSession.run(
-          session.id.tenantId,
-          session.id.agentId,
-          session.id.roomId.conversationId,
-          session.id.runtimeGenerationId,
-          session.seenSeq,
-        );
-      }
-      this.db.exec('COMMIT');
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
+    const insertEvent = this.db.prepare(`
+      INSERT INTO room_events (
+        room_id, seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const event of this.events) {
+      if (event.seq <= this.dbHead) continue;
+      insertEvent.run(
+        roomId,
+        event.seq,
+        event.messageId,
+        event.transportMessageId ?? null,
+        event.author.kind,
+        event.author.id,
+        event.kind,
+        event.body,
+        JSON.stringify(event.addressedTo),
+        event.origin,
+        event.wakeDepth,
+        event.at,
+      );
+    }
+    const upsertSession = this.db.prepare(`
+      INSERT INTO agent_sessions (
+        tenant_id, agent_id, room_id, runtime_generation_id, seen_seq
+      ) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(tenant_id, agent_id, room_id, runtime_generation_id) DO UPDATE SET seen_seq = excluded.seen_seq
+    `);
+    for (const session of this.sessions.values()) {
+      if (this.dbSessions.get(sessionKey(session.id))?.seenSeq === session.seenSeq) continue;
+      upsertSession.run(
+        session.id.tenantId,
+        session.id.agentId,
+        session.id.roomId.conversationId,
+        session.id.runtimeGenerationId,
+        session.seenSeq,
+      );
+    }
+    this.dbHead = this.events.at(-1)?.seq ?? this.dbHead;
+    this.dbSessions.clear();
+    for (const session of this.sessions.values()) {
+      this.dbSessions.set(sessionKey(session.id), cloneSession(session));
     }
   }
 

@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -30,6 +30,7 @@ import { RoomService } from './room-service.server';
 import {
   HELD_LIMIT,
   type AgentDescriptor,
+  type RoomDmGateway,
   type RoomLeases,
   type RoomMemberRuntime,
   type RoomRecordStore,
@@ -55,6 +56,10 @@ interface BuildOptions {
   runtime?: RoomMemberRuntime;
   /** Replaces the pass-through lease: the cursor tests fence against a real one. */
   lease?: RoomLeases;
+  /** The private-room gateway, when the room offers room_dm. */
+  dm?: RoomDmGateway;
+  /** Set on a private room: what its turn facts call the room it hangs under. */
+  parentTitle?: () => string;
 }
 
 interface Built {
@@ -127,6 +132,8 @@ function build(options: BuildOptions = {}): Built {
     roomTitle: () => '测试房间',
     workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-service-')),
     toolHost,
+    ...(options.dm ? { dm: options.dm } : {}),
+    ...(options.parentTitle ? { parentTitle: options.parentTitle } : {}),
   });
   runtime.bind(service, turnLog, tools);
   return {
@@ -166,7 +173,7 @@ async function eventsOf(store: MemoryRoomStreamStore): Promise<RoomEvent[]> {
 interface Activation {
   harness: Harness;
   /** Ends the turn; resolves once the log row has landed. */
-  end(result?: { stopReason?: string | null; error?: string }): Promise<void>;
+  end(result?: { stopReason?: string | null; error?: string; timedOut?: boolean }): Promise<void>;
   speakTool(): ToolDefinition;
 }
 
@@ -198,13 +205,14 @@ class FakeRuntime implements RoomMemberRuntime {
     const harness = await holder.activate(agentId);
     return {
       harness,
-      end: async (result?: { stopReason?: string | null; error?: string }) => {
+      end: async (result?: { stopReason?: string | null; error?: string; timedOut?: boolean }) => {
         // The real runtime awaits the hook's promise before it releases the
         // lease; the fake has no lease, so it just waits the turn out.
         await harness.hooks?.afterTurn?.({
-          // `null` means the prompt never resolved: it must survive the round
-          // trip to the timeout outcome.
           stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
+          // `null` with no error defaults to the watchdog — the only way a
+          // turn ends as timeout; a test can say otherwise explicitly.
+          timedOut: result?.timedOut ?? (result?.stopReason === null && !result?.error),
           token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
@@ -222,6 +230,10 @@ class FakeRuntime implements RoomMemberRuntime {
 /** A turn log the tests can wait on: every append is one turn finished. */
 class FakeTurnLog implements TurnLog {
   readonly rows: RoomTurnView[] = [];
+  /** The room ids whose rows a reset cleared, in order. */
+  readonly cleared: string[] = [];
+  /** The room each row belongs to, so `clear` can keep the same semantics. */
+  private readonly rowRoomIds: string[] = [];
   private waiters: Array<{ count: number; resolve: () => void }> = [];
 
   append(record: Parameters<TurnLog['append']>[0]): void {
@@ -237,6 +249,7 @@ class FakeTurnLog implements TurnLog {
       heldCount: record.heldCount ?? 0,
       ...(record.error ? { error: record.error } : {}),
     });
+    this.rowRoomIds.push(record.roomId);
     this.waiters = this.waiters.filter(waiter => {
       if (this.rows.length < waiter.count) return true;
       waiter.resolve();
@@ -246,6 +259,15 @@ class FakeTurnLog implements TurnLog {
 
   listByRoom(): RoomTurnView[] {
     return [...this.rows];
+  }
+
+  clear(roomId: string): void {
+    this.cleared.push(roomId);
+    for (let index = this.rows.length - 1; index >= 0; index -= 1) {
+      if (this.rowRoomIds[index] !== roomId) continue;
+      this.rows.splice(index, 1);
+      this.rowRoomIds.splice(index, 1);
+    }
   }
 
   /** Resolves once at least `count` turns have been logged. */
@@ -375,7 +397,7 @@ class ChainRuntime implements RoomMemberRuntime {
       }
       // The real runtime awaits the hook's promise before it releases the
       // lease; the drain below waits out the wake-followed activations.
-      await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', token: TOKEN });
+      await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
       await this.turnLog!.drain();
     } finally {
       this.running.delete(agentId);
@@ -703,6 +725,124 @@ describe('RoomService turns', () => {
     await codex.end({ stopReason: 'end_turn', error: 'ACP connection closed' });
     await h.turnLog.waitFor(2);
     expect(h.turnLog.rows[1]).toMatchObject({ agentId: 'codex', outcome: 'failed', error: 'ACP connection closed' });
+
+    // A prompt that resolved but reported no stop reason is a pass, not a
+    // timeout: only the watchdog makes a timeout.
+    const opencode = await h.runtime.activated(keyOf('opencode'));
+    await opencode.end({ stopReason: null, timedOut: false });
+    await h.turnLog.waitFor(3);
+    expect(h.turnLog.rows[2]).toMatchObject({ agentId: 'opencode', outcome: 'passed' });
+  });
+
+  it('in a serial room a second round waits behind the running turn, not beside it', async () => {
+    const h = build({ manual: true, settings: { serial: true } });
+    await h.service.sendMessage('第一轮');
+    expect(h.runtime.wakes).toEqual([keyOf('claude')]);
+    const claude = await h.runtime.activated(keyOf('claude'));
+
+    // The person's second message opens round 2 while round 1's seat is still
+    // running: it queues behind the room's one activation slot.
+    await h.service.sendMessage('第二轮');
+    expect(h.runtime.wakes).toEqual([keyOf('claude')]);
+
+    await claude.end();
+    // The queue is the room's, in seat order: codex — round 1's next entry —
+    // wakes, and round 2's members stay queued.
+    expect(h.runtime.wakes).toEqual([keyOf('claude'), keyOf('codex')]);
+
+    const codex = await h.runtime.activated(keyOf('codex'));
+    await codex.end();
+    const opencode = await h.runtime.activated(keyOf('opencode'));
+    await opencode.end();
+    // Round 1 ran its seats; claude's round-2 entry is next, and after it the
+    // queue is drained — one activation at a time throughout.
+    expect(h.runtime.wakes.slice(1)).toEqual([
+      keyOf('codex'),
+      keyOf('opencode'),
+      keyOf('claude'),
+    ]);
+    const claudeAgain = await h.runtime.activated(keyOf('claude'));
+    await claudeAgain.end();
+    expect(h.runtime.wakes).toHaveLength(4);
+  });
+
+  it('logs an activation that failed before it was a turn and keeps the serial queue moving', async () => {
+    const h = build({ manual: true, settings: { serial: true } });
+    await h.service.sendMessage('报数');
+    expect(h.runtime.wakes).toEqual([keyOf('claude')]);
+
+    // The runtime's report: the activation died before a harness existed.
+    h.service.activationFailed('claude', 'no agent claude in the registry');
+    expect(h.turnLog.rows[0]).toMatchObject({
+      agentId: 'claude',
+      outcome: 'failed',
+      error: 'no agent claude in the registry',
+      roundSeq: 0,
+    });
+    // The queue moved on instead of waiting for an afterTurn that never comes.
+    expect(h.runtime.wakes).toEqual([keyOf('claude'), keyOf('codex')]);
+  });
+
+  it('offers no room_dm inside a private room: the pair is already alone', async () => {
+    const dm: RoomDmGateway = { open: async () => ({ roomId: 'r_child00000', seq: 1 }) };
+    const privateRoom = build({ manual: true, dm, parentTitle: () => '大房间' });
+    await privateRoom.service.sendMessage('单独聊');
+    await privateRoom.runtime.activated(keyOf('claude'));
+    expect(privateRoom.tools.at(-1)!.map(tool => tool.name)).not.toContain('room_dm');
+
+    const rootRoom = build({ manual: true, dm });
+    await rootRoom.service.sendMessage('再聊');
+    await rootRoom.runtime.activated(keyOf('claude'));
+    expect(rootRoom.tools.at(-1)!.map(tool => tool.name)).toContain('room_dm');
+  });
+
+  it('denies writes outside cwd, writes that name no location, and symlinks out of cwd', async () => {
+    const h = build({ manual: true });
+    await h.service.sendMessage('写点什么');
+    const claude = await h.runtime.activated(keyOf('claude'));
+    const decide = claude.harness.permissions;
+    const options = [
+      { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' as const },
+      { optionId: 'reject-once', name: 'Reject once', kind: 'reject_once' as const },
+    ];
+    const ask = (toolCall: Record<string, unknown>) =>
+      decide({
+        sessionId: 'session-1',
+        toolCall: toolCall as never,
+        options,
+      });
+
+    // Inside cwd — resolved through symlinks, so a /tmp aliasing /private/tmp
+    // on this machine is no obstacle — a write is allowed.
+    const inside = await ask({
+      toolCallId: 'c1',
+      kind: 'edit',
+      locations: [{ path: join(claude.harness.cwd, 'note.md') }],
+    });
+    expect(inside).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+
+    // Outside cwd, denied — and a symlink that lives inside but points out
+    // is judged by where it points.
+    const outside = await ask({
+      toolCallId: 'c2',
+      kind: 'edit',
+      locations: [{ path: join(tmpdir(), 'rivus-elsewhere', 'note.md') }],
+    });
+    expect(outside).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    const escape = mkdtempSync(join(tmpdir(), 'rivus-escape-'));
+    const link = join(claude.harness.cwd, 'escape.md');
+    symlinkSync(join(escape, 'target.md'), link);
+    const viaLink = await ask({ toolCallId: 'c3', kind: 'edit', locations: [{ path: link }] });
+    expect(viaLink).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+
+    // A write-kind call that names no location is denied by default, not
+    // waved through as harmless; a location-less execute still runs.
+    const noLocations = await ask({ toolCallId: 'c4', kind: 'edit' });
+    expect(noLocations).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    const bareExecute = await ask({ toolCallId: 'c5', kind: 'execute' });
+    expect(bareExecute).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+
+    await claude.end();
   });
 });
 
@@ -757,6 +897,7 @@ describe('RoomService pass cursor', () => {
     const harness = await h.service.activate(agentId as RoomLabAgentId);
     await harness.hooks?.afterTurn?.({
       stopReason: (result?.stopReason ?? 'end_turn') as 'end_turn',
+      timedOut: result?.stopReason === null && !result?.error,
       token: TOKEN,
       ...(result?.error ? { error: result.error } : {}),
     });
@@ -790,7 +931,7 @@ describe('RoomService pass cursor', () => {
     lease.acquire(keyOf('claude'));
     const harness = await h.service.activate('claude');
     lease.release(keyOf('claude'));
-    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', token: TOKEN });
+    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('pass lost for @claude'));
     errorSpy.mockRestore();
 
@@ -840,7 +981,7 @@ describe('RoomService pass cursor on sqlite', () => {
     const key = runtimeKey('r_5e1ec0de5a', 'claude');
     lease.acquire(key);
     const harness = await service.activate('claude');
-    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', token: TOKEN });
+    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
     lease.release(key);
 
     // The rows the E2E cross-check compared: the turn row's read_up_to_seq
@@ -857,5 +998,145 @@ describe('RoomService pass cursor on sqlite', () => {
     expect(turn.error).toBeNull();
     // The lease row is gone: the release followed the fenced write.
     expect(lease.read(key)).toBeUndefined();
+  });
+});
+
+describe('RoomService truncated inbox', () => {
+  /** A record with `extra` unread events past the turn budget, all by claude. */
+  async function longRecord(h: Built, extra: number): Promise<void> {
+    await h.service.sendMessage('长记录');
+    for (let index = 0; index < extra; index += 1) {
+      const head = (await h.store.readSlice(ROOM, 0, { maxEvents: 1 })).head;
+      const result = await h.store.speak({
+        session: sessionId('claude'),
+        body: `第 ${index + 2} 句`,
+        addressedTo: [],
+        readUpToSeq: head,
+        triggerSeq: head,
+      });
+      if (result.outcome !== 'posted') throw new Error('the seed post should have gone through');
+    }
+  }
+
+  it('stands the cursor on the last seq the turn carried, not the head', async () => {
+    const h = build({ manual: true, members: ['claude', 'codex'] });
+    await longRecord(h, 59); // head 60, codex's cursor 0: sixty unread.
+
+    const codex = await h.runtime.activated(keyOf('codex'));
+    const texts = codex.harness.blocks.map(block => ('text' in block ? block.text : ''));
+    // Fifty carried, ten left out — and the transcript says so.
+    expect(texts[1]).toContain('[seq 50]');
+    expect(texts[1]).not.toContain('[seq 51]');
+    expect(texts[1]).toContain('10 more unread events follow seq 50');
+
+    // A speak is HELD against the events the turn never read — the newer
+    // list starts where the inbox stopped — not let past by a cursor that
+    // claims the whole record.
+    const held = await codex.speakTool()
+      .handler({ body: '我的结论', addressedTo: [] }, { sessionId: undefined }) as {
+        held?: { newer: ToolEvent[] };
+      };
+    expect(held.held?.newer.map(event => event.seq)).toEqual([51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
+
+    // A room_read that skips ahead of the cursor returns its events but
+    // advances the handle nowhere: the gap stays honestly unread.
+    const read = h.toolOf('codex', 'room_read');
+    const skipped = await read.handler({ afterSeq: 55 }, { sessionId: undefined }) as { events: ToolEvent[] };
+    expect(skipped.events.map(event => event.seq)).toEqual([56, 57, 58, 59, 60]);
+    await codex.end();
+    expect(h.store.inspectSession(sessionId('codex'))?.seenSeq).toBe(50);
+
+    // The next turn carries exactly what was left, and its pass stands on it.
+    const again = await h.runtime.activated(keyOf('codex'));
+    const againTexts = again.harness.blocks.map(block => ('text' in block ? block.text : ''));
+    expect(againTexts[1]).toContain('[seq 51]');
+    expect(againTexts[1]).not.toContain('[seq 50]');
+    await again.end();
+    expect(h.store.inspectSession(sessionId('codex'))?.seenSeq).toBe(60);
+  });
+});
+
+describe('RoomService reset', () => {
+  const RESET_ROOM = 'r_deadbeef00';
+
+  async function buildOnSqlite(roundBudget: number): Promise<{
+    store: SqliteRoomStore;
+    turnLog: SqliteTurnLog;
+    service: RoomService;
+    wakes: string[];
+  }> {
+    const store = SqliteRoomStore.memory();
+    const catalog = new RoomCatalog([], undefined, store.agents);
+    catalog.create({
+      id: RESET_ROOM,
+      title: '重置房间',
+      now: '2026-09-29T00:00:00.000Z',
+      memberIds: ['claude', 'codex'],
+    });
+    store.saveRoom(catalog.get(RESET_ROOM));
+    const turnLog = new SqliteTurnLog(store.db);
+    const wakes: string[] = [];
+    const service = new RoomService({
+      roomId: { tenantId: 'local', conversationId: RESET_ROOM },
+      store: store.stream(RESET_ROOM),
+      registry: {
+        get: async id => agentOf(id, ''),
+        list: async () => [agentOf('claude', ''), agentOf('codex', '')],
+        save: async () => {},
+        remove: async () => {},
+      },
+      runtime: { wake: key => wakes.push(key) },
+      lease: { fence: (_key, op) => op(), read: () => undefined },
+      turnLog,
+      members: () => ['claude', 'codex'],
+      agents: () => [
+        { id: 'claude', label: 'Claude', role: '成员', color: 1 },
+        { id: 'codex', label: 'Codex', role: '成员', color: 2 },
+      ],
+      settings: () => ({ wake: 'broadcast', serial: false, roundBudget }),
+      roomTitle: () => '重置房间',
+      workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-reset-')),
+    });
+    return { store, turnLog, service, wakes };
+  }
+
+  it('clears the log and the budget with the record, and stops the turns still running', async () => {
+    const { store, turnLog, service, wakes } = await buildOnSqlite(2);
+    await service.sendMessage('第一轮', 'web:reset-1');
+    expect(wakes).toEqual([runtimeKey(RESET_ROOM, 'claude'), runtimeKey(RESET_ROOM, 'codex')]);
+
+    // Claude's turn passes; codex's stays open — the case a reset interrupts.
+    const claude = await service.activate('claude');
+    await claude.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    const codex = await service.activate('codex');
+    expect(turnLog.listByRoom(RESET_ROOM)).toHaveLength(1);
+
+    await service.reset();
+    // The record is empty; the log that described it is too.
+    const cleared = await store.stream(RESET_ROOM)
+      .readSlice({ tenantId: 'local', conversationId: RESET_ROOM }, 0, { maxEvents: 10 });
+    expect(cleared.events).toEqual([]);
+    expect(cleared.head).toBe(0);
+    expect(turnLog.listByRoom(RESET_ROOM)).toEqual([]);
+
+    // The interrupted turn ends as a failure of the reset, and its pass marks
+    // nothing read in the record that replaced the one it ran against.
+    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    const rows = turnLog.listByRoom(RESET_ROOM);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      agentId: 'codex',
+      outcome: 'failed',
+      error: 'room was reset during this turn',
+    });
+    const cursor = store.db.prepare(`
+      SELECT seen_seq FROM agent_sessions WHERE room_id = ? AND agent_id = 'codex'
+    `).get(RESET_ROOM) as unknown as { seen_seq: number };
+    expect(Number(cursor.seen_seq)).toBe(0);
+
+    // The budget went with the log: the next round wakes the full roster
+    // again under the same limit that had just been spent.
+    await service.sendMessage('第二轮', 'web:reset-2');
+    expect(wakes.slice(2)).toEqual([runtimeKey(RESET_ROOM, 'claude'), runtimeKey(RESET_ROOM, 'codex')]);
   });
 });

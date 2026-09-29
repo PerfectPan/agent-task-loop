@@ -23,6 +23,11 @@ export const HELD_LIMIT = 3;
  */
 export interface RoomMemberRuntime {
   wake(key: string): void;
+  /**
+   * Stops a running activation (a reset cancels the turns it invalidates);
+   * a scheduler without a cancel simply lets them run out.
+   */
+  cancel?(key: string): void | Promise<void>;
 }
 
 /**
@@ -58,6 +63,8 @@ export interface TurnLog {
   }): void;
   /** A room's turns, oldest first. */
   listByRoom(roomId: string): RoomTurnView[];
+  /** A room's rows, gone: a reset clears the log with the record it describes. */
+  clear(roomId: string): void;
 }
 
 /**

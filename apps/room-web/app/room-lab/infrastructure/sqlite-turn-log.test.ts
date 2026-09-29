@@ -110,3 +110,18 @@ describe('SqliteTurnLog', () => {
     expect(log.listByRoom(ROOM)).toEqual([]);
   });
 });
+
+describe('SqliteTurnLog clear', () => {
+  it('drops one room’s rows and leaves the other rooms’ alone', () => {
+    const store = SqliteRoomStore.memory();
+    insertRoom(store);
+    insertRoom(store, 'r_otherroom00');
+    const log = new SqliteTurnLog(store.db);
+    log.append(turn({ id: 'turn:1' }));
+    log.append(turn({ id: 'turn:2', roomId: 'r_otherroom00' }));
+
+    log.clear(ROOM);
+    expect(log.listByRoom(ROOM)).toEqual([]);
+    expect(log.listByRoom('r_otherroom00').map(row => row.id)).toEqual(['turn:2']);
+  });
+});

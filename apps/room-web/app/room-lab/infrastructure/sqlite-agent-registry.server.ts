@@ -5,7 +5,7 @@ import { nowIso } from './room-home.server';
 
 /**
  * The `agents` table implementing the control plane's `AgentRegistry` port
- * (RFC 0015): the one roster, read and written through the port. The endpoint's
+ * (docs/architecture/agent-collaboration.md): the one roster, read and written through the port. The endpoint's
  * own columns — `role`, `color`, `position` — ride along in the same row and
  * stay invisible to the port: `save` updates only what the port sees and leaves
  * them standing, and a row created through the port starts on the generic role

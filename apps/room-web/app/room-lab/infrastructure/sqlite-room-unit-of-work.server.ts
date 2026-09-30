@@ -264,7 +264,7 @@ export class SqliteRoomStreamStore {
   }
 
   /**
-   * Appends an endpoint-authored member post (RFC 0015 room_dm): the write the
+   * Appends an endpoint-authored member post (room_dm): the write the
    * private-room gateway makes in a child room. Its depth names the parent
    * trigger's plus one rather than an in-room trigger's, it never HELDs, and
    * it moves no cursor — the room's own protocol takes over from the next

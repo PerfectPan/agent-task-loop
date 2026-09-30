@@ -166,7 +166,7 @@ describe('runMigrations', () => {
     expect(tables(db)).not.toContain('half_applied');
   });
 
-  it('upgrades a version-3 library — the last shape before RFC 0015 — to the control plane', () => {
+  it('upgrades a version-3 library — the last shape before the control plane — to the current schema', () => {
     // The fixture standing in for the real library on a machine that has one:
     // a room with an event and a seated member, built by the chain itself and
     // stopped after version 3.

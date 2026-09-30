@@ -5,7 +5,7 @@ import type { RoomTurnView } from '../read-model';
 export type TurnOutcome = 'posted' | 'passed' | 'timeout' | 'failed';
 
 /**
- * One row of `turns` (RFC 0015): when a member's turn started, what woke it,
+ * One row of `turns` (docs/architecture/agent-collaboration.md): when a member's turn started, what woke it,
  * and how it ended. The endpoint's own log — the UI reads elapsed time,
  * outcomes and rounds from here; nothing in the record or the control plane
  * depends on it.

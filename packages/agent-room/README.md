@@ -5,7 +5,7 @@ Shared **posted stream**, per-agent session, and write-point HELD.
 This package does not know tasks, occupancy seats, Feishu, or ReviewLoop.
 Callers inject the capability port for the slice they use. `rivus-agent` is the first live adapter.
 
-See RFC 0010 Chapter B.
+See [`docs/architecture/agent-collaboration.md`](../../docs/architecture/agent-collaboration.md).
 
 ## Domain model
 
@@ -27,8 +27,8 @@ See RFC 0010 Chapter B.
   event never wakes its own author, and an event at or above the room's depth
   ceiling wakes nobody. Everyone else is woken.
 
-See RFC 0015 for the collaboration system and RFC 0012 for the
-repository-wide dependency rules.
+See [`docs/architecture/agent-collaboration.md`](../../docs/architecture/agent-collaboration.md) for the collaboration system and
+[`docs/architecture/overview.md`](../../docs/architecture/overview.md) for the repository-wide dependency rules.
 
 ## Status
 

@@ -3,12 +3,12 @@ import type { FencedResult, FencingToken, LeaseRecord, LeaseStore } from '@rivus
 
 /**
  * `member_leases` implementing the control plane's `LeaseStore` port
- * (RFC 0015): one row per running activation, and every method a
+ * (docs/architecture/agent-collaboration.md): one row per running activation, and every method a
  * compare-and-swap on the whole record, so a stale holder can neither renew nor
  * release. Freshness stays the caller's judgement — the store only ever swaps
  * exact records, which is how a stale lease is taken over.
  *
- * `runFenced` is what the RFC asks of sqlite in one process: a per-key promise
+ * `runFenced` is what the design asks of sqlite in one process: a per-key promise
  * chain plus one re-read of the holder before the operation is entered. A
  * holder that lost its lease while awaiting its prompt gets
  * `{ executed: false }` and its write never lands.

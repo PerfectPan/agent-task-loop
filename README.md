@@ -9,6 +9,7 @@ The core package provides a local CLI that drives tasks from assignment through 
 - Getting started (install, first run, common commands): [docs/getting-started.md](./docs/getting-started.md)
 - Configuration reference: [docs/configuration.md](./docs/configuration.md)
 - Workflow & task lifecycle (diagrams): [docs/workflow.md](./docs/workflow.md)
+- Architecture (packages, boundaries, subsystems): [docs/architecture/overview.md](./docs/architecture/overview.md)
 
 ## Monorepo Layout
 
@@ -31,7 +32,8 @@ GPL-3.0-only. See [LICENSE](./LICENSE).
 - Contribution workflow: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Agent guidelines: [AGENTS.md](./AGENTS.md)
 - Workflow & task lifecycle (diagrams): [docs/workflow.md](./docs/workflow.md)
-- RFCs: [rfcs/](./rfcs/)
+- Active specs and plans: [specs/](./specs/), [docs/plans/](./docs/plans/)
+- Documentation map: [docs/README.md](./docs/README.md)
 - npm publishing: [docs/npm-publish.md](./docs/npm-publish.md)
 
 ## Local CLI

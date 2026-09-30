@@ -43,7 +43,7 @@ export interface FsSessionProviderOptions {
   /**
    * Build a resume command for a session, or `null`/undefined when the tool
    * can't resume. Left unset by default — verified per-tool resume commands
-   * are wired in P5 (see docs/plans/issue-25-shared-sessions.md), not guessed.
+   * are passed in by each provider factory, not guessed.
    */
   resume?: (session: Session) => string | null;
 }

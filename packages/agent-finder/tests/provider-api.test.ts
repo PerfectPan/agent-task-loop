@@ -31,7 +31,7 @@ const providerIds = [
 ];
 
 describe("@rivus/agent-finder-core provider API", () => {
-  test("lists supported providers in stable RFC order", () => {
+  test("lists supported providers in stable catalog order", () => {
     expect(listProviders().map((provider) => provider.id)).toEqual(providerIds);
   });
 

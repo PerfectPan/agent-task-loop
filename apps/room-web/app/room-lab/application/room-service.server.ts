@@ -52,7 +52,7 @@ import { defaultRoomHome } from '../infrastructure/room-home.server';
 /** Every ACP session this endpoint opens belongs to one runtime generation. */
 const RUNTIME_GENERATION = 'web-v1';
 
-/** A stale lease row reads as "not running"; the RFC's own staleness window. */
+/** A stale lease row reads as "not running"; the design's own staleness window. */
 const LEASE_STALE_MS = 120_000;
 
 /** The actor behind the notices the dispatcher posts into the record. */
@@ -103,7 +103,7 @@ export interface RoomServiceOptions {
   parentTitle?: () => string;
   /**
    * The round ledgers of the other rooms a dm root may name. A child room
-   * charges its inherited rounds there (RFC 0015: a round spans its children).
+   * charges its inherited rounds there (docs/architecture/agent-collaboration.md: a round spans its children).
    */
   ledgerOf?: (roomId: string) => RoomRoundLedger;
   /**
@@ -120,7 +120,7 @@ export interface RoomServiceOptions {
 }
 
 /**
- * The endpoint's dispatcher and turn assembly (RFC 0015): `admit` computes the
+ * The endpoint's dispatcher and turn assembly (docs/architecture/agent-collaboration.md): `admit` computes the
  * wake set and calls `runtime.wake`, the runtime answers with `activate` —
  * which builds the turn's Harness: the member's prompt, the room facts, the
  * inbox, the three Room tools, the permission policy — and `afterTurn` passes
@@ -208,7 +208,7 @@ export class RoomService {
     // The cursor moves only over what the turn actually carried. A truncated
     // inbox leaves the rest ahead of it: `room_read` brings the events in,
     // a later speak is HELD against what was never read, and the pass stands
-    // on the last seq the member saw (RFC 0015: seeing is not speaking).
+    // on the last seq the member saw (docs/architecture/agent-collaboration.md: seeing is not speaking).
     const readUpToSeq = inbox.at(-1)?.seq ?? cursor;
     const inboxTruncated = unread.length - inbox.length;
     const trigger = record.events.at(-1);
@@ -267,7 +267,7 @@ export class RoomService {
       ];
       // A private room offers no room_dm: its two members are already alone,
       // and the room a dm between them would open hangs one level further
-      // down, where the person never sees it (RFC 0015: private rooms hang
+      // down, where the person never sees it (docs/architecture/agent-collaboration.md: private rooms hang
       // under the room they were opened from, one level).
       if (this.options.dm && !this.options.parentTitle) {
         const gateway = this.options.dm;
@@ -322,7 +322,7 @@ export class RoomService {
         onUpdate: update => this.onUpdate(agentId, update),
         // The promise comes back: the runtime awaits it before it releases
         // the lease, so the pass's fenced cursor write lands inside the held
-        // window (RFC 0015: prompt, afterTurn, release).
+        // window (docs/architecture/agent-collaboration.md: prompt, afterTurn, release).
         afterTurn: result => this.afterTurn(turn, result),
       },
     };
@@ -393,7 +393,7 @@ export class RoomService {
     });
     // The hosted endpoint stays up: it belongs to the member's session, whose
     // next turn re-serves its tools on it. The gate closed above — the turn
-    // left `openTurns` — so calls are refused from here on (RFC 0015: a
+    // left `openTurns` — so calls are refused from here on (docs/architecture/agent-collaboration.md: a
     // turn's tools stop working when the turn ends).
     this.toolCallSeen.delete(handle.agentId);
     this.touch();
@@ -513,7 +513,7 @@ export class RoomService {
    * room is serial, concurrently otherwise. The private-room gateway calls it
    * for the post it made in a child room, and a member's own `room_speak` for
    * the post it just landed; a round a dm post opened belongs to the room its
-   * message id names, and charges that room's budget (RFC 0015: a round spans
+   * message id names, and charges that room's budget (docs/architecture/agent-collaboration.md: a round spans
    * the private rooms opened inside it).
    *
    * `turnRound` is the round the dispatching turn already resolved its record
@@ -642,7 +642,7 @@ export class RoomService {
   }
 
   /**
-   * This room as the ledger child rooms charge (RFC 0015): counts one turn
+   * This room as the ledger child rooms charge (docs/architecture/agent-collaboration.md): counts one turn
    * against the round, and answers whether the wake may start. The count
    * happens synchronously before `runtime.wake`: concurrent wakes never pass
    * through `activate` before the rest of the dispatch loop has run, so a
@@ -679,7 +679,7 @@ export class RoomService {
 
   /**
    * The round `head` sits in: the nearest human root at or below it, or — in a
-   * private room — the round the nearest dm root names (RFC 0015). Events
+   * private room — the round the nearest dm root names (docs/architecture/agent-collaboration.md). Events
    * above the newest root belong to that root's round, wherever the root's
    * room is.
    */
@@ -771,7 +771,7 @@ function boundedInbox(unread: RoomEvent[]): RoomEvent[] {
 }
 
 /**
- * The turn prompt (RFC 0015): the room facts as one block, the inbox one line
+ * The turn prompt (docs/architecture/agent-collaboration.md): the room facts as one block, the inbox one line
  * per event, the instruction as the last. The member's own system prompt
  * travels in the Harness's native channel, so it is not a block here.
  */

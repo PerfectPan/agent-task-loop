@@ -39,7 +39,7 @@ export interface RoomLabHostBindings {
 }
 
 /**
- * The endpoint's assembly (RFC 0015): the record comes from `@rivus/agent-room`
+ * The endpoint's assembly (docs/architecture/agent-collaboration.md): the record comes from `@rivus/agent-room`
  * through the sqlite stream store, the control plane — registry, lease,
  * runtime, tool server — from `@rivus/agent-orchestration`, and everything
  * with a product name (seating, settings, the Room tools, the turn log) lives
@@ -349,7 +349,7 @@ export class RoomLabHost {
         this.hostSessionTools(roomId, agentId, tools, authorize),
       // A private room offers no room_dm: its two members are already alone,
       // and a dm between them would open a grandchild room the person cannot
-      // see (RFC 0015: private rooms hang one level under their parent).
+      // see (docs/architecture/agent-collaboration.md: private rooms hang one level under their parent).
       ...(isPrivate ? {} : { dm: this.dm }),
       parentTitle: this.parentTitleOf(roomId),
       ledgerOf: ancestor => this.open(ancestor),
@@ -418,7 +418,7 @@ export class RoomLabHost {
 
   /**
    * The sidebar's rooms, private rooms nested under the room they were opened
-   * from (RFC 0015). Roots keep their creation order; so do the children.
+   * from (docs/architecture/agent-collaboration.md). Roots keep their creation order; so do the children.
    */
   catalogView(): RoomCatalogItemView[] {
     const items = new Map<string, RoomCatalogItemView>(this.catalog.list().map(room => {

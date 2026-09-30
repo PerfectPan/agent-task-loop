@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto';
 import { AGENT_COLOR_COUNT } from '../domain/agent-registry';
 
 /**
- * The rows migration 2 writes: the candidate catalog (RFC 0015) — the ACP
+ * The rows migration 2 writes: the candidate catalog (docs/architecture/agent-collaboration.md) — the ACP
  * adapters this project knows how to start, claude and codex shipped as its own
  * dependencies and opencode run from the person's install — plus any id an
  * existing library already seats or holds a prompt for, so a crew that predates

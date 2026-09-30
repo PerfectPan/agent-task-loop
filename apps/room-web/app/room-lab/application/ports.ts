@@ -19,7 +19,7 @@ export const HELD_LIMIT = 3;
 
 /**
  * The scheduler half of the control plane, as the dispatcher sees it: wakes
- * coalesce into one pending flag per key and never block the caller (RFC 0015).
+ * coalesce into one pending flag per key and never block the caller (docs/architecture/agent-collaboration.md).
  */
 export interface RoomMemberRuntime {
   wake(key: string): void;
@@ -32,7 +32,7 @@ export interface RoomMemberRuntime {
 
 /**
  * A room's two cost knobs the protocol reads directly. The bounds that stay at
- * their RFC defaults (depth ceiling `2n`, round budget `n(n + 1)`) are left
+ * their design defaults (depth ceiling `2n`, round budget `n(n + 1)`) are left
  * unset here and derived where they are used.
  */
 export interface RoomSettings {
@@ -142,7 +142,7 @@ export interface RoomLeases {
 
 /**
  * One round's home: the room whose human event opened it. A round spans the
- * private rooms opened inside it (RFC 0015), so a child room charges its
+ * private rooms opened inside it (docs/architecture/agent-collaboration.md), so a child room charges its
  * budget and reads its ceiling here instead of keeping its own.
  */
 export interface RoomRoundLedger {
@@ -157,7 +157,7 @@ export interface RoomRoundLedger {
 /**
  * Which room and seq a round is rooted at. A dm post's own room when it opens
  * a round there; the parent room a `dm:` message id names when the round is
- * inherited (RFC 0015: the round is the causal tree under one human event,
+ * inherited (docs/architecture/agent-collaboration.md: the round is the causal tree under one human event,
  * wherever its events land).
  */
 export interface RoomRound {
@@ -166,7 +166,7 @@ export interface RoomRound {
 }
 
 /**
- * The private-room gateway behind the room_dm tool (RFC 0015): finds or opens
+ * The private-room gateway behind the room_dm tool (docs/architecture/agent-collaboration.md): finds or opens
  * the pair's child room, posts the body there at the trigger's depth plus one,
  * and hands the post to the child room's dispatcher. The host owns it, because
  * the child room is outside this service's own record.

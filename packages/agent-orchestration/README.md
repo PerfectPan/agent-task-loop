@@ -2,7 +2,7 @@
 
 The agent collaboration **control plane**: which agents exist, whether each can
 be reached, who may run right now, and how a turn is assembled and delivered
-(RFC 0015). Its noun is the **Agent**. It knows nothing about rooms and owns no
+([`docs/architecture/agent-collaboration.md`](../../docs/architecture/agent-collaboration.md)). Its noun is the **Agent**. It knows nothing about rooms and owns no
 database — the registry and the lease store are ports, implemented by the
 endpoint.
 

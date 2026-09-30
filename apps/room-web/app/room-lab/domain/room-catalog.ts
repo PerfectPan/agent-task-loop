@@ -16,13 +16,13 @@ export interface RoomRecord {
   updatedAt: string;
   lastOpenedAt: string;
   memberIds: RoomLabAgentId[];
-  /** The one cost knob that lives in the protocol (RFC 0015). */
+  /** The one cost knob that lives in the protocol (docs/architecture/agent-collaboration.md). */
   wake: RoomWakeMode;
   /** Run the woken set one member at a time, in seat order. */
   serial: boolean;
   /** Where members work during a turn; undefined means the room's own directory. */
   cwd?: string;
-  /** Set on a private room: the room it was opened from (RFC 0015 Private rooms). */
+  /** Set on a private room: the room it was opened from (private rooms, docs/architecture/agent-collaboration.md). */
   parentRoomId?: string;
   /** The member whose room_dm opened it; absent for a room a person created. */
   openedBy?: RoomLabAgentId;
@@ -91,7 +91,7 @@ export class RoomCatalog {
 
   /**
    * The private room one pair of members already shares under a parent, the one
-   * a second room_dm reuses (RFC 0015). The pair matches regardless of who
+   * a second room_dm reuses (docs/architecture/agent-collaboration.md). The pair matches regardless of who
    * opened it, so either member finds the same room.
    */
   findPrivate(parentRoomId: string, memberIds: readonly RoomLabAgentId[]): RoomRecord | undefined {

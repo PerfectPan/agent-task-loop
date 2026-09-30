@@ -68,7 +68,7 @@ const TURN_CLOSED = { content: [{ type: 'text' as const, text: JSON.stringify({ 
 /**
  * Hosts the endpoint's tool definitions as one streamable-HTTP MCP endpoint
  * per (room, agent) session, on the loopback address, behind the session's
- * token, and hands back the `session/new` entry (RFC 0015 S2). ACP carries
+ * token, and hands back the `session/new` entry (control-plane split). ACP carries
  * `mcpServers` only on `session/new`, so the endpoint is hosted once at the
  * first session and each turn re-serves its tools on it; the per-call gate
  * keeps the turn-scoped authorization. Built on the official MCP server SDK;

@@ -13,7 +13,7 @@ export interface LeaseManagerDependencies {
 }
 
 /**
- * The lease half of the old orchestration facade (RFC 0015 S2): acquire,
+ * The lease half of the old orchestration facade (control-plane split): acquire,
  * heartbeat, fence, release. A lease is fresh while the holder pid is alive
  * and the heartbeat is within `staleAfterMs`; every renewal is a
  * compare-and-swap on the whole record.

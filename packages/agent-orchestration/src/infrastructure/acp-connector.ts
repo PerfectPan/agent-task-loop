@@ -65,7 +65,7 @@ const DEFAULT_CLOSE_KILL_MS = 5_000;
 const STDERR_TAIL_BYTES = 8_192;
 
 /**
- * The one connector on the main path (RFC 0015): an ACP process per agent,
+ * The one connector on the main path (docs/architecture/agent-collaboration.md): an ACP process per agent,
  * spawned through the person's login shell so an alias counts, one
  * `initialize` per process, sessions created per (room, agent).
  */
@@ -169,7 +169,7 @@ export class AcpConnector implements AgentConnector {
       // The advertised fs is the session's cwd and nothing else: the handler
       // resolves the path against the root the session opened with, so an
       // agent cannot read or write through the client to somewhere the room
-      // never gave it (RFC 0015: writes stay inside the room's cwd).
+      // never gave it (docs/architecture/agent-collaboration.md: writes stay inside the room's cwd).
       readTextFile: async (params) => {
         const path = await scopedPath(runtime, params.sessionId, params.path, 'fs/read_text_file');
         return { content: await readFile(path, 'utf8') };

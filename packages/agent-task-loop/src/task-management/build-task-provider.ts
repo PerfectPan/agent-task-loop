@@ -48,7 +48,7 @@ export function buildTaskProvider(
         });
 
   // Wrap the whole tree so the loop's run-time state (session ids, runner info,
-  // …) is persisted source-agnostically — see RFC 0006. Providers stay unaware.
+  // …) is persisted source-agnostically — see docs/architecture/task-sources.md. Providers stay unaware.
   const store = new FileTaskStateStore();
   // Best-effort orphan sweep so the store can't grow without bound. The TTL is
   // deliberately generous (180d) so an in-flight task is never pruned out from

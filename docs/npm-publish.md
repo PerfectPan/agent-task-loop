@@ -91,6 +91,6 @@ After the pull request lands on `main`, GitHub Actions opens or updates a releas
 
 - Never commit `.npmrc` with tokens.
 - Confirm `publishConfig.registry` points to `https://registry.npmjs.org`.
-- Confirm the package uses the scope selected by RFC 0001.
+- Confirm the package uses the `@rivus` scope.
 - Confirm package-changing pull requests include a changeset.
 - Confirm generated files and local config are not included in the tarball.

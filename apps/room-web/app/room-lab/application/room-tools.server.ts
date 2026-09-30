@@ -18,7 +18,7 @@ export interface RoomTurnHandle {
   roomId: RoomId;
   /** The human event that opened the round this turn belongs to. */
   roundSeq: number;
-  /** Set when the round is rooted in another room — a dm post's round (RFC 0015). */
+  /** Set when the round is rooted in another room — a dm post's round (docs/architecture/agent-collaboration.md). */
   roundRoomId?: string;
   /** The record head this turn started at; a post's wake depth is its plus one. */
   triggerSeq: RoomSeq;
@@ -40,7 +40,7 @@ export type SpeakThroughLease = (input: {
 }) => Promise<SpeakResult>;
 
 /**
- * The one post a turn may make (RFC 0015). HELD is answered to the member,
+ * The one post a turn may make (docs/architecture/agent-collaboration.md). HELD is answered to the member,
  * which reads what it missed with `room_read` and calls again — three HELDs
  * close the tool and the turn ends as a pass. Errors are returned, never
  * thrown: the member reads them.
@@ -92,7 +92,7 @@ export function roomSpeakTool(
 }
 
 /**
- * The private-room write point (RFC 0015): opens or reuses the child room the
+ * The private-room write point (docs/architecture/agent-collaboration.md): opens or reuses the child room the
  * caller shares with one member and posts the body there. It does not count as
  * the turn's post — `handle.spoke` stays untouched — so the turn may still
  * room_speak once into its own room.

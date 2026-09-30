@@ -1,9 +1,8 @@
 /**
  * Dependency-free terminal presentation helpers.
  *
- * Kept local to agent-finder-cli for now; this is the seed of the shared
- * `cli-presentation` layer described in docs/plans/issue-25-shared-sessions.md
- * (the human-output redesign tracked by #23). Color is emitted only on an
+ * Kept local to agent-finder-cli; see the presentation layer in
+ * docs/architecture/agent-sessions.md. Color is emitted only on an
  * interactive TTY and never when NO_COLOR is set, so `--json` and piped/CI
  * output stay plain and stable.
  */

@@ -66,7 +66,7 @@ function importsAgentRoom(specifier: string): boolean {
   );
 }
 
-describe('RFC 0009 plugin isolation from Room', () => {
+describe('Rivus plugin isolation from Room', () => {
   it('does not depend on @rivus/agent-room', async () => {
     const packageJson = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
       dependencies?: Record<string, string>;

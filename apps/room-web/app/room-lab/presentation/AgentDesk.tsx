@@ -127,7 +127,7 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
 }
 
 /**
- * One row the catalog has never heard of is one more row (RFC 0015): the form
+ * One row the catalog has never heard of is one more row (docs/architecture/agent-collaboration.md): the form
  * writes it, the next scan answers for it. The id is the word after `@`, so the
  * form refuses anything off the mention grammar before the server has to.
  */

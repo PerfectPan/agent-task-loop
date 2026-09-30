@@ -10,8 +10,8 @@ export function Footer({ repoUrl, npmUrl }: { repoUrl: string; npmUrl: string })
           <span className="text-muted/60">· GPL-3.0</span>
         </div>
         <div className="flex items-center gap-5">
-          <a href={`${repoUrl}/tree/main/rfcs`} target="_blank" rel="noreferrer" className="transition hover:text-fg">
-            RFCs
+          <a href={`${repoUrl}/tree/main/docs/architecture`} target="_blank" rel="noreferrer" className="transition hover:text-fg">
+            Architecture
           </a>
           <a href={`${repoUrl}#readme`} target="_blank" rel="noreferrer" className="transition hover:text-fg">
             Docs

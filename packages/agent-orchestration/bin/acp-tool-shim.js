@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// RFC 0015 S2: the ToolServer's stdio fallback. For an adapter without
+// The ToolServer's stdio fallback. For an adapter without
 // mcpCapabilities.http, this process sits in front of the very same
 // streamable-HTTP endpoint and speaks MCP over stdio. Built on the official
 // MCP SDK; no hand-written JSON-RPC.

@@ -4,7 +4,7 @@ import { AcpConnector } from '../src/infrastructure/acp-connector';
 
 /**
  * Opt-in live probe against the three real adapters on this machine
- * (RFC 0015 S2 verify step). Runs only with RIVUS_LIVE_ACP=1; skipped
+ * (control-plane live check). Runs only with RIVUS_LIVE_ACP=1; skipped
  * otherwise, so CI never depends on logged-in coding agents.
  *
  * The bindings below are command lines run through the login shell; override

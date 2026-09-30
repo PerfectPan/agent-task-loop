@@ -32,7 +32,7 @@ import type { RoomLabAgentId, RoomTurnView } from '../read-model';
 import { copy } from '../copy';
 
 /**
- * The private-exchange slice (RFC 0015 Private rooms) over the real sqlite
+ * The private-exchange slice (private rooms, docs/architecture/agent-collaboration.md) over the real sqlite
  * stream store: one in-memory library holds the parent room and every child a
  * room_dm opens, the way the host wires them, so the record, the cursors, the
  * turn log and the round budget are all the production ones.

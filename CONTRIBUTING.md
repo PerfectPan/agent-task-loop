@@ -6,9 +6,13 @@ Thanks for taking the time to improve Agent Task Loop.
 
 ```bash
 pnpm install
+gh extension install PerfectPan/gh-repo-checks
+./scripts/install-git-hooks.sh
 pnpm test
 pnpm build
 ```
+
+`pnpm test` also runs `moon -C packages/agent-finder test`, so the MoonBit toolchain must be on `PATH`; CI installs it with the official `cli.moonbitlang.com` installer.
 
 Run the local CLI from the repository root:
 
@@ -21,13 +25,37 @@ npx --no-install @rivus/agent-task-loop --help
 1. Open an issue or discussion for ambiguous work.
 2. Choose Spec and Plan artifacts using the [Change Design Gate](#change-design-gate) before substantial work, and review the behavior and technical design before implementing that scope.
 3. Create a focused branch.
-4. Add or update tests for behavior changes.
-5. Add a changeset for user-facing package changes.
-6. Run `pnpm test` and `pnpm build`.
-7. Update `README.md`, `docs/`, or the active Spec and Plan when user-facing behavior, architecture, workflow, or operations change.
-8. Open a pull request with the motivation, implementation notes, and validation results.
+4. Install local Git hooks with `./scripts/install-git-hooks.sh` if this checkout has not already done so.
+5. Add or update tests for behavior changes.
+6. Add a changeset for user-facing package changes.
+7. Run the [Required Checks](#required-checks).
+8. Update `README.md`, `docs/`, or the active Spec and Plan when user-facing behavior, architecture, workflow, or operations change.
+9. Open a pull request with a conventional title, motivation, implementation notes, validation, evidence, skipped gates, and follow-up risks.
+10. Keep the PR description current after review feedback, rebases, validation reruns, or scope changes.
 
 Small fixes, typo corrections, dependency metadata updates, and narrow documentation improvements do not need a separate Spec and Plan.
+
+## Required Checks
+
+CI (`.github/workflows/ci.yml` and `.github/workflows/review.yml`) runs these on every pull request; run them locally before opening review:
+
+```bash
+# Repository checks:
+gh repo-checks repository
+
+# PR title and description:
+gh repo-checks pr-title "docs: update contributing guide"
+gh repo-checks pr-body pr-body.md
+
+# Install and CI gates:
+pnpm install --frozen-lockfile
+pnpm check:moonbit-version
+pnpm test
+pnpm build
+pnpm typecheck
+```
+
+For package-facing changes, also run `pnpm changeset status` and the `npm pack --dry-run` check in [Pull Request Expectations](#pull-request-expectations).
 
 ## Changesets
 
@@ -39,7 +67,13 @@ pnpm changeset
 
 Choose `patch`, `minor`, or `major` according to the public package impact. Documentation-only changes, repository metadata changes, tests, and internal maintenance that do not affect a published package can skip a changeset.
 
-Release pull requests are created by GitHub Actions after changeset files land on `main`.
+Only published packages get changesets. Private workspace packages (`private: true`) are not versioned or tagged by Changesets (`privatePackages` in [`.changeset/config.json`](.changeset/config.json)). Changelog entries link the pull request and author through `@changesets/changelog-github`.
+
+### Releasing
+
+1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs, then the MoonBit module version sync). Later changesets fold into the same PR.
+2. The release PR is opened with the workflow's `GITHUB_TOKEN`, and GitHub does not start workflows for events that token causes, so CI does not run on it by itself. Before merging, a person closes and reopens it (`gh pr close <n> && gh pr reopen <n>`) or pushes an empty commit to its branch. `gh workflow run ci.yml` does not count: a dispatched run is not attached to the PR and does not satisfy required checks.
+3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance, then the MoonBit publish workflow runs. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
 ## SDD Workflow And Document Lifecycle
 
@@ -94,7 +128,23 @@ Every PR should answer:
 - What changed?
 - Why is this change needed?
 - How was it tested?
-- Are there follow-up tasks?
+- Are there follow-up tasks or risks?
+- What evidence proves the behavior, packaging, or deployment claim?
+- Which validation gates were skipped, and why?
+
+Use a conventional title:
+
+```text
+type(scope): summary
+```
+
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+
+Titles are English; `gh repo-checks pr-title` rejects CJK characters. Bot-generated PRs follow the same rule: the Changesets release PR uses `chore(release): version packages`, and dependency bots should emit titles such as `chore(deps): bump <package> to <version>`.
+
+The description keeps every `##` section from the [PR template](.github/pull_request_template.md). Summary and Validation must contain real content, not template placeholders. Do not include agent attribution lines such as "Generated with <tool>"; the author is accountable for the content. `gh repo-checks pr-body` enforces these rules, and the `PR description` job runs it on every pull request event, including description edits. PRs opened by bot accounts skip the description check, because dependency and release bots write their own bodies; they still must pass the title check. A skipped job still satisfies the required status check.
+
+Update the description when review feedback, rebases, or follow-up commits change the scope or validation result. Reviewers should be able to understand the final state from the PR without reconstructing it from comments.
 
 For npm package changes, include the output summary from:
 
@@ -103,8 +153,49 @@ cd packages/agent-task-loop
 npm pack --dry-run --registry=https://registry.npmjs.org
 ```
 
-## Public Repository Hygiene
+## Release Notes
 
-Do not commit private tokens, local config, generated workspaces, internal hostnames, or personal filesystem paths.
+Release notes come from Changesets. Each user-facing change to a published package adds a change file (`pnpm changeset`, see [Changesets](#changesets)) in the same PR, and `pnpm version-packages` writes that package's `CHANGELOG.md` at release time: [`@rivus/agent-task-loop`](packages/agent-task-loop/CHANGELOG.md), [`@rivus/agent-finder-cli`](packages/agent-finder-cli/CHANGELOG.md), [`@rivus/agent-finder-core`](packages/agent-finder/CHANGELOG.md). Do not edit generated changelogs or keep a hand-written root `CHANGELOG.md` beside them.
 
-The project intentionally keeps package contents narrow. If a file should ship to npm, it must be included through `packages/agent-task-loop/package.json#files`.
+## License
+
+The project is licensed under GPL-3.0-only (`LICENSE`). Distributing the software or a modified version requires releasing its source under the same license. Package metadata uses the SPDX identifier `GPL-3.0-only`. Change the license only as a deliberate project decision, and keep third-party notices for code or data copied from other projects.
+
+## Repository Checks
+
+Do not commit private tokens, local config, generated workspaces, internal hostnames, or personal filesystem paths. Test fixtures use neutral paths such as `/fake-home/...` or `/work/...`, and fixture files avoid ignored extensions such as `.log`.
+
+The project intentionally keeps package contents narrow. If a file should ship to npm, it must be included through the package's `package.json#files`; verify it appears in the `npm pack --dry-run` output.
+
+The review checks come from [`PerfectPan/gh-repo-checks`](https://github.com/PerfectPan/gh-repo-checks): CI runs them through its GitHub Action (`uses: PerfectPan/gh-repo-checks@v1`), and locally they run as a GitHub CLI extension (`gh extension install PerfectPan/gh-repo-checks`). Do not copy the check scripts into this repository; change them upstream. Repository-specific additions, such as extra required files or forbidden patterns, go in [`.github/repo-checks.conf`](.github/repo-checks.conf), and repository-specific scripts run as extra steps after the shared check. `.github/workflows/review.yml`, `.githooks/pre-commit`, `.github/repo-checks.conf` and `scripts/install-git-hooks.sh` are copied verbatim from the shared project template; change them upstream so later syncs stay a plain diff.
+
+Run `gh repo-checks repository` locally before opening review. It does not replace the pnpm gates, but it catches missing template files, tracked local artifacts, obvious secrets, private paths, and drift between the GitHub PR and GitLab MR templates.
+
+Workflows reference actions by their latest major version tag, such as `actions/checkout@v7`, not by commit SHA. Workflow files copied from the project template take action upgrades from the template rather than local edits.
+
+## Local Git Hooks
+
+Install local hooks after cloning:
+
+```bash
+gh extension install PerfectPan/gh-repo-checks
+./scripts/install-git-hooks.sh
+```
+
+The pre-commit hook runs `git diff --cached --check` and `gh repo-checks repository --staged` before a commit is created; without the extension it warns and skips the repository check. Hooks are a local guardrail; CI and branch protection remain the authoritative enforcement because hooks can be missing or bypassed.
+
+If `core.hooksPath` is already set to another path, `scripts/install-git-hooks.sh` fails instead of overwriting it. Re-run with `--force` only after confirming the existing hooks can be replaced or moved into `.githooks`.
+
+## Repository Setup
+
+`main` is covered by the repository ruleset `Default`, which blocks deletion and force pushes. Required review checks are not configured yet. Preview the template's protection payload for this repository with:
+
+```bash
+gh repo-checks protect --repo PerfectPan/agent-task-loop --approvals 0 --check test
+```
+
+It requires pull requests, linear history, resolved conversations, and the `Review` workflow checks `repository checks`, `conventional PR title`, and `PR description`, plus the CI `test` job. `--approvals 0` fits a single maintainer, who cannot approve their own pull requests. Because the repository already uses a ruleset, add these checks to the `Default` ruleset in the repository settings instead of applying classic branch protection with `--apply`.
+
+## Security Reports
+
+Use [`SECURITY.md`](SECURITY.md) for vulnerability reporting guidance. Do not include secrets, exploit details, or private infrastructure in public issues or pull requests.

@@ -17,8 +17,8 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 ## Validation
 
 - [ ] Repository checks: `gh repo-checks repository`
-- [ ] PR title: `gh repo-checks pr-title "<title>"`
-- [ ] PR description: `gh repo-checks pr-body <body-file>`
+- [ ] MR title: `gh repo-checks pr-title "<title>"`
+- [ ] MR description: `gh repo-checks pr-body <body-file>`
 - [ ] Install: `pnpm install --frozen-lockfile`
 - [ ] MoonBit version: `pnpm check:moonbit-version`
 - [ ] Test: `pnpm test`

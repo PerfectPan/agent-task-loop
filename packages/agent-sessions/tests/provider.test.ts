@@ -63,9 +63,9 @@ describe("FsSessionProvider", () => {
 
   it("uses an injected resume builder when provided", async () => {
     const resumable = codexProvider({
-      home: "/home/x",
+      home: "/fake-home/x",
       readdir: async (path) =>
-        path === "/home/x/.codex/sessions" ? [{ name: `${CODEX_ID}.jsonl`, isDirectory: () => false }] : [],
+        path === "/fake-home/x/.codex/sessions" ? [{ name: `${CODEX_ID}.jsonl`, isDirectory: () => false }] : [],
       stat: async () => ({ mtimeMs: 0 }),
       resume: (s) => `codex resume ${s.id}`
     });

@@ -49,7 +49,7 @@ describe('GitPublishService', () => {
       await execa('git', ['-C', dir, 'config', 'commit.gpgsign', 'false']);
 
       mkdirSync(path.join(dir, '.agent-task-loop', 'logs'), { recursive: true });
-      writeFileSync(path.join(dir, '.agent-task-loop', 'logs', 'run.log'), `/Users/someone/workspace/${dir}\n`);
+      writeFileSync(path.join(dir, '.agent-task-loop', 'logs', 'run.log'), `workspace: ${dir}\n`);
       writeFileSync(path.join(dir, 'README.md'), 'real change\n');
 
       const service = new GitPublishService();

@@ -3,11 +3,11 @@ test "doctor aggregates statuses and warnings" {
   let probe = @model.Probe::{
     os: "linux",
     arch: "x64",
-    home: "/home/tester",
+    home: "/fake-home/tester",
     generated_at: "2026-05-03T00:00:00Z",
     commands: {},
     executable_paths: {},
-    existing_paths: { "/home/tester/.config/opencode": true },
+    existing_paths: { "/fake-home/tester/.config/opencode": true },
     versions: {},
   }
   let summary = doctor(@scanner.scan(probe))

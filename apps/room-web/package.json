@@ -2,6 +2,7 @@
   "name": "@rivus/room-web",
   "version": "0.0.2",
   "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "build:workspace-deps": "pnpm --filter @rivus/agent-orchestration build && pnpm --filter @rivus/agent-room build && pnpm --filter @rivus/agent-task-loop build",

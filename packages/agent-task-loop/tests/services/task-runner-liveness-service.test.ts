@@ -48,7 +48,7 @@ describe('TaskRunnerLivenessService', () => {
       priority: 1,
       status: '待复核',
       reviewRound: 3,
-      logPath: new URL('../fixtures/stale.log', import.meta.url).pathname,
+      logPath: new URL('../fixtures/stale-runner-log.txt', import.meta.url).pathname,
     });
 
     expect(inspection.state).toBe('stale');

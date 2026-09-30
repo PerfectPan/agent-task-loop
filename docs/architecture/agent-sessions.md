@@ -9,8 +9,11 @@ MoonBit.
 ## Model
 
 - `Session` is tool-agnostic: `id`, `agent` (attributed from the source root),
-  optional `title`, `cwd`, `path`, `createdAt`, `messageCount`, `updatedAt`
-  (metadata, else file mtime), and `resumable`.
+  optional `title`, `cwd`, `path`, `createdAt`, `messageCount`, and `updatedAt`
+  (metadata, else file mtime). There is no resumability flag on `Session`: a
+  session is resumable when `SessionProvider.resumeCommand(id)` returns a
+  command, and `null` means it cannot be resumed (unknown id, or a provider
+  without a configured resume).
 - `TranscriptEntry` is one turn: `role` (`user`, `assistant`, `reasoning`,
   `tool`), preview `text`, optional `toolName` and `timestamp`.
   `parseTranscript` reads Codex rollout JSONL (`{type, payload}`) and Claude
@@ -23,7 +26,10 @@ MoonBit.
 
 - `defaultSessionRoots` are `~/.codex/sessions` and `~/.claude/projects`,
   derived from the home directory. `CLAUDE_CONFIG_DIR` and Codex
-  `archived_sessions` are not consulted.
+  `archived_sessions` are not consulted, so Claude sessions under a custom
+  config directory and archived Codex sessions are not listed.
+  [Plan 0008](../plans/0008-shared-agent-infrastructure.md) Task 2 owns
+  adding both roots.
 - `buildFsIndex` walks the roots under a scan budget and depth cap, matches
   UUID-named `.jsonl` files, never throws, and takes injectable `readdir` and
   `stat` for tests.
@@ -49,8 +55,8 @@ MoonBit.
 
 - Resume prints a command; it does not start the agent. Codex
   (`codex resume <id>`) and Claude (`claude --resume <id>`) are supported.
-- OpenCode stores sessions in SQLite with `ses_…` ids, so it has no provider
-  and `resumable` is false for it.
+- OpenCode stores sessions in SQLite with `ses_…` ids, so it has no provider:
+  its sessions are not listed and `resumeCommand` returns `null` for them.
 - Traces are preview-grade: no `tool_result` bodies, diffs, or code-block
   rendering, and no in-trace search.
 

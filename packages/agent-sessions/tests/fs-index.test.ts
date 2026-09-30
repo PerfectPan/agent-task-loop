@@ -93,10 +93,10 @@ describe("buildFsIndex", () => {
   });
 
   it("defaultSessionRoots maps the two standard roots to their agents", () => {
-    const roots = defaultSessionRoots("/home/me");
+    const roots = defaultSessionRoots("/fake-home/me");
     expect(roots).toEqual<SessionRoot[]>([
-      { path: "/home/me/.codex/sessions", agent: "codex" },
-      { path: "/home/me/.claude/projects", agent: "claude" }
+      { path: "/fake-home/me/.codex/sessions", agent: "codex" },
+      { path: "/fake-home/me/.claude/projects", agent: "claude" }
     ]);
   });
 });

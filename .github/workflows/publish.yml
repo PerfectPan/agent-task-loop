@@ -51,23 +51,31 @@ jobs:
       - name: Package MoonBit module
         run: moon -C packages/agent-finder package
 
+      # The release PR is opened with GITHUB_TOKEN, and GitHub does not start
+      # workflows for events that token causes, so CI does not run on it by
+      # itself. Before merging, close and reopen the PR (or push an empty commit
+      # to its branch) as a person: `gh pr close <n> && gh pr reopen <n>`.
+      # A `gh workflow run` dispatch is not attached to the PR and does not count.
       - name: Create release pull request
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          version: pnpm version-packages
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          commitMode: github-api
+          version-script: pnpm version-packages
+          commit-message: "chore(release): version packages"
+          pr-title: "chore(release): version packages"
+          create-github-releases: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # changelog-github reads PR titles and authors through the API
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Publish to npm
         id: npm-publish
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         run: |
           pnpm release
           echo "published=true" >> "$GITHUB_OUTPUT"
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
 
   publish-moonbit:
     needs: publish

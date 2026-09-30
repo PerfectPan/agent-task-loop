@@ -78,7 +78,24 @@ pnpm test
 pnpm build
 ```
 
-After the pull request lands on `main`, GitHub Actions opens or updates a release pull request. Merging that release pull request runs `pnpm release`, which builds the package and publishes unpublished package versions through Changesets. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
+After the pull request lands on `main`, GitHub Actions opens or updates the release pull request `chore(release): version packages` on the branch `changeset-release/main`. It runs `pnpm version-packages`: Changesets bumps published packages and writes changelog entries through `@changesets/changelog-github`, then `pnpm sync:moonbit-version` copies the `@rivus/agent-finder-core` version into `packages/agent-finder/moon.mod.json`. Private workspace packages are not versioned.
+
+The release pull request is opened with the workflow's `GITHUB_TOKEN`. GitHub does not start workflows for events caused by that token, so CI does not run on the release pull request by itself. Before merging, close and reopen it as a person, or push an empty commit to its branch:
+
+```bash
+gh pr close <n> && gh pr reopen <n>
+```
+
+That is a normal `pull_request` event, so `CI` and `Review` run. `gh workflow run ci.yml` does not help: a dispatched run is not attached to the pull request and does not satisfy required checks.
+
+Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets, with `NPM_CONFIG_PROVENANCE=true` so npm attaches provenance. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
+
+Preview a release locally without committing the result:
+
+```bash
+pnpm changeset status --verbose
+pnpm exec changeset publish-plan
+```
 
 ## Failure Handling
 

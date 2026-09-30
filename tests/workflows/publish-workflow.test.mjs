@@ -13,6 +13,16 @@ test('npm publish workflow invokes MoonBit publish after Changesets publishes pa
   assert.match(workflow, /if:\s+\$\{\{\s*needs\.publish\.outputs\.published\s*==\s*'true'\s*\}\}/);
 });
 
+test('release PR passes the conventional PR title check and npm publish attaches provenance', async () => {
+  const workflow = await readFile(publishWorkflowPath, 'utf8');
+
+  assert.match(workflow, /uses:\s+changesets\/action@v2\s*$/m);
+  assert.match(workflow, /pr-title:\s+"chore\(release\): version packages"/);
+  assert.match(workflow, /commit-message:\s+"chore\(release\): version packages"/);
+  assert.match(workflow, /if:\s+steps\.changesets\.outputs\.has-changesets\s*==\s*'false'/);
+  assert.match(workflow, /NPM_CONFIG_PROVENANCE:\s+"true"/);
+});
+
 test('MoonBit publish workflow can be called by another workflow with credentials inherited', async () => {
   const workflow = await readFile(moonBitPublishWorkflowPath, 'utf8');
 

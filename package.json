@@ -19,7 +19,8 @@
     "version-packages": "changeset version && pnpm sync:moonbit-version"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@microsoft/api-extractor": "^7.58.8",
     "@rslib/core": "^0.21.3",
     "@types/react": "^19.2.0",

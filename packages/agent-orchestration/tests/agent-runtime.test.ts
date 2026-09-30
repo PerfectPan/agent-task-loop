@@ -385,6 +385,62 @@ describe('Inbox and runtime', () => {
     expect(lease.read(key)).toBeUndefined();
   });
 
+  it('reports a lease that could not be taken, so no queue waits on the activation', async () => {
+    // The HMR shape: the old host's lease is still fresh when the new one
+    // wakes the key. The activation must end loudly, not silently.
+    const leaseStore = new MemoryLeaseStore();
+    const foreignLease = new LeaseManager({
+      store: leaseStore,
+      clock: { now: () => 1_000 },
+      identity: { pid: 999_999 },
+      holderId: 'the-old-host',
+      liveness: { isAlive: () => true },
+    });
+    const failures: { key: string; error: string }[] = [];
+    const { runtime } = await runtimeWith({ leaseStore });
+    runtime.onActivationFailure((failedKey, error) => { failures.push({ key: failedKey, error }); });
+    foreignLease.acquire(key);
+    runtime.wake(key);
+    await settled(runtime, key);
+
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatchObject({ key });
+    expect(failures[0]!.error).toMatch(/already occupied/);
+    expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
+  });
+
+  it('survives an activation-failure handler that throws', async () => {
+    const { runtime } = await runtimeWith({
+      onActivate: async () => {
+        throw new Error('mkdir EACCES');
+      },
+    });
+    runtime.onActivationFailure(() => {
+      throw new Error('the log row exploded');
+    });
+    runtime.wake(key);
+    await settled(runtime, key);
+    // The activation's own failure is what stays; the handler's blow-up cost
+    // its report, not the process.
+    expect(runtime.lastError(key)).toMatch(/mkdir EACCES/);
+    expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
+  });
+
+  it('starts nothing new once close has run', async () => {
+    const { runtime, connector } = await runtimeWith({ connectorOptions: { hangPrompt: true } });
+    runtime.wake(key);
+    await vi.waitFor(() => expect(connector.connections[0]?.promptCalls).toBe(1));
+
+    await runtime.close();
+    // A wake after close — the abandoned-activation shape — is dropped, and
+    // the process close() ended stays the only one.
+    runtime.wake(key);
+    await new Promise(resolve => setTimeout(resolve, 25));
+    expect(connector.connections[0]?.promptCalls).toBe(1);
+    expect(connector.connections[0]?.closed).toBe(1);
+    expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
+  }, 15_000);
+
   it('close aborts the running activation and closes the processes it holds', async () => {
     const { runtime, connector } = await runtimeWith({ connectorOptions: { hangPrompt: true } });
     runtime.wake(key);

@@ -49,6 +49,11 @@ export interface AcpConnectorOptions {
    * before the client gives up on it; the runtime then discards the process.
    */
   cancelGraceMs?: number;
+  /**
+   * How long `close()` waits after SIGTERM before escalating to SIGKILL; a
+   * process that ignores the term signal must not pin the key forever.
+   */
+  closeKillMs?: number;
   /** Test seam: start the process yourself instead of through the login shell. */
   spawnProcess?: AcpProcessSpawner;
 }
@@ -56,6 +61,7 @@ export interface AcpConnectorOptions {
 const DEFAULT_INITIALIZE_TIMEOUT_MS = 45_000;
 const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
 const DEFAULT_CANCEL_GRACE_MS = 5_000;
+const DEFAULT_CLOSE_KILL_MS = 5_000;
 const STDERR_TAIL_BYTES = 8_192;
 
 /**
@@ -68,6 +74,7 @@ export class AcpConnector implements AgentConnector {
   private readonly initializeTimeoutMs: number;
   private readonly sessionTimeoutMs: number;
   private readonly cancelGraceMs: number;
+  private readonly closeKillMs: number;
   private readonly spawnProcess: AcpProcessSpawner;
 
   constructor(options: AcpConnectorOptions = {}) {
@@ -75,6 +82,7 @@ export class AcpConnector implements AgentConnector {
     this.initializeTimeoutMs = options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS;
     this.sessionTimeoutMs = options.sessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
     this.cancelGraceMs = options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS;
+    this.closeKillMs = options.closeKillMs ?? DEFAULT_CLOSE_KILL_MS;
     this.spawnProcess = options.spawnProcess ?? ((binding) => loginShellProcess(binding, this.shell));
   }
 
@@ -82,7 +90,7 @@ export class AcpConnector implements AgentConnector {
     const handle = this.spawnProcess(binding);
     try {
       const opened = await this.openClient(handle, signal);
-      return new AcpConnection(handle, opened, this.sessionTimeoutMs, this.cancelGraceMs);
+      return new AcpConnection(handle, opened, this.sessionTimeoutMs, this.cancelGraceMs, this.closeKillMs);
     } catch (error) {
       handle.kill();
       throw error;
@@ -216,11 +224,21 @@ async function scopedPath(
   if (!root) throw new Error(`${label}: no session root for ${sessionId}`);
   const resolved = await resolveReal(target, label);
   const within = relative(root, resolved);
-  if (within === '' || (!within.startsWith('..') && !isAbsolute(within))) return resolved;
+  // `..` and `..`-prefixed components only: a name that merely starts with
+  // two dots (`..foo`) is an ordinary in-root name.
+  if (
+    within === ''
+    || (within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within))
+  ) {
+    return resolved;
+  }
   throw new Error(`${label}: ${target} is outside the session cwd`);
 }
 
 async function resolveReal(target: string, label: string): Promise<string> {
+  // ACP paths are absolute; a relative one resolves against this process's
+  // cwd, which is not a place the session named, so it is refused outright.
+  if (!isAbsolute(target)) throw new Error(`${label}: ${target} is not an absolute path`);
   let current = resolve(target);
   for (let hops = 0; hops < 40; hops += 1) {
     const parts = current.split(sep);
@@ -258,7 +276,10 @@ async function resolveReal(target: string, label: string): Promise<string> {
     }
     if (!followed) return walked;
   }
-  return current;
+  // A chain this long is a loop or a fight. Returning the last link would
+  // hand the OS a path it would happily follow the rest of the way out of
+  // the root, so the walk refuses instead.
+  throw new Error(`${label}: ${target} resolves through too many symlinks`);
 }
 
 interface OpenedClient {
@@ -278,6 +299,7 @@ class AcpConnection implements AgentConnection {
     private readonly opened: OpenedClient,
     private readonly sessionTimeoutMs: number,
     private readonly cancelGraceMs: number,
+    private readonly closeKillMs: number,
   ) {
     void this.handle.exit.catch(() => undefined);
   }
@@ -365,7 +387,21 @@ class AcpConnection implements AgentConnection {
 
   async close(): Promise<void> {
     this.handle.kill();
-    await this.handle.exit;
+    const exited = await Promise.race([
+      this.handle.exit.then(
+        () => true,
+        () => true,
+      ),
+      new Promise<boolean>(resolve => {
+        const timer = setTimeout(() => resolve(false), this.closeKillMs);
+        timer.unref?.();
+      }),
+    ]);
+    if (exited) return;
+    // A process that sat through SIGTERM — the lease stays held and the
+    // heartbeat keeps it fresh until the process is really gone.
+    this.handle.kill('SIGKILL');
+    await this.handle.exit.catch(() => undefined);
   }
 }
 

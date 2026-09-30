@@ -250,3 +250,45 @@ describe('client-side fs', () => {
     await connection.close();
   });
 });
+
+describe('client-side fs resolution limits', () => {
+  it('refuses a chain past the hop limit, allows in-root ..-names, refuses relative paths', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-chain-'));
+    writeFileSync(join(root, '..keep.md'), 'an ordinary name that starts with two dots', 'utf8');
+    const outside = mkdtempSync(join(tmpdir(), 'rivus-acp-fs-chain-out-'));
+    writeFileSync(join(outside, 'secret.md'), 'at the end of the chain', 'utf8');
+    // Forty-five links, every one of them inside the root, ending outside it.
+    let link = join(outside, 'secret.md');
+    for (let index = 0; index < 45; index += 1) {
+      const next = join(root, `l${index}`);
+      symlinkSync(link, next);
+      link = next;
+    }
+
+    const { connector, agent } = connectorWith({
+      extraReads: [join(root, '..keep.md'), link, 'relative.md'],
+    });
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: root });
+    await connection.prompt(session, [{ type: 'text', text: 'resolve these' }]);
+
+    expect(agent()?.fsResults).toEqual([
+      `readTextFile ${join(root, '..keep.md')}: ok`,
+      `readTextFile ${link}: refused`,
+      'readTextFile relative.md: refused',
+    ]);
+    await connection.close();
+  });
+});
+
+describe('close escalation', () => {
+  it('kills with SIGKILL once the process has sat through SIGTERM', async () => {
+    const fake = fakeAcpProcess({ ignoreSigterm: true });
+    const connector = new AcpConnector({ spawnProcess: () => fake.handle, closeKillMs: 30 });
+    const connection = await connector.connect(binding);
+    const session = await connection.newSession({ cwd: '/tmp/fake-room' });
+    await connection.prompt(session, [{ type: 'text', text: 'work' }]);
+    await connection.close();
+    expect(fake.kills).toEqual([undefined, 'SIGKILL']);
+  });
+});

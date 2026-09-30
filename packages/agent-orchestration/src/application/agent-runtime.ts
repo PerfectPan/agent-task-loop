@@ -86,6 +86,8 @@ export class AgentRuntime {
   private activateHandler: ActivateHandler | undefined;
   private sessionDiscardHandler: ((key: string) => void | Promise<void>) | undefined;
   private activationFailureHandler: ActivationFailureHandler | undefined;
+  /** Set by close(): a shut-down runtime starts no further activations. */
+  private closed = false;
 
   constructor(options: AgentRuntimeOptions) {
     this.connector = options.connector;
@@ -125,6 +127,7 @@ export class AgentRuntime {
 
   /** Coalesces; never blocks the caller. */
   wake(key: string): void {
+    if (this.closed) return;
     const inbox = this.inboxRecord(key);
     if (inbox.state === 'running') {
       // Not dropped, not queued as a second run: one more activation that
@@ -241,16 +244,23 @@ export class AgentRuntime {
       afterTurn = this.emitAfterTurn(harness, timedOut, prompt?.stopReason ?? null, record, undefined);
     } catch (error) {
       inbox.lastError = errorText(error);
-      // A lease lost to another holder is the successor's business, not a
-      // turn; everything after the harness exists is that turn's failure.
-      if (harness && record && !(error instanceof OrchestrationConflictError)) {
+      // A lease lost mid-turn is the successor's business, not this turn's;
+      // everything after the harness exists is that turn's failure, and a
+      // lease that could not be taken at all — a conflict at acquire, the
+      // HMR window where the old host's lease is still fresh — is reported
+      // too: no afterTurn will ever come for it, and an endpoint whose
+      // serial queues wait on every activation ending would stall.
+      const conflict = error instanceof OrchestrationConflictError;
+      if (harness && record && !conflict) {
         afterTurn = this.emitAfterTurn(harness, timedOut, null, record, error);
-      } else if (!(error instanceof OrchestrationConflictError)) {
-        activationFailed = Promise.resolve(
-          this.activationFailureHandler?.(key, errorText(error)),
-        ).catch((handlerError: unknown) => {
-          inbox.lastError ??= errorText(handlerError);
-        });
+      } else if (record === undefined || !conflict) {
+        // Deferred: a handler that throws synchronously must not escape the
+        // catch into an unawaited rejection.
+        activationFailed = Promise.resolve()
+          .then(() => this.activationFailureHandler?.(key, errorText(error)))
+          .catch((handlerError: unknown) => {
+            inbox.lastError ??= errorText(handlerError);
+          });
       }
       if (connection) {
         // The process or session is of unknown health after a failure; the
@@ -285,7 +295,7 @@ export class AgentRuntime {
       inbox.controller = undefined;
       inbox.activation = undefined;
       inbox.state = 'idle';
-      if (inbox.pending) {
+      if (inbox.pending && !this.closed) {
         inbox.pending = false;
         inbox.state = 'running';
         inbox.activation = this.activate(key, inbox);
@@ -361,9 +371,13 @@ export class AgentRuntime {
   /**
    * Stops every inbox: aborts the running activations — their turns end as
    * cancelled or failed, never silently — and closes the processes they hold.
-   * Shutdown only; a live runtime keeps its processes across turns.
+   * Nothing new starts after it: a wake, or a pending restart an aborted
+   * turn's afterTurn triggers, is dropped rather than spawning a process
+   * nobody will close. Shutdown only; a live runtime keeps its processes
+   * across turns.
    */
   async close(): Promise<void> {
+    this.closed = true;
     const inboxes = [...this.inboxes.values()];
     for (const inbox of inboxes) {
       inbox.pending = false;

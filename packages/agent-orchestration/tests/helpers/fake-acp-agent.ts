@@ -31,6 +31,10 @@ export interface FakeAgentConfig {
   ignoreCancel?: boolean;
   /** prompt exercises the client-side fs on these paths, recording each outcome. */
   clientFs?: { inside: string; outside: string; content: string; via?: string };
+  /** prompt also reads these paths through the client, recording each outcome. */
+  extraReads?: string[];
+  /** The process ignores SIGTERM; only SIGKILL ends it. */
+  ignoreSigterm?: boolean;
 }
 
 export class FakeAcpAgent {
@@ -110,6 +114,14 @@ export class FakeAcpAgent {
         }
       }
     }
+    for (const path of this.config.extraReads ?? []) {
+      try {
+        await this.connection.readTextFile({ sessionId: params.sessionId, path });
+        this.fsResults.push(`readTextFile ${path}: ok`);
+      } catch {
+        this.fsResults.push(`readTextFile ${path}: refused`);
+      }
+    }
     if (this.config.requestPermission) {
       const response = await this.connection.requestPermission({
         sessionId: params.sessionId,
@@ -162,6 +174,8 @@ export class FakeAcpAgent {
 export function fakeAcpProcess(config: FakeAgentConfig = {}): {
   handle: AcpProcessHandle;
   agent: () => FakeAcpAgent | undefined;
+  /** The signals `kill` was called with, in order. */
+  kills: Array<NodeJS.Signals | undefined>;
 } {
   const clientToAgent = new PassThrough();
   const agentToClient = new PassThrough();
@@ -174,6 +188,7 @@ export function fakeAcpProcess(config: FakeAgentConfig = {}): {
     holder.agent = new FakeAcpAgent(config, connection);
     return holder.agent;
   }, agentStream);
+  const kills: Array<NodeJS.Signals | undefined> = [];
   let killed: (() => void) | undefined;
   const exit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
     killed = () => {
@@ -188,8 +203,13 @@ export function fakeAcpProcess(config: FakeAgentConfig = {}): {
       stdout: agentToClient,
       stderr: undefined,
       exit,
-      kill: () => killed?.(),
+      kill: (signal) => {
+        kills.push(signal);
+        if (config.ignoreSigterm && signal !== 'SIGKILL') return;
+        killed?.();
+      },
     },
     agent: () => holder.agent,
+    kills,
   };
 }

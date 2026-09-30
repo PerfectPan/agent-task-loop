@@ -1,5 +1,12 @@
 # @rivus/room-web
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [f2d016a]
+  - @rivus/agent-task-loop@0.11.1
+
 ## 0.0.1
 
 ### Patch Changes

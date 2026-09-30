@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft |
-| Date | 2026-09-23 |
+| Status | Implemented |
+| Date | 2026-09-23, implemented 2026-09-30 (PR #120) |
 | Supersedes | RFC 0013 "Addressing" and "Send lifecycle"; RFC 0010 Chapter B wake policy and the `wake-on-peer-posts` knob |
 | Related | RFC 0010 (team runtime), RFC 0011 (orchestration kernel), RFC 0012 (domain layout), RFC 0014 (task board) |
 

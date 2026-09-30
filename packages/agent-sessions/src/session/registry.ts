@@ -1,12 +1,12 @@
-import type { Session } from "./types.js";
-import type { TranscriptEntry } from "../transcript/types.js";
+import type { Session } from './types.js';
+import type { TranscriptEntry } from '../transcript/types.js';
 import {
   claudeProvider,
   codexProvider,
   type ListOptions,
   type ProviderFactoryOptions,
-  type SessionProvider
-} from "./provider.js";
+  type SessionProvider,
+} from './provider.js';
 
 /**
  * Aggregates per-tool {@link SessionProvider}s into one cross-tool view:
@@ -29,7 +29,9 @@ export class SessionRegistry {
   async getTranscript(id: string, maxLines?: number): Promise<TranscriptEntry[]> {
     for (const provider of this.providers) {
       const transcript = await provider.getTranscript(id, maxLines);
-      if (transcript.length > 0) return transcript;
+      if (transcript.length > 0) {
+        return transcript;
+      }
     }
     return [];
   }
@@ -37,7 +39,9 @@ export class SessionRegistry {
   async resumeCommand(id: string): Promise<string | null> {
     for (const provider of this.providers) {
       const command = await provider.resumeCommand(id);
-      if (command) return command;
+      if (command) {
+        return command;
+      }
     }
     return null;
   }

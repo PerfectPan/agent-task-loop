@@ -22,10 +22,7 @@ function tryParseReviewPayload(raw: string): ParsedReviewPayload | undefined {
 
   try {
     const parsed = JSON.parse(trimmed) as ParsedReviewPayload;
-    if (
-      (parsed.verdict === '通过' || parsed.verdict === '驳回') &&
-      Array.isArray(parsed.findings)
-    ) {
+    if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
       return parsed;
     }
   } catch {
@@ -34,16 +31,13 @@ function tryParseReviewPayload(raw: string): ParsedReviewPayload | undefined {
 
   const lines = trimmed
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     try {
       const parsed = JSON.parse(lines[index]!) as ParsedReviewPayload;
-      if (
-        (parsed.verdict === '通过' || parsed.verdict === '驳回') &&
-        Array.isArray(parsed.findings)
-      ) {
+      if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
         return parsed;
       }
     } catch {
@@ -115,7 +109,7 @@ export class ReviewService {
       signal: input.signal,
       onSpawn: input.onSpawn,
       onHeartbeat: input.onHeartbeat,
-      onSession: payload => {
+      onSession: (payload) => {
         latestSessionId = payload.sessionId;
         input.onSession?.(payload);
       },

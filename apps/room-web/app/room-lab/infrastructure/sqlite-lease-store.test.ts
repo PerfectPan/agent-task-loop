@@ -36,8 +36,9 @@ describe('SqliteLeaseStore', () => {
     leases.tryCreate(KEY, holder);
 
     // A different heartbeat than the stored one is not the current record.
-    expect(leases.tryReplace(KEY, { ...holder, heartbeatAt: '2026-09-28T00:00:01.000Z' }, record(2, 'holder-b')))
-      .toBe(false);
+    expect(leases.tryReplace(KEY, { ...holder, heartbeatAt: '2026-09-28T00:00:01.000Z' }, record(2, 'holder-b'))).toBe(
+      false,
+    );
     expect(leases.read(KEY)).toEqual(holder);
 
     expect(leases.tryReplace(KEY, holder, record(2, 'holder-b'))).toBe(true);
@@ -49,8 +50,9 @@ describe('SqliteLeaseStore', () => {
     const holder = record();
     leases.tryCreate(KEY, holder);
 
-    expect(leases.tryTouch(record(9, 'someone-else'), record(9, 'someone-else', '2026-09-28T00:00:02.000Z')))
-      .toBe(false);
+    expect(leases.tryTouch(record(9, 'someone-else'), record(9, 'someone-else', '2026-09-28T00:00:02.000Z'))).toBe(
+      false,
+    );
     expect(leases.tryRelease(record(9, 'someone-else'))).toBe(false);
     expect(leases.read(KEY)).toEqual(holder);
 
@@ -96,8 +98,10 @@ describe('SqliteLeaseStore', () => {
     leases.tryCreate(KEY, holder);
     const operation = vi.fn(async () => 'written');
 
-    await expect(leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, operation))
-      .resolves.toEqual({ executed: true, value: 'written' });
+    await expect(leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, operation)).resolves.toEqual({
+      executed: true,
+      value: 'written',
+    });
     expect(operation).toHaveBeenCalledOnce();
   });
 
@@ -108,8 +112,9 @@ describe('SqliteLeaseStore', () => {
     leases.tryReplace(KEY, holder, record(2, 'holder-b'));
     const operation = vi.fn(async () => 'written');
 
-    await expect(leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, operation))
-      .resolves.toEqual({ executed: false });
+    await expect(leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, operation)).resolves.toEqual({
+      executed: false,
+    });
     expect(operation).not.toHaveBeenCalled();
   });
 
@@ -119,18 +124,15 @@ describe('SqliteLeaseStore', () => {
     leases.tryCreate(KEY, holder);
     const order: string[] = [];
     let releaseOld: () => void = () => undefined;
-    const oldWork = new Promise<void>(resolve => {
+    const oldWork = new Promise<void>((resolve) => {
       releaseOld = resolve;
     });
 
-    const oldWrite = leases.runFenced(
-      { key: KEY, holderPid: 1, holderId: 'holder-a' },
-      async () => {
-        order.push('old:start');
-        await oldWork;
-        order.push('old:end');
-      },
-    );
+    const oldWrite = leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, async () => {
+      order.push('old:start');
+      await oldWork;
+      order.push('old:end');
+    });
     // Wait until the old write has passed the re-read and is inside the operation.
     await vi.waitFor(() => expect(order).toEqual(['old:start']));
 
@@ -145,7 +147,7 @@ describe('SqliteLeaseStore', () => {
       },
     );
 
-    await new Promise(resolve => setTimeout(resolve, 15));
+    await new Promise((resolve) => setTimeout(resolve, 15));
     expect(order).toEqual(['old:start']);
 
     releaseOld();
@@ -160,7 +162,7 @@ describe('SqliteLeaseStore', () => {
     const token = { key: KEY, holderPid: 1, holderId: 'holder-a' };
     const order: string[] = [];
     let releaseHeartbeat: () => void = () => undefined;
-    const heartbeatGate = new Promise<void>(resolve => {
+    const heartbeatGate = new Promise<void>((resolve) => {
       releaseHeartbeat = resolve;
     });
 
@@ -179,7 +181,7 @@ describe('SqliteLeaseStore', () => {
     releaseHeartbeat();
     const results = await Promise.all([first, second]);
     expect(order).toEqual(['first:start', 'first:end', 'second']);
-    expect(results.every(result => result.executed)).toBe(true);
+    expect(results.every((result) => result.executed)).toBe(true);
   });
 
   it('rejects when the signal is already aborted', async () => {

@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  RoomValidationError,
-  createMemoryRoomStreamStore,
-  roomKey,
-} from '../src/index';
+import { RoomValidationError, createMemoryRoomStreamStore, roomKey } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 
@@ -151,5 +147,4 @@ describe('memory admit', () => {
       }),
     ).rejects.toBeInstanceOf(RoomValidationError);
   });
-
 });

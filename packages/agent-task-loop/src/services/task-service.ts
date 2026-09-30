@@ -1,8 +1,5 @@
 import type { AppConfig } from '../config/schema';
-import {
-  buildTaskProvider,
-  type BuildTaskProviderOptions,
-} from '../task-management/build-task-provider';
+import { buildTaskProvider, type BuildTaskProviderOptions } from '../task-management/build-task-provider';
 import type {
   ClaimTaskPayload,
   CreateTaskPayload,

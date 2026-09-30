@@ -15,12 +15,12 @@ describe('agents migration', () => {
     const store = SqliteRoomStore.open(root());
     const agents = store.agents.list();
 
-    expect(agents.map(agent => agent.id)).toEqual(['claude', 'codex', 'opencode']);
-    expect(agents.map(agent => agent.position)).toEqual([0, 1, 2]);
-    expect(agents.every(agent => agent.color >= 1 && agent.color <= 5)).toBe(true);
+    expect(agents.map((agent) => agent.id)).toEqual(['claude', 'codex', 'opencode']);
+    expect(agents.map((agent) => agent.position)).toEqual([0, 1, 2]);
+    expect(agents.every((agent) => agent.color >= 1 && agent.color <= 5)).toBe(true);
     // The seeds are the candidate catalog: the command line is the ACP binding
     // the probe starts, not a headless CLI invocation.
-    expect(store.agents.list().map(agent => agent.command)).toEqual([
+    expect(store.agents.list().map((agent) => agent.command)).toEqual([
       'claude-agent-acp',
       'codex-acp',
       'opencode acp',
@@ -31,7 +31,7 @@ describe('agents migration', () => {
     const home = root();
     // A library at version 1: one room whose crew includes an id this project
     // does not ship, plus a system prompt for another.
-    createVersionOneLibrary(home, db => {
+    createVersionOneLibrary(home, (db) => {
       db.exec(`
         INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
         VALUES ('r_aaaaaaaaaa', '旧房间', NULL, '2026-09-06T00:00:00.000Z', '2026-09-06T00:00:00.000Z', '2026-09-06T00:00:00.000Z');
@@ -47,9 +47,7 @@ describe('agents migration', () => {
     const store = SqliteRoomStore.open(home);
     const agents = store.agents.list();
 
-    expect(agents.map(agent => agent.id)).toEqual([
-      'claude', 'codex', 'opencode', 'inherited-one', 'inherited-two',
-    ]);
+    expect(agents.map((agent) => agent.id)).toEqual(['claude', 'codex', 'opencode', 'inherited-one', 'inherited-two']);
     expect(store.agents.get('inherited-one')).toMatchObject({
       label: 'inherited-one',
       role: '成员',
@@ -76,11 +74,10 @@ describe('agents migration', () => {
   it('numbers positions in insertion order and draws every colour from 1…5', () => {
     const rows = buildAgentSeedRows(['legacy'], '2026-09-18T00:00:00.000Z', () => 2);
 
-    expect(rows.map(row => row.position)).toEqual([0, 1, 2, 3]);
-    expect(rows.map(row => row.color)).toEqual([2, 2, 2, 2]);
+    expect(rows.map((row) => row.position)).toEqual([0, 1, 2, 3]);
+    expect(rows.map((row) => row.color)).toEqual([2, 2, 2, 2]);
     expect(rows.at(-1)).toMatchObject({ id: 'legacy', role: '成员' });
     // An id the project already ships is not seeded a second time.
-    expect(buildAgentSeedRows(['codex', 'codex'], '2026-09-18T00:00:00.000Z'))
-      .toHaveLength(DEFAULT_AGENT_SEEDS.length);
+    expect(buildAgentSeedRows(['codex', 'codex'], '2026-09-18T00:00:00.000Z')).toHaveLength(DEFAULT_AGENT_SEEDS.length);
   });
 });

@@ -8,8 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://agent-task-loop.vercel.app'),
   openGraph: {
     title: 'Agent Task Loop',
-    description:
-      'Drive AI coding agents through task execution, review, rework, and PR handoff — from your terminal.',
+    description: 'Drive AI coding agents through task execution, review, rework, and PR handoff — from your terminal.',
     type: 'website',
   },
   twitter: {

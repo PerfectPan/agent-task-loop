@@ -8,11 +8,7 @@ import { fixedNow } from '../helpers';
 // the passed logTail and derive hasLog from it. This keeps the test focused on
 // FsSessionProvider's own logic (path selection, tailing, error handling).
 vi.mock('../../../src/tui/data/session-provider', () => ({
-  buildPreviewFromTask: (
-    task: TaskRecord,
-    _now: number,
-    logTail: string[] = [],
-  ): SessionPreview => ({
+  buildPreviewFromTask: (task: TaskRecord, _now: number, logTail: string[] = []): SessionPreview => ({
     taskId: task.taskId,
     runner: {},
     heartbeat: { state: 'none', ageMs: null },
@@ -123,8 +119,9 @@ describe('FsSessionProvider', () => {
       '/root/2026': [file('other.jsonl'), file(`rollout-2026-${sid}.jsonl`)],
     };
     const readdir = vi.fn(async (path: string) => tree[path] ?? []);
-    const readFile = vi.fn(async () =>
-      '{"payload":{"type":"user_message","message":"hi"}}\n{"payload":{"type":"agent_message","message":"done"}}\n',
+    const readFile = vi.fn(
+      async () =>
+        '{"payload":{"type":"user_message","message":"hi"}}\n{"payload":{"type":"agent_message","message":"done"}}\n',
     );
     const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
 
@@ -138,9 +135,7 @@ describe('FsSessionProvider', () => {
 
   it('caches the transcript index across calls', async () => {
     const sid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    const readdir = vi.fn(async (path: string) =>
-      path === '/root' ? [file(`${sid}.jsonl`)] : [],
-    );
+    const readdir = vi.fn(async (path: string) => (path === '/root' ? [file(`${sid}.jsonl`)] : []));
     const readFile = vi.fn(async () => '{"payload":{"type":"agent_message","message":"x"}}\n');
     const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
 

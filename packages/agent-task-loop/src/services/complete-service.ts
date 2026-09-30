@@ -200,7 +200,9 @@ export class CompleteService {
       lastError: '',
     });
 
-    const existingPullRequest = await this.deps.pullRequestService.findOpenPullRequestByBranch({ branch: context.branch });
+    const existingPullRequest = await this.deps.pullRequestService.findOpenPullRequestByBranch({
+      branch: context.branch,
+    });
 
     const generatedPullRequest = await this.generatePullRequestContentWithHistory({
       workspacePath: task.workspacePath,
@@ -221,8 +223,13 @@ export class CompleteService {
         description: generatedPullRequest.body,
       }));
     const pullRequestDetail =
-      typeof pullRequest.description === 'string' ? pullRequest : await this.deps.pullRequestService.getPullRequest({ number: pullRequest.number });
-    const nextPullRequestDescription = mergeProcessSummaryDescription(pullRequestDetail.description, generatedPullRequest.body);
+      typeof pullRequest.description === 'string'
+        ? pullRequest
+        : await this.deps.pullRequestService.getPullRequest({ number: pullRequest.number });
+    const nextPullRequestDescription = mergeProcessSummaryDescription(
+      pullRequestDetail.description,
+      generatedPullRequest.body,
+    );
     await this.deps.taskService.updatePublishResult(task, {
       prLink: pullRequest.url,
       publishBranch: context.branch,

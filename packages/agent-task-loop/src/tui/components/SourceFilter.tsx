@@ -21,9 +21,9 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
   const [checked, setChecked] = useState<Set<string>>(() => new Set(selected));
   const [index, setIndex] = useState(0);
 
-  const move = (delta: number) => setIndex(i => (i + delta + options.length) % options.length);
+  const move = (delta: number) => setIndex((i) => (i + delta + options.length) % options.length);
   const toggle = (id: string) =>
-    setChecked(prev => {
+    setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -38,7 +38,7 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
       return onCancel();
     }
     if (key.return) {
-      return onApply(options.filter(o => checked.has(o.id)).map(o => o.id));
+      return onApply(options.filter((o) => checked.has(o.id)).map((o) => o.id));
     }
     if (key.upArrow || input === 'k') {
       return move(-1);
@@ -51,7 +51,7 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
     }
     if (input === 'a') {
       // Toggle all on/off.
-      setChecked(prev => (prev.size === options.length ? new Set() : new Set(options.map(o => o.id))));
+      setChecked((prev) => (prev.size === options.length ? new Set() : new Set(options.map((o) => o.id))));
     }
   });
 
@@ -81,7 +81,7 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
         })}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>[↑↓/jk] move  [Space] toggle  [a] all  [Enter] apply  [Esc] cancel</Text>
+        <Text dimColor>[↑↓/jk] move [Space] toggle [a] all [Enter] apply [Esc] cancel</Text>
       </Box>
     </Box>
   );

@@ -35,7 +35,7 @@ describe('FileTaskStateStore', () => {
     expect(store.read('github:o/r', '7')).toEqual({ runId: 'a' });
     expect(store.read('feishu', '7')).toEqual({ runId: 'b' });
     // no ':' or '/' in on-disk dir names
-    expect(readdirSync(dir).every(name => !name.includes(':') && !name.includes('/'))).toBe(true);
+    expect(readdirSync(dir).every((name) => !name.includes(':') && !name.includes('/'))).toBe(true);
   });
 
   it('does not collide sources that naive sanitize would merge', () => {

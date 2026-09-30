@@ -7,14 +7,16 @@ vi.mock('../../src/adapters/base', () => ({
 describe('codexAdapter', () => {
   it('captures codex session id from output', async () => {
     const mod = await import('../../src/adapters/base');
-    vi.mocked(mod.runAgentCommand).mockImplementation(async (_command, _args, _env, _cwd, _onSpawn, _onHeartbeat, onOutput) => {
-      onOutput?.('OpenAI Codex v0.111.0\nsession id: 019d8d27-3942-7361-9e13-afd8142aa883\n');
-      return {
-        stdout: 'done',
-        stderr: '',
-        exitCode: 0,
-      };
-    });
+    vi.mocked(mod.runAgentCommand).mockImplementation(
+      async (_command, _args, _env, _cwd, _onSpawn, _onHeartbeat, onOutput) => {
+        onOutput?.('OpenAI Codex v0.111.0\nsession id: 019d8d27-3942-7361-9e13-afd8142aa883\n');
+        return {
+          stdout: 'done',
+          stderr: '',
+          exitCode: 0,
+        };
+      },
+    );
 
     const { codexAdapter } = await import('../../src/adapters/codex');
     const onSession = vi.fn();

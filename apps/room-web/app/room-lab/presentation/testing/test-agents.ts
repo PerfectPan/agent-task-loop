@@ -13,7 +13,7 @@ export const TEST_AGENTS: readonly AgentDefinition[] = [
   { id: 'dsh', label: 'DSH', role: '分析', command: 'dsh --profile headless', color: 5, position: 4, systemPrompt: '' },
 ];
 
-export const TEST_AGENT_IDS = TEST_AGENTS.map(agent => agent.id);
+export const TEST_AGENT_IDS = TEST_AGENTS.map((agent) => agent.id);
 
 export function testRegistry(agents: readonly AgentDefinition[] = TEST_AGENTS): AgentRegistry {
   return AgentRegistry.of(agents);

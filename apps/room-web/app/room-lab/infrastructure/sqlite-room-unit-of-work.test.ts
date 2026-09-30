@@ -13,10 +13,12 @@ const TENANT = 'local';
 function library(): { store: SqliteRoomStore; roomId: RoomId } {
   const store = SqliteRoomStore.memory();
   const roomId: RoomId = { tenantId: TENANT, conversationId: 'r_aaaaaaaaaa' };
-  store.db.prepare(`
+  store.db
+    .prepare(`
     INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
     VALUES ('r_aaaaaaaaaa', '共享房间', NULL, '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z')
-  `).run();
+  `)
+    .run();
   return { store, roomId };
 }
 
@@ -25,10 +27,12 @@ describe('SqliteRoomStreamStore wake depth', () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-unit-of-work-'));
     const store = SqliteRoomStore.open(root);
     const roomId: RoomId = { tenantId: TENANT, conversationId: 'r_aaaaaaaaaa' };
-    store.db.prepare(`
+    store.db
+      .prepare(`
       INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
       VALUES ('r_aaaaaaaaaa', '深度房间', NULL, '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z')
-    `).run();
+    `)
+      .run();
 
     const stream = new SqliteRoomStreamStore(store.db, roomId);
     const codex: AgentSessionId = {
@@ -53,7 +57,9 @@ describe('SqliteRoomStreamStore wake depth', () => {
       readUpToSeq: admitted.event.seq,
       triggerSeq: admitted.event.seq,
     });
-    if (posted.outcome !== 'posted') throw new Error('the post should have gone through');
+    if (posted.outcome !== 'posted') {
+      throw new Error('the post should have gone through');
+    }
     expect(posted.event.wakeDepth).toBe(admitted.event.wakeDepth + 1);
     expect(stream.inspectSession(codex)).toMatchObject({ seenSeq: posted.seq });
 
@@ -62,12 +68,14 @@ describe('SqliteRoomStreamStore wake depth', () => {
     const reopened = new DatabaseSync(join(root, 'rooms.sqlite'));
     const restored = new SqliteRoomStreamStore(reopened, roomId);
     const slice = await restored.readSlice(roomId, 0, { maxEvents: 100 });
-    expect(slice.events.map(event => ({
-      seq: event.seq,
-      kind: event.kind,
-      authorId: event.author.id,
-      wakeDepth: event.wakeDepth,
-    }))).toEqual([
+    expect(
+      slice.events.map((event) => ({
+        seq: event.seq,
+        kind: event.kind,
+        authorId: event.author.id,
+        wakeDepth: event.wakeDepth,
+      })),
+    ).toEqual([
       { seq: 1, kind: 'human', authorId: 'director', wakeDepth: 0 },
       { seq: 2, kind: 'posted', authorId: 'codex', wakeDepth: 1 },
     ]);
@@ -127,7 +135,7 @@ describe('SqliteRoomStreamStore instances on one room', () => {
     // newer event lands beside it, not on top of it.
     for (const view of [serviceView, dmView]) {
       const slice = await view.readSlice(roomId, 0, { maxEvents: 10 });
-      expect(slice.events.map(event => event.seq)).toEqual([1, 2]);
+      expect(slice.events.map((event) => event.seq)).toEqual([1, 2]);
     }
     const posted = await serviceView.speak({
       session: claude,
@@ -136,10 +144,12 @@ describe('SqliteRoomStreamStore instances on one room', () => {
       readUpToSeq: 2,
       triggerSeq: 2,
     });
-    if (posted.outcome !== 'posted') throw new Error('the post should have gone through');
+    if (posted.outcome !== 'posted') {
+      throw new Error('the post should have gone through');
+    }
     expect(posted.seq).toBe(3);
     const slice = await dmView.readSlice(roomId, 0, { maxEvents: 10 });
-    expect(slice.events.map(event => [event.seq, event.author.id])).toEqual([
+    expect(slice.events.map((event) => [event.seq, event.author.id])).toEqual([
       [1, 'director'],
       [2, 'codex'],
       [3, 'claude'],

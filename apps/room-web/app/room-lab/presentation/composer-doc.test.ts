@@ -32,8 +32,8 @@ describe('composer document', () => {
   it('agrees with parseRoomMessage about who was addressed', () => {
     const value = '@codex 和 @claude 看一下，@nobody 不算';
     const chips = (textToDoc(value, ACTIVE).content?.[0]?.content ?? [])
-      .filter(node => node.type === 'mention')
-      .map(node => node.attrs?.id);
+      .filter((node) => node.type === 'mention')
+      .map((node) => node.attrs?.id);
     expect(chips).toEqual(['codex', 'claude']);
     expect(parseRoomMessage(value, ['claude', 'codex']).addressedTo.sort()).toEqual(['claude', 'codex']);
   });
@@ -61,17 +61,17 @@ describe('composer document', () => {
   });
 
   it('reads a hard break as a newline', () => {
-    expect(docToText({
-      type: 'doc',
-      content: [{
-        type: 'paragraph',
+    expect(
+      docToText({
+        type: 'doc',
         content: [
-          { type: 'text', text: '上' },
-          { type: 'hardBreak' },
-          { type: 'text', text: '下' },
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '上' }, { type: 'hardBreak' }, { type: 'text', text: '下' }],
+          },
         ],
-      }],
-    })).toBe('上\n下');
+      }),
+    ).toBe('上\n下');
   });
 
   it('reads an empty document, and a document holding only an empty paragraph, as empty', () => {

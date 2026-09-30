@@ -81,8 +81,8 @@ export function buildAgentSeedRows(
   now: string,
   color: () => number = randomAgentColor,
 ): AgentSeedRow[] {
-  const seeded = new Set(DEFAULT_AGENT_SEEDS.map(agent => agent.id));
-  const inherited = [...new Set(inheritedIds)].filter(id => !seeded.has(id));
+  const seeded = new Set(DEFAULT_AGENT_SEEDS.map((agent) => agent.id));
+  const inherited = [...new Set(inheritedIds)].filter((id) => !seeded.has(id));
   return [...DEFAULT_AGENT_SEEDS, ...inherited.map(inheritedAgentSeed)].map((agent, index) => ({
     ...agent,
     color: color(),

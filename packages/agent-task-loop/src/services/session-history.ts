@@ -49,7 +49,7 @@ export function appendSessionHistory(existing: string | undefined, entry: string
 
   const lines = existing
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   if (lines.includes(normalizedEntry)) {

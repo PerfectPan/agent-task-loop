@@ -30,8 +30,7 @@ function buildDiagram(): string[] {
   const inner = Math.max(1, colRework - colReview - 1);
   const dash = Math.max(0, inner - displayWidth(label));
   const left = Math.floor(dash / 2);
-  const arcTop =
-    padTo('', colReview) + '┌' + '─'.repeat(left) + label + '─'.repeat(dash - left) + '┐';
+  const arcTop = padTo('', colReview) + '┌' + '─'.repeat(left) + label + '─'.repeat(dash - left) + '┐';
 
   return [
     '  ◌ 待处理',
@@ -79,7 +78,9 @@ function DiagramLine({ line, current }: { line: string; current?: TaskStatus }) 
 
 /** Full-screen overlay drawing the task workflow as one connected diagram. */
 export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps): React.ReactElement | null {
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
   return (
     <Box flexGrow={1} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} overflow="hidden">
       <Text bold color="cyan">
@@ -91,7 +92,9 @@ export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps
         ))}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Tabs: Active = running/queued · Needs Input = 待决策/待验收 · Done · press any key to close</Text>
+        <Text dimColor>
+          Tabs: Active = running/queued · Needs Input = 待决策/待验收 · Done · press any key to close
+        </Text>
       </Box>
     </Box>
   );

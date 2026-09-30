@@ -77,7 +77,13 @@ const SOURCE = 'github:rivus/idea';
 // resolveTaskExecutionContext keys: project = repo name, repository = owner/repo.
 const config = {
   projects: {
-    idea: { key: 'idea', name: 'Idea', defaultRepository: 'rivus/idea', workspaceRoot: '/tmp/worktrees', taskTemplatePrompt: '' },
+    idea: {
+      key: 'idea',
+      name: 'Idea',
+      defaultRepository: 'rivus/idea',
+      workspaceRoot: '/tmp/worktrees',
+      taskTemplatePrompt: '',
+    },
   },
   repositories: {
     'rivus/idea': {
@@ -175,7 +181,9 @@ describe('CompleteService over a GitHub-only stack', () => {
           }),
         ),
       } as never,
-      generateCommitMessage: vi.fn().mockResolvedValue({ message: 'feat: feature', sessionId: 'c1', sessionName: 's1' }),
+      generateCommitMessage: vi
+        .fn()
+        .mockResolvedValue({ message: 'feat: feature', sessionId: 'c1', sessionName: 's1' }),
       generatePullRequestContent: vi
         .fn()
         .mockResolvedValue({ title: 'feat: feature', body: 'pr body', sessionId: 'p1', sessionName: 's2' }),

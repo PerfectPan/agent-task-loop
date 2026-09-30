@@ -1,13 +1,13 @@
-import { accessSync, constants, existsSync } from "node:fs";
-import { delimiter } from "node:path";
-import { execFileSync } from "node:child_process";
-import { arch, homedir, platform } from "node:os";
-import { listCommandCandidates } from "../application/list-command-candidates.js";
-import { listPathCandidates } from "../application/list-path-candidates.js";
-import { listProviders } from "../application/list-providers.js";
-import type { HostProbe, HostProbeCollector } from "../contracts/types.js";
-import { expandPath } from "../support/expand-path.js";
-import { resolveCommand } from "./resolve-command.js";
+import { accessSync, constants, existsSync } from 'node:fs';
+import { delimiter } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { arch, homedir, platform } from 'node:os';
+import { listCommandCandidates } from '../application/list-command-candidates.js';
+import { listPathCandidates } from '../application/list-path-candidates.js';
+import { listProviders } from '../application/list-providers.js';
+import type { HostProbe, HostProbeCollector } from '../contracts/types.js';
+import { expandPath } from '../support/expand-path.js';
+import { resolveCommand } from './resolve-command.js';
 
 export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
   const hostOs = options.os ?? platform();
@@ -18,10 +18,10 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
     options.resolveCommand ??
     ((command: string) =>
       resolveCommand(command, {
-        path: process.env.PATH ?? "",
+        path: process.env.PATH ?? '',
         pathExt: process.env.PATHEXT,
         delimiter,
-        fileExists: existsSync
+        fileExists: existsSync,
       }));
   const executableChecker = options.isExecutable ?? defaultIsExecutable;
   const pathChecker = options.pathExists ?? existsSync;
@@ -53,7 +53,7 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
       if (!resolved || !executablePaths[resolved]) {
         continue;
       }
-      const args = provider.versionProbe.split(" ").filter(Boolean);
+      const args = provider.versionProbe.split(' ').filter(Boolean);
       const version = versionReader(resolved, args);
       if (version) {
         versions[`${resolved} ${provider.versionProbe}`] = version;
@@ -69,7 +69,7 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
     commands,
     executablePaths,
     existingPaths,
-    versions
+    versions,
   };
 }
 
@@ -78,16 +78,16 @@ function defaultIsExecutable(path: string): boolean {
     accessSync(path, constants.X_OK);
     return true;
   } catch {
-    return process.platform === "win32" && /\.(?:com|exe|bat|cmd)$/iu.test(path);
+    return process.platform === 'win32' && /\.(?:com|exe|bat|cmd)$/iu.test(path);
   }
 }
 
 function defaultReadVersion(path: string, args: string[]): string | null {
   try {
     return execFileSync(path, args, {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-      timeout: 1500
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 1500,
     }).trim();
   } catch {
     return null;

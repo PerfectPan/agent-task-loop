@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { PREVIEW_MODES } from '../../../src/tui/types';
-import {
-  PANE_ORDER,
-  nextPane,
-  prevPane,
-  nextPreviewMode,
-} from '../../../src/tui/logic/pane';
+import { PANE_ORDER, nextPane, prevPane, nextPreviewMode } from '../../../src/tui/logic/pane';
 
 describe('PANE_ORDER', () => {
   it('is list -> detail -> preview', () => {

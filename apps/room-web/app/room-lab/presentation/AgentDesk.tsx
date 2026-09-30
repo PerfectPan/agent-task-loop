@@ -18,11 +18,10 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
   const backTo = desk.lastOpenedId ? `/room/${desk.lastOpenedId}` : '/room';
   const navigation = useNavigation();
   const busy = navigation.state !== 'idle';
-  const preferred = desk.agents.find(agent => SEATABLE.has(agent.availability))?.id
-    ?? desk.agents[0]?.id;
+  const preferred = desk.agents.find((agent) => SEATABLE.has(agent.availability))?.id ?? desk.agents[0]?.id;
   const [selected, setSelected] = useState<RoomLabAgentId | undefined>(preferred);
-  const current = desk.agents.find(agent => agent.id === selected) ?? desk.agents[0];
-  const seatable = desk.agents.filter(agent => SEATABLE.has(agent.availability)).length;
+  const current = desk.agents.find((agent) => agent.id === selected) ?? desk.agents[0];
+  const seatable = desk.agents.filter((agent) => SEATABLE.has(agent.availability)).length;
   return (
     <main className="min-h-dvh bg-background px-4 py-8 font-sans text-foreground">
       <div className="mx-auto w-[min(760px,100%)]">
@@ -39,17 +38,24 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
             </div>
             <div className="flex gap-2">
               <Button variant="outline" asChild>
-                <Link to={backTo} className="no-underline">{copy.action.backToRoom}</Link>
+                <Link to={backTo} className="no-underline">
+                  {copy.action.backToRoom}
+                </Link>
               </Button>
               <Form method="post">
                 <input type="hidden" name="intent" value="scan" />
-                <Button type="submit" variant="outline" disabled={busy}>{copy.action.rescan}</Button>
+                <Button type="submit" variant="outline" disabled={busy}>
+                  {copy.action.rescan}
+                </Button>
               </Form>
             </div>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] max-[720px]:grid-cols-1">
-            <ul className="m-0 flex list-none flex-col p-0 border-r border-border max-[720px]:border-r-0 max-[720px]:border-b" aria-label={copy.label.localAgents}>
-              {desk.agents.map(agent => {
+            <ul
+              className="m-0 flex list-none flex-col p-0 border-r border-border max-[720px]:border-r-0 max-[720px]:border-b"
+              aria-label={copy.label.localAgents}
+            >
+              {desk.agents.map((agent) => {
                 const active = current?.id === agent.id;
                 return (
                   <li key={agent.id} className="border-b border-border last:border-b-0">
@@ -59,7 +65,7 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
                       tabIndex={0}
                       className={`flex w-full cursor-pointer items-start gap-3 px-[18px] py-3 text-left transition-colors duration-150 hover:bg-accent ${active ? 'bg-primary/10' : ''}`}
                       onClick={() => setSelected(agent.id)}
-                      onKeyDown={event => {
+                      onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
                           setSelected(agent.id);
@@ -70,7 +76,9 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong className="text-sm font-medium">{agent.label}</strong>
-                          <Badge variant={availabilityVariant[agent.availability]}>{copy.availability[agent.availability]}</Badge>
+                          <Badge variant={availabilityVariant[agent.availability]}>
+                            {copy.availability[agent.availability]}
+                          </Badge>
                         </div>
                         <p className="m-0 mt-0.5 text-xs text-muted-foreground">{agent.role}</p>
                         <p className="m-0 mt-1 font-mono text-xs leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">
@@ -82,7 +90,9 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
                             {agent.seatedIn.map((room, index) => (
                               <span key={room.id}>
                                 {index > 0 ? '、' : ''}
-                                <Link className="text-primary" to={`/room/${room.id}`}>{room.title}</Link>
+                                <Link className="text-primary" to={`/room/${room.id}`}>
+                                  {room.title}
+                                </Link>
                               </span>
                             ))}
                           </p>
@@ -114,7 +124,9 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
                   <p className="m-0 text-xs text-muted-foreground">{copy.say.promptSaved}</p>
-                  <Button type="submit" disabled={busy}>{copy.action.save}</Button>
+                  <Button type="submit" disabled={busy}>
+                    {copy.action.save}
+                  </Button>
                 </div>
               </Form>
             )}
@@ -137,11 +149,13 @@ function AddAgentForm({ busy, error }: { busy: boolean; error?: string }) {
     <Form
       method="post"
       className="flex flex-col gap-3 border-t border-border px-[18px] py-4"
-      onSubmit={event => {
+      onSubmit={(event) => {
         const id = new FormData(event.currentTarget).get('id');
         const wellFormed = typeof id === 'string' && isAgentId(id);
         setIdRejected(!wellFormed);
-        if (!wellFormed) event.preventDefault();
+        if (!wellFormed) {
+          event.preventDefault();
+        }
       }}
     >
       <input type="hidden" name="intent" value="add-agent" />
@@ -149,30 +163,42 @@ function AddAgentForm({ busy, error }: { busy: boolean; error?: string }) {
       <div className="grid grid-cols-2 gap-3 max-[720px]:grid-cols-1">
         <label className="flex flex-col gap-1.5 text-sm">
           {copy.label.agentId}
-          <Input name="id" required maxLength={40} pattern="[a-z][a-z0-9-]*"
-            placeholder={copy.label.agentIdPlaceholder} disabled={busy} />
+          <Input
+            name="id"
+            required
+            maxLength={40}
+            pattern="[a-z][a-z0-9-]*"
+            placeholder={copy.label.agentIdPlaceholder}
+            disabled={busy}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           {copy.label.agentLabel}
-          <Input name="label" required maxLength={40}
-            placeholder={copy.label.agentLabelPlaceholder} disabled={busy} />
+          <Input name="label" required maxLength={40} placeholder={copy.label.agentLabelPlaceholder} disabled={busy} />
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           {copy.label.agentCommand}
-          <Input name="command" required maxLength={400} className="font-mono"
-            placeholder={copy.label.agentCommandPlaceholder} disabled={busy} />
+          <Input
+            name="command"
+            required
+            maxLength={400}
+            className="font-mono"
+            placeholder={copy.label.agentCommandPlaceholder}
+            disabled={busy}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           {copy.label.agentRole}
-          <Input name="role" maxLength={40}
-            placeholder={copy.label.agentRolePlaceholder} disabled={busy} />
+          <Input name="role" maxLength={40} placeholder={copy.label.agentRolePlaceholder} disabled={busy} />
         </label>
       </div>
       <div className="flex items-center justify-between gap-3">
         <p data-error className="m-0 min-h-4 text-xs text-destructive" role={idRejected || error ? 'alert' : undefined}>
-          {idRejected ? copy.say.agentIdPattern : error ?? ''}
+          {idRejected ? copy.say.agentIdPattern : (error ?? '')}
         </p>
-        <Button type="submit" className="self-end" disabled={busy}>{copy.action.addAgent}</Button>
+        <Button type="submit" className="self-end" disabled={busy}>
+          {copy.action.addAgent}
+        </Button>
       </div>
     </Form>
   );

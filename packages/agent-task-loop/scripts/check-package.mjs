@@ -1,13 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,12 +15,11 @@ try {
   mkdirSync(archiveDirectory);
   mkdirSync(cliConsumerDirectory);
   mkdirSync(pluginConsumerDirectory);
-  execFileSync(
-    'corepack',
-    ['pnpm@9.15.9', 'pack', '--pack-destination', archiveDirectory],
-    { cwd: packageRoot, stdio: 'ignore' },
-  );
-  const archiveNames = readdirSync(archiveDirectory).filter(name => name.endsWith('.tgz'));
+  execFileSync('corepack', ['pnpm@9.15.9', 'pack', '--pack-destination', archiveDirectory], {
+    cwd: packageRoot,
+    stdio: 'ignore',
+  });
+  const archiveNames = readdirSync(archiveDirectory).filter((name) => name.endsWith('.tgz'));
   if (archiveNames.length !== 1) {
     throw new Error(`Expected one package archive, found ${archiveNames.length}`);
   }
@@ -38,18 +29,10 @@ try {
     path.join(cliConsumerDirectory, 'package.json'),
     JSON.stringify({ name: 'agent-task-loop-cli-smoke', private: true, type: 'module' }),
   );
-  execFileSync(
-    'npm',
-    [
-      'install',
-      archivePath,
-      '--ignore-scripts',
-      '--no-audit',
-      '--no-fund',
-      '--package-lock=false',
-    ],
-    { cwd: cliConsumerDirectory, stdio: 'inherit' },
-  );
+  execFileSync('npm', ['install', archivePath, '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], {
+    cwd: cliConsumerDirectory,
+    stdio: 'inherit',
+  });
   if (existsSync(path.join(cliConsumerDirectory, 'node_modules', '@rivus', 'agent'))) {
     throw new Error('CLI-only install unexpectedly installed the optional @rivus/agent peer');
   }
@@ -79,12 +62,7 @@ try {
     ],
     { cwd: pluginConsumerDirectory, stdio: 'inherit' },
   );
-  const installedPackageDirectory = path.join(
-    pluginConsumerDirectory,
-    'node_modules',
-    '@rivus',
-    'agent-task-loop',
-  );
+  const installedPackageDirectory = path.join(pluginConsumerDirectory, 'node_modules', '@rivus', 'agent-task-loop');
   for (const requiredPath of [
     'dist/cli.js',
     'dist/rivus-plugin.js',
@@ -160,12 +138,7 @@ void [defaultPlugin, configuredPlugin];
     { cwd: pluginConsumerDirectory, stdio: 'inherit' },
   );
 
-  const installedPackageJson = JSON.parse(
-    readFileSync(
-      path.join(installedPackageDirectory, 'package.json'),
-      'utf8',
-    ),
-  );
+  const installedPackageJson = JSON.parse(readFileSync(path.join(installedPackageDirectory, 'package.json'), 'utf8'));
   if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.1.1 <0.4.0') {
     throw new Error('Unexpected @rivus/agent peer range');
   }

@@ -17,8 +17,6 @@ import { Button } from '~/components/ui/button';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mention';
 
-
-
 /**
  * The composer is never disabled. A round in progress only changes where a
  * new message lands, and the hint says so. Only the send button waits while
@@ -29,11 +27,19 @@ import { MENTION_LIST_ID, mentionOptionId, roomMention } from './composer-mentio
  * the time it leaves. The document exists so that a mention can be one object
  * you delete in one keystroke instead of nine characters you can half-delete.
  */
-export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }: {
-  value: string; sending: boolean;
+export function RoomComposer({
+  value,
+  sending,
+  agents,
+  onValueChange,
+  onSubmit,
+}: {
+  value: string;
+  sending: boolean;
   /** The room's members, in speaking order: who can be mentioned, and in what colour. */
   agents: readonly MentionAgent[];
-  onValueChange: (value: string) => void; onSubmit: () => void;
+  onValueChange: (value: string) => void;
+  onSubmit: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeOptionId, setActiveOptionId] = useState<string>();
@@ -53,74 +59,81 @@ export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }
   // Keyed by the ids themselves: the crew arrives as a fresh array every render,
   // and rebuilding this list would re-run the effect that sets the document and
   // drop the caret mid-sentence.
-  const mentionKey = agents.map(agent => agent.id).join(',');
-  const mentionable = useMemo<MentionId[]>(
-    () => ['all', ...mentionKey.split(',').filter(Boolean)],
-    [mentionKey],
-  );
+  const mentionKey = agents.map((agent) => agent.id).join(',');
+  const mentionable = useMemo<MentionId[]>(() => ['all', ...mentionKey.split(',').filter(Boolean)], [mentionKey]);
 
   const setMenu = useCallback((open: boolean) => {
     menuOpenRef.current = open;
     setMenuOpen(open);
   }, []);
 
-  const editor = useEditor({
-    // A chat line, not a document: no headings, no lists, no bold.
-    extensions: [
-      Document,
-      Paragraph,
-      Text,
-      HardBreak,
-      History,
-      Placeholder.configure({ placeholder: copy.label.composerPlaceholder }),
-      // A ceiling on the document, so a paste cannot grow it without bound. The
-      // number the person reads, and the one that gates sending, is the length
-      // of the serialised string, because that is what the server measures: a
-      // chip is one character here and eight on the wire.
-      CharacterCount.configure({ limit: ROOM_MESSAGE_LIMIT }),
-      roomMention({
-        activeAgentIds: () => agentsRef.current.map(agent => agent.id),
-        agents: () => agentsRef.current,
-        onOpenChange: setMenu,
-        onActiveOptionChange: setActiveOptionId,
-      }),
-    ],
-    content: textToDoc(value, mentionable),
-    editorProps: {
-      attributes: {
-        id: 'room-command',
-        role: 'textbox',
-        'aria-multiline': 'true',
-        'aria-label': copy.label.composer,
-        'aria-describedby': 'room-composer-hint',
-        class: 'min-h-[78px] max-h-[40dvh] overflow-y-auto font-serif text-base leading-[1.7] text-foreground outline-none',
+  const editor = useEditor(
+    {
+      // A chat line, not a document: no headings, no lists, no bold.
+      extensions: [
+        Document,
+        Paragraph,
+        Text,
+        HardBreak,
+        History,
+        Placeholder.configure({ placeholder: copy.label.composerPlaceholder }),
+        // A ceiling on the document, so a paste cannot grow it without bound. The
+        // number the person reads, and the one that gates sending, is the length
+        // of the serialised string, because that is what the server measures: a
+        // chip is one character here and eight on the wire.
+        CharacterCount.configure({ limit: ROOM_MESSAGE_LIMIT }),
+        roomMention({
+          activeAgentIds: () => agentsRef.current.map((agent) => agent.id),
+          agents: () => agentsRef.current,
+          onOpenChange: setMenu,
+          onActiveOptionChange: setActiveOptionId,
+        }),
+      ],
+      content: textToDoc(value, mentionable),
+      editorProps: {
+        attributes: {
+          id: 'room-command',
+          role: 'textbox',
+          'aria-multiline': 'true',
+          'aria-label': copy.label.composer,
+          'aria-describedby': 'room-composer-hint',
+          class:
+            'min-h-[78px] max-h-[40dvh] overflow-y-auto font-serif text-base leading-[1.7] text-foreground outline-none',
+        },
+        handleKeyDown: (view, event) => {
+          // An IME is mid-composition, so this key belongs to the candidate
+          // window. Enter is swallowed outright: it must not send, must not pick
+          // a mention, and must not reach the base keymap and split the
+          // paragraph — confirming 中文 is not a newline. Every other key is left
+          // to ProseMirror.
+          if (view.composing || event.isComposing || event.keyCode === 229) {
+            return event.key === 'Enter';
+          }
+          if (event.key !== 'Enter' || event.shiftKey) {
+            return false;
+          }
+          // The suggestion plugin runs after this handler, so a menu that is open
+          // gets Enter handed back to it to pick a member.
+          if (menuOpenRef.current) {
+            return false;
+          }
+          event.preventDefault();
+          if (event.repeat) {
+            return true;
+          }
+          send();
+          return true;
+        },
       },
-      handleKeyDown: (view, event) => {
-        // An IME is mid-composition, so this key belongs to the candidate
-        // window. Enter is swallowed outright: it must not send, must not pick
-        // a mention, and must not reach the base keymap and split the
-        // paragraph — confirming 中文 is not a newline. Every other key is left
-        // to ProseMirror.
-        if (view.composing || event.isComposing || event.keyCode === 229) {
-          return event.key === 'Enter';
-        }
-        if (event.key !== 'Enter' || event.shiftKey) return false;
-        // The suggestion plugin runs after this handler, so a menu that is open
-        // gets Enter handed back to it to pick a member.
-        if (menuOpenRef.current) return false;
-        event.preventDefault();
-        if (event.repeat) return true;
-        send();
-        return true;
+      onUpdate: ({ editor: instance }) => {
+        const text = docToText(instance.getJSON());
+        lastTextRef.current = text;
+        onValueChange(text);
       },
+      immediatelyRender: false,
     },
-    onUpdate: ({ editor: instance }) => {
-      const text = docToText(instance.getJSON());
-      lastTextRef.current = text;
-      onValueChange(text);
-    },
-    immediatelyRender: false,
-  }, []);
+    [],
+  );
 
   const characters = value.length;
   const canSend = !sending && !!value.trim() && characters <= ROOM_MESSAGE_LIMIT;
@@ -128,7 +141,9 @@ export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }
   canSendRef.current = canSend;
 
   function send() {
-    if (!canSendRef.current) return;
+    if (!canSendRef.current) {
+      return;
+    }
     submitRef.current();
   }
 
@@ -137,16 +152,22 @@ export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }
   // document already says, or every keystroke would round-trip through
   // setContent and drop the cursor.
   useEffect(() => {
-    if (!editor || value === lastTextRef.current) return;
+    if (!editor || value === lastTextRef.current) {
+      return;
+    }
     lastTextRef.current = value;
     editor.commands.setContent(textToDoc(value, mentionable), { emitUpdate: false });
   }, [editor, value, mentionable]);
 
   const openMentions = () => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
     // A composer that has never been focused has its caret at the very start,
     // so an unfocused click would put the `@` before everything already typed.
-    if (!editor.isFocused) editor.commands.focus('end');
+    if (!editor.isFocused) {
+      editor.commands.focus('end');
+    }
     const { state } = editor;
     const before = state.doc.textBetween(Math.max(0, state.selection.from - 1), state.selection.from);
     // `@` only triggers the suggestion at a word boundary, so give it one.
@@ -179,7 +200,7 @@ export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }
           size="icon-sm"
           aria-label={copy.action.mention}
           className="text-muted-foreground hover:text-foreground"
-          onMouseDown={event => event.preventDefault()}
+          onMouseDown={(event) => event.preventDefault()}
           onClick={openMentions}
         >
           <At size={16} />
@@ -188,7 +209,9 @@ export function RoomComposer({ value, sending, agents, onValueChange, onSubmit }
           {copy.say.composerHint}
         </span>
         {characters > 0 && (
-          <span className={`ml-auto text-xs tabular-nums ${characters > ROOM_MESSAGE_LIMIT ? 'text-destructive' : 'text-muted-foreground'}`}>
+          <span
+            className={`ml-auto text-xs tabular-nums ${characters > ROOM_MESSAGE_LIMIT ? 'text-destructive' : 'text-muted-foreground'}`}
+          >
             {characters} / {ROOM_MESSAGE_LIMIT}
           </span>
         )}

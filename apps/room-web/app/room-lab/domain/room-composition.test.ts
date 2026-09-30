@@ -20,9 +20,7 @@ describe('RoomComposition', () => {
   });
 
   it('rejects an id that is not a row in the registry', () => {
-    expect(() => new RoomComposition(['gemini'], testRegistry())).toThrow(
-      'Unknown Room agent: gemini',
-    );
+    expect(() => new RoomComposition(['gemini'], testRegistry())).toThrow('Unknown Room agent: gemini');
     // Without a registry the domain can still reject something that is not an id.
     expect(() => new RoomComposition(['Not An Id'])).toThrow('Unknown Room agent: Not An Id');
   });
@@ -37,7 +35,7 @@ describe('RoomComposition', () => {
 
   it('accepts every non-empty subset of a five-agent registry', () => {
     const catalog = TEST_AGENT_IDS;
-    const compositions = Array.from({ length: (2 ** catalog.length) - 1 }, (_, index) =>
+    const compositions = Array.from({ length: 2 ** catalog.length - 1 }, (_, index) =>
       catalog.filter((_, bit) => ((index + 1) & (1 << bit)) !== 0),
     );
 
@@ -52,7 +50,7 @@ describe('RoomComposition', () => {
     const orders = permutations(catalog);
 
     expect(orders).toHaveLength(120);
-    expect(new Set(orders.map(order => order.join('>')))).toHaveLength(120);
+    expect(new Set(orders.map((order) => order.join('>')))).toHaveLength(120);
     for (const order of orders) {
       expect(new RoomComposition(order, testRegistry()).snapshot()).toEqual(order);
     }
@@ -60,9 +58,10 @@ describe('RoomComposition', () => {
 });
 
 function permutations(agentIds: readonly RoomLabAgentId[]): RoomLabAgentId[][] {
-  if (agentIds.length === 0) return [[]];
+  if (agentIds.length === 0) {
+    return [[]];
+  }
   return agentIds.flatMap((agentId, index) =>
-    permutations(agentIds.filter((_, candidateIndex) => candidateIndex !== index))
-      .map(tail => [agentId, ...tail]),
+    permutations(agentIds.filter((_, candidateIndex) => candidateIndex !== index)).map((tail) => [agentId, ...tail]),
   );
 }

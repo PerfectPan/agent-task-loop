@@ -7,7 +7,9 @@ import { isRouteErrorResponse } from 'react-router';
 export function routeErrorMessage(error: unknown, fallback: string): string {
   if (isRouteErrorResponse(error)) {
     const body = error.data as { error?: unknown } | undefined;
-    if (typeof body?.error === 'string') return body.error;
+    if (typeof body?.error === 'string') {
+      return body.error;
+    }
     return `${error.status} ${error.statusText}`.trim();
   }
   return error instanceof Error ? error.message : fallback;

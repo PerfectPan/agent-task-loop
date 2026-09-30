@@ -16,13 +16,7 @@ const TILE = [
   'bg-chart-5/15 text-chart-5',
 ] as const;
 
-const INK = [
-  'text-chart-1',
-  'text-chart-2',
-  'text-chart-3',
-  'text-chart-4',
-  'text-chart-5',
-] as const;
+const INK = ['text-chart-1', 'text-chart-2', 'text-chart-3', 'text-chart-4', 'text-chart-5'] as const;
 
 const DOT = [
   'bg-chart-1 text-background',

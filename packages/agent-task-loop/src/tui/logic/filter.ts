@@ -26,7 +26,7 @@ export interface FilterOptions {
 export function filterTasks(tasks: TaskRecord[], opts: FilterOptions): TaskRecord[] {
   const query = opts.query?.trim().toLowerCase() ?? '';
   const sources = opts.sources && opts.sources.length > 0 ? new Set(opts.sources) : null;
-  return tasks.filter(task => {
+  return tasks.filter((task) => {
     if (!tabIncludes(opts.tab, task.status)) {
       return false;
     }

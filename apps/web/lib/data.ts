@@ -22,7 +22,9 @@ const REVALIDATE = 3600;
 async function getJson<T>(url: string, headers?: Record<string, string>): Promise<T | null> {
   try {
     const res = await fetch(url, { headers, next: { revalidate: REVALIDATE } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     return (await res.json()) as T;
   } catch {
     return null;

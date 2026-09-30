@@ -2,253 +2,253 @@
 name: Rivus room-web
 description: 宣纸：一张暖白的纸，正文是思源宋体、界面词是 Inter；左右两栏只比纸面稍暗，靠一根发丝线分开；圆头像、柔和药丸、提及是胶囊。词表用 shadcn 标准 token，配色是宣纸。
 colors:
-  background: "#ffffff"
-  foreground: "#37352f"
-  card: "#ffffff"
-  card-foreground: "#37352f"
-  popover: "#ffffff"
-  popover-foreground: "#37352f"
-  primary: "#1a6fd1"
-  primary-foreground: "#ffffff"
-  secondary: "#f7f7f5"
-  secondary-foreground: "#37352f"
-  muted: "#f7f7f5"
-  muted-foreground: "#676664"
-  accent: "#efefec"
-  accent-foreground: "#37352f"
-  destructive: "#b0322d"
-  destructive-foreground: "#ffffff"
-  border: "#e9e9e7"
-  input: "#dedddb"
-  ring: "#1a6fd1"
-  chart-1: "#6940a5"
-  chart-2: "#a25207"
-  chart-3: "#3a7351"
-  chart-4: "#ac3e79"
-  chart-5: "#636e0f"
-  sidebar: "#f7f7f5"
-  sidebar-foreground: "#37352f"
-  sidebar-primary: "#1a6fd1"
-  sidebar-primary-foreground: "#ffffff"
-  sidebar-accent: "#ebebe8"
-  sidebar-accent-foreground: "#37352f"
-  sidebar-border: "#e9e9e7"
-  sidebar-ring: "#1a6fd1"
-  info: "#e7f3f8"
-  info-foreground: "#2b6c92"
-  warning: "#fbeedc"
-  warning-foreground: "#8a5a10"
-  success: "#ebf6f1"
-  success-foreground: "#3d7a56"
-  destructive-soft: "#fbe4e4"
-  destructive-soft-foreground: "#b0322d"
+  background: '#ffffff'
+  foreground: '#37352f'
+  card: '#ffffff'
+  card-foreground: '#37352f'
+  popover: '#ffffff'
+  popover-foreground: '#37352f'
+  primary: '#1a6fd1'
+  primary-foreground: '#ffffff'
+  secondary: '#f7f7f5'
+  secondary-foreground: '#37352f'
+  muted: '#f7f7f5'
+  muted-foreground: '#676664'
+  accent: '#efefec'
+  accent-foreground: '#37352f'
+  destructive: '#b0322d'
+  destructive-foreground: '#ffffff'
+  border: '#e9e9e7'
+  input: '#dedddb'
+  ring: '#1a6fd1'
+  chart-1: '#6940a5'
+  chart-2: '#a25207'
+  chart-3: '#3a7351'
+  chart-4: '#ac3e79'
+  chart-5: '#636e0f'
+  sidebar: '#f7f7f5'
+  sidebar-foreground: '#37352f'
+  sidebar-primary: '#1a6fd1'
+  sidebar-primary-foreground: '#ffffff'
+  sidebar-accent: '#ebebe8'
+  sidebar-accent-foreground: '#37352f'
+  sidebar-border: '#e9e9e7'
+  sidebar-ring: '#1a6fd1'
+  info: '#e7f3f8'
+  info-foreground: '#2b6c92'
+  warning: '#fbeedc'
+  warning-foreground: '#8a5a10'
+  success: '#ebf6f1'
+  success-foreground: '#3d7a56'
+  destructive-soft: '#fbe4e4'
+  destructive-soft-foreground: '#b0322d'
 typography:
   headline:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "24px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '24px'
     fontWeight: 700
     lineHeight: 1.25
-    letterSpacing: "-0.02em"
+    letterSpacing: '-0.02em'
   title:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "18px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '18px'
     fontWeight: 600
     lineHeight: 1.35
   body:
-    fontFamily: "Noto Serif SC, Songti SC, STSong, Georgia, serif"
-    fontSize: "16px"
+    fontFamily: 'Noto Serif SC, Songti SC, STSong, Georgia, serif'
+    fontSize: '16px'
     fontWeight: 400
     lineHeight: 1.7
   name:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "14px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '14px'
     fontWeight: 600
     lineHeight: 1.25
   secondary:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "14px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '14px'
     fontWeight: 400
     lineHeight: 1.45
   pill:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "13px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '13px'
     fontWeight: 400
     lineHeight: 1.4
   label:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "12px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '12px'
     fontWeight: 500
     lineHeight: 1.4
   meta:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "12px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '12px'
     fontWeight: 400
     lineHeight: 1.35
   mark:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "11px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '11px'
     fontWeight: 600
     lineHeight: 1
-    letterSpacing: "0.02em"
+    letterSpacing: '0.02em'
   mark-sm:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "10px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '10px'
     fontWeight: 600
     lineHeight: 1
-    letterSpacing: "0.02em"
+    letterSpacing: '0.02em'
   chip:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '15px'
     fontWeight: 600
     lineHeight: 1.5
   chip-mark:
-    fontFamily: "Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif"
-    fontSize: "8px"
+    fontFamily: 'Inter, -apple-system, PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif'
+    fontSize: '8px'
     fontWeight: 600
     lineHeight: 1
   mono:
-    fontFamily: "ui-monospace, SF Mono, Menlo, Consolas, monospace"
-    fontSize: "12px"
+    fontFamily: 'ui-monospace, SF Mono, Menlo, Consolas, monospace'
+    fontSize: '12px'
     fontWeight: 400
     lineHeight: 1.25
-    fontVariation: "tabular-nums"
+    fontVariation: 'tabular-nums'
 rounded:
-  sm: "4px"
-  md: "6px"
-  lg: "8px"
-  xl: "12px"
-  full: "9999px"
+  sm: '4px'
+  md: '6px'
+  lg: '8px'
+  xl: '12px'
+  full: '9999px'
 spacing:
-  "4": "4px"
-  "8": "8px"
-  "12": "12px"
-  "14": "14px"
-  "22": "22px"
-  "28": "28px"
+  '4': '4px'
+  '8': '8px'
+  '12': '12px'
+  '14': '14px'
+  '22': '22px'
+  '28': '28px'
 components:
   button-default:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.sm}"
-    height: "30px"
-    padding: "0 12px"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-foreground}'
+    rounded: '{rounded.sm}'
+    height: '30px'
+    padding: '0 12px'
   button-default-hover:
-    backgroundColor: "{colors.primary}"
+    backgroundColor: '{colors.primary}'
     opacity: 0.9
   button-outline:
-    backgroundColor: "transparent"
-    borderColor: "{colors.input}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.sm}"
-    height: "30px"
-    padding: "0 12px"
+    backgroundColor: 'transparent'
+    borderColor: '{colors.input}'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.sm}'
+    height: '30px'
+    padding: '0 12px'
   button-outline-hover:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.accent-foreground}"
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.accent-foreground}'
   button-ghost:
-    backgroundColor: "transparent"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.sm}"
-    height: "30px"
-    padding: "0 12px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.sm}'
+    height: '30px'
+    padding: '0 12px'
   button-ghost-xs:
-    backgroundColor: "transparent"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.sm}"
-    height: "24px"
-    padding: "0 6px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.sm}'
+    height: '24px'
+    padding: '0 6px'
   button-destructive:
-    backgroundColor: "{colors.destructive}"
-    textColor: "{colors.destructive-foreground}"
-    rounded: "{rounded.sm}"
-    height: "24px"
-    padding: "0 10px"
+    backgroundColor: '{colors.destructive}'
+    textColor: '{colors.destructive-foreground}'
+    rounded: '{rounded.sm}'
+    height: '24px'
+    padding: '0 10px'
   input:
-    backgroundColor: "transparent"
-    borderColor: "{colors.input}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.sm}"
-    height: "30px"
-    padding: "0 8px"
+    backgroundColor: 'transparent'
+    borderColor: '{colors.input}'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.sm}'
+    height: '30px'
+    padding: '0 8px'
   badge-muted:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.muted-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.muted-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '2px 8px'
   badge-info:
-    backgroundColor: "{colors.info}"
-    textColor: "{colors.info-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
+    backgroundColor: '{colors.info}'
+    textColor: '{colors.info-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '2px 8px'
   badge-warning:
-    backgroundColor: "{colors.warning}"
-    textColor: "{colors.warning-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
+    backgroundColor: '{colors.warning}'
+    textColor: '{colors.warning-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '2px 8px'
   badge-success:
-    backgroundColor: "{colors.success}"
-    textColor: "{colors.success-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
+    backgroundColor: '{colors.success}'
+    textColor: '{colors.success-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '2px 8px'
   badge-destructive-soft:
-    backgroundColor: "{colors.destructive-soft}"
-    textColor: "{colors.destructive-soft-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "2px 8px"
+    backgroundColor: '{colors.destructive-soft}'
+    textColor: '{colors.destructive-soft-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '2px 8px'
   state-pill:
-    backgroundColor: "{colors.warning}"
-    textColor: "{colors.warning-foreground}"
-    rounded: "{rounded.sm}"
-    padding: "5px 10px"
+    backgroundColor: '{colors.warning}'
+    textColor: '{colors.warning-foreground}'
+    rounded: '{rounded.sm}'
+    padding: '5px 10px'
   nav-link:
-    backgroundColor: "transparent"
-    textColor: "{colors.sidebar-foreground}"
-    rounded: "{rounded.md}"
-    height: "28px"
-    padding: "0 8px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.sidebar-foreground}'
+    rounded: '{rounded.md}'
+    height: '28px'
+    padding: '0 8px'
   nav-link-current:
-    backgroundColor: "{colors.sidebar-accent}"
-    textColor: "{colors.sidebar-accent-foreground}"
+    backgroundColor: '{colors.sidebar-accent}'
+    textColor: '{colors.sidebar-accent-foreground}'
   avatar:
-    backgroundColor: "color-mix(in srgb, {colors.chart-1} 15%, transparent)"
-    textColor: "{colors.chart-1}"
-    rounded: "{rounded.full}"
-    size: "30px"
+    backgroundColor: 'color-mix(in srgb, {colors.chart-1} 15%, transparent)'
+    textColor: '{colors.chart-1}'
+    rounded: '{rounded.full}'
+    size: '30px'
   avatar-human:
-    backgroundColor: "{colors.foreground}"
-    textColor: "{colors.background}"
-    rounded: "{rounded.full}"
-    size: "30px"
+    backgroundColor: '{colors.foreground}'
+    textColor: '{colors.background}'
+    rounded: '{rounded.full}'
+    size: '30px'
   composer-card:
-    backgroundColor: "{colors.card}"
-    borderColor: "{colors.input}"
-    rounded: "{rounded.xl}"
-    padding: "14px 14px 10px"
+    backgroundColor: '{colors.card}'
+    borderColor: '{colors.input}'
+    rounded: '{rounded.xl}'
+    padding: '14px 14px 10px'
   composer-send:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.full}"
-    size: "32px"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-foreground}'
+    rounded: '{rounded.full}'
+    size: '32px'
   mention-chip:
-    backgroundColor: "color-mix(in srgb, {colors.chart-3} 15%, transparent)"
-    textColor: "{colors.chart-3}"
-    rounded: "{rounded.full}"
-    padding: "0 6px"
+    backgroundColor: 'color-mix(in srgb, {colors.chart-3} 15%, transparent)'
+    textColor: '{colors.chart-3}'
+    rounded: '{rounded.full}'
+    padding: '0 6px'
   dropdown-menu:
-    backgroundColor: "{colors.popover}"
-    borderColor: "{colors.input}"
-    textColor: "{colors.popover-foreground}"
-    rounded: "{rounded.lg}"
-    padding: "4px"
+    backgroundColor: '{colors.popover}'
+    borderColor: '{colors.input}'
+    textColor: '{colors.popover-foreground}'
+    rounded: '{rounded.lg}'
+    padding: '4px'
   sheet:
-    backgroundColor: "{colors.sidebar}"
-    borderColor: "{colors.input}"
-    textColor: "{colors.sidebar-foreground}"
-    width: "min(320px, 100%)"
+    backgroundColor: '{colors.sidebar}'
+    borderColor: '{colors.input}'
+    textColor: '{colors.sidebar-foreground}'
+    width: 'min(320px, 100%)'
   count-off-block:
-    backgroundColor: "{colors.sidebar-accent}"
-    rounded: "{rounded.lg}"
-    padding: "10px"
+    backgroundColor: '{colors.sidebar-accent}'
+    rounded: '{rounded.lg}'
+    padding: '10px'
 ---
 
 # Design System: Rivus room-web
@@ -274,6 +274,7 @@ components:
 - **`--info` / `--warning` / `--success` / `--destructive-soft` 是补出来的四对**，沿用 shadcn 自己的配对写法：token 是洗底，`-foreground` 是落在它上面的墨。一枚状态药丸就是 `bg-warning text-warning-foreground`，一个变体名就交代完外观。`--destructive` 保持 shadcn 的原意——实色红，配白字，用在「确认清空」上；柔和的错误洗底另开 `--destructive-soft`，两者不混。
 
 **Key Characteristics:**
+
 - 纸（`background`）与两侧的暖灰（`sidebar`）靠一根发丝线分开，不靠色块，也不靠色相。
 - 唯一浮起的物件是输入卡片；菜单、抽屉、新消息胶囊共用同一个 `shadow-card`，没有第二个阴影值。
 - 一个强调色（`primary`）管交互，四对状态色以药丸形态管「现在怎么了」，五个 `chart-*` 只管头像与作者名。
@@ -287,15 +288,15 @@ components:
 
 四层表面，亮色下三层都是白，靠 `sidebar` 一档暖灰和一根线分出结构：
 
-| token | 亮 / 暗 | 用在 |
-| --- | --- | --- |
-| `background` | `#ffffff` / `#191919` | body、对话流、创建页与错误页、智能体页 |
-| `card` | `#ffffff` / `#252525` | 输入卡片、新建房间表单、智能体页的卡片 |
-| `popover` | `#ffffff` / `#252525` | 房间菜单、提及菜单、跳转链接、草稿预览 |
-| `sidebar` | `#f7f7f5` / `#202020` | 左栏、右栏、≤1180 的成员抽屉 |
-| `muted` | `#f7f7f5` / `#202020` | 与 `secondary` 同值；`/board` 与 `/task` 的卡片底 |
-| `accent` | `#efefec` / `#2a2a2a` | 中栏的悬停与选中底 |
-| `sidebar-accent` | `#ebebe8` / `#2a2a2a` | 栏里的悬停、当前项、报数记录块 |
+| token            | 亮 / 暗               | 用在                                              |
+| ---------------- | --------------------- | ------------------------------------------------- |
+| `background`     | `#ffffff` / `#191919` | body、对话流、创建页与错误页、智能体页            |
+| `card`           | `#ffffff` / `#252525` | 输入卡片、新建房间表单、智能体页的卡片            |
+| `popover`        | `#ffffff` / `#252525` | 房间菜单、提及菜单、跳转链接、草稿预览            |
+| `sidebar`        | `#f7f7f5` / `#202020` | 左栏、右栏、≤1180 的成员抽屉                      |
+| `muted`          | `#f7f7f5` / `#202020` | 与 `secondary` 同值；`/board` 与 `/task` 的卡片底 |
+| `accent`         | `#efefec` / `#2a2a2a` | 中栏的悬停与选中底                                |
+| `sidebar-accent` | `#ebebe8` / `#2a2a2a` | 栏里的悬停、当前项、报数记录块                    |
 
 两档发丝线：`border` 画栏与栏之间和同栏内部的分隔，`input` 画控件边和卡片边。`sidebar-border` 与 `border` 同值，分开定义是为了让栏可以单独调。
 
@@ -314,12 +315,12 @@ components:
 - **`destructive`**（`#b0322d` / `#e88080`）：错误文字、发送失败外框、「确认清空」的实色底（配 `destructive-foreground`）。
 - 四对状态洗底：
 
-| 对 | 墨（浅 / 深） | 洗底（浅 / 深） | 用在 |
-| --- | --- | --- | --- |
-| `info` | `#2b6c92` / `#7fb6dc` | `#e7f3f8` / `#1c2b35` | 生成中：脉冲点、页头「当前 X」、发言顺序条亮项、报数「回复中」；Badge `info` 标 CLI 可运行 |
-| `warning` | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待更新：时间线药丸、成员栏草稿块与其按钮 |
-| `success` | `#3d7a56` / `#6fb58b` | `#ebf6f1` / `#1c2f25` | 静止状态的实心点。洗底目前只作为 Badge `success` 变体存在，房间界面未用到 |
-| `destructive-soft` | `#b0322d` / `#e88080` | `#fbe4e4` / `#3a1f1f` | 错误横幅、成员错误块、时间线错误药丸、报数「回复失败」 |
+| 对                 | 墨（浅 / 深）         | 洗底（浅 / 深）       | 用在                                                                                       |
+| ------------------ | --------------------- | --------------------- | ------------------------------------------------------------------------------------------ |
+| `info`             | `#2b6c92` / `#7fb6dc` | `#e7f3f8` / `#1c2b35` | 生成中：脉冲点、页头「当前 X」、发言顺序条亮项、报数「回复中」；Badge `info` 标 CLI 可运行 |
+| `warning`          | `#8a5a10` / `#d9a94a` | `#fbeedc` / `#33290f` | 草稿待更新：时间线药丸、成员栏草稿块与其按钮                                               |
+| `success`          | `#3d7a56` / `#6fb58b` | `#ebf6f1` / `#1c2f25` | 静止状态的实心点。洗底目前只作为 Badge `success` 变体存在，房间界面未用到                  |
+| `destructive-soft` | `#b0322d` / `#e88080` | `#fbe4e4` / `#3a1f1f` | 错误横幅、成员错误块、时间线错误药丸、报数「回复失败」                                     |
 
 ### 身份色
 
@@ -329,8 +330,8 @@ components:
 
 字母**由 id 推出来**，不列表：按非字母数字切段，两段及以上取前两段的首字母，只有一段取前两个字母，大写。`claude-code → CC`、`dsh → DS`、`opencode → OP`。
 
-| token | 浅 | 深 |
-| --- | --- | --- |
+| token     | 浅        | 深        |
+| --------- | --------- | --------- |
 | `chart-1` | `#6940a5` | `#b69be5` |
 | `chart-2` | `#a25207` | `#e8955a` |
 | `chart-3` | `#3a7351` | `#7cc29a` |
@@ -364,11 +365,11 @@ components:
 
 **两款字，一条分界：界面词是黑体，正文是宋体。**
 
-| token | 字 | 用在 |
-| --- | --- | --- |
-| `--font-sans` | `Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif` | 除正文外的一切：标题、作者名、时间、按钮、导航、节标签、药丸、提示行、提及胶囊 |
-| `--font-serif` | `"Noto Serif SC", "Songti SC", "STSong", Georgia, serif` | 消息正文、输入框编辑区、右栏草稿预览、空状态那句说明 |
-| `--font-mono` | `ui-monospace, "SF Mono", Menlo, Consolas, monospace` | 数字要对齐的地方：计时器、用时、报数序号、命令行路径、提及菜单的 `↵` |
+| token          | 字                                                                                    | 用在                                                                           |
+| -------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `--font-sans`  | `Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif` | 除正文外的一切：标题、作者名、时间、按钮、导航、节标签、药丸、提示行、提及胶囊 |
+| `--font-serif` | `"Noto Serif SC", "Songti SC", "STSong", Georgia, serif`                              | 消息正文、输入框编辑区、右栏草稿预览、空状态那句说明                           |
+| `--font-mono`  | `ui-monospace, "SF Mono", Menlo, Consolas, monospace`                                 | 数字要对齐的地方：计时器、用时、报数序号、命令行路径、提及菜单的 `↵`           |
 
 宋体正文 16px / **1.7**（黑体是 1.65：宋体笔画细、字面小，多给一点行距才不挤）。两款字都自托管，来自 `@fontsource/inter`（400 / 500 / 600 / 700）和 `@fontsource/noto-serif-sc`（400 / 600），在 `global.css` 顶部 `@import`。
 
@@ -422,11 +423,11 @@ components:
 
 **响应式**：
 
-| 断点 | 变化 |
-| --- | --- |
-| ≤ 1180px | 右栏不再是网格里的一列，改由 shadcn 的 `Sheet`（`side="right"`，`min(320px,100%)`，`sidebar` 底）承担。两者只挂载一个：`RoomContext` 用 `matchMedia('(max-width: 1180px)')` 选择，所以文档里不会出现第二份面板 id 或第二个「读取更新并重答」。服务端渲染的是并排那一列，切换发生在 hydration 之后。页头出现「成员」按钮把抽屉拉出来。遮罩是 `foreground/20`，不是 shadcn 默认的 `black/50`——这套配色里不放纯黑。 |
-| ≤ 820px | 网格变单列两行，左栏变成横向顶栏：项目横排、可横向滚动、右边框改成底边框；节标签「房间」、房间的元信息、页脚隐藏；新建房间表单固定 260px 宽。 |
-| ≤ 720px（仅智能体页） | 左列表 / 右表单的两栏变单栏。 |
+| 断点                  | 变化                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ≤ 1180px              | 右栏不再是网格里的一列，改由 shadcn 的 `Sheet`（`side="right"`，`min(320px,100%)`，`sidebar` 底）承担。两者只挂载一个：`RoomContext` 用 `matchMedia('(max-width: 1180px)')` 选择，所以文档里不会出现第二份面板 id 或第二个「读取更新并重答」。服务端渲染的是并排那一列，切换发生在 hydration 之后。页头出现「成员」按钮把抽屉拉出来。遮罩是 `foreground/20`，不是 shadcn 默认的 `black/50`——这套配色里不放纯黑。 |
+| ≤ 820px               | 网格变单列两行，左栏变成横向顶栏：项目横排、可横向滚动、右边框改成底边框；节标签「房间」、房间的元信息、页脚隐藏；新建房间表单固定 260px 宽。                                                                                                                                                                                                                                                                    |
+| ≤ 720px（仅智能体页） | 左列表 / 右表单的两栏变单栏。                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### Named Rules
 
@@ -538,28 +539,28 @@ components:
 
 `copy.test.ts` 守两件事：用几条正则守每组的语法，所以口语状态词（「说完了」）或者写成句子的标签回不来；再扫一遍房间面的全部源码，只要还有中文字面量就失败并报出文件和行号。
 
-| 组 | 读法 | 语法 | 例 |
-| --- | --- | --- | --- |
-| `status` | 扫：在列表里和圆点、数字并排 | 名词短语，只有四种构词：**已X · X中 · 待X · X失败**（加裸状态「在场」「等待」） | 已回复 · 生成中 · 排队中 · 草稿待更新 · 运行失败 · 已读未答 |
-| `action` | 做：按钮、菜单项 | 动词短语，不带句号 | 发送 · 创建房间 · 读取更新并重答 · 开始报数 |
-| `availability` | 认：按领域状态取键的标签，映射保持穷尽 | 名词 | 可运行 · 未安装 |
-| `label` | 认：节标题、导航、表单标签、占位 | 名词，不带句号 | 成员 · 5 · 检查连接 · 房间名 |
-| `say` | 懂：说明、空状态、错误、页头那一句 | 完整陈述句：事实 + 下一步 | 发送失败，内容已保留在输入框 |
+| 组             | 读法                                   | 语法                                                                            | 例                                                          |
+| -------------- | -------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `status`       | 扫：在列表里和圆点、数字并排           | 名词短语，只有四种构词：**已X · X中 · 待X · X失败**（加裸状态「在场」「等待」） | 已回复 · 生成中 · 排队中 · 草稿待更新 · 运行失败 · 已读未答 |
+| `action`       | 做：按钮、菜单项                       | 动词短语，不带句号                                                              | 发送 · 创建房间 · 读取更新并重答 · 开始报数                 |
+| `availability` | 认：按领域状态取键的标签，映射保持穷尽 | 名词                                                                            | 可运行 · 未安装                                             |
+| `label`        | 认：节标题、导航、表单标签、占位       | 名词，不带句号                                                                  | 成员 · 5 · 检查连接 · 房间名                                |
+| `say`          | 懂：说明、空状态、错误、页头那一句     | 完整陈述句：事实 + 下一步                                                       | 发送失败，内容已保留在输入框                                |
 
 判断一个字串属于哪组很机械：会和别的字串并排出现的，是 `status` 或 `label`；点了会发生事的，是 `action`；其余是 `say`。
 
 read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译成 `copy.status`：
 
-| 状态 | 上屏文案 | tone | 点 / 字色 |
-| --- | --- | --- | --- |
-| idle | 在场 | quiet | `success-foreground` / `muted-foreground` |
-| running | 生成中 | run | `info-foreground` / `info-foreground` |
-| completed / posted | 已回复 | quiet | `success-foreground` / `muted-foreground` |
-| held | 草稿待更新 | held | `warning-foreground` / `warning-foreground` |
-| silent | 已读未答 | quiet | `success-foreground` / `muted-foreground` |
-| error | 运行失败 | err | `destructive` / `destructive` |
-| （派生）queued | 排队中 | — | 空心环 / `muted-foreground` |
-| 报数每行 | 已回复 · #seq / 回复中 / 回复失败 / 等待 | | |
+| 状态               | 上屏文案                                 | tone  | 点 / 字色                                   |
+| ------------------ | ---------------------------------------- | ----- | ------------------------------------------- |
+| idle               | 在场                                     | quiet | `success-foreground` / `muted-foreground`   |
+| running            | 生成中                                   | run   | `info-foreground` / `info-foreground`       |
+| completed / posted | 已回复                                   | quiet | `success-foreground` / `muted-foreground`   |
+| held               | 草稿待更新                               | held  | `warning-foreground` / `warning-foreground` |
+| silent             | 已读未答                                 | quiet | `success-foreground` / `muted-foreground`   |
+| error              | 运行失败                                 | err   | `destructive` / `destructive`               |
+| （派生）queued     | 排队中                                   | —     | 空心环 / `muted-foreground`                 |
+| 报数每行           | 已回复 · #seq / 回复中 / 回复失败 / 等待 |       |                                             |
 
 页头那一句也是名词形式，好和成员栏并排读：「当前 codex · 待回复 2 位」「当前 dsh · 最后一位」「dsh 即将开始」。
 
@@ -585,23 +586,24 @@ read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译成 `copy
 
 这两个路由不在本轮范围。上一轮它们靠 `@theme inline` 里的旧别名（`paper` / `washi` / `muted` / `moss` / `seal` …）活着；别名这一轮全部删除，所以对这两个文件做了**纯机械的类名替换**，不改结构、不改逻辑：
 
-| 旧 | 新 | 备注 |
-| --- | --- | --- |
-| `bg-paper` | `bg-background` | |
-| `bg-washi` | `bg-muted` | `washi` 是 `#f7f7f5`，等于 `muted`，不是 `card`（`#ffffff`） |
-| `text-muted` | `text-muted-foreground` | |
-| `text-ink` | `text-foreground` | |
-| `border-line` | `border-border` | |
-| `text-moss` / `text-moss-deep` / `bg-moss` / `border-moss/40` | `text-primary` / `bg-primary` / `border-primary/40` | `moss-deep` 并到 `primary`，词表里没有更深一档 |
-| `ring-moss` | `ring-ring` | |
-| `text-paper` | `text-primary-foreground` | 它落在 `bg-moss` 上 |
-| `text-seal` / `border-seal` | `text-destructive` / `border-destructive` | |
-| `text-hydrangea` / `border-hydrangea/40` | `text-info-foreground` / `border-info-foreground/40` | |
-| `border-gold` | `border-warning` | |
+| 旧                                                            | 新                                                   | 备注                                                         |
+| ------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `bg-paper`                                                    | `bg-background`                                      |                                                              |
+| `bg-washi`                                                    | `bg-muted`                                           | `washi` 是 `#f7f7f5`，等于 `muted`，不是 `card`（`#ffffff`） |
+| `text-muted`                                                  | `text-muted-foreground`                              |                                                              |
+| `text-ink`                                                    | `text-foreground`                                    |                                                              |
+| `border-line`                                                 | `border-border`                                      |                                                              |
+| `text-moss` / `text-moss-deep` / `bg-moss` / `border-moss/40` | `text-primary` / `bg-primary` / `border-primary/40`  | `moss-deep` 并到 `primary`，词表里没有更深一档               |
+| `ring-moss`                                                   | `ring-ring`                                          |                                                              |
+| `text-paper`                                                  | `text-primary-foreground`                            | 它落在 `bg-moss` 上                                          |
+| `text-seal` / `border-seal`                                   | `text-destructive` / `border-destructive`            |                                                              |
+| `text-hydrangea` / `border-hydrangea/40`                      | `text-info-foreground` / `border-info-foreground/40` |                                                              |
+| `border-gold`                                                 | `border-warning`                                     |                                                              |
 
 ## Do's and Don'ts
 
 ### Do:
+
 - **Do** 用 shadcn 的 token 名字。要新表面先问：现有的 `background / card / popover / sidebar / muted / accent` 里有没有一个已经是这个角色。
 - **Do** 状态成对取用：`bg-<x> text-<x>-foreground`，写成 `Badge` 的一个 variant。
 - **Do** 身份用 `chart-1…5`，取成员那一行存下的色；作者名和头像取同一个。
@@ -614,6 +616,7 @@ read model 的状态词永远不上屏，经 `agentStatusLabels` 翻译成 `copy
 - **Do** 保持输入框永远可用，一轮进行中只改提示行。
 
 ### Don't:
+
 - **Don't** 再造 token。上一轮的 `--canvas / --side / --stream / --raised / --ink-N / --sel / --run / --held / --err / --done / --id-N` 已经删干净，不要以别的名字回来。
 - **Don't** 用 `muted-foreground/60` 写任何要读的字，它只做禁用态和空心圆点。
 - **Don't** 用 `primary` 表意「正在运行」或「成功」；运行是 `info`，完成是 `success-foreground` 的绿点。

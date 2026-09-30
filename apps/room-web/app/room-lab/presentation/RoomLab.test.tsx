@@ -15,12 +15,23 @@ vi.mock('react-router', () => ({
   useNavigate: () => vi.fn(),
 }));
 vi.mock('./RoomWorkspace', () => ({
-  RoomWorkspace: ({ value, onValueChange, onAction, state }: {
-    value: string; onValueChange: (value: string) => void; onAction: (action: unknown) => void;
+  RoomWorkspace: ({
+    value,
+    onValueChange,
+    onAction,
+    state,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+    onAction: (action: unknown) => void;
     state: { title: string };
-  }) => <><h1>{state.title}</h1>
-    <input aria-label="draft" value={value} onChange={e => onValueChange(e.target.value)} />
-    <button onClick={() => onAction({ action: 'message', body: value })}>Send</button></>,
+  }) => (
+    <>
+      <h1>{state.title}</h1>
+      <input aria-label="draft" value={value} onChange={(e) => onValueChange(e.target.value)} />
+      <button onClick={() => onAction({ action: 'message', body: value })}>Send</button>
+    </>
+  ),
 }));
 afterEach(() => {
   cleanup();

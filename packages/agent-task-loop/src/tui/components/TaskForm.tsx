@@ -17,7 +17,14 @@ export interface TaskFormProps {
 type FieldKey = 'taskId' | 'title' | 'project' | 'targetAgent' | 'priority' | 'description' | 'source';
 
 /** New-task form. Owns its own key handling while mounted. */
-export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRefineDescription }: TaskFormProps): React.JSX.Element {
+export function TaskForm({
+  onSubmit,
+  onCancel,
+  submitting,
+  error,
+  sources,
+  onRefineDescription,
+}: TaskFormProps): React.JSX.Element {
   const sourceOptions = sources ?? [];
   const showSource = sourceOptions.length > 1;
 
@@ -43,7 +50,12 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
 
   const targetAgent = TARGET_AGENTS[agentIndex] as TargetAgent;
   const source = showSource ? sourceOptions[sourceIndex] : sourceOptions[0];
@@ -69,7 +81,9 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
 
   const submit = () => {
     setTouched(true);
-    if (!valid || submitting) return;
+    if (!valid || submitting) {
+      return;
+    }
     onSubmit({
       taskId: taskId.trim(),
       title: title.trim(),
@@ -82,39 +96,73 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
   };
 
   useInput((input, key) => {
-    if (key.escape) return onCancel();
+    if (key.escape) {
+      return onCancel();
+    }
     const field = fields[index].key;
 
-    if (key.return) return submit();
+    if (key.return) {
+      return submit();
+    }
     if (key.ctrl && input === 'r' && onRefineDescription && !refining) {
       setRefining(true);
       setRefineError(null);
       Promise.resolve(onRefineDescription({ title: title.trim(), description: description.trim() }))
-        .then(refined => { if (mounted.current) setDescription(refined); })
-        .catch(err => { if (mounted.current) setRefineError(err instanceof Error ? err.message : String(err)); })
-        .finally(() => { if (mounted.current) setRefining(false); });
+        .then((refined) => {
+          if (mounted.current) {
+            setDescription(refined);
+          }
+        })
+        .catch((err) => {
+          if (mounted.current) {
+            setRefineError(err instanceof Error ? err.message : String(err));
+          }
+        })
+        .finally(() => {
+          if (mounted.current) {
+            setRefining(false);
+          }
+        });
       return;
     }
-    if (key.tab && key.shift) return setIndex(i => (i - 1 + fields.length) % fields.length);
-    if (key.tab || key.downArrow) return setIndex(i => (i + 1) % fields.length);
-    if (key.upArrow) return setIndex(i => (i - 1 + fields.length) % fields.length);
+    if (key.tab && key.shift) {
+      return setIndex((i) => (i - 1 + fields.length) % fields.length);
+    }
+    if (key.tab || key.downArrow) {
+      return setIndex((i) => (i + 1) % fields.length);
+    }
+    if (key.upArrow) {
+      return setIndex((i) => (i - 1 + fields.length) % fields.length);
+    }
 
     if (field === 'targetAgent') {
-      if (key.rightArrow || input === ' ') setAgentIndex(i => (i + 1) % TARGET_AGENTS.length);
-      else if (key.leftArrow) setAgentIndex(i => (i - 1 + TARGET_AGENTS.length) % TARGET_AGENTS.length);
+      if (key.rightArrow || input === ' ') {
+        setAgentIndex((i) => (i + 1) % TARGET_AGENTS.length);
+      } else if (key.leftArrow) {
+        setAgentIndex((i) => (i - 1 + TARGET_AGENTS.length) % TARGET_AGENTS.length);
+      }
       return;
     }
     if (field === 'source') {
-      if (key.rightArrow || input === ' ') setSourceIndex(i => (i + 1) % sourceOptions.length);
-      else if (key.leftArrow) setSourceIndex(i => (i - 1 + sourceOptions.length) % sourceOptions.length);
+      if (key.rightArrow || input === ' ') {
+        setSourceIndex((i) => (i + 1) % sourceOptions.length);
+      } else if (key.leftArrow) {
+        setSourceIndex((i) => (i - 1 + sourceOptions.length) % sourceOptions.length);
+      }
       return;
     }
-    if (key.backspace || key.delete) return setText[field](text[field].slice(0, -1));
+    if (key.backspace || key.delete) {
+      return setText[field](text[field].slice(0, -1));
+    }
     if (field === 'priority') {
-      if (/^[0-9]$/.test(input)) setText[field](input);
+      if (/^[0-9]$/.test(input)) {
+        setText[field](input);
+      }
       return;
     }
-    if (input && !key.ctrl && !key.meta) setText[field](text[field] + input);
+    if (input && !key.ctrl && !key.meta) {
+      setText[field](text[field] + input);
+    }
   });
 
   return (
@@ -126,9 +174,7 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
         {fields.map((f, i) => {
           const active = i === index;
           const value =
-            f.key === 'targetAgent' ? `◀ ${targetAgent} ▶`
-            : f.key === 'source' ? `◀ ${source} ▶`
-            : text[f.key];
+            f.key === 'targetAgent' ? `◀ ${targetAgent} ▶` : f.key === 'source' ? `◀ ${source} ▶` : text[f.key];
           return (
             <Box key={f.key}>
               <Box width={14} flexShrink={0}>

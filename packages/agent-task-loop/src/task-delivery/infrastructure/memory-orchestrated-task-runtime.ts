@@ -4,10 +4,7 @@ import path from 'node:path';
 import type { ProcessRunner, SeatBind, TemplateSpec } from '../../orchestration/types';
 import type { Orchestration } from '../../orchestration/orchestration';
 import { createMemoryOrchestration } from '../../orchestration/node-factory';
-import type {
-  TaskDeliveryRuntime,
-  TaskDeliveryRuntimeView,
-} from '../application/task-delivery-ports';
+import type { TaskDeliveryRuntime, TaskDeliveryRuntimeView } from '../application/task-delivery-ports';
 import type { TaskDeliverySeat } from '../domain/model';
 
 export const TASK_DELIVERY_TEMPLATE: TemplateSpec = {
@@ -47,11 +44,7 @@ export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
     }
   }
 
-  fence<T>(
-    taskId: string,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<T> {
+  fence<T>(taskId: string, operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     return this.orchestration.fence(taskKey(taskId), operation, signal);
   }
 
@@ -61,15 +54,21 @@ export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
     prompt: string;
   }): Promise<{ text: string; latencyMs: number }> {
     const workDir = this.workspaces.get(input.taskId);
-    if (!workDir) throw new Error(`Task ${input.taskId} has no active workspace`);
+    if (!workDir) {
+      throw new Error(`Task ${input.taskId} has no active workspace`);
+    }
     const startedAt = (this.options.now ?? Date.now)();
     const result = await this.orchestration.spawn(taskKey(input.taskId), input.seat, {
       cwd: workDir,
       extraArgs: [input.prompt],
     });
-    if (result.exitCode !== 0) throw new Error(`${input.seat} exited with code ${result.exitCode}`);
+    if (result.exitCode !== 0) {
+      throw new Error(`${input.seat} exited with code ${result.exitCode}`);
+    }
     const text = result.stdout.trim();
-    if (!text) throw new Error(`${input.seat} returned an empty response`);
+    if (!text) {
+      throw new Error(`${input.seat} returned an empty response`);
+    }
     return { text, latencyMs: (this.options.now ?? Date.now)() - startedAt };
   }
 
@@ -81,10 +80,7 @@ export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
     this.orchestration.appendFact(taskKey(taskId), seat, text);
   }
 
-  sendMail(
-    taskId: string,
-    input: { from: TaskDeliverySeat; to: TaskDeliverySeat; body: string },
-  ): void {
+  sendMail(taskId: string, input: { from: TaskDeliverySeat; to: TaskDeliverySeat; body: string }): void {
     this.orchestration.sendMail(taskKey(taskId), input);
   }
 
@@ -112,11 +108,15 @@ export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
         releaseError ??= error;
       }
     }
-    if (releaseError) throw releaseError;
+    if (releaseError) {
+      throw releaseError;
+    }
   }
 
   reset(): void {
-    if (this.workspaces.size > 0) throw new Error('cannot reset an occupied Task runtime');
+    if (this.workspaces.size > 0) {
+      throw new Error('cannot reset an occupied Task runtime');
+    }
     this.orchestration = this.createOrchestration();
   }
 

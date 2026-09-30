@@ -121,12 +121,7 @@ export class ReviewLoopRunner {
         formatFailure: this.deps.formatFailure,
         mutationFence,
       });
-      const result = await executionService.executeTask(
-        roundInput.task,
-        workspacePath,
-        roundInput.round,
-        signal,
-      );
+      const result = await executionService.executeTask(roundInput.task, workspacePath, roundInput.round, signal);
 
       return {
         resultSummary: result.resultSummary,
@@ -142,12 +137,12 @@ export class ReviewLoopRunner {
       config: this.deps.config,
       publishContextService: new PublishContextService(),
       gitPublishService: new GitPublishService(),
-      generateCommitMessage: async input => buildAutoCommitMessage(input),
+      generateCommitMessage: async (input) => buildAutoCommitMessage(input),
     });
 
     return new ReviewLoopService({
       executeRound,
-      review: async input => {
+      review: async (input) => {
         const reviewerAgent = pickReviewerAgent(input.task.targetAgent as TargetAgent);
         const reviewService = new ReviewService({
           adapter: adapters[reviewerAgent],
@@ -166,16 +161,15 @@ export class ReviewLoopRunner {
           latestHeartbeatAt = new Date(now).toISOString();
           lastHeartbeatPersistedAt = now;
           try {
-            await mutationFence.run(() => this.deps.taskService.updateRunnerState(
-              input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
-              {
+            await mutationFence.run(() =>
+              this.deps.taskService.updateRunnerState(input.task as Pick<TaskRecord, 'taskId' | 'recordId'>, {
                 runnerPid: latestRunnerPid,
                 runnerKind: 'review',
                 runnerAgent: reviewerAgent,
                 runnerRound: input.reviewRound,
                 lastHeartbeatAt: latestHeartbeatAt,
-              },
-            ));
+              }),
+            );
           } catch (error) {
             signal?.throwIfAborted();
             if (this.deps.onBackgroundError) {
@@ -189,22 +183,21 @@ export class ReviewLoopRunner {
         };
 
         signal?.throwIfAborted();
-        await mutationFence.run(() => this.deps.taskService.updateRunnerState(
-          input.task as Pick<TaskRecord, 'taskId' | 'recordId'>,
-          {
+        await mutationFence.run(() =>
+          this.deps.taskService.updateRunnerState(input.task as Pick<TaskRecord, 'taskId' | 'recordId'>, {
             runnerKind: 'review',
             runnerAgent: reviewerAgent,
             runnerRound: input.reviewRound,
             lastHeartbeatAt: latestHeartbeatAt,
-          },
-        ));
+          }),
+        );
         signal?.throwIfAborted();
 
         return reviewService.review({
           ...input,
           reviewerAgent,
           signal,
-          onSpawn: async payload => {
+          onSpawn: async (payload) => {
             latestRunnerPid = payload.pid;
             await persistHeartbeat(true);
           },
@@ -213,7 +206,7 @@ export class ReviewLoopRunner {
           },
         });
       },
-      isTaskDeliverable: async deliveryInput => {
+      isTaskDeliverable: async (deliveryInput) => {
         signal?.throwIfAborted();
         const { repository } = resolveTaskExecutionContext(this.deps.config, deliveryInput.task);
         const check = await deliveryCheckService.check({

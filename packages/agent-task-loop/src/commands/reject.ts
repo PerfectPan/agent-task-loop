@@ -44,7 +44,7 @@ export const rejectCommand = defineCommand({
       const fencedTaskService = taskService.withMutationFence(mutationFence);
       const service = new RejectService({
         taskService: fencedTaskService,
-        runLoop: input =>
+        runLoop: (input) =>
           runner.run({
             ...input,
             maxRounds: Math.max(configuredMaxRounds, input.startRound + configuredMaxRounds - 1),

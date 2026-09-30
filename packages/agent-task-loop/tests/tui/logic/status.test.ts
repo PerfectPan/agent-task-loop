@@ -48,7 +48,7 @@ describe('bucket mapping', () => {
 
   it('every status lands in at least one non-"all" tab', () => {
     for (const status of TASK_STATUSES) {
-      const named = TABS.filter(t => t.key !== 'all').some(t => tabIncludes(t.key, status));
+      const named = TABS.filter((t) => t.key !== 'all').some((t) => tabIncludes(t.key, status));
       expect(named, `${status} is hidden from every named tab`).toBe(true);
     }
   });

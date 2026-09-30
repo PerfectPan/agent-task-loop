@@ -3,11 +3,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { AgentSession, RoomEvent, RoomId } from '@rivus/agent-room';
 import { RoomCatalog, type RoomRecord, type RoomWakeMode } from '../domain/room-catalog';
-import {
-  AgentRegistry,
-  type AgentDefinition,
-  type RoomLabAgentId,
-} from '../domain/agent-registry';
+import { AgentRegistry, type AgentDefinition, type RoomLabAgentId } from '../domain/agent-registry';
 import { defaultRoomHome, nowIso } from './room-home.server';
 import { randomAgentColor } from './agent-seed.server';
 import { runMigrations } from './migrations';
@@ -47,22 +43,28 @@ export class SqliteRoomStore {
   }
 
   loadCatalog(): RoomCatalog {
-    const rooms = this.db.prepare(`
+    const rooms = this.db
+      .prepare(`
       SELECT id, title, goal, created_at, updated_at, last_opened_at, wake, serial, cwd,
              parent_room_id, opened_by, opened_at_seq
       FROM rooms
-    `).all() as unknown as RoomRow[];
-    const members = this.db.prepare(`
+    `)
+      .all() as unknown as RoomRow[];
+    const members = this.db
+      .prepare(`
       SELECT room_id, agent_id, seat_order FROM room_members ORDER BY seat_order ASC
-    `).all() as unknown as MemberRow[];
+    `)
+      .all() as unknown as MemberRow[];
     const membersByRoom = new Map<string, RoomLabAgentId[]>();
     for (const row of members) {
-      if (!this.agents.has(row.agent_id)) continue;
+      if (!this.agents.has(row.agent_id)) {
+        continue;
+      }
       const list = membersByRoom.get(row.room_id) ?? [];
       list.push(row.agent_id);
       membersByRoom.set(row.room_id, list);
     }
-    const records: RoomRecord[] = rooms.map(row => ({
+    const records: RoomRecord[] = rooms.map((row) => ({
       id: row.id,
       title: row.title,
       createdAt: row.created_at,
@@ -112,10 +114,12 @@ export class SqliteRoomStore {
   saveLastOpened(record: RoomRecord): void {
     this.inTransaction(() => {
       this.upsertRoom(record);
-      this.db.prepare(`
+      this.db
+        .prepare(`
         INSERT INTO app_meta (key, value) VALUES ('last_opened_id', ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
-      `).run(record.id);
+      `)
+        .run(record.id);
     });
   }
 
@@ -134,16 +138,19 @@ export class SqliteRoomStore {
         });
       }
       if (snapshot.lastOpenedId) {
-        this.db.prepare(`
+        this.db
+          .prepare(`
           INSERT INTO app_meta (key, value) VALUES ('last_opened_id', ?)
           ON CONFLICT(key) DO UPDATE SET value = excluded.value
-        `).run(snapshot.lastOpenedId);
+        `)
+          .run(snapshot.lastOpenedId);
       }
     });
   }
 
   private upsertRoom(room: RoomRecord): void {
-    this.db.prepare(`
+    this.db
+      .prepare(`
       INSERT INTO rooms (
         id, title, goal, created_at, updated_at, last_opened_at, wake, serial, cwd,
         parent_room_id, opened_by, opened_at_seq
@@ -160,20 +167,21 @@ export class SqliteRoomStore {
         parent_room_id = excluded.parent_room_id,
         opened_by = excluded.opened_by,
         opened_at_seq = excluded.opened_at_seq
-    `).run(
-      room.id,
-      room.title,
-      room.goal ?? null,
-      room.createdAt,
-      room.updatedAt,
-      room.lastOpenedAt,
-      room.wake,
-      room.serial ? 1 : 0,
-      room.cwd ?? null,
-      room.parentRoomId ?? null,
-      room.openedBy ?? null,
-      room.openedAtSeq ?? null,
-    );
+    `)
+      .run(
+        room.id,
+        room.title,
+        room.goal ?? null,
+        room.createdAt,
+        room.updatedAt,
+        room.lastOpenedAt,
+        room.wake,
+        room.serial ? 1 : 0,
+        room.cwd ?? null,
+        room.parentRoomId ?? null,
+        room.openedBy ?? null,
+        room.openedAtSeq ?? null,
+      );
   }
 
   private inTransaction(work: () => void): void {
@@ -188,10 +196,14 @@ export class SqliteRoomStore {
   }
 
   preview(roomId: string): { lastLine?: string; lastAt?: string } {
-    const row = this.db.prepare(`
+    const row = this.db
+      .prepare(`
       SELECT body, at FROM room_events WHERE room_id = ? ORDER BY seq DESC LIMIT 1
-    `).get(roomId) as unknown as { body: string; at: string } | undefined;
-    if (!row?.body) return {};
+    `)
+      .get(roomId) as unknown as { body: string; at: string } | undefined;
+    if (!row?.body) {
+      return {};
+    }
     return {
       lastLine: row.body.replace(/\s+/g, ' ').slice(0, 48),
       lastAt: row.at,
@@ -204,9 +216,7 @@ export class SqliteRoomStore {
    * row still exists, it just adds nothing to a turn.
    */
   saveSystemPrompt(agentId: RoomLabAgentId, prompt: string): void {
-    this.db
-      .prepare('UPDATE agents SET system_prompt = ? WHERE id = ?')
-      .run(prompt.trim(), agentId);
+    this.db.prepare('UPDATE agents SET system_prompt = ? WHERE id = ?').run(prompt.trim(), agentId);
   }
 
   /**
@@ -216,20 +226,23 @@ export class SqliteRoomStore {
    * `timeout_ms` at the room default, so the insert names none of them.
    */
   addAgent(input: { id: string; label: string; role: string; command: string }): void {
-    const last = this.db.prepare('SELECT MAX(position) AS position FROM agents')
-      .get() as unknown as { position: number | null };
-    this.db.prepare(`
+    const last = this.db.prepare('SELECT MAX(position) AS position FROM agents').get() as unknown as {
+      position: number | null;
+    };
+    this.db
+      .prepare(`
       INSERT INTO agents (id, label, role, command, color, position, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      input.id,
-      input.label,
-      input.role,
-      input.command,
-      randomAgentColor(),
-      (last.position === null ? -1 : Number(last.position)) + 1,
-      nowIso(),
-    );
+    `)
+      .run(
+        input.id,
+        input.label,
+        input.role,
+        input.command,
+        randomAgentColor(),
+        (last.position === null ? -1 : Number(last.position)) + 1,
+        nowIso(),
+      );
   }
 
   /** The record and its write points for one room (docs/architecture/agent-collaboration.md). */
@@ -244,11 +257,13 @@ export class SqliteRoomStore {
   }
 
   loadAgents(): AgentDefinition[] {
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(`
       SELECT id, label, role, command, color, position, system_prompt
       FROM agents ORDER BY position ASC
-    `).all() as unknown as AgentRow[];
-    return rows.map(row => ({
+    `)
+      .all() as unknown as AgentRow[];
+    return rows.map((row) => ({
       id: row.id,
       label: row.label,
       role: row.role,
@@ -260,19 +275,25 @@ export class SqliteRoomStore {
   }
 
   private meta(key: string): string | undefined {
-    const row = this.db.prepare('SELECT value FROM app_meta WHERE key = ?').get(key) as unknown as { value: string } | undefined;
+    const row = this.db.prepare('SELECT value FROM app_meta WHERE key = ?').get(key) as unknown as
+      | { value: string }
+      | undefined;
     return row?.value;
   }
 
   private setMeta(key: string, value: string): void {
-    this.db.prepare(`
+    this.db
+      .prepare(`
       INSERT INTO app_meta (key, value) VALUES (?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `).run(key, value);
+    `)
+      .run(key, value);
   }
 
   private importLegacyFiles(): void {
-    if (this.meta('legacy_imported') === '1') return;
+    if (this.meta('legacy_imported') === '1') {
+      return;
+    }
     const catalogFile = join(this.root, 'catalog.json');
     if (this.root === ':memory:' || !existsSync(catalogFile)) {
       this.setMeta('legacy_imported', '1');
@@ -303,7 +324,9 @@ export class SqliteRoomStore {
   private importLegacyRoom(roomId: string, directory: string): void {
     const events = readJson<RoomEvent[]>(join(directory, 'events.json'), []);
     const sessions = readJson<AgentSession[]>(join(directory, 'sessions.json'), []);
-    if (events.length === 0 && sessions.length === 0) return;
+    if (events.length === 0 && sessions.length === 0) {
+      return;
+    }
     this.inTransaction(() => {
       this.db.prepare('DELETE FROM room_events WHERE room_id = ?').run(roomId);
       this.db.prepare('DELETE FROM agent_sessions WHERE room_id = ?').run(roomId);
@@ -371,7 +394,9 @@ interface RoomRow {
 }
 
 function readJson<T>(filePath: string, fallback: T): T {
-  if (!existsSync(filePath)) return fallback;
+  if (!existsSync(filePath)) {
+    return fallback;
+  }
   return JSON.parse(readFileSync(filePath, 'utf8')) as T;
 }
 

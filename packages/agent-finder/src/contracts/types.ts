@@ -34,7 +34,7 @@ export interface HostProbeCollector {
 }
 
 export interface DiscoveryReport {
-  schema_version: "0.1";
+  schema_version: '0.1';
   generated_at: string;
   host: { os: string; arch: string };
   agents: AgentRecord[];
@@ -44,7 +44,7 @@ export interface AgentRecord {
   id: string;
   name: string;
   type: string;
-  status: "runnable" | "found" | "missing" | "unknown";
+  status: 'runnable' | 'found' | 'missing' | 'unknown';
   command: string | null;
   app_path: string | null;
   version: string | null;

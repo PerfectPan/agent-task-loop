@@ -32,9 +32,7 @@ describe('TaskService provider boundary', () => {
 
     const service = new TaskService(provider);
 
-    await expect(service.listPendingTasks('codex')).resolves.toEqual([
-      expect.objectContaining({ taskId: 'TASK-1' }),
-    ]);
+    await expect(service.listPendingTasks('codex')).resolves.toEqual([expect.objectContaining({ taskId: 'TASK-1' })]);
     await expect(service.getTaskById('TASK-1')).resolves.toEqual(expect.objectContaining({ taskId: 'TASK-1' }));
 
     await service.updateReviewState(

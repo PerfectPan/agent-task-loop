@@ -22,7 +22,7 @@ const tasks: TaskRecord[] = [
   task({ taskId: 'T-6', status: '已失败', title: 'Flaky job', project: 'ci' }),
 ];
 
-const ids = (records: TaskRecord[]): string[] => records.map(r => r.taskId);
+const ids = (records: TaskRecord[]): string[] => records.map((r) => r.taskId);
 
 describe('filterTasks', () => {
   it('Active tab keeps 执行中/待处理 and drops 已完成/待决策', () => {

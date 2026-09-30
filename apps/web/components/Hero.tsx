@@ -19,14 +19,14 @@ export function Hero({ version, repoUrl }: { version: string; repoUrl: string })
         <h1 className="mx-auto mt-6 max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
           Drive AI coding agents
           <span className="bg-gradient-to-r from-accent to-accent-2 bg-clip-text text-transparent">
-            {' '}from task to PR
+            {' '}
+            from task to PR
           </span>
         </h1>
 
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted sm:text-lg">
-          A local CLI and terminal dashboard that runs your coding agents through the full loop —
-          execution, review, rework, and a publish-ready pull request. Reads your existing trackers,
-          multi-agent ready.
+          A local CLI and terminal dashboard that runs your coding agents through the full loop — execution, review,
+          rework, and a publish-ready pull request. Reads your existing trackers, multi-agent ready.
         </p>
 
         <div className="mx-auto mt-8 flex max-w-xl items-center justify-between gap-3 rounded-xl border border-border bg-surface/80 px-4 py-3 font-mono text-sm">

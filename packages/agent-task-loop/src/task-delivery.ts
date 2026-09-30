@@ -4,10 +4,7 @@ export type {
   TaskDeliveryStatus,
   TaskReviewVerdict,
 } from './task-delivery/domain/model';
-export {
-  TaskDeliveryTransitionError,
-  TaskDeliveryValidationError,
-} from './task-delivery/domain/errors';
+export { TaskDeliveryTransitionError, TaskDeliveryValidationError } from './task-delivery/domain/errors';
 export { parseTaskReviewVerdict } from './task-delivery/domain/review-verdict';
 export { TaskDelivery } from './task-delivery/domain/task-delivery';
 export type {

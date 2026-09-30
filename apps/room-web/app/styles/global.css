@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /*
  * Self-hosted, no network at runtime. @fontsource/noto-serif-sc ships ~100
@@ -7,12 +7,12 @@
  * so the first paint uses the fallback and swaps once rather than holding text
  * blank. Inter carries the interface, Noto Serif SC the prose.
  */
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
-@import "@fontsource/noto-serif-sc/400.css";
-@import "@fontsource/noto-serif-sc/600.css";
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/noto-serif-sc/400.css';
+@import '@fontsource/noto-serif-sc/600.css';
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant hover (&:hover);
@@ -218,9 +218,9 @@
   --shadow-card: var(--card-shadow);
 
   /* Interface words are sans, prose is serif. See DESIGN.md → Typography. */
-  --font-sans: Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
-  --font-serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: Inter, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 @theme {
@@ -228,8 +228,13 @@
   --animate-pulse-soft: rivus-pulse 1.4s ease-in-out infinite;
 
   @keyframes rivus-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.25; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
   }
 }
 

@@ -52,7 +52,7 @@ export async function runAgentCommand(
     onHeartbeat?.();
   }, 15_000);
   heartbeatTimer.unref();
-  subprocess.all?.on('data', chunk => {
+  subprocess.all?.on('data', (chunk) => {
     onHeartbeat?.();
     onOutput?.(chunk.toString());
   });

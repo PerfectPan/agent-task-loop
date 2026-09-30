@@ -39,14 +39,22 @@ export function parseRoomMessage(
   const knownAgents = new Set(knownAgentIds);
   for (const match of body.matchAll(MENTION_PATTERN)) {
     const mention = match[1]?.toLowerCase();
-    if (!mention) continue;
-    if (mention === 'all') {
-      for (const agentId of activeAgentIds) addressedTo.add(agentId);
+    if (!mention) {
       continue;
     }
-    if (activeAgents.has(mention)) addressedTo.add(mention);
-    else if (knownAgents.has(mention)) inactiveMentions.add(mention);
-    else unknownMentions.add(mention);
+    if (mention === 'all') {
+      for (const agentId of activeAgentIds) {
+        addressedTo.add(agentId);
+      }
+      continue;
+    }
+    if (activeAgents.has(mention)) {
+      addressedTo.add(mention);
+    } else if (knownAgents.has(mention)) {
+      inactiveMentions.add(mention);
+    } else {
+      unknownMentions.add(mention);
+    }
   }
   return {
     body,

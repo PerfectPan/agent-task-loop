@@ -22,14 +22,20 @@ describe('Room action boundary', () => {
   });
 
   it('rejects a cross-origin JSON mutation', async () => {
-    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: 'https://attacker.example',
-      },
-      body: JSON.stringify({ action: 'reset' }),
-    }))));
+    const response = asResponse(
+      await action(
+        args(
+          new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Origin: 'https://attacker.example',
+            },
+            body: JSON.stringify({ action: 'reset' }),
+          }),
+        ),
+      ),
+    );
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
@@ -39,27 +45,39 @@ describe('Room action boundary', () => {
   });
 
   it('rejects form submissions before parsing the action', async () => {
-    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Origin: 'http://127.0.0.1:3210',
-      },
-      body: 'action=reset',
-    }))));
+    const response = asResponse(
+      await action(
+        args(
+          new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Origin: 'http://127.0.0.1:3210',
+            },
+            body: 'action=reset',
+          }),
+        ),
+      ),
+    );
 
     expect(response.status).toBe(415);
   });
 
   it('rejects malformed JSON payloads as a client error', async () => {
-    const response = asResponse(await action(args(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: 'http://127.0.0.1:3210',
-      },
-      body: JSON.stringify({ action: 'task', title: 42 }),
-    }))));
+    const response = asResponse(
+      await action(
+        args(
+          new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Origin: 'http://127.0.0.1:3210',
+            },
+            body: JSON.stringify({ action: 'task', title: 42 }),
+          }),
+        ),
+      ),
+    );
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -70,16 +88,26 @@ describe('Room action boundary', () => {
 
   it('rejects an empty Room composition at the domain boundary', async () => {
     process.env.RIVUS_ROOM_HOME = mkdtempSync(join(tmpdir(), 'rivus-room-'));
-    globalThis.__rivusRoomLabHost = new RoomLabHost(SqliteRoomStore.open(process.env.RIVUS_ROOM_HOME), probeReadyBinding);
+    globalThis.__rivusRoomLabHost = new RoomLabHost(
+      SqliteRoomStore.open(process.env.RIVUS_ROOM_HOME),
+      probeReadyBinding,
+    );
     const created = await getRoomLabHost().create({ title: '边界测试' });
-    const response = asResponse(await action(args(new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: 'http://127.0.0.1:3210',
-      },
-      body: JSON.stringify({ action: 'compose', agentIds: [] }),
-    }), created.roomId)));
+    const response = asResponse(
+      await action(
+        args(
+          new Request(`http://127.0.0.1:3210/room/${created.roomId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Origin: 'http://127.0.0.1:3210',
+            },
+            body: JSON.stringify({ action: 'compose', agentIds: [] }),
+          }),
+          created.roomId,
+        ),
+      ),
+    );
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
@@ -98,14 +126,18 @@ describe('Room action boundary', () => {
   });
 
   it('refuses a form post to the agent desk from a host that only looks local', async () => {
-    const rejected = agentsAction(args(new Request('http://127.0.0.1:3210/room/agents', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Origin: 'http://localhost.attacker.example',
-      },
-      body: 'intent=scan',
-    })));
+    const rejected = agentsAction(
+      args(
+        new Request('http://127.0.0.1:3210/room/agents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Origin: 'http://localhost.attacker.example',
+          },
+          body: 'intent=scan',
+        }),
+      ),
+    );
 
     await expect(rejected).rejects.toMatchObject({ init: { status: 403 } });
   });
@@ -117,8 +149,11 @@ describe('Room action boundary', () => {
       const rejected = loader(loaderArgs(new Request('http://127.0.0.1:3210/room/r_aaaaaaaaaa')));
       await expect(rejected).rejects.toMatchObject({ init: { status: 403 } });
     } finally {
-      if (previous === undefined) delete process.env.VERCEL;
-      else process.env.VERCEL = previous;
+      if (previous === undefined) {
+        delete process.env.VERCEL;
+      } else {
+        process.env.VERCEL = previous;
+      }
     }
   });
 });

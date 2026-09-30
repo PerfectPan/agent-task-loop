@@ -9,10 +9,7 @@ describe('ReviewService', () => {
           status: 'success',
           summary: JSON.stringify({
             verdict: '驳回',
-            findings: [
-              '1. [高] 缺少 hook 内自愈',
-              '2. [中] 缺少 worktree 验证',
-            ],
+            findings: ['1. [高] 缺少 hook 内自愈', '2. [中] 缺少 worktree 验证'],
           }),
           workspacePath: '/tmp/workspace',
         }),
@@ -43,11 +40,7 @@ describe('ReviewService', () => {
       adapter: {
         execute: vi.fn().mockResolvedValue({
           status: 'success',
-          summary: [
-            '先做事实核对。',
-            '再跑一下验证。',
-            '{"verdict":"通过","findings":[]}',
-          ].join('\n'),
+          summary: ['先做事实核对。', '再跑一下验证。', '{"verdict":"通过","findings":[]}'].join('\n'),
           workspacePath: '/tmp/workspace',
         }),
       } as never,

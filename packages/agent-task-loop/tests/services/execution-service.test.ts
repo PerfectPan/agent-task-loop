@@ -26,7 +26,7 @@ describe('ExecutionService', () => {
       markTaskSucceeded: vi.fn(),
       markTaskFailed: vi.fn(),
     };
-    const execute = vi.fn().mockImplementation(async input => {
+    const execute = vi.fn().mockImplementation(async (input) => {
       input.onSession?.({ sessionId: 'sess-123', sessionName: 'task-1-codex' });
       input.onProgress?.('正在分析问题');
       return {
@@ -331,7 +331,7 @@ describe('ExecutionService', () => {
       markTaskSucceeded: vi.fn(),
       markTaskFailed: vi.fn(),
     };
-    const execute = vi.fn().mockImplementation(async input => {
+    const execute = vi.fn().mockImplementation(async (input) => {
       await input.onSpawn?.({ pid: 12345 });
       await input.onHeartbeat?.();
       return {
@@ -372,9 +372,11 @@ describe('ExecutionService', () => {
     );
 
     expect(result.status).toBe('待复核');
-    expect(onHeartbeatError).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'TLS handshake timeout',
-    }));
+    expect(onHeartbeatError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'TLS handshake timeout',
+      }),
+    );
     expect(taskService.updateReviewState).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 'TASK-11' }),
       expect.objectContaining({

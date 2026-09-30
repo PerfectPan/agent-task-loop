@@ -1,12 +1,6 @@
 export type TaskDeliverySeat = 'impl' | 'review';
 
-export type TaskDeliveryStatus =
-  | 'executing'
-  | 'reviewing'
-  | 'reworking'
-  | 'passed'
-  | 'changes-requested'
-  | 'failed';
+export type TaskDeliveryStatus = 'executing' | 'reviewing' | 'reworking' | 'passed' | 'changes-requested' | 'failed';
 
 export type TaskReviewVerdict = 'PASS' | 'CHANGES_REQUESTED';
 

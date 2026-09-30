@@ -22,7 +22,10 @@ function mentionParts(body: string): string[] {
   return body.split(MENTION_PATTERN);
 }
 
-export function RoomMessage({ event, colorOf = () => undefined }: {
+export function RoomMessage({
+  event,
+  colorOf = () => undefined,
+}: {
   event: RoomLabEventView;
   colorOf?: AgentColorLookup;
 }) {
@@ -37,7 +40,9 @@ export function RoomMessage({ event, colorOf = () => undefined }: {
         <span aria-hidden="true" />
         <p className="m-0 max-w-[66ch] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
           <span className="mr-2 font-medium">{name}</span>
-          <time dateTime={event.at} className="tabular-nums mr-2">{formatClock(event.at)}</time>
+          <time dateTime={event.at} className="tabular-nums mr-2">
+            {formatClock(event.at)}
+          </time>
           {event.body}
         </p>
       </li>
@@ -52,11 +57,23 @@ export function RoomMessage({ event, colorOf = () => undefined }: {
         event.failed && 'rounded-sm outline outline-1 outline-destructive outline-offset-4',
       )}
     >
-      {human ? <HumanMark /> : agentId ? <AgentMark agentId={agentId} color={colorOf(agentId)} /> : <span aria-hidden="true" className="size-[30px] rounded-full bg-border" />}
+      {human ? (
+        <HumanMark />
+      ) : agentId ? (
+        <AgentMark agentId={agentId} color={colorOf(agentId)} />
+      ) : (
+        <span aria-hidden="true" className="size-[30px] rounded-full bg-border" />
+      )}
       <article className="min-w-0">
         <header className="mb-[3px] flex items-baseline gap-2 leading-tight">
-          <strong className={`text-sm font-semibold ${human ? 'text-foreground' : agentId ? agentInk(colorOf(agentId)) : ''}`}>{name}</strong>
-          <time className="tabular-nums whitespace-nowrap text-xs text-muted-foreground" dateTime={event.at}>{formatClock(event.at)}</time>
+          <strong
+            className={`text-sm font-semibold ${human ? 'text-foreground' : agentId ? agentInk(colorOf(agentId)) : ''}`}
+          >
+            {name}
+          </strong>
+          <time className="tabular-nums whitespace-nowrap text-xs text-muted-foreground" dateTime={event.at}>
+            {formatClock(event.at)}
+          </time>
           {event.failed && <span className="text-xs text-destructive">{copy.say.sendFailed}</span>}
         </header>
         <p className="m-0 max-w-[66ch] font-serif text-base leading-[1.7] whitespace-pre-wrap [overflow-wrap:anywhere]">
@@ -65,19 +82,21 @@ export function RoomMessage({ event, colorOf = () => undefined }: {
             // was being written: the composer's chip, minus the editing.
             const mentionId = index % 2 === 1 ? part.toLowerCase() : undefined;
             const chip = mentionId ? mentionChip(mentionId, colorOf(mentionId)) : undefined;
-            return chip
-              ? (
-                <span className={chip.chipClass} key={index}>
-                  <span aria-hidden="true" className={chip.dotClass}>{chip.letters}</span>
-                  {chip.text}
+            return chip ? (
+              <span className={chip.chipClass} key={index}>
+                <span aria-hidden="true" className={chip.dotClass}>
+                  {chip.letters}
                 </span>
-              )
-              : part;
+                {chip.text}
+              </span>
+            ) : (
+              part
+            );
           })}
         </p>
-        {event.addressedTo.length > 0 && <span className="sr-only">
-          {copy.say.mentioned(event.addressedTo.join('、'))}
-        </span>}
+        {event.addressedTo.length > 0 && (
+          <span className="sr-only">{copy.say.mentioned(event.addressedTo.join('、'))}</span>
+        )}
       </article>
     </li>
   );

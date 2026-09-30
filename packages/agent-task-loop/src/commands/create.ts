@@ -15,7 +15,7 @@ const prioritySchema = z.string().min(1).pipe(z.coerce.number().int().min(0).max
 
 // Normalizes one raw CLI/prompt value into a trimmed, non-empty string (or
 // undefined) — the shape every field starts from before shape validation.
-const argSchema = z.preprocess(value => {
+const argSchema = z.preprocess((value) => {
   if (typeof value === 'number') {
     return String(value);
   }
@@ -76,8 +76,8 @@ function missingKeys(inputs: CreateInputs): RequiredKey[] {
     return [];
   }
   return result.error.issues
-    .filter(issue => issue.code === 'invalid_type' && issue.path.length === 1)
-    .map(issue => issue.path[0] as RequiredKey);
+    .filter((issue) => issue.code === 'invalid_type' && issue.path.length === 1)
+    .map((issue) => issue.path[0] as RequiredKey);
 }
 
 function isTty(): boolean {
@@ -90,7 +90,7 @@ function fail(message: string): never {
 }
 
 function question(rl: readline.Interface, prompt: string): Promise<string> {
-  return new Promise(resolve => rl.question(prompt, resolve));
+  return new Promise((resolve) => rl.question(prompt, resolve));
 }
 
 async function promptForMissing(inputs: CreateInputs): Promise<CreateInputs> {
@@ -100,7 +100,7 @@ async function promptForMissing(inputs: CreateInputs): Promise<CreateInputs> {
   }
 
   if (!isTty()) {
-    fail(`Missing required flag(s): ${missing.map(key => FLAG_BY_KEY[key]).join(', ')}`);
+    fail(`Missing required flag(s): ${missing.map((key) => FLAG_BY_KEY[key]).join(', ')}`);
   }
 
   const next = { ...inputs };
@@ -223,9 +223,12 @@ export const createCommand = defineCommand({
 
     const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
     const sourceSummaries = listSources(config);
-    const sourceIds = sourceSummaries.map(source => source.id);
-    const defaultSource = sourceSummaries.find(source => source.isDefault)?.id ?? sourceIds[0];
-    const source = resolveSource(inputs.source, defaultSource ? [defaultSource, ...sourceIds.filter(id => id !== defaultSource)] : sourceIds);
+    const sourceIds = sourceSummaries.map((source) => source.id);
+    const defaultSource = sourceSummaries.find((source) => source.isDefault)?.id ?? sourceIds[0];
+    const source = resolveSource(
+      inputs.source,
+      defaultSource ? [defaultSource, ...sourceIds.filter((id) => id !== defaultSource)] : sourceIds,
+    );
 
     const payload: CreateTaskPayload = {
       taskId: inputs.taskId,

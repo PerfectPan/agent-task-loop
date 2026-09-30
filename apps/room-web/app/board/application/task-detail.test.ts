@@ -18,9 +18,7 @@ function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   };
 }
 
-function createFakeProvider(
-  getTaskById: (id: string) => Promise<TaskRecord | undefined>,
-): TaskProvider {
+function createFakeProvider(getTaskById: (id: string) => Promise<TaskRecord | undefined>): TaskProvider {
   return {
     listTasks: async () => {
       throw new Error('Not implemented in test fake');

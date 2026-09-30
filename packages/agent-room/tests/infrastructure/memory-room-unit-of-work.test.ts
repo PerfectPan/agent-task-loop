@@ -14,11 +14,9 @@ describe('MemoryRoomUnitOfWork', () => {
       throw new Error('commit hook');
     });
 
-    expect(unitOfWork.readRoom(sessionId.roomId, room => room.head)).toBe(0);
+    expect(unitOfWork.readRoom(sessionId.roomId, (room) => room.head)).toBe(0);
     expect(
-      unitOfWork.readRoom(sessionId.roomId, room =>
-        room.readSlice(0, { maxEvents: 10, maxChars: 100 }),
-      ),
+      unitOfWork.readRoom(sessionId.roomId, (room) => room.readSlice(0, { maxEvents: 10, maxChars: 100 })),
     ).toEqual({ events: [], head: 0 });
   });
 
@@ -55,7 +53,7 @@ describe('MemoryRoomUnitOfWork', () => {
     const firstRoom = { tenantId: 'a::b', conversationId: 'c' };
     const secondRoom = { tenantId: 'a', conversationId: 'b::c' };
 
-    unitOfWork.withRoom(firstRoom, room => {
+    unitOfWork.withRoom(firstRoom, (room) => {
       room.post(
         {
           messageId: 'first',
@@ -69,8 +67,8 @@ describe('MemoryRoomUnitOfWork', () => {
         '2026-08-29T00:00:00.000Z',
       );
     });
-    unitOfWork.withRoom(secondRoom, room => expect(room.head).toBe(0));
-    unitOfWork.withRoom(firstRoom, room => expect(room.head).toBe(1));
+    unitOfWork.withRoom(secondRoom, (room) => expect(room.head).toBe(0));
+    unitOfWork.withRoom(firstRoom, (room) => expect(room.head).toBe(1));
 
     const firstSession = {
       tenantId: 'a',

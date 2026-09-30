@@ -38,8 +38,7 @@ describe('TaskDelivery aggregate', () => {
     const task = TaskDelivery.start({ taskId: 'WEB-INVALID', title: 'Guard verdicts', maxRounds: 1 });
     task.recordImplementation('answer');
 
-    expect(() => task.recordReview('UNKNOWN' as never, 'review'))
-      .toThrow(TaskDeliveryValidationError);
+    expect(() => task.recordReview('UNKNOWN' as never, 'review')).toThrow(TaskDeliveryValidationError);
     expect(task.snapshot()).toMatchObject({ status: 'reviewing', verdict: undefined });
   });
 });
@@ -57,7 +56,7 @@ describe('TaskDeliveryApplication', () => {
     const application = new TaskDeliveryApplication({
       repository,
       runtime,
-      eventSink: { publish: async event => void events.push(event) },
+      eventSink: { publish: async (event) => void events.push(event) },
     });
 
     const result = await application.start({
@@ -73,9 +72,9 @@ describe('TaskDeliveryApplication', () => {
       occupied: false,
       allowedSeat: 'review',
     });
-    expect(runtime.calls.map(call => call.seat)).toEqual(['impl', 'review', 'impl', 'review']);
+    expect(runtime.calls.map((call) => call.seat)).toEqual(['impl', 'review', 'impl', 'review']);
     expect(runtime.mail).toHaveLength(1);
-    expect(events.filter(event => event.type === 'seat-output')).toHaveLength(4);
+    expect(events.filter((event) => event.type === 'seat-output')).toHaveLength(4);
   });
 
   it('does not let a failed projection change the Task verdict', async () => {
@@ -83,11 +82,16 @@ describe('TaskDeliveryApplication', () => {
     const application = new TaskDeliveryApplication({
       repository: new MemoryTaskDeliveryRepository(),
       runtime,
-      eventSink: { publish: async () => { throw new Error('Room unavailable'); } },
+      eventSink: {
+        publish: async () => {
+          throw new Error('Room unavailable');
+        },
+      },
     });
 
-    await expect(application.start({ taskId: 'WEB-002', title: 'Independent Task', maxRounds: 1 }))
-      .resolves.toMatchObject({ status: 'passed', occupied: false });
+    await expect(
+      application.start({ taskId: 'WEB-002', title: 'Independent Task', maxRounds: 1 }),
+    ).resolves.toMatchObject({ status: 'passed', occupied: false });
   });
 
   it('does not let a failed update observer change the Task verdict', async () => {
@@ -96,24 +100,27 @@ describe('TaskDeliveryApplication', () => {
     const application = new TaskDeliveryApplication({
       repository,
       runtime,
-      onUpdate: () => { throw new Error('read model unavailable'); },
+      onUpdate: () => {
+        throw new Error('read model unavailable');
+      },
     });
 
-    await expect(application.start({ taskId: 'WEB-UPDATE', title: 'Observer failure', maxRounds: 1 }))
-      .resolves.toMatchObject({ status: 'passed', occupied: false });
+    await expect(
+      application.start({ taskId: 'WEB-UPDATE', title: 'Observer failure', maxRounds: 1 }),
+    ).resolves.toMatchObject({ status: 'passed', occupied: false });
     expect(repository.get('WEB-UPDATE')).toMatchObject({ status: 'passed', verdict: 'PASS' });
   });
 
   it('acquires occupancy before creating and never overwrites a concurrent aggregate', async () => {
     let releaseImplementation!: () => void;
     let implementationStarted!: () => void;
-    const implementationGate = new Promise<void>(resolve => {
+    const implementationGate = new Promise<void>((resolve) => {
       releaseImplementation = resolve;
     });
-    const started = new Promise<void>(resolve => {
+    const started = new Promise<void>((resolve) => {
       implementationStarted = resolve;
     });
-    const runner: ProcessRunner = async input => {
+    const runner: ProcessRunner = async (input) => {
       if (input.cmd === 'impl') {
         implementationStarted();
         await implementationGate;
@@ -133,8 +140,9 @@ describe('TaskDeliveryApplication', () => {
 
     const first = application.start({ taskId: ' WEB-003 ', title: ' first ', maxRounds: 1 });
     await started;
-    await expect(application.start({ taskId: 'WEB-003', title: 'second', maxRounds: 1 }))
-      .rejects.toThrow(/already occupied/);
+    await expect(application.start({ taskId: 'WEB-003', title: 'second', maxRounds: 1 })).rejects.toThrow(
+      /already occupied/,
+    );
     expect(repository.get('WEB-003')).toMatchObject({ title: 'first', status: 'executing' });
 
     releaseImplementation();
@@ -146,11 +154,12 @@ describe('TaskDeliveryApplication', () => {
     const application = new TaskDeliveryApplication({
       repository: new MemoryTaskDeliveryRepository(),
       runtime: new ReleaseFailingRuntime(['answer', 'VERDICT: PASS\nApproved.']),
-      eventSink: { publish: async event => void events.push(event) },
+      eventSink: { publish: async (event) => void events.push(event) },
     });
 
-    await expect(application.start({ taskId: 'WEB-004', title: 'stable result', maxRounds: 1 }))
-      .resolves.toMatchObject({ status: 'passed', occupied: false });
+    await expect(application.start({ taskId: 'WEB-004', title: 'stable result', maxRounds: 1 })).resolves.toMatchObject(
+      { status: 'passed', occupied: false },
+    );
     expect(events.at(-1)).toMatchObject({
       type: 'cleanup-failed',
       task: { status: 'passed' },
@@ -173,12 +182,16 @@ class FakeRuntime implements TaskDeliveryRuntime {
   }
 
   async fence<T>(_taskId: string, operation: () => Promise<T>): Promise<T> {
-    if (!this.occupied) throw new Error('task is not occupied');
+    if (!this.occupied) {
+      throw new Error('task is not occupied');
+    }
     return operation();
   }
 
   async run(input: { seat: TaskDeliverySeat; prompt: string }): Promise<{ text: string; latencyMs: number }> {
-    if (!this.occupied || input.seat !== this.allowedSeat) throw new Error('seat is not allowed');
+    if (!this.occupied || input.seat !== this.allowedSeat) {
+      throw new Error('seat is not allowed');
+    }
     this.calls.push({ seat: input.seat, prompt: input.prompt });
     return { text: this.outputs.shift() ?? '', latencyMs: 1 };
   }

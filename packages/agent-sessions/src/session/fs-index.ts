@@ -1,7 +1,7 @@
-import { readdir as nodeReaddir, stat as nodeStat } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import type { AgentKind, Session } from "./types.js";
+import { readdir as nodeReaddir, stat as nodeStat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import type { AgentKind, Session } from './types.js';
 
 /** Upper bound on directory entries scanned while indexing transcripts. */
 const SCAN_BUDGET = 50_000;
@@ -34,8 +34,8 @@ export interface BuildFsIndexOptions {
 /** The standard on-disk roots for the filesystem-backed agents (Codex, Claude). */
 export function defaultSessionRoots(home: string = homedir()): SessionRoot[] {
   return [
-    { path: join(home, ".codex", "sessions"), agent: "codex" },
-    { path: join(home, ".claude", "projects"), agent: "claude" }
+    { path: join(home, '.codex', 'sessions'), agent: 'codex' },
+    { path: join(home, '.claude', 'projects'), agent: 'claude' },
   ];
 }
 
@@ -59,7 +59,9 @@ export async function buildFsIndex(opts: BuildFsIndexOptions): Promise<Map<strin
   const map = new Map<string, Session>();
 
   const walk = async (dir: string, agent: AgentKind, depth: number): Promise<void> => {
-    if (depth > maxDepth || budget <= 0) return;
+    if (depth > maxDepth || budget <= 0) {
+      return;
+    }
     let entries: DirEntry[];
     try {
       entries = await readdir(dir);
@@ -68,20 +70,28 @@ export async function buildFsIndex(opts: BuildFsIndexOptions): Promise<Map<strin
     }
     const subdirs: string[] = [];
     for (const entry of entries) {
-      if (--budget <= 0) return;
+      if (--budget <= 0) {
+        return;
+      }
       if (entry.isDirectory()) {
         subdirs.push(join(dir, entry.name));
         continue;
       }
       const match = entry.name.match(UUID_RE);
-      if (!match || map.has(match[0])) continue;
+      if (!match || map.has(match[0])) {
+        continue;
+      }
       const path = join(dir, entry.name);
       map.set(match[0], { id: match[0], agent, path, updatedAt: await mtimeIso(stat, path) });
     }
-    for (const sub of subdirs) await walk(sub, agent, depth + 1);
+    for (const sub of subdirs) {
+      await walk(sub, agent, depth + 1);
+    }
   };
 
-  for (const root of opts.roots) await walk(root.path, root.agent, 0);
+  for (const root of opts.roots) {
+    await walk(root.path, root.agent, 0);
+  }
   return map;
 }
 
@@ -90,6 +100,6 @@ async function mtimeIso(stat: Stat, path: string): Promise<string> {
     const { mtimeMs } = await stat(path);
     return new Date(mtimeMs).toISOString();
   } catch {
-    return "";
+    return '';
   }
 }

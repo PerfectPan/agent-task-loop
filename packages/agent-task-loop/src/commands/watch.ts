@@ -10,7 +10,7 @@ const TERMINAL_STATUSES = new Set(['待决策', '待发布', '待验收', '已�
 export const INITIAL_LOG_TAIL_BYTES = 64 * 1024;
 
 async function sleep(ms: number): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, ms));
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function readLogDelta(
@@ -20,12 +20,7 @@ export async function readLogDelta(
 ): Promise<{ nextOffset: number; chunk: string }> {
   try {
     const stat = await fs.stat(logPath);
-    const start =
-      offset === undefined ?
-        Math.max(0, stat.size - initialTailBytes)
-      : stat.size < offset ?
-        0
-      : offset;
+    const start = offset === undefined ? Math.max(0, stat.size - initialTailBytes) : stat.size < offset ? 0 : offset;
 
     if (stat.size === start) {
       return { nextOffset: stat.size, chunk: '' };

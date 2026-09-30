@@ -9,11 +9,11 @@ publishing is in [`../moonbit-publish.md`](../moonbit-publish.md) and
 
 ## Layers
 
-| Layer | Where | Owns |
-| --- | --- | --- |
-| MoonBit core `PerfectPan/agent-finder` | `agent_discovery_core/` | Provider catalog, status derivation, evidence, diagnostics, versioned JSON |
-| npm wrapper `@rivus/agent-finder-core` | `src/` | Host probes (PATH lookup, executable and path checks, bounded version probes), type mapping, JS exports |
-| CLI `@rivus/agent-finder-cli` | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser |
+| Layer                                  | Where                       | Owns                                                                                                                                                 |
+| -------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MoonBit core `PerfectPan/agent-finder` | `agent_discovery_core/`     | Provider catalog, status derivation, evidence, diagnostics, versioned JSON                                                                           |
+| npm wrapper `@rivus/agent-finder-core` | `src/`                      | Host probes (PATH lookup, executable and path checks, bounded version probes), type mapping, JS exports                                              |
+| CLI `@rivus/agent-finder-cli`          | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser |
 
 The core scanner never touches the host. It receives a `Probe` of facts
 collected by the wrapper, which keeps it deterministic and testable across
@@ -23,12 +23,12 @@ macOS, Linux, and Windows fixtures. The catalog is data-driven:
 
 ## Status and evidence
 
-| Status | Meaning |
-| --- | --- |
+| Status     | Meaning                                                                                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `runnable` | A command exists and is executable; where a provider needs an extension subcommand (for example GitHub Copilot through `gh`), its version probe also succeeded |
-| `found` | An app, command, config, or MCP config path exists, but runnable CLI execution is not proven |
-| `missing` | No known command, app, config, or MCP path was found |
-| `unknown` | Reserved for probe failures that cannot be classified safely |
+| `found`    | An app, command, config, or MCP config path exists, but runnable CLI execution is not proven                                                                   |
+| `missing`  | No known command, app, config, or MCP path was found                                                                                                           |
+| `unknown`  | Reserved for probe failures that cannot be classified safely                                                                                                   |
 
 Every agent record carries an `evidence` array explaining its status, so a
 consumer can tell "runnable because command and version probe succeeded" from

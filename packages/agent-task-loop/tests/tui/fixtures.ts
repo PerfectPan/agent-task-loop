@@ -174,8 +174,7 @@ export function demoTasks(now: number): TaskRecord[] {
       priority: 2,
       status: '已失败',
       progressSummary: 'Attempted token bucket but hit a circular dependency.',
-      lastError:
-        'Circular dependency between RateLimiter and HttpClient. Needs an architectural review before retry.',
+      lastError: 'Circular dependency between RateLimiter and HttpClient. Needs an architectural review before retry.',
       updatedAt: ago(480),
       claimedAt: ago(600),
     },

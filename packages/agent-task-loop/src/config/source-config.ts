@@ -91,15 +91,24 @@ export function listSources(config: EditableConfig): SourceSummary[] {
 
 /** Rebuilds a `githubIssues` block from a repo list, collapsing to the single
  *  shorthand when exactly one remains. */
-function buildGitHubConfig(repos: GitHubRepoEntry[], token: string | undefined, topAgent: string): AppConfig['githubIssues'] {
+function buildGitHubConfig(
+  repos: GitHubRepoEntry[],
+  token: string | undefined,
+  topAgent: string,
+): AppConfig['githubIssues'] {
   if (repos.length === 1) {
     const only = repos[0]!;
-    return { ...(token ? { token } : {}), owner: only.owner, repo: only.repo, defaultAgent: only.defaultAgent } as AppConfig['githubIssues'];
+    return {
+      ...(token ? { token } : {}),
+      owner: only.owner,
+      repo: only.repo,
+      defaultAgent: only.defaultAgent,
+    } as AppConfig['githubIssues'];
   }
   return {
     ...(token ? { token } : {}),
     defaultAgent: topAgent,
-    repositories: repos.map(r => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
+    repositories: repos.map((r) => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
   } as AppConfig['githubIssues'];
 }
 
@@ -121,11 +130,11 @@ export function addGitHubRepo(
   }
 
   const existing = normalizeGitHubRepos(gi);
-  if (existing.some(r => r.owner === repo.owner && r.repo === repo.repo)) {
+  if (existing.some((r) => r.owner === repo.owner && r.repo === repo.repo)) {
     throw new Error(`GitHub repo already configured: ${repo.owner}/${repo.repo}`);
   }
   const repos: GitHubRepoEntry[] = [
-    ...existing.map(r => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
+    ...existing.map((r) => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
     { owner: repo.owner, repo: repo.repo, defaultAgent },
   ];
   next.githubIssues = buildGitHubConfig(repos, repo.token ?? gi.token, gi.defaultAgent ?? 'codex');
@@ -163,15 +172,15 @@ export function removeSource(config: EditableConfig, id: string): EditableConfig
     }
     const target = id.slice('github:'.length);
     const repos = normalizeGitHubRepos(next.githubIssues);
-    if (!repos.some(r => `${r.owner}/${r.repo}` === target)) {
+    if (!repos.some((r) => `${r.owner}/${r.repo}` === target)) {
       throw new Error(`Source not found: ${id}`);
     }
-    const remaining = repos.filter(r => `${r.owner}/${r.repo}` !== target);
+    const remaining = repos.filter((r) => `${r.owner}/${r.repo}` !== target);
     if (remaining.length === 0) {
       delete next.githubIssues;
     } else {
       next.githubIssues = buildGitHubConfig(
-        remaining.map(r => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
+        remaining.map((r) => ({ owner: r.owner, repo: r.repo, defaultAgent: r.defaultAgent })),
         next.githubIssues.token,
         next.githubIssues.defaultAgent ?? 'codex',
       );

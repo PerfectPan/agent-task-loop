@@ -19,9 +19,7 @@ export class TemplateRegistry {
       throw new OrchestrationTemplateError(`template ${spec.id} has duplicate seats`);
     }
     if (spec.allow?.start && !unique.has(spec.allow.start)) {
-      throw new OrchestrationTemplateError(
-        `template ${spec.id} start seat ${spec.allow.start} is not in seats`,
-      );
+      throw new OrchestrationTemplateError(`template ${spec.id} start seat ${spec.allow.start} is not in seats`);
     }
     this.templates.set(spec.id, copyTemplate(spec));
   }

@@ -1,8 +1,4 @@
-import type {
-  TaskDeliverySeat,
-  TaskDeliverySnapshot,
-  TaskReviewVerdict,
-} from '../domain/model';
+import type { TaskDeliverySeat, TaskDeliverySnapshot, TaskReviewVerdict } from '../domain/model';
 
 export interface TaskDeliveryRepository {
   get(taskId: string): TaskDeliverySnapshot | undefined;
@@ -17,16 +13,8 @@ export interface TaskDeliveryRuntimeView {
 
 export interface TaskDeliveryRuntime {
   open(input: { taskId: string; title: string }): Promise<void>;
-  fence<T>(
-    taskId: string,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<T>;
-  run(input: {
-    taskId: string;
-    seat: TaskDeliverySeat;
-    prompt: string;
-  }): Promise<{ text: string; latencyMs: number }>;
+  fence<T>(taskId: string, operation: () => Promise<T>, signal?: AbortSignal): Promise<T>;
+  run(input: { taskId: string; seat: TaskDeliverySeat; prompt: string }): Promise<{ text: string; latencyMs: number }>;
   allow(taskId: string, seat: TaskDeliverySeat): void;
   appendFact(taskId: string, seat: TaskDeliverySeat, text: string): void;
   sendMail(taskId: string, input: { from: TaskDeliverySeat; to: TaskDeliverySeat; body: string }): void;

@@ -57,19 +57,25 @@ export function roomSpeakTool(
       ' read the newer events with room_read, then call room_speak again with a revised message.',
     inputSchema: {
       body: z.string().min(1).max(ROOM_MESSAGE_LIMIT).describe('The message to post, plain text.'),
-      addressedTo: z
-        .array(z.string())
-        .max(20)
-        .optional()
-        .describe('Member ids this message addresses, without the @.'),
+      addressedTo: z.array(z.string()).max(20).optional().describe('Member ids this message addresses, without the @.'),
     },
-    handler: async input => {
-      if (!deps.isOpen()) return { error: 'turn-closed' };
-      if (handle.closed) return { error: 'held-limit' };
-      if (handle.spoke) return { error: 'already-spoke' };
+    handler: async (input) => {
+      if (!deps.isOpen()) {
+        return { error: 'turn-closed' };
+      }
+      if (handle.closed) {
+        return { error: 'held-limit' };
+      }
+      if (handle.spoke) {
+        return { error: 'already-spoke' };
+      }
       const body = typeof input.body === 'string' ? input.body.trim() : '';
-      if (!body) return { error: 'body-required' };
-      if (body.length > ROOM_MESSAGE_LIMIT) return { error: 'body-too-long' };
+      if (!body) {
+        return { error: 'body-required' };
+      }
+      if (body.length > ROOM_MESSAGE_LIMIT) {
+        return { error: 'body-too-long' };
+      }
       const addressedTo = Array.isArray(input.addressedTo)
         ? input.addressedTo.filter((id): id is string => typeof id === 'string')
         : [];
@@ -85,7 +91,9 @@ export function roomSpeakTool(
         return { posted: { seq: result.seq } };
       }
       handle.heldCount += 1;
-      if (handle.heldCount >= HELD_LIMIT) handle.closed = true;
+      if (handle.heldCount >= HELD_LIMIT) {
+        handle.closed = true;
+      }
       return { held: { newer: result.newer.map(toToolEvent) } };
     },
   };
@@ -100,8 +108,7 @@ export function roomSpeakTool(
 export function roomDmTool(
   handle: RoomTurnHandle,
   deps: {
-    dm: (input: { to: string; body: string }) =>
-      Promise<{ roomId: string; seq: number } | { error: string }>;
+    dm: (input: { to: string; body: string }) => Promise<{ roomId: string; seq: number } | { error: string }>;
     isOpen: () => boolean;
   },
 ): ToolDefinition {
@@ -116,16 +123,28 @@ export function roomDmTool(
       to: z.string().min(1).describe('The member id to talk with, without the @.'),
       body: z.string().min(1).max(ROOM_MESSAGE_LIMIT).describe('The message to post there, plain text.'),
     },
-    handler: async input => {
-      if (!deps.isOpen()) return { error: 'turn-closed' };
+    handler: async (input) => {
+      if (!deps.isOpen()) {
+        return { error: 'turn-closed' };
+      }
       const to = typeof input.to === 'string' ? input.to.trim() : '';
-      if (!to) return { error: 'to-required' };
+      if (!to) {
+        return { error: 'to-required' };
+      }
       const body = typeof input.body === 'string' ? input.body.trim() : '';
-      if (!body) return { error: 'body-required' };
-      if (body.length > ROOM_MESSAGE_LIMIT) return { error: 'body-too-long' };
-      if (to === handle.agentId) return { error: 'dm-self' };
+      if (!body) {
+        return { error: 'body-required' };
+      }
+      if (body.length > ROOM_MESSAGE_LIMIT) {
+        return { error: 'body-too-long' };
+      }
+      if (to === handle.agentId) {
+        return { error: 'dm-self' };
+      }
       const result = await deps.dm({ to, body });
-      if ('error' in result) return result;
+      if ('error' in result) {
+        return result;
+      }
       return { dm: { roomId: result.roomId, seq: result.seq } };
     },
   };
@@ -152,11 +171,18 @@ export function roomReadTool(
       'Read events from the room record after a sequence number. Use it after a held' +
       ' room_speak result, or when this turn carried only part of the record.',
     inputSchema: {
-      afterSeq: z.number().int().min(0).optional().describe('Read events after this seq. Defaults to 0, the start of the record.'),
+      afterSeq: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Read events after this seq. Defaults to 0, the start of the record.'),
       limit: z.number().int().min(1).max(200).optional().describe('At most this many events. Defaults to 50.'),
     },
-    handler: async input => {
-      if (!deps.isOpen()) return { error: 'turn-closed' };
+    handler: async (input) => {
+      if (!deps.isOpen()) {
+        return { error: 'turn-closed' };
+      }
       const afterSeq = typeof input.afterSeq === 'number' ? Math.max(0, Math.floor(input.afterSeq)) : 0;
       const limit = typeof input.limit === 'number' ? Math.min(200, Math.max(1, Math.floor(input.limit))) : undefined;
       const slice = await deps.read({ afterSeq, ...(limit === undefined ? {} : { limit }) });

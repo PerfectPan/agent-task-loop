@@ -7,17 +7,21 @@ import { displayWidth } from './truncate';
  * laid-out ink tree (which `overflow: hidden` would clip anyway).
  */
 export function wrappedLineCount(text: string | undefined, width: number): number {
-  if (!text || width <= 0) return 0;
-  return text
-    .split('\n')
-    .reduce((rows, line) => rows + Math.max(1, Math.ceil(displayWidth(line) / width)), 0);
+  if (!text || width <= 0) {
+    return 0;
+  }
+  return text.split('\n').reduce((rows, line) => rows + Math.max(1, Math.ceil(displayWidth(line) / width)), 0);
 }
 
 /** Clamp a scroll offset to `[0, max(0, contentLines - viewportLines)]`. */
 export function clampScroll(scroll: number, contentLines: number, viewportLines: number): number {
   const max = Math.max(0, contentLines - viewportLines);
-  if (scroll < 0) return 0;
-  if (scroll > max) return max;
+  if (scroll < 0) {
+    return 0;
+  }
+  if (scroll > max) {
+    return max;
+  }
   return scroll;
 }
 

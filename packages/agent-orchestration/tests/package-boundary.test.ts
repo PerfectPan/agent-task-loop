@@ -57,7 +57,9 @@ describe('package boundary', () => {
     // The control-plane split empties this directory by moving the task baton
     // to agent-task-loop; commit two refills it with the lease manager, the
     // agent runtime and the tool server.
-    if (!existsSync(dir) || walk(dir).length === 0) return;
+    if (!existsSync(dir) || walk(dir).length === 0) {
+      return;
+    }
     const banned = ['node:fs', 'node:os', 'execa', 'homedir'];
     const files = walk(dir);
     for (const file of files) {

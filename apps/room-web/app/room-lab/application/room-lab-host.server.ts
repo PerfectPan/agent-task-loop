@@ -71,15 +71,12 @@ export class RoomLabHost {
   /** The room_dm write path; the child rooms it opens are this host's. */
   private readonly dm: RoomDm;
 
-  constructor(
-    store: SqliteRoomStore = SqliteRoomStore.open(),
-    bindings: RoomLabHostBindings = {},
-  ) {
+  constructor(store: SqliteRoomStore = SqliteRoomStore.open(), bindings: RoomLabHostBindings = {}) {
     this.store = store;
     this.agents = store.agents;
     this.catalog = store.loadCatalog();
     this.connector = new AcpConnector();
-    this.probeRow = bindings.probe ?? (binding => this.connector.probe(binding));
+    this.probeRow = bindings.probe ?? ((binding) => this.connector.probe(binding));
     this.controlRegistry = new SqliteAgentRegistry(store.db);
     this.lease = new LeaseManager({
       store: new SqliteLeaseStore(store.db),
@@ -97,17 +94,17 @@ export class RoomLabHost {
     this.turnLog = new SqliteTurnLog(store.db);
     this.dm = new RoomDm({
       findPrivate: (parentRoomId, members) => this.catalog.findPrivate(parentRoomId, members),
-      openPrivate: input => {
+      openPrivate: (input) => {
         const record = this.catalog.openPrivate(input);
         this.store.saveRoom(record);
         return record;
       },
-      stream: roomId => this.store.stream(roomId),
+      stream: (roomId) => this.store.stream(roomId),
       dispatch: (roomId, event) => this.open(roomId).dispatch(event),
       now: nowIso,
     });
-    this.runtime.onActivate(key => this.activateKey(key));
-    this.runtime.onSessionDiscard(key => this.discardKey(key));
+    this.runtime.onActivate((key) => this.activateKey(key));
+    this.runtime.onSessionDiscard((key) => this.discardKey(key));
     this.runtime.onActivationFailure((key, error) => this.activationFailed(key, error));
   }
 
@@ -124,7 +121,9 @@ export class RoomLabHost {
    */
   private activationFailed(key: string, error: string): void {
     const { roomId, agentId } = parseRuntimeKey(key);
-    if (!this.services.has(roomId)) return;
+    if (!this.services.has(roomId)) {
+      return;
+    }
     this.open(roomId).activationFailed(agentId, error);
   }
 
@@ -134,7 +133,9 @@ export class RoomLabHost {
    */
   private async discardKey(key: string): Promise<void> {
     const hosted = this.sessionTools.get(key);
-    if (!hosted) return;
+    if (!hosted) {
+      return;
+    }
     this.sessionTools.delete(key);
     await hosted.close().catch(() => undefined);
   }
@@ -188,24 +189,28 @@ export class RoomLabHost {
    * `session/new` — and the answers are cached until 重新扫描.
    */
   async inventory(): Promise<RoomAgentProbeItem[]> {
-    if (this.inventoryCache) return this.inventoryCache;
+    if (this.inventoryCache) {
+      return this.inventoryCache;
+    }
     const agents = this.agents.list();
     const rooms = this.list();
-    const items = await Promise.all(agents.map(async agent => {
-      const probe = await this.probeRow({ command: agent.command });
-      return {
-        id: agent.id,
-        label: agent.label,
-        role: agent.role,
-        color: agent.color,
-        command: agent.command,
-        availability: deriveAgentAvailability({
-          probe: probe.status,
-          seatedIn: rooms.filter(room => room.memberIds.includes(agent.id)).length,
-        }),
-      };
-    }));
-    return this.inventoryCache = items;
+    const items = await Promise.all(
+      agents.map(async (agent) => {
+        const probe = await this.probeRow({ command: agent.command });
+        return {
+          id: agent.id,
+          label: agent.label,
+          role: agent.role,
+          color: agent.color,
+          command: agent.command,
+          availability: deriveAgentAvailability({
+            probe: probe.status,
+            seatedIn: rooms.filter((room) => room.memberIds.includes(agent.id)).length,
+          }),
+        };
+      }),
+    );
+    return (this.inventoryCache = items);
   }
 
   /**
@@ -225,12 +230,20 @@ export class RoomLabHost {
    */
   async addAgent(input: { id: string; label: string; role?: string; command: string }): Promise<void> {
     const id = input.id.trim();
-    if (!isAgentId(id)) throw new RoomInputError('An agent id must match ^[a-z][a-z0-9-]*$');
-    if (this.agents.has(id)) throw new RoomInputError(`Agent ${id} already exists`);
+    if (!isAgentId(id)) {
+      throw new RoomInputError('An agent id must match ^[a-z][a-z0-9-]*$');
+    }
+    if (this.agents.has(id)) {
+      throw new RoomInputError(`Agent ${id} already exists`);
+    }
     const label = input.label.trim();
-    if (!label) throw new RoomInputError('An agent needs a label');
+    if (!label) {
+      throw new RoomInputError('An agent needs a label');
+    }
     const command = input.command.trim();
-    if (!command) throw new RoomInputError('An agent needs a command to probe');
+    if (!command) {
+      throw new RoomInputError('An agent needs a command to probe');
+    }
     this.store.addAgent({ id, label, role: input.role?.trim() || INHERITED_AGENT_ROLE, command });
     this.reloadAgents();
   }
@@ -251,11 +264,11 @@ export class RoomLabHost {
     const lastOpenedId = this.lastOpened()?.id;
     return {
       ...(lastOpenedId === undefined ? {} : { lastOpenedId }),
-      agents: (await this.inventory()).map(agent => ({
+      agents: (await this.inventory()).map((agent) => ({
         ...agent,
         seatedIn: rooms
-          .filter(room => room.memberIds.includes(agent.id))
-          .map(room => ({ id: room.id, title: room.title })),
+          .filter((room) => room.memberIds.includes(agent.id))
+          .map((room) => ({ id: room.id, title: room.title })),
         systemPrompt: this.agents.get(agent.id)?.systemPrompt ?? '',
       })),
     };
@@ -308,17 +321,16 @@ export class RoomLabHost {
     this.store.saveRoom(record);
   }
 
-  private setSettings(
-    roomId: string,
-    settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string },
-  ): void {
+  private setSettings(roomId: string, settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string }): void {
     const record = this.catalog.replaceSettings(roomId, settings, nowIso());
     this.store.saveRoom(record);
   }
 
   open(roomId: string): RoomService {
     const existing = this.services.get(roomId);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
     // A room that is not in the catalog has no service; get throws first.
     this.catalog.get(roomId);
     const isPrivate = this.catalog.get(roomId).parentRoomId !== undefined;
@@ -327,36 +339,38 @@ export class RoomLabHost {
       store: this.store.stream(roomId),
       registry: this.controlRegistry,
       runtime: {
-        wake: key => this.runtime.wake(key),
-        cancel: key => void this.runtime.cancel(key),
+        wake: (key) => this.runtime.wake(key),
+        cancel: (key) => void this.runtime.cancel(key),
       },
       lease: this.lease,
       turnLog: this.turnLog,
       members: () => this.catalog.get(roomId).memberIds,
-      agents: () => this.agents.list().map(agent => ({
-        id: agent.id,
-        label: agent.label,
-        role: agent.role,
-        color: agent.color,
-      })),
+      agents: () =>
+        this.agents.list().map((agent) => ({
+          id: agent.id,
+          label: agent.label,
+          role: agent.role,
+          color: agent.color,
+        })),
       settings: () => {
         const current = this.catalog.get(roomId);
         return { wake: current.wake, serial: current.serial, ...(current.cwd ? { cwd: current.cwd } : {}) };
       },
       roomTitle: () => this.catalog.get(roomId).title,
       workRoot: defaultWorkRoot,
-      toolHost: ({ agentId, tools, authorize }) =>
-        this.hostSessionTools(roomId, agentId, tools, authorize),
+      toolHost: ({ agentId, tools, authorize }) => this.hostSessionTools(roomId, agentId, tools, authorize),
       // A private room offers no room_dm: its two members are already alone,
       // and a dm between them would open a grandchild room the person cannot
       // see (docs/architecture/agent-collaboration.md: private rooms hang one level under their parent).
       ...(isPrivate ? {} : { dm: this.dm }),
       parentTitle: this.parentTitleOf(roomId),
-      ledgerOf: ancestor => this.open(ancestor),
-      childRooms: () => this.catalog.list()
-        .filter(room => room.parentRoomId === roomId)
-        .map(room => room.id),
-      resetChild: id => this.open(id),
+      ledgerOf: (ancestor) => this.open(ancestor),
+      childRooms: () =>
+        this.catalog
+          .list()
+          .filter((room) => room.parentRoomId === roomId)
+          .map((room) => room.id),
+      resetChild: (id) => this.open(id),
     });
     this.services.set(roomId, service);
     return service;
@@ -371,14 +385,16 @@ export class RoomLabHost {
   async close(): Promise<void> {
     const hosted = [...this.sessionTools.values()];
     this.sessionTools.clear();
-    await Promise.all(hosted.map(tools => tools.close().catch(() => undefined)));
+    await Promise.all(hosted.map((tools) => tools.close().catch(() => undefined)));
     await this.runtime.close();
   }
 
   /** What a private room's turn facts call the room it was opened from. */
   private parentTitleOf(roomId: string): (() => string) | undefined {
     const parentId = this.catalog.get(roomId).parentRoomId;
-    if (!parentId) return undefined;
+    if (!parentId) {
+      return undefined;
+    }
     return () => this.catalog.get(parentId).title;
   }
 
@@ -393,7 +409,7 @@ export class RoomLabHost {
 
   async decorate(state: RoomView, roomId: string): Promise<RoomLabState> {
     const record = this.catalog.get(roomId);
-    const inventory = new Map((await this.inventory()).map(agent => [agent.id, agent]));
+    const inventory = new Map((await this.inventory()).map((agent) => [agent.id, agent]));
     return {
       ...state,
       roomId,
@@ -405,7 +421,7 @@ export class RoomLabHost {
         ...(record.cwd === undefined ? {} : { cwd: record.cwd }),
       },
       catalog: this.catalogView(),
-      agents: state.agents.map(agent => {
+      agents: state.agents.map((agent) => {
         const listed = inventory.get(agent.id);
         return {
           ...agent,
@@ -421,22 +437,30 @@ export class RoomLabHost {
    * from (docs/architecture/agent-collaboration.md). Roots keep their creation order; so do the children.
    */
   catalogView(): RoomCatalogItemView[] {
-    const items = new Map<string, RoomCatalogItemView>(this.catalog.list().map(room => {
-      const preview = this.store.preview(room.id);
-      return [room.id, {
-        id: room.id,
-        title: room.title,
-        updatedAt: preview.lastAt ?? room.updatedAt,
-        memberCount: room.memberIds.length,
-        ...(preview.lastLine === undefined ? {} : { lastLine: preview.lastLine }),
-      }];
-    }));
+    const items = new Map<string, RoomCatalogItemView>(
+      this.catalog.list().map((room) => {
+        const preview = this.store.preview(room.id);
+        return [
+          room.id,
+          {
+            id: room.id,
+            title: room.title,
+            updatedAt: preview.lastAt ?? room.updatedAt,
+            memberCount: room.memberIds.length,
+            ...(preview.lastLine === undefined ? {} : { lastLine: preview.lastLine }),
+          },
+        ];
+      }),
+    );
     const roots: RoomCatalogItemView[] = [];
     for (const room of this.catalog.list()) {
       const item = items.get(room.id)!;
       const parent = room.parentRoomId ? items.get(room.parentRoomId) : undefined;
-      if (parent) (parent.children ??= []).push(item);
-      else roots.push(item);
+      if (parent) {
+        (parent.children ??= []).push(item);
+      } else {
+        roots.push(item);
+      }
     }
     return roots;
   }

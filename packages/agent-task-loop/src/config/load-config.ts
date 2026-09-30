@@ -39,9 +39,7 @@ export function resolveConfigPath(configPath?: string): string {
     return global;
   }
 
-  throw new Error(
-    'No config found. Run `agent-task-loop init`, or pass --config / set AGENT_TASK_LOOP_CONFIG.',
-  );
+  throw new Error('No config found. Run `agent-task-loop init`, or pass --config / set AGENT_TASK_LOOP_CONFIG.');
 }
 
 export async function loadConfig(configPath?: string): Promise<AppConfig> {

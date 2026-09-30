@@ -10,7 +10,7 @@ export { globalConfigPath };
 
 const AGENT_MAP: Record<string, { name: string; command: string }> = {
   'claude-code': { name: 'claude', command: 'claude' },
-  'codex': { name: 'codex', command: 'codex' },
+  codex: { name: 'codex', command: 'codex' },
 };
 
 type AgentEntry = { name: string; command: string; args: string[]; env: Record<string, string> };
@@ -72,7 +72,7 @@ export function createGlobalConfig(inputs: GlobalConfigInputs): 'created' | 'exi
 }
 
 function prompt(rl: readline.Interface, question: string): Promise<string> {
-  return new Promise(resolve => rl.question(question, resolve));
+  return new Promise((resolve) => rl.question(question, resolve));
 }
 
 async function confirmInstall(): Promise<boolean> {
@@ -109,7 +109,7 @@ async function ensureLarkCli(): Promise<boolean> {
   }
   console.log('Installing @larksuite/cli...');
   execFileSync('npm', ['install', '-g', '@larksuite/cli'], { stdio: 'inherit' });
-  if (!await isLarkCliAvailable()) {
+  if (!(await isLarkCliAvailable())) {
     console.error('Installation failed. Install manually: npm install -g @larksuite/cli');
     return false;
   }
@@ -134,7 +134,8 @@ export const initCommand = defineCommand({
     const sourceAnswer = (await prompt(rl, 'Which task source? [g]ithub / [f]eishu / [b]oth (default: github): '))
       .trim()
       .toLowerCase();
-    const useFeishu = sourceAnswer === 'f' || sourceAnswer === 'feishu' || sourceAnswer === 'b' || sourceAnswer === 'both';
+    const useFeishu =
+      sourceAnswer === 'f' || sourceAnswer === 'feishu' || sourceAnswer === 'b' || sourceAnswer === 'both';
     const useGitHub =
       sourceAnswer === '' ||
       sourceAnswer === 'g' ||
@@ -155,7 +156,8 @@ export const initCommand = defineCommand({
       const repoPrompt = detected ? `GitHub repo [${detected.repo}]: ` : 'GitHub repo: ';
       const owner = (await prompt(rl, ownerPrompt)).trim() || detected?.owner || '';
       const repo = (await prompt(rl, repoPrompt)).trim() || detected?.repo || '';
-      const defaultAgent = (await prompt(rl, 'Default agent for issues without an agent label [codex]: ')).trim() || 'codex';
+      const defaultAgent =
+        (await prompt(rl, 'Default agent for issues without an agent label [codex]: ')).trim() || 'codex';
       if (!owner || !repo) {
         rl.close();
         console.error('GitHub owner and repo are required. Re-run `agent-task-loop init`.');

@@ -3,7 +3,13 @@ import type { Agent } from '@rivus/agent-orchestration';
 import { SqliteAgentRegistry } from './sqlite-agent-registry.server';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 
-function agent(input: { id: string; label: string; command: string; systemPrompt?: string; timeoutMs?: number }): Agent {
+function agent(input: {
+  id: string;
+  label: string;
+  command: string;
+  systemPrompt?: string;
+  timeoutMs?: number;
+}): Agent {
   return {
     id: input.id,
     label: input.label,
@@ -14,10 +20,16 @@ function agent(input: { id: string; label: string; command: string; systemPrompt
 }
 
 /** The endpoint's own columns, read straight off the row the port cannot see. */
-function endpointColumns(store: SqliteRoomStore, id: string): { role: string; color: number; position: number; created_at: string } {
-  const row = store.db.prepare('SELECT role, color, position, created_at FROM agents WHERE id = ?')
+function endpointColumns(
+  store: SqliteRoomStore,
+  id: string,
+): { role: string; color: number; position: number; created_at: string } {
+  const row = store.db
+    .prepare('SELECT role, color, position, created_at FROM agents WHERE id = ?')
     .get(id) as unknown as { role: string; color: number; position: number; created_at: string };
-  if (!row) throw new Error(`no row for ${id}`);
+  if (!row) {
+    throw new Error(`no row for ${id}`);
+  }
   return row;
 }
 
@@ -27,7 +39,7 @@ describe('SqliteAgentRegistry', () => {
 
     const agents = await registry.list();
 
-    expect(agents.map(row => row.id)).toEqual(['claude', 'codex', 'opencode']);
+    expect(agents.map((row) => row.id)).toEqual(['claude', 'codex', 'opencode']);
     // The port's shape and nothing else: no role, colour or position on it.
     expect(Object.keys(agents[0]!).sort()).toEqual(['binding', 'id', 'label', 'systemPrompt']);
     expect(agents[0]).toMatchObject({
@@ -51,13 +63,15 @@ describe('SqliteAgentRegistry', () => {
     const registry = new SqliteAgentRegistry(store.db);
     const before = endpointColumns(store, 'codex');
 
-    await registry.save(agent({
-      id: 'codex',
-      label: 'Codex 改',
-      command: 'codex-acp',
-      systemPrompt: '先给结论。',
-      timeoutMs: 600_000,
-    }));
+    await registry.save(
+      agent({
+        id: 'codex',
+        label: 'Codex 改',
+        command: 'codex-acp',
+        systemPrompt: '先给结论。',
+        timeoutMs: 600_000,
+      }),
+    );
 
     // What the port sees moved…
     const saved = await registry.get('codex');
@@ -75,8 +89,9 @@ describe('SqliteAgentRegistry', () => {
   it('saves a new agent with neutral values for the columns the port cannot see', async () => {
     const store = SqliteRoomStore.memory();
     const registry = new SqliteAgentRegistry(store.db);
-    const seated = store.db.prepare('SELECT MAX(position) AS position FROM agents')
-      .get() as unknown as { position: number };
+    const seated = store.db.prepare('SELECT MAX(position) AS position FROM agents').get() as unknown as {
+      position: number;
+    };
 
     await registry.save(agent({ id: 'gemini', label: 'Gemini', command: 'gemini-acp', systemPrompt: '' }));
 
@@ -100,13 +115,13 @@ describe('SqliteAgentRegistry', () => {
     const registry = new SqliteAgentRegistry(store.db);
 
     await registry.save(agent({ id: 'codex', label: 'Codex', command: 'codex-acp', timeoutMs: 300_000 }));
-    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex'))
-      .toEqual({ timeout_ms: 300_000 });
+    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({
+      timeout_ms: 300_000,
+    });
     expect((await registry.get('codex'))?.timeoutMs).toBe(300_000);
 
     await registry.save(agent({ id: 'codex', label: 'Codex', command: 'codex-acp' }));
-    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex'))
-      .toEqual({ timeout_ms: null });
+    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({ timeout_ms: null });
     expect((await registry.get('codex'))?.timeoutMs).toBeUndefined();
   });
 
@@ -117,8 +132,7 @@ describe('SqliteAgentRegistry', () => {
     await registry.remove('opencode');
 
     expect(await registry.get('opencode')).toBeUndefined();
-    expect((await registry.list()).map(row => row.id)).toEqual(['claude', 'codex']);
-    expect(store.db.prepare('SELECT COUNT(*) AS n FROM agents').get())
-      .toEqual({ n: 2 });
+    expect((await registry.list()).map((row) => row.id)).toEqual(['claude', 'codex']);
+    expect(store.db.prepare('SELECT COUNT(*) AS n FROM agents').get()).toEqual({ n: 2 });
   });
 });

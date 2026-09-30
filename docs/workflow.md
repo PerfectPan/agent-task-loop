@@ -53,11 +53,11 @@ stateDiagram-v2
 
 **Buckets** (how the dashboard tabs group them):
 
-| Bucket | Statuses |
-| --- | --- |
+| Bucket                    | Statuses                                            |
+| ------------------------- | --------------------------------------------------- |
 | Active (running + queued) | 待处理 · 进行中 · 执行中 · 待复核 · 修复中 · 待发布 |
-| Needs Input | 待决策 · 待验收 |
-| Done | 已完成 · 已失败 |
+| Needs Input               | 待决策 · 待验收                                     |
+| Done                      | 已完成 · 已失败                                     |
 
 ## Agent rounds (per task)
 

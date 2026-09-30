@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskRecord } from '../../../src/types/task';
-import {
-  buildPreviewFromTask,
-  createFakeSessionProvider,
-} from '../../../src/tui/data/session-provider';
+import { buildPreviewFromTask, createFakeSessionProvider } from '../../../src/tui/data/session-provider';
 import { formatSessionHistoryEntry } from '../../../src/services/session-history';
 import { fixedNow, isoSecondsAgo } from '../helpers';
 

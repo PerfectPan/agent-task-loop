@@ -87,7 +87,7 @@ describe('Task Manager application', () => {
 
     const result = await application.listTasks({ limit: 1, status: '待处理', targetAgent: 'claude' });
 
-    expect(result.tasks.map(item => item.taskId)).toEqual(['TASK-1']);
+    expect(result.tasks.map((item) => item.taskId)).toEqual(['TASK-1']);
     expect(result.count).toBe(1);
     expect(result.truncated).toBe(true);
   });
@@ -172,11 +172,13 @@ describe('Task Manager application', () => {
 
   it('refreshes the authoritative Task Backend state after a Task Run completes', async () => {
     const provider = fakeTaskProvider([]);
-    provider.getTaskById = vi.fn().mockResolvedValue(task({
-      taskId: 'TASK-9',
-      status: '待发布',
-      progressSummary: 'Review passed and the branch is ready.',
-    }));
+    provider.getTaskById = vi.fn().mockResolvedValue(
+      task({
+        taskId: 'TASK-9',
+        status: '待发布',
+        progressSummary: 'Review passed and the branch is ready.',
+      }),
+    );
     const application = createTaskManagerApplication({
       taskProvider: provider,
       startTask: vi.fn().mockResolvedValue(task({ taskId: 'TASK-9', status: '执行中' })),

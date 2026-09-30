@@ -1,12 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { lstatSync, mkdirSync, readlinkSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import type {
-  AgentSessionId,
-  RoomEvent,
-  RoomId,
-  RoomSeq,
-} from '@rivus/agent-room';
+import type { AgentSessionId, RoomEvent, RoomId, RoomSeq } from '@rivus/agent-room';
 import { shouldWake } from '@rivus/agent-room';
 import {
   isLockFresh,
@@ -22,13 +17,7 @@ import type { HostedTools } from '@rivus/agent-orchestration/acp';
 import type { ContentBlock } from '@agentclientprotocol/sdk';
 import path from 'node:path';
 import { copy } from '../copy';
-import type {
-  RoomLabEventView,
-  RoomLabAgentId,
-  RoomSeatView,
-  RoomTurnView,
-  RoomView,
-} from '../read-model';
+import type { RoomLabEventView, RoomLabAgentId, RoomSeatView, RoomTurnView, RoomView } from '../read-model';
 import { deriveMemberStatus } from '../read-model';
 import { ROOM_MESSAGE_LIMIT, parseRoomMessage } from '../domain/room-message';
 import {
@@ -160,14 +149,14 @@ export class RoomService {
     const message = validateText(body, 'Message');
     const messageId = validateMessageId(clientMessageId) ?? `web:${randomUUID()}`;
     const seats = this.options.members();
-    const known = this.options.agents().map(agent => agent.id);
+    const known = this.options.agents().map((agent) => agent.id);
     const parsed = parseRoomMessage(message, seats, known);
     if (parsed.unknownMentions.length > 0) {
-      const mentions = parsed.unknownMentions.map(mention => `@${mention}`).join(', ');
+      const mentions = parsed.unknownMentions.map((mention) => `@${mention}`).join(', ');
       throw new RoomInputError(`Unknown Room mention: ${mentions}`);
     }
     if (parsed.inactiveMentions.length > 0) {
-      const mentions = parsed.inactiveMentions.map(mention => `@${mention}`).join(', ');
+      const mentions = parsed.inactiveMentions.map((mention) => `@${mention}`).join(', ');
       throw new RoomInputError(`Add these agents to the Room before mentioning them: ${mentions}`);
     }
     const admitted = await this.options.store.admit({
@@ -196,14 +185,16 @@ export class RoomService {
     this.options.store.ensureSession(session);
 
     const agent = await this.options.registry.get(agentId);
-    if (!agent) throw new Error(`no agent ${agentId} in the registry`);
+    if (!agent) {
+      throw new Error(`no agent ${agentId} in the registry`);
+    }
 
     const record = await this.options.store.readSlice(roomId, 0, {
       maxEvents: Number.MAX_SAFE_INTEGER,
     });
     const head = record.head;
     const cursor = this.options.store.inspectSession(session)?.seenSeq ?? 0;
-    const unread = record.events.filter(event => event.seq > cursor);
+    const unread = record.events.filter((event) => event.seq > cursor);
     const inbox = boundedInbox(unread);
     // The cursor moves only over what the turn actually carried. A truncated
     // inbox leaves the rest ahead of it: `room_read` brings the events in,
@@ -212,7 +203,9 @@ export class RoomService {
     const readUpToSeq = inbox.at(-1)?.seq ?? cursor;
     const inboxTruncated = unread.length - inbox.length;
     const trigger = record.events.at(-1);
-    if (!trigger) throw new Error(`room ${roomId.conversationId} has no record to read`);
+    if (!trigger) {
+      throw new Error(`room ${roomId.conversationId} has no record to read`);
+    }
     const round = this.resolveRound(record.events, head);
     this.touch();
 
@@ -246,23 +239,25 @@ export class RoomService {
       const tools: ToolDefinition[] = [
         roomSpeakTool(turn.handle, {
           isOpen,
-          speak: async input => {
-            const result = await lease.fence(wakeKey, () =>
-              this.options.store.speak({ session, ...input }));
+          speak: async (input) => {
+            const result = await lease.fence(wakeKey, () => this.options.store.speak({ session, ...input }));
             // The chain's second wave: a member's post dispatches exactly as
             // the human admit does. The turn already resolved the round the
             // post belongs to — hand it over, so a restart mid-round cannot
             // strand the post in a round of its own.
-            if (result.outcome === 'posted') this.dispatch(result.event, round);
+            if (result.outcome === 'posted') {
+              this.dispatch(result.event, round);
+            }
             return result;
           },
         }),
         roomReadTool(turn.handle, {
           isOpen,
-          read: input => this.options.store.readSlice(roomId, input.afterSeq, {
-            maxEvents: input.limit ?? 50,
-            maxChars: 48_000,
-          }),
+          read: (input) =>
+            this.options.store.readSlice(roomId, input.afterSeq, {
+              maxEvents: input.limit ?? 50,
+              maxChars: 48_000,
+            }),
         }),
       ];
       // A private room offers no room_dm: its two members are already alone,
@@ -271,24 +266,26 @@ export class RoomService {
       // under the room they were opened from, one level).
       if (this.options.dm && !this.options.parentTitle) {
         const gateway = this.options.dm;
-        tools.push(roomDmTool(turn.handle, {
-          isOpen,
-          dm: input => {
-            if (!this.options.members().includes(input.to)) {
-              return Promise.resolve({ error: 'dm-not-a-member' });
-            }
-            return gateway.open({
-              parentRoomId: roomId.conversationId,
-              from: agentId,
-              to: input.to,
-              body: input.body,
-              triggerDepth: trigger.wakeDepth,
-              triggerSeq: head,
-              roundRoomId: round.roomId,
-              roundSeq: round.seq,
-            });
-          },
-        }));
+        tools.push(
+          roomDmTool(turn.handle, {
+            isOpen,
+            dm: (input) => {
+              if (!this.options.members().includes(input.to)) {
+                return Promise.resolve({ error: 'dm-not-a-member' });
+              }
+              return gateway.open({
+                parentRoomId: roomId.conversationId,
+                from: agentId,
+                to: input.to,
+                body: input.body,
+                triggerDepth: trigger.wakeDepth,
+                triggerSeq: head,
+                roundRoomId: round.roomId,
+                roundSeq: round.seq,
+              });
+            },
+          }),
+        );
       }
       // Tools live with the member's session: the first activation hosts the
       // endpoint and its `session/new` carries it; every later activation
@@ -319,11 +316,11 @@ export class RoomService {
       tools: hosted ? [hosted.endpoint] : [],
       permissions: cwdPermissionPolicy(cwd),
       hooks: {
-        onUpdate: update => this.onUpdate(agentId, update),
+        onUpdate: (update) => this.onUpdate(agentId, update),
         // The promise comes back: the runtime awaits it before it releases
         // the lease, so the pass's fenced cursor write lands inside the held
         // window (docs/architecture/agent-collaboration.md: prompt, afterTurn, release).
-        afterTurn: result => this.afterTurn(turn, result),
+        afterTurn: (result) => this.afterTurn(turn, result),
       },
     };
     return harness;
@@ -354,9 +351,7 @@ export class RoomService {
         // this turn's inbox on the next wake, so the log and the turn row
         // both carry it.
         passError = errorText(error);
-        console.error(
-          `room ${handle.roomId.conversationId}: pass lost for @${handle.agentId}: ${passError}`,
-        );
+        console.error(`room ${handle.roomId.conversationId}: pass lost for @${handle.agentId}: ${passError}`);
       }
     }
     // The runtime reports `stopReason: null` both for a turn its watchdog
@@ -366,13 +361,8 @@ export class RoomService {
     // the reset invalidated fails with why, whatever it managed to do.
     const resetError = turn.invalidated ? 'room was reset during this turn' : undefined;
     const error = [result.error, passError, resetError].filter(Boolean).join('; ') || undefined;
-    const outcome = handle.spoke && !turn.invalidated
-      ? 'posted'
-      : result.timedOut
-        ? 'timeout'
-        : error
-          ? 'failed'
-          : 'passed';
+    const outcome =
+      handle.spoke && !turn.invalidated ? 'posted' : result.timedOut ? 'timeout' : error ? 'failed' : 'passed';
     this.options.turnLog.append({
       id: randomUUID(),
       roomId: handle.roomId.conversationId,
@@ -439,7 +429,7 @@ export class RoomService {
     });
     const turns = this.options.turnLog.listByRoom(roomId.conversationId);
     const seats = new Set(this.options.members());
-    const agents: RoomSeatView[] = this.options.agents().map(definition => {
+    const agents: RoomSeatView[] = this.options.agents().map((definition) => {
       const leaseHeld = this.leaseHeld(definition.id);
       const last = lastTurnFor(turns, definition.id);
       return {
@@ -463,7 +453,7 @@ export class RoomService {
       head: slice.head,
       revision: this.revision,
       activeAgentIds: this.options.members().slice(),
-      events: slice.events.map(event => this.eventView(event)),
+      events: slice.events.map((event) => this.eventView(event)),
       agents,
       turns: turns.slice(-50),
     };
@@ -481,9 +471,7 @@ export class RoomService {
     // moves a cursor over events it never read, then cancel it.
     for (const turn of this.openTurns.values()) {
       turn.invalidated = true;
-      void this.options.runtime.cancel?.(
-        runtimeKey(this.options.roomId.conversationId, turn.handle.agentId),
-      );
+      void this.options.runtime.cancel?.(runtimeKey(this.options.roomId.conversationId, turn.handle.agentId));
     }
     this.options.store.clear();
     this.options.turnLog.clear(this.homeRoomId);
@@ -493,8 +481,11 @@ export class RoomService {
     // log, its own running turns, its own children.
     for (const childId of this.options.childRooms?.() ?? []) {
       const child = this.options.resetChild?.(childId);
-      if (child) await child.reset();
-      else this.options.turnLog.clear(childId);
+      if (child) {
+        await child.reset();
+      } else {
+        this.options.turnLog.clear(childId);
+      }
     }
     this.rounds.clear();
     this.budgetNotices.clear();
@@ -522,14 +513,15 @@ export class RoomService {
   dispatch(event: RoomEvent, turnRound?: RoomRound): void {
     const seats = this.options.members();
     const settings = this.options.settings();
-    const round: RoomRound = event.kind === 'human' && event.wakeDepth === 0
-      ? { roomId: this.homeRoomId, seq: event.seq }
-      : dmRoundOf(event) ?? turnRound ?? { roomId: this.homeRoomId, seq: this.roundOfCached(event.seq) };
+    const round: RoomRound =
+      event.kind === 'human' && event.wakeDepth === 0
+        ? { roomId: this.homeRoomId, seq: event.seq }
+        : (dmRoundOf(event) ?? turnRound ?? { roomId: this.homeRoomId, seq: this.roundOfCached(event.seq) });
     const local = round.roomId === this.homeRoomId;
     const ceiling = local ? this.ceiling(round.seq) : this.roundLedger(round).ceiling(round.seq);
-    let wanted = seats.filter(memberId => shouldWake({ event, memberId, ceiling }));
+    let wanted = seats.filter((memberId) => shouldWake({ event, memberId, ceiling }));
     if (settings.wake === 'addressed' && event.addressedTo.length > 0) {
-      wanted = wanted.filter(memberId => event.addressedTo.includes(memberId));
+      wanted = wanted.filter((memberId) => event.addressedTo.includes(memberId));
     }
     if (settings.serial) {
       // One wake per member: a member already queued for an earlier round has
@@ -539,7 +531,7 @@ export class RoomService {
       // re-tag, a dedupe by member alone would leave the newer round's wake
       // inside an entry that dies with the older round's budget.
       for (const memberId of wanted) {
-        const queued = this.serialQueue.find(entry => entry.agentId === memberId);
+        const queued = this.serialQueue.find((entry) => entry.agentId === memberId);
         if (queued) {
           queued.round = round;
           continue;
@@ -560,7 +552,9 @@ export class RoomService {
 
   /** The round ledger of the room a round is rooted in; this room for its own. */
   private roundLedger(round: RoomRound): RoomRoundLedger {
-    if (round.roomId === this.homeRoomId) return this;
+    if (round.roomId === this.homeRoomId) {
+      return this;
+    }
     if (!this.options.ledgerOf) {
       throw new Error(`room ${this.homeRoomId} has no ledger for the round in ${round.roomId}`);
     }
@@ -585,7 +579,9 @@ export class RoomService {
    */
   private wakeNextInQueue(): void {
     while (this.serialQueue.length > 0) {
-      if (this.openTurns.size > 0 || this.wakeInFlight) return;
+      if (this.openTurns.size > 0 || this.wakeInFlight) {
+        return;
+      }
       const entry = this.serialQueue[0]!;
       if (!this.chargeRound(entry.round)) {
         // The round is spent: its remaining entries go together, with the
@@ -625,8 +621,8 @@ export class RoomService {
       state = {
         n: this.options.members().length,
         turns: rooms.reduce(
-          (count, roomId) => count
-            + this.options.turnLog.listByRoom(roomId).filter(turn => turn.roundSeq === roundSeq).length,
+          (count, roomId) =>
+            count + this.options.turnLog.listByRoom(roomId).filter((turn) => turn.roundSeq === roundSeq).length,
           0,
         ),
       };
@@ -651,7 +647,9 @@ export class RoomService {
    * exact ledger.
    */
   charge(roundSeq: number): boolean {
-    if (!this.budgetAllows(roundSeq)) return false;
+    if (!this.budgetAllows(roundSeq)) {
+      return false;
+    }
     this.roundBudget(roundSeq).turns += 1;
     return true;
   }
@@ -663,7 +661,9 @@ export class RoomService {
 
   /** The budget's one notice per round; a person's next message opens a new one. */
   postBudgetNotice(roundSeq: number): void {
-    if (this.budgetNotices.has(roundSeq)) return;
+    if (this.budgetNotices.has(roundSeq)) {
+      return;
+    }
     this.budgetNotices.add(roundSeq);
     void this.options.store
       .speak({
@@ -686,10 +686,16 @@ export class RoomService {
   private resolveRound(events: RoomEvent[], head: RoomSeq): RoomRound {
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const event = events[index]!;
-      if (event.seq > head) continue;
-      if (event.kind === 'human') return { roomId: this.homeRoomId, seq: event.seq };
+      if (event.seq > head) {
+        continue;
+      }
+      if (event.kind === 'human') {
+        return { roomId: this.homeRoomId, seq: event.seq };
+      }
       const dm = dmRoundOf(event);
-      if (dm) return dm;
+      if (dm) {
+        return dm;
+      }
     }
     return { roomId: this.homeRoomId, seq: 0 };
   }
@@ -697,7 +703,7 @@ export class RoomService {
   /** Cached round lookup for an event this service has already read. */
   private roundOfCached(seq: number): number {
     const known = [...this.rounds.keys()].sort((left, right) => right - left);
-    return known.find(roundSeq => roundSeq <= seq) ?? seq;
+    return known.find((roundSeq) => roundSeq <= seq) ?? seq;
   }
 
   private resolveCwd(settings: ReturnType<RoomSettingsReader>): string {
@@ -718,12 +724,16 @@ export class RoomService {
 
   private leaseHeld(agentId: RoomLabAgentId): boolean {
     const record = this.options.lease.read(runtimeKey(this.options.roomId.conversationId, agentId));
-    if (!record) return false;
-    return isLockFresh(record, Date.now(), LEASE_STALE_MS, pid => nodeLiveness.isAlive(pid));
+    if (!record) {
+      return false;
+    }
+    return isLockFresh(record, Date.now(), LEASE_STALE_MS, (pid) => nodeLiveness.isAlive(pid));
   }
 
   private onUpdate(agentId: RoomLabAgentId, update: SessionUpdate): void {
-    if (update.sessionUpdate === 'tool_call_update') this.toolCallSeen.add(agentId);
+    if (update.sessionUpdate === 'tool_call_update') {
+      this.toolCallSeen.add(agentId);
+    }
   }
 
   private eventView(event: RoomEvent): RoomLabEventView {
@@ -760,7 +770,9 @@ function boundedInbox(unread: RoomEvent[]): RoomEvent[] {
   const events: RoomEvent[] = [];
   let chars = 0;
   for (const event of unread) {
-    if (events.length >= TURN_BUDGET.maxEvents) break;
+    if (events.length >= TURN_BUDGET.maxEvents) {
+      break;
+    }
     if (events.length > 0 && TURN_BUDGET.maxChars !== undefined && chars + event.body.length > TURN_BUDGET.maxChars) {
       break;
     }
@@ -793,15 +805,16 @@ function turnBlocks(input: {
     `You are @${input.agentId} (${input.label}), member ${input.seatIndex} of ${input.seatCount}` +
     ` in room "${input.roomTitle}".` +
     (input.parent ? ` This is a private room under "${input.parent}".` : '') +
-    ` Members in seat order: ${input.members.map(member => `@${member}`).join(', ')}.` +
+    ` Members in seat order: ${input.members.map((member) => `@${member}`).join(', ')}.` +
     ` You were woken by seq ${input.trigger.seq} from @${input.trigger.author.id}.`;
   const lastShown = input.inbox.at(-1)?.seq;
-  const transcript = input.inbox.length === 0
-    ? '(nothing new since your last turn)'
-    : input.inbox.map(event => inboxLine(event, input.agentId)).join('\n')
-      + (input.inboxTruncated && lastShown !== undefined
-        ? `\n(${input.inboxTruncated} more unread events follow seq ${lastShown}; call room_read to read them before you speak.)`
-        : '');
+  const transcript =
+    input.inbox.length === 0
+      ? '(nothing new since your last turn)'
+      : input.inbox.map((event) => inboxLine(event, input.agentId)).join('\n') +
+        (input.inboxTruncated && lastShown !== undefined
+          ? `\n(${input.inboxTruncated} more unread events follow seq ${lastShown}; call room_read to read them before you speak.)`
+          : '');
   const instruction =
     'Read first. If you have something to add, call room_speak once.' +
     ' To settle something with one member alone, call room_dm instead.' +
@@ -821,9 +834,7 @@ function turnBlocks(input: {
  */
 function inboxLine(event: RoomEvent, selfId: RoomLabAgentId): string {
   const author = event.author.id === selfId ? `@${event.author.id} (you)` : `@${event.author.id}`;
-  const addressed = event.addressedTo.length > 0
-    ? ` → ${event.addressedTo.map(id => `@${id}`).join(', ')}`
-    : '';
+  const addressed = event.addressedTo.length > 0 ? ` → ${event.addressedTo.map((id) => `@${id}`).join(', ')}` : '';
   return `[seq ${event.seq}] ${author}${addressed}: ${event.body}`;
 }
 
@@ -835,26 +846,29 @@ function inboxLine(event: RoomEvent, selfId: RoomLabAgentId): string {
  */
 function cwdPermissionPolicy(cwd: string): PermissionPolicy {
   const root = realPathOf(cwd) ?? cwd;
-  return request => {
+  return (request) => {
     const call = request.toolCall;
     const paths = (call.locations ?? [])
-      .map(location => location.path)
+      .map((location) => location.path)
       .filter((value): value is string => typeof value === 'string');
     const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
     // A relative path would resolve against this server's cwd — a place the
     // room never named — and a chain the walker gives up on is exactly where
     // the OS would follow it out of the root; both are denied.
-    const outside = paths.some(candidate => {
-      if (!path.isAbsolute(candidate)) return true;
+    const outside = paths.some((candidate) => {
+      if (!path.isAbsolute(candidate)) {
+        return true;
+      }
       const resolved = resolvedTarget(candidate);
       return resolved === undefined || !isInside(root, resolved);
     });
-    const wanted = outside || (writeKind && paths.length === 0)
-      ? ['reject_once', 'reject_always']
-      : ['allow_once', 'allow_always'];
+    const wanted =
+      outside || (writeKind && paths.length === 0) ? ['reject_once', 'reject_always'] : ['allow_once', 'allow_always'];
     for (const kind of wanted) {
-      const option = request.options.find(candidate => candidate.kind === kind);
-      if (option) return { outcome: 'selected', optionId: option.optionId };
+      const option = request.options.find((candidate) => candidate.kind === kind);
+      if (option) {
+        return { outcome: 'selected', optionId: option.optionId };
+      }
     }
     return { outcome: 'cancelled' };
   };
@@ -864,8 +878,7 @@ function isInside(root: string, target: string): boolean {
   const within = path.relative(root, target);
   // `..` and `..`-prefixed components only: a name that merely starts with
   // two dots (`..foo`) is an ordinary in-root name.
-  return within === ''
-    || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
+  return within === '' || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
 }
 
 function realPathOf(target: string): string | undefined {
@@ -894,7 +907,9 @@ function resolvedTarget(target: string): string | undefined {
     let followed = false;
     for (let index = 1; index < parts.length; index += 1) {
       const part = parts[index]!;
-      if (!part) continue;
+      if (!part) {
+        continue;
+      }
       const next = path.join(walked, part);
       let stat: { isSymbolicLink(): boolean };
       try {
@@ -915,14 +930,13 @@ function resolvedTarget(target: string): string | undefined {
       // The link's own target may hold links of its own: walk it next pass,
       // with the rest of the original path hanging off it.
       const rest = parts.slice(index + 1).filter(Boolean);
-      current = path.join(
-        path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget),
-        ...rest,
-      );
+      current = path.join(path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget), ...rest);
       followed = true;
       break;
     }
-    if (!followed) return walked;
+    if (!followed) {
+      return walked;
+    }
   }
   return undefined;
 }
@@ -933,7 +947,9 @@ function defaultWorkRoot(): string {
 
 function validateText(value: string, label: string): string {
   const text = value.trim();
-  if (!text) throw new RoomInputError(`${label} is required`);
+  if (!text) {
+    throw new RoomInputError(`${label} is required`);
+  }
   if (text.length > ROOM_MESSAGE_LIMIT) {
     throw new RoomInputError(`${label} must be at most ${ROOM_MESSAGE_LIMIT} characters`);
   }
@@ -941,7 +957,9 @@ function validateText(value: string, label: string): string {
 }
 
 function validateMessageId(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   if (!/^[A-Za-z0-9:_-]{8,80}$/.test(value)) {
     throw new RoomInputError('Message id is invalid');
   }
@@ -951,7 +969,9 @@ function validateMessageId(value: string | undefined): string | undefined {
 function lastTurnFor(turns: RoomTurnView[], agentId: RoomLabAgentId): RoomTurnView | undefined {
   for (let index = turns.length - 1; index >= 0; index -= 1) {
     const turn = turns[index]!;
-    if (turn.agentId === agentId && turn.outcome) return turn;
+    if (turn.agentId === agentId && turn.outcome) {
+      return turn;
+    }
   }
   return undefined;
 }

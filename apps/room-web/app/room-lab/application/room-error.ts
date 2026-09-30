@@ -5,10 +5,18 @@ import { RoomInputError } from './room-service.server';
 
 /** One ladder for every Room action, so a new error class is mapped once. */
 export function roomActionStatus(error: unknown): number {
-  if (error instanceof RoomInputError) return 400;
-  if (error instanceof RoomCatalogInvariantError) return 400;
-  if (error instanceof RoomCompositionInvariantError) return 400;
-  if (error instanceof LocalRequestError) return error.status;
+  if (error instanceof RoomInputError) {
+    return 400;
+  }
+  if (error instanceof RoomCatalogInvariantError) {
+    return 400;
+  }
+  if (error instanceof RoomCompositionInvariantError) {
+    return 400;
+  }
+  if (error instanceof LocalRequestError) {
+    return error.status;
+  }
   return 500;
 }
 

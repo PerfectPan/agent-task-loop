@@ -1,8 +1,5 @@
 import type { KnownAgentIds, RoomLabAgentId } from './agent-registry';
-import {
-  RoomCatalogInvariantError,
-  assertRoomIdentity,
-} from './room-identity';
+import { RoomCatalogInvariantError, assertRoomIdentity } from './room-identity';
 import { RoomComposition } from './room-composition';
 
 /** How an event decides who is woken: everyone, or only those addressed. */
@@ -41,14 +38,15 @@ export class RoomCatalog {
   ) {
     // A record from before the settings columns (a legacy catalog.json) has no
     // wake or serial on it; the defaults are the record's, not the caller's.
-    this.rooms = rooms.map(room => cloneRecord({
-      ...room,
-      wake: room.wake ?? 'broadcast',
-      serial: room.serial ?? false,
-    }));
-    this.lastOpenedId = lastOpenedId && this.rooms.some(room => room.id === lastOpenedId)
-      ? lastOpenedId
-      : this.rooms[0]?.id;
+    this.rooms = rooms.map((room) =>
+      cloneRecord({
+        ...room,
+        wake: room.wake ?? 'broadcast',
+        serial: room.serial ?? false,
+      }),
+    );
+    this.lastOpenedId =
+      lastOpenedId && this.rooms.some((room) => room.id === lastOpenedId) ? lastOpenedId : this.rooms[0]?.id;
   }
 
   create(input: {
@@ -62,7 +60,7 @@ export class RoomCatalog {
     now: string;
   }): RoomRecord {
     const id = assertRoomIdentity(input.id);
-    if (this.rooms.some(room => room.id === id)) {
+    if (this.rooms.some((room) => room.id === id)) {
       throw new RoomCatalogInvariantError(`Room already exists: ${id}`);
     }
     const record: RoomRecord = {
@@ -71,10 +69,7 @@ export class RoomCatalog {
       createdAt: input.now,
       updatedAt: input.now,
       lastOpenedAt: input.now,
-      memberIds: new RoomComposition(
-        input.memberIds ?? this.known?.ids() ?? [],
-        this.known,
-      ).snapshot(),
+      memberIds: new RoomComposition(input.memberIds ?? this.known?.ids() ?? [], this.known).snapshot(),
       wake: input.wake ?? 'broadcast',
       serial: input.serial ?? false,
       ...(optionalCwd(input.cwd) === undefined ? {} : { cwd: optionalCwd(input.cwd) }),
@@ -96,10 +91,8 @@ export class RoomCatalog {
    */
   findPrivate(parentRoomId: string, memberIds: readonly RoomLabAgentId[]): RoomRecord | undefined {
     const pair = pairKey(memberIds);
-    return this.rooms.find(room =>
-      room.parentRoomId === parentRoomId
-      && room.memberIds.length === 2
-      && pairKey(room.memberIds) === pair,
+    return this.rooms.find(
+      (room) => room.parentRoomId === parentRoomId && room.memberIds.length === 2 && pairKey(room.memberIds) === pair,
     );
   }
 
@@ -130,7 +123,7 @@ export class RoomCatalog {
       now: input.now,
     });
     this.lastOpenedId = lastOpenedId;
-    return this.update(created.id, room => {
+    return this.update(created.id, (room) => {
       room.parentRoomId = input.parentRoomId;
       room.openedBy = input.openedBy;
       room.openedAtSeq = input.openedAtSeq;
@@ -138,8 +131,10 @@ export class RoomCatalog {
   }
 
   get(id: string): RoomRecord {
-    const room = this.rooms.find(candidate => candidate.id === id);
-    if (!room) throw new RoomCatalogInvariantError(`Unknown Room: ${id}`);
+    const room = this.rooms.find((candidate) => candidate.id === id);
+    if (!room) {
+      throw new RoomCatalogInvariantError(`Unknown Room: ${id}`);
+    }
     return cloneRecord(room);
   }
 
@@ -148,21 +143,21 @@ export class RoomCatalog {
   }
 
   rename(id: string, title: string, now: string): RoomRecord {
-    return this.update(id, room => {
+    return this.update(id, (room) => {
       room.title = validateTitle(title);
       room.updatedAt = now;
     });
   }
 
   touch(id: string, now: string): RoomRecord {
-    return this.update(id, room => {
+    return this.update(id, (room) => {
       room.lastOpenedAt = now;
       this.lastOpenedId = id;
     });
   }
 
   replaceMembers(id: string, memberIds: readonly RoomLabAgentId[], now: string): RoomRecord {
-    return this.update(id, room => {
+    return this.update(id, (room) => {
       room.memberIds = new RoomComposition(memberIds, this.known).snapshot();
       room.updatedAt = now;
     });
@@ -174,13 +169,20 @@ export class RoomCatalog {
     settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string },
     now: string,
   ): RoomRecord {
-    return this.update(id, room => {
-      if (settings.wake !== undefined) room.wake = settings.wake;
-      if (settings.serial !== undefined) room.serial = settings.serial;
+    return this.update(id, (room) => {
+      if (settings.wake !== undefined) {
+        room.wake = settings.wake;
+      }
+      if (settings.serial !== undefined) {
+        room.serial = settings.serial;
+      }
       if (settings.cwd !== undefined) {
         const cwd = optionalCwd(settings.cwd);
-        if (cwd === undefined) delete room.cwd;
-        else room.cwd = cwd;
+        if (cwd === undefined) {
+          delete room.cwd;
+        } else {
+          room.cwd = cwd;
+        }
       }
       room.updatedAt = now;
     });
@@ -194,8 +196,10 @@ export class RoomCatalog {
   }
 
   private update(id: string, change: (room: RoomRecord) => void): RoomRecord {
-    const index = this.rooms.findIndex(room => room.id === id);
-    if (index < 0) throw new RoomCatalogInvariantError(`Unknown Room: ${id}`);
+    const index = this.rooms.findIndex((room) => room.id === id);
+    if (index < 0) {
+      throw new RoomCatalogInvariantError(`Unknown Room: ${id}`);
+    }
     const next = cloneRecord(this.rooms[index]!);
     change(next);
     this.rooms[index] = next;
@@ -207,25 +211,41 @@ export { RoomCatalogInvariantError };
 
 function validateTitle(value: string): string {
   const title = value.trim().replace(/\s+/g, ' ');
-  if (!title) throw new RoomCatalogInvariantError('Room title is required');
-  if (title.length > 80) throw new RoomCatalogInvariantError('Room title must be at most 80 characters');
+  if (!title) {
+    throw new RoomCatalogInvariantError('Room title is required');
+  }
+  if (title.length > 80) {
+    throw new RoomCatalogInvariantError('Room title must be at most 80 characters');
+  }
   return title;
 }
 
 function optionalGoal(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   const goal = value.trim();
-  if (!goal) return undefined;
-  if (goal.length > 400) throw new RoomCatalogInvariantError('Room goal must be at most 400 characters');
+  if (!goal) {
+    return undefined;
+  }
+  if (goal.length > 400) {
+    throw new RoomCatalogInvariantError('Room goal must be at most 400 characters');
+  }
   return goal;
 }
 
 /** An empty settings field clears the room's own value. */
 function optionalCwd(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   const cwd = value.trim();
-  if (!cwd) return undefined;
-  if (cwd.length > 400) throw new RoomCatalogInvariantError('Room cwd must be at most 400 characters');
+  if (!cwd) {
+    return undefined;
+  }
+  if (cwd.length > 400) {
+    throw new RoomCatalogInvariantError('Room cwd must be at most 400 characters');
+  }
   return cwd;
 }
 

@@ -27,9 +27,7 @@ export interface UseTaskPollResult {
  * keep the previous array reference and skip a render.
  */
 function signatureOf(tasks: TaskRecord[]): string {
-  return tasks
-    .map((t) => `${t.taskId}:${t.status}:${t.updatedAt ?? ''}:${t.lastHeartbeatAt ?? ''}`)
-    .join('|');
+  return tasks.map((t) => `${t.taskId}:${t.status}:${t.updatedAt ?? ''}:${t.lastHeartbeatAt ?? ''}`).join('|');
 }
 
 /**
@@ -38,10 +36,7 @@ function signatureOf(tasks: TaskRecord[]): string {
  * `enabled`. To avoid render thrash, the tasks array reference is only replaced
  * when its signature actually changes.
  */
-export function useTaskPoll(
-  fetchTasks: FetchTasks,
-  opts: UseTaskPollOptions,
-): UseTaskPollResult {
+export function useTaskPoll(fetchTasks: FetchTasks, opts: UseTaskPollOptions): UseTaskPollResult {
   const { intervalMs, enabled = true } = opts;
 
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -61,7 +56,9 @@ export function useTaskPoll(
     setIsLoading(true);
     try {
       const next = await fetchRef.current();
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        return;
+      }
       const nextSig = signatureOf(next);
       if (nextSig !== signatureRef.current) {
         signatureRef.current = nextSig;
@@ -69,7 +66,9 @@ export function useTaskPoll(
       }
       setError(null);
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       if (mountedRef.current) {
@@ -91,7 +90,9 @@ export function useTaskPoll(
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
     void runFetch();
     const id = setInterval(() => {
       void runFetch();

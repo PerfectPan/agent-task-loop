@@ -55,8 +55,8 @@ describe('parseSessionHistory', () => {
     const a = `[${isoSecondsAgo(60)}] | round=1 | kind=execute | agent=claude`;
     const b = `[${isoSecondsAgo(30)}] | round=2 | kind=review | agent=codex`;
     const result = parseSessionHistory(`${a}\n\n   \n${b}`);
-    expect(result.map(e => e.round)).toEqual([1, 2]);
-    expect(result.map(e => e.kind)).toEqual(['execute', 'review']);
+    expect(result.map((e) => e.round)).toEqual([1, 2]);
+    expect(result.map((e) => e.kind)).toEqual(['execute', 'review']);
   });
 
   it('skips clearly-malformed lines that lack round+kind+agent', () => {

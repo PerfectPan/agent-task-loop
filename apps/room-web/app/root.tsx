@@ -33,7 +33,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             suppressHydrationWarning above. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: "try{var t=localStorage.getItem('rivus-theme');var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}",
+            __html:
+              "try{var t=localStorage.getItem('rivus-theme');var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}",
           }}
         />
       </head>

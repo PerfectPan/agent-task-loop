@@ -177,14 +177,14 @@ describe('CompleteService', () => {
 
     await expect(service.complete({ taskId: 'TASK-306' })).rejects.toThrow('push failed');
 
-    const publishPayloads = taskService.updatePublishResult.mock.calls.map(call => call[1]);
+    const publishPayloads = taskService.updatePublishResult.mock.calls.map((call) => call[1]);
     expect(publishPayloads).toContainEqual(
       expect.objectContaining({
         progressSummary: '推送远端分支失败，请查看 LastError',
         lastError: 'push failed',
       }),
     );
-    expect(publishPayloads.some(payload => payload.publishCommit)).toBe(false);
+    expect(publishPayloads.some((payload) => payload.publishCommit)).toBe(false);
   });
 
   it('fails before completion when remote head does not match local commit', async () => {
@@ -224,7 +224,7 @@ describe('CompleteService', () => {
   });
 
   it('preserves an existing pull request description when appending process summary', async () => {
-    const updatePullRequest = vi.fn().mockImplementation(input =>
+    const updatePullRequest = vi.fn().mockImplementation((input) =>
       Promise.resolve({
         number: 14,
         url: 'https://github.com/acme/demo/pull/14',

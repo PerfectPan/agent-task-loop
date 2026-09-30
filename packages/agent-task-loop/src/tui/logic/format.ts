@@ -66,5 +66,5 @@ export function formatDetailFields(task: TaskRecord, now: number): DetailField[]
     { label: 'PR', value: task.prLink ?? '' },
     { label: '更新', value: task.updatedAt ? timeAgo(task.updatedAt, now) : '' },
   ];
-  return candidates.filter(field => field.value !== '');
+  return candidates.filter((field) => field.value !== '');
 }

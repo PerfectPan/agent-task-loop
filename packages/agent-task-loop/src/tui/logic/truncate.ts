@@ -90,11 +90,7 @@ function tailSlice(text: string, budget: number): string {
  * - For `maxWidth <= 0` returns `''`; for `maxWidth === 1` (when truncation is
  *   needed) returns just the ellipsis.
  */
-export function truncateToWidth(
-  text: string,
-  maxWidth: number,
-  position: 'end' | 'middle' = 'end',
-): string {
+export function truncateToWidth(text: string, maxWidth: number, position: 'end' | 'middle' = 'end'): string {
   if (maxWidth <= 0) {
     return '';
   }

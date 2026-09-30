@@ -19,7 +19,9 @@ export class FileLeaseStore implements LeaseStore {
   tryCreate(key: string, record: LeaseRecord): boolean {
     return this.withLeaseGuard(key, () => {
       const file = leasePath(this.baseDir, key);
-      if (existsSync(file)) return false;
+      if (existsSync(file)) {
+        return false;
+      }
       writeJsonAtomically(file, record);
       return true;
     });
@@ -29,7 +31,9 @@ export class FileLeaseStore implements LeaseStore {
     return this.withLeaseGuard(key, () => {
       const file = leasePath(this.baseDir, key);
       const current = readJson<LeaseRecord>(file);
-      if (!current || !sameLock(current, expected) || next.key !== key) return false;
+      if (!current || !sameLock(current, expected) || next.key !== key) {
+        return false;
+      }
       writeJsonAtomically(file, next);
       return true;
     });
@@ -39,7 +43,9 @@ export class FileLeaseStore implements LeaseStore {
     return this.withLeaseGuard(expected.key, () => {
       const file = leasePath(this.baseDir, expected.key);
       const current = readJson<LeaseRecord>(file);
-      if (!current || !sameLock(current, expected) || next.key !== expected.key) return false;
+      if (!current || !sameLock(current, expected) || next.key !== expected.key) {
+        return false;
+      }
       writeJsonAtomically(file, next);
       return true;
     });
@@ -49,7 +55,9 @@ export class FileLeaseStore implements LeaseStore {
     return this.withLeaseGuard(expected.key, () => {
       const file = leasePath(this.baseDir, expected.key);
       const current = readJson<LeaseRecord>(file);
-      if (!current || !sameLock(current, expected)) return false;
+      if (!current || !sameLock(current, expected)) {
+        return false;
+      }
       unlinkSync(file);
       return true;
     });
@@ -59,11 +67,7 @@ export class FileLeaseStore implements LeaseStore {
     return readJson(leasePath(this.baseDir, key));
   }
 
-  async runFenced<T>(
-    token: FencingToken,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<FencedResult<T>> {
+  async runFenced<T>(token: FencingToken, operation: () => Promise<T>, signal?: AbortSignal): Promise<FencedResult<T>> {
     const guard = `${leasePath(this.baseDir, token.key)}.mutation-guard`;
     mkdirSync(path.dirname(guard), { recursive: true });
     const owner: GuardOwner = {
@@ -92,7 +96,9 @@ export class FileLeaseStore implements LeaseStore {
       pid: process.pid,
       id: randomBytes(16).toString('hex'),
     };
-    if (!tryAcquireGuard(guard, owner)) return false;
+    if (!tryAcquireGuard(guard, owner)) {
+      return false;
+    }
     try {
       return operation();
     } finally {
@@ -102,9 +108,7 @@ export class FileLeaseStore implements LeaseStore {
 }
 
 function sameHolder(current: LeaseRecord, token: FencingToken): boolean {
-  return current.key === token.key &&
-    current.holderPid === token.holderPid &&
-    current.holderId === token.holderId;
+  return current.key === token.key && current.holderPid === token.holderPid && current.holderId === token.holderId;
 }
 
 function writeJsonAtomically(file: string, value: unknown): void {
@@ -133,12 +137,16 @@ function tryAcquireGuard(guard: string, owner: GuardOwner): boolean {
         return true;
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' && code !== 'ENOTEMPTY') throw error;
+        if (code !== 'EEXIST' && code !== 'ENOTEMPTY') {
+          throw error;
+        }
       }
     } finally {
       rmSync(candidate, { recursive: true, force: true });
     }
-    if (!reclaimAbandonedGuard(guard)) return false;
+    if (!reclaimAbandonedGuard(guard)) {
+      return false;
+    }
   }
   return false;
 }
@@ -152,7 +160,9 @@ function reclaimAbandonedGuard(guard: string): boolean {
   try {
     renameSync(guard, abandoned);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return true;
+    }
     throw error;
   }
   rmSync(abandoned, { recursive: true, force: true });
@@ -161,6 +171,8 @@ function reclaimAbandonedGuard(guard: string): boolean {
 
 function releaseGuard(guard: string, owner: GuardOwner): void {
   const current = readJson<GuardOwner>(path.join(guard, 'owner.json'));
-  if (current?.pid !== owner.pid || current.id !== owner.id) return;
+  if (current?.pid !== owner.pid || current.id !== owner.id) {
+    return;
+  }
   rmSync(guard, { recursive: true, force: true });
 }

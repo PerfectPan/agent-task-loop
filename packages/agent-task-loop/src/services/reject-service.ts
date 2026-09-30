@@ -19,17 +19,14 @@ export class RejectService {
       task.status === '已失败' &&
       task.acceptanceVerdict === '打回' &&
       Boolean(task.acceptanceFeedback) &&
-      (task.lastError?.startsWith('Review loop exceeded') ||
-        task.progressSummary === '自动 review loop 超出最大轮次');
+      (task.lastError?.startsWith('Review loop exceeded') || task.progressSummary === '自动 review loop 超出最大轮次');
     if (task.status !== '待验收' && !canResumeFailedReject) {
       throw new Error(`Task ${task.taskId} is not ready for acceptance rejection: ${task.status}`);
     }
 
     const currentAcceptanceRound = task.acceptanceRound ?? 0;
     const isSameFailedRejectReason = canResumeFailedReject && task.acceptanceFeedback === input.reason;
-    const acceptanceRound = isSameFailedRejectReason
-      ? Math.max(currentAcceptanceRound, 1)
-      : currentAcceptanceRound + 1;
+    const acceptanceRound = isSameFailedRejectReason ? Math.max(currentAcceptanceRound, 1) : currentAcceptanceRound + 1;
     const promptOverride = buildReworkPrompt({
       taskDescription: task.description,
       resultSummary: task.resultSummary,

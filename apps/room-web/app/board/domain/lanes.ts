@@ -101,9 +101,7 @@ export function groupIntoLanes(tasks: readonly TaskRecord[]): Lane[] {
     tasks: [],
   }));
 
-  const laneIndexById = new Map<LaneId, number>(
-    lanes.map((lane, index) => [lane.id, index]),
-  );
+  const laneIndexById = new Map<LaneId, number>(lanes.map((lane, index) => [lane.id, index]));
 
   for (const task of tasks) {
     const laneId = STATUS_TO_LANE_ID.get(task.status);

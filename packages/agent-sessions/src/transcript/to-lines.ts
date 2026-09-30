@@ -1,4 +1,4 @@
-import type { TranscriptEntry } from "./types.js";
+import type { TranscriptEntry } from './types.js';
 
 /**
  * Reconstruct the legacy one-line-per-turn string format that
@@ -8,7 +8,5 @@ import type { TranscriptEntry } from "./types.js";
  * is adopted.
  */
 export function toLines(entries: TranscriptEntry[]): string[] {
-  return entries.map((e) =>
-    e.role === "tool" ? `⚙ ${e.toolName ?? e.text}` : `${e.role}: ${e.text}`
-  );
+  return entries.map((e) => (e.role === 'tool' ? `⚙ ${e.toolName ?? e.text}` : `${e.role}: ${e.text}`));
 }

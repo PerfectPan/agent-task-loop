@@ -8,14 +8,21 @@ import { buildAgentSeedRows } from '../agent-seed.server';
  */
 export function seedAgents(db: DatabaseSync, now = new Date().toISOString()): void {
   const existing = db.prepare('SELECT COUNT(*) AS n FROM agents').get() as unknown as { n: number };
-  if (Number(existing.n) > 0) return;
-  const inherited = db.prepare(`
+  if (Number(existing.n) > 0) {
+    return;
+  }
+  const inherited = db
+    .prepare(`
     SELECT agent_id FROM room_members
     UNION
     SELECT agent_id FROM agent_system_prompts
     ORDER BY agent_id ASC
-  `).all() as unknown as Array<{ agent_id: string }>;
-  const rows = buildAgentSeedRows(inherited.map(row => row.agent_id), now);
+  `)
+    .all() as unknown as Array<{ agent_id: string }>;
+  const rows = buildAgentSeedRows(
+    inherited.map((row) => row.agent_id),
+    now,
+  );
   const insert = db.prepare(`
     INSERT INTO agents (id, label, role, command, color, position, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)

@@ -4,7 +4,7 @@ import { TaskForm } from '../../../src/tui/components/TaskForm';
 import { stripAnsi } from '../helpers';
 
 async function tick() {
-  await new Promise(r => setTimeout(r, 10));
+  await new Promise((r) => setTimeout(r, 10));
 }
 
 afterEach(() => vi.restoreAllMocks());

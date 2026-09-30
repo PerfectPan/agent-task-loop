@@ -286,7 +286,7 @@ describe('Orchestration open / occupy', () => {
     let finishOld: () => void = () => undefined;
     const oldWrite = a.fence('task:T-1', async () => {
       order.push('old:start');
-      await new Promise<void>(resolve => {
+      await new Promise<void>((resolve) => {
         finishOld = resolve;
       });
       order.push('old:end');
@@ -299,7 +299,7 @@ describe('Orchestration open / occupy', () => {
     const newWrite = b.fence('task:T-1', async () => {
       order.push('new');
     });
-    await new Promise(resolve => setTimeout(resolve, 15));
+    await new Promise((resolve) => setTimeout(resolve, 15));
     expect(order).toEqual(['old:start']);
 
     finishOld();
@@ -334,9 +334,7 @@ describe('Orchestration open / occupy', () => {
     await b.open({ key: 'task:T-1', template: 'classic-delivery' });
     const mutation = vi.fn();
 
-    await expect(a.fence('task:T-1', mutation)).rejects.toBeInstanceOf(
-      OrchestrationConflictError,
-    );
+    await expect(a.fence('task:T-1', mutation)).rejects.toBeInstanceOf(OrchestrationConflictError);
     expect(mutation).not.toHaveBeenCalled();
   });
 

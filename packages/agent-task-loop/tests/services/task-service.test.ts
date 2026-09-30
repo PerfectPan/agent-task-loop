@@ -61,11 +61,53 @@ describe('TaskService', () => {
     vi.mocked(mod.runLarkCli).mockResolvedValue(
       JSON.stringify({
         data: {
-          fields: ['TaskID', 'Title', 'Description', 'Project', 'TargetAgent', 'Priority', 'Status', 'CreatedAt', 'LogPath', 'ProgressSummary', 'SessionId', 'SessionName', 'SessionHistory'],
+          fields: [
+            'TaskID',
+            'Title',
+            'Description',
+            'Project',
+            'TargetAgent',
+            'Priority',
+            'Status',
+            'CreatedAt',
+            'LogPath',
+            'ProgressSummary',
+            'SessionId',
+            'SessionName',
+            'SessionHistory',
+          ],
           record_id_list: ['rec-1', 'rec-2'],
           data: [
-            ['T-1', 'Fix', 'desc', 'demo', ['codex'], 5, ['待处理'], '2026-04-11T10:00:00Z', '/tmp/T-1.log', '正在准备工作区', 'sess-1', 'task-1-codex', '[2026-04-11T10:00:00Z] | round=1 | kind=execute'],
-            ['T-2', 'Skip', 'desc', 'demo', ['claude'], 9, ['待处理'], '2026-04-11T09:00:00Z', '/tmp/T-2.log', '正在分析问题', 'sess-2', 'task-2-claude', '[2026-04-11T09:00:00Z] | round=1 | kind=execute'],
+            [
+              'T-1',
+              'Fix',
+              'desc',
+              'demo',
+              ['codex'],
+              5,
+              ['待处理'],
+              '2026-04-11T10:00:00Z',
+              '/tmp/T-1.log',
+              '正在准备工作区',
+              'sess-1',
+              'task-1-codex',
+              '[2026-04-11T10:00:00Z] | round=1 | kind=execute',
+            ],
+            [
+              'T-2',
+              'Skip',
+              'desc',
+              'demo',
+              ['claude'],
+              9,
+              ['待处理'],
+              '2026-04-11T09:00:00Z',
+              '/tmp/T-2.log',
+              '正在分析问题',
+              'sess-2',
+              'task-2-claude',
+              '[2026-04-11T09:00:00Z] | round=1 | kind=execute',
+            ],
           ],
         },
       }),
@@ -90,7 +132,7 @@ describe('TaskService', () => {
     };
     const order: string[] = [];
     const service = new TaskService(provider).withMutationFence({
-      run: async mutation => {
+      run: async (mutation) => {
         order.push('fence:start');
         const result = await mutation();
         order.push('fence:end');
@@ -137,7 +179,17 @@ describe('TaskService', () => {
     vi.mocked(mod.runLarkCli).mockResolvedValueOnce(
       JSON.stringify({
         data: {
-          fields: ['TaskID', 'Title', 'Description', 'Project', 'TargetAgent', 'Priority', 'Status', 'WorkspacePath', 'ResultSummary'],
+          fields: [
+            'TaskID',
+            'Title',
+            'Description',
+            'Project',
+            'TargetAgent',
+            'Priority',
+            'Status',
+            'WorkspacePath',
+            'ResultSummary',
+          ],
           record_id_list: ['rec-main', 'rec-empty'],
           data: [
             ['TASK-102', '切换租户登出问题', 'desc', 'demo', ['claude'], 10, ['待验收'], '/tmp/workspace', 'done'],
@@ -166,7 +218,17 @@ describe('TaskService', () => {
     vi.mocked(mod.runLarkCli).mockResolvedValueOnce(
       JSON.stringify({
         data: {
-          fields: ['TaskID', 'Title', 'Description', 'Project', 'TargetAgent', 'Priority', 'Status', 'UpdatedAt', 'ProgressSummary'],
+          fields: [
+            'TaskID',
+            'Title',
+            'Description',
+            'Project',
+            'TargetAgent',
+            'Priority',
+            'Status',
+            'UpdatedAt',
+            'ProgressSummary',
+          ],
           record_id_list: ['rec-old', 'rec-new'],
           data: [
             ['TASK-200', '旧主卡', 'desc', 'demo', ['codex'], 10, ['待复核'], '2026-04-20T09:00:00Z', '旧进度'],

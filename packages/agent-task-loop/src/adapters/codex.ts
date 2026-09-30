@@ -19,7 +19,7 @@ export const codexAdapter: AgentAdapter = {
       input.cwd,
       input.onSpawn,
       input.onHeartbeat,
-      chunk => {
+      (chunk) => {
         const session = extractCodexSession(chunk);
         if (session) {
           input.onSession?.({

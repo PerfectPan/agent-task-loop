@@ -2,12 +2,7 @@ import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import {
-  MemoryRoomStreamStore,
-  type AgentSessionId,
-  type RoomEvent,
-  type RoomId,
-} from '@rivus/agent-room';
+import { MemoryRoomStreamStore, type AgentSessionId, type RoomEvent, type RoomId } from '@rivus/agent-room';
 import {
   LeaseManager,
   nodeClock,
@@ -106,15 +101,16 @@ function build(options: BuildOptions = {}): Built {
   };
   const prompts = options.prompts ?? {};
   const registry: AgentRegistry = {
-    get: async id => (members.includes(id)
-      ? agentOf(id, prompts[id] ?? '')
-      : undefined),
-    list: async () => members.map(id => agentOf(id, prompts[id] ?? '')),
+    get: async (id) => (members.includes(id) ? agentOf(id, prompts[id] ?? '') : undefined),
+    list: async () => members.map((id) => agentOf(id, prompts[id] ?? '')),
     save: async () => {},
     remove: async () => {},
   };
-  const descriptors: AgentDescriptor[] = members.map(id => ({
-    id, label: LABELS[id] ?? id, role: '成员', color: 1,
+  const descriptors: AgentDescriptor[] = members.map((id) => ({
+    id,
+    label: LABELS[id] ?? id,
+    role: '成员',
+    color: 1,
   }));
   const lease = options.lease ?? { fence: (_key, op) => op(), read: () => undefined };
   const service = new RoomService({
@@ -145,8 +141,10 @@ function build(options: BuildOptions = {}): Built {
     store,
     tools,
     toolOf: (agentId, name) => {
-      const found = toolsByAgent.get(agentId)?.find(definition => definition.name === name);
-      if (!found) throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+      const found = toolsByAgent.get(agentId)?.find((definition) => definition.name === name);
+      if (!found) {
+        throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+      }
       return found;
     },
   };
@@ -194,8 +192,10 @@ class FakeRuntime implements RoomMemberRuntime {
 
   wake(key: string): void {
     this.wakes.push(key);
-    if (this.manual) return;
-    void this.activated(key).then(activation => activation.end());
+    if (this.manual) {
+      return;
+    }
+    void this.activated(key).then((activation) => activation.end());
   }
 
   async activated(key: string): Promise<Activation> {
@@ -219,8 +219,10 @@ class FakeRuntime implements RoomMemberRuntime {
         await log.drain();
       },
       speakTool: () => {
-        const found = this.tools.at(-1)?.find(definition => definition.name === 'room_speak');
-        if (!found) throw new Error('no room_speak tool on this turn');
+        const found = this.tools.at(-1)?.find((definition) => definition.name === 'room_speak');
+        if (!found) {
+          throw new Error('no room_speak tool on this turn');
+        }
         return found;
       },
     };
@@ -250,8 +252,10 @@ class FakeTurnLog implements TurnLog {
       ...(record.error ? { error: record.error } : {}),
     });
     this.rowRoomIds.push(record.roomId);
-    this.waiters = this.waiters.filter(waiter => {
-      if (this.rows.length < waiter.count) return true;
+    this.waiters = this.waiters.filter((waiter) => {
+      if (this.rows.length < waiter.count) {
+        return true;
+      }
       waiter.resolve();
       return false;
     });
@@ -264,7 +268,9 @@ class FakeTurnLog implements TurnLog {
   clear(roomId: string): void {
     this.cleared.push(roomId);
     for (let index = this.rows.length - 1; index >= 0; index -= 1) {
-      if (this.rowRoomIds[index] !== roomId) continue;
+      if (this.rowRoomIds[index] !== roomId) {
+        continue;
+      }
       this.rows.splice(index, 1);
       this.rowRoomIds.splice(index, 1);
     }
@@ -272,8 +278,12 @@ class FakeTurnLog implements TurnLog {
 
   /** Resolves once at least `count` turns have been logged. */
   waitFor(count: number): Promise<void> {
-    if (this.rows.length >= count) return Promise.resolve();
-    return new Promise(resolve => { this.waiters.push({ count, resolve }); });
+    if (this.rows.length >= count) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.waiters.push({ count, resolve });
+    });
   }
 
   /**
@@ -284,7 +294,7 @@ class FakeTurnLog implements TurnLog {
    */
   async drain(): Promise<void> {
     for (let round = 0; round < 5; round += 1) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 }
@@ -304,23 +314,30 @@ interface ToolEvent {
  * otherwise end the turn without a Room tool.
  */
 function countOffDecision(bodies: string[], seat: number): string | undefined {
-  const numbers = bodies.map(body => body.trim()).filter(body => /^\d+$/.test(body)).map(Number);
-  if (numbers.length === 0) return seat === 1 ? '1' : undefined;
+  const numbers = bodies
+    .map((body) => body.trim())
+    .filter((body) => /^\d+$/.test(body))
+    .map(Number);
+  if (numbers.length === 0) {
+    return seat === 1 ? '1' : undefined;
+  }
   return Math.max(...numbers) === seat - 1 ? String(seat) : undefined;
 }
 
 /** The member's own seat, read out of the facts block the service assembled. */
 function seatOf(harness: Harness): number {
-  const facts = harness.blocks.map(block => ('text' in block ? block.text : '')).join('\n');
+  const facts = harness.blocks.map((block) => ('text' in block ? block.text : '')).join('\n');
   const match = facts.match(/member (\d+) of/);
-  if (!match) throw new Error('no seat number in the room facts');
+  if (!match) {
+    throw new Error('no seat number in the room facts');
+  }
   return Number(match[1]!);
 }
 
 /** The bodies on the transcript the activation carried in. */
 function transcriptBodies(harness: Harness): string[] {
-  const text = harness.blocks.map(block => ('text' in block ? block.text : '')).join('\n');
-  return [...text.matchAll(/\[seq \d+\] @[^:]*: (.*)$/gm)].map(match => match[1]!);
+  const text = harness.blocks.map((block) => ('text' in block ? block.text : '')).join('\n');
+  return [...text.matchAll(/\[seq \d+\] @[^:]*: (.*)$/gm)].map((match) => match[1]!);
 }
 
 /**
@@ -339,15 +356,14 @@ class ChainRuntime implements RoomMemberRuntime {
   private toolOf: ((agentId: string, name: string) => ToolDefinition) | undefined;
 
   constructor(
-    private readonly decide: (agentId: RoomLabAgentId, harness: Harness, read: string[]) =>
-      { body: string; addressedTo?: string[] } | undefined,
+    private readonly decide: (
+      agentId: RoomLabAgentId,
+      harness: Harness,
+      read: string[],
+    ) => { body: string; addressedTo?: string[] } | undefined,
   ) {}
 
-  bind(
-    service: RoomService,
-    turnLog: FakeTurnLog,
-    toolOf: (agentId: string, name: string) => ToolDefinition,
-  ): void {
+  bind(service: RoomService, turnLog: FakeTurnLog, toolOf: (agentId: string, name: string) => ToolDefinition): void {
     this.service = service;
     this.turnLog = turnLog;
     this.toolOf = toolOf;
@@ -382,18 +398,24 @@ class ChainRuntime implements RoomMemberRuntime {
       const readBodies: string[] = [];
       for (let attempt = 0; attempt <= HELD_LIMIT; attempt += 1) {
         const decision = this.decide(agentId, harness, readBodies);
-        if (!decision) break;
-        const result = await speak.handler(
+        if (!decision) {
+          break;
+        }
+        const result = (await speak.handler(
           { body: decision.body, addressedTo: decision.addressedTo ?? [] },
           { sessionId: undefined },
-        ) as { posted?: { seq: number }; held?: { newer: ToolEvent[] }; error?: string };
-        if (result.posted || result.error) break;
-        if (!result.held) break;
-        const slice = await read.handler(
+        )) as { posted?: { seq: number }; held?: { newer: ToolEvent[] }; error?: string };
+        if (result.posted || result.error) {
+          break;
+        }
+        if (!result.held) {
+          break;
+        }
+        const slice = (await read.handler(
           { afterSeq: Math.max(0, (result.held.newer[0]?.seq ?? 1) - 1) },
           { sessionId: undefined },
-        ) as { events: ToolEvent[] };
-        readBodies.push(...slice.events.map(event => event.body));
+        )) as { events: ToolEvent[] };
+        readBodies.push(...slice.events.map((event) => event.body));
       }
       // The real runtime awaits the hook's promise before it releases the
       // lease; the drain below waits out the wake-followed activations.
@@ -402,7 +424,9 @@ class ChainRuntime implements RoomMemberRuntime {
     } finally {
       this.running.delete(agentId);
     }
-    if (this.pending.delete(agentId)) await this.runTurn(agentId);
+    if (this.pending.delete(agentId)) {
+      await this.runTurn(agentId);
+    }
   }
 }
 
@@ -423,7 +447,7 @@ describe('RoomService dispatch', () => {
     await h.service.sendMessage('这个接口为什么偶发 502？', 'web:retry-1');
     expect(h.runtime.wakes).toHaveLength(before);
     const events = await eventsOf(h.store);
-    expect(events.filter(event => event.kind === 'human')).toHaveLength(1);
+    expect(events.filter((event) => event.kind === 'human')).toHaveLength(1);
   });
 
   it('in an addressed room wakes only the members named; an unaddressed one still wakes everyone', async () => {
@@ -452,8 +476,9 @@ describe('RoomService dispatch', () => {
     // The notice lands on its own write, one microtask behind the dispatch.
     await vi.waitFor(async () => {
       const events = await eventsOf(h.store);
-      expect(events.filter(event => event.kind === 'control-plane').map(event => event.body))
-        .toEqual([copy.say.roundBudgetReached]);
+      expect(events.filter((event) => event.kind === 'control-plane').map((event) => event.body)).toEqual([
+        copy.say.roundBudgetReached,
+      ]);
     });
   });
 
@@ -472,7 +497,7 @@ describe('RoomService dispatch', () => {
     const opencode = await h.runtime.activated(keyOf('opencode'));
     await opencode.end();
     expect(h.runtime.wakes).toEqual([keyOf('claude'), keyOf('codex'), keyOf('opencode')]);
-    expect(h.turnLog.rows.map(row => row.agentId)).toEqual(['claude', 'codex', 'opencode']);
+    expect(h.turnLog.rows.map((row) => row.agentId)).toEqual(['claude', 'codex', 'opencode']);
   });
 
   it('reads the seat order off the members the room seats now', async () => {
@@ -499,7 +524,8 @@ describe('RoomService dispatch on member posts', () => {
     // Claude posts: the same dispatch an admit runs — shouldWake over the
     // posted event, budget charged, every peer but the author woken.
     const claude = await h.runtime.activated(keyOf('claude'));
-    const posted = await claude.speakTool()
+    const posted = await claude
+      .speakTool()
       .handler({ body: '上游超时，重试没退避', addressedTo: [] }, { sessionId: undefined });
     expect(posted).toMatchObject({ posted: { seq: 2 } });
     expect(h.runtime.wakes.slice(3)).toEqual([keyOf('codex'), keyOf('opencode')]);
@@ -514,8 +540,7 @@ describe('RoomService dispatch on member posts', () => {
     const h = build({ manual: true, settings: { wake: 'addressed' } });
     await h.service.sendMessage('这个接口为什么偶发 502？');
     const claude = await h.runtime.activated(keyOf('claude'));
-    await claude.speakTool()
-      .handler({ body: '先看这个，@codex', addressedTo: ['codex'] }, { sessionId: undefined });
+    await claude.speakTool().handler({ body: '先看这个，@codex', addressedTo: ['codex'] }, { sessionId: undefined });
     expect(h.runtime.wakes.slice(3)).toEqual([keyOf('codex')]);
   });
 
@@ -529,7 +554,7 @@ describe('RoomService dispatch on member posts', () => {
     // The record holds exactly the walkthrough: each seat reads its
     // predecessor's number and reports its own, one depth under its trigger.
     const events = await eventsOf(h.store);
-    expect(events.map(event => [event.author.id, event.body, event.wakeDepth])).toEqual([
+    expect(events.map((event) => [event.author.id, event.body, event.wakeDepth])).toEqual([
       ['director', '报数', 0],
       ['claude', '1', 1],
       ['codex', '2', 2],
@@ -542,11 +567,16 @@ describe('RoomService dispatch on member posts', () => {
     // walkthrough's, in order and one depth under their trigger.
     expect(h.turnLog.rows.length).toBeGreaterThanOrEqual(7);
     expect(h.turnLog.rows.length).toBeLessThanOrEqual(9);
-    expect(h.turnLog.rows.filter(row => row.outcome === 'posted').map(row => [row.agentId, row.postedSeq]))
-      .toEqual([['claude', 2], ['codex', 3], ['opencode', 4]]);
-    expect(h.turnLog.rows.every(row => row.outcome === 'posted' || row.outcome === 'passed')).toBe(true);
+    expect(h.turnLog.rows.filter((row) => row.outcome === 'posted').map((row) => [row.agentId, row.postedSeq])).toEqual(
+      [
+        ['claude', 2],
+        ['codex', 3],
+        ['opencode', 4],
+      ],
+    );
+    expect(h.turnLog.rows.every((row) => row.outcome === 'posted' || row.outcome === 'passed')).toBe(true);
     // The default budget n(n+1) = 12 covers the nine: no notice anywhere.
-    expect(events.filter(event => event.kind === 'control-plane')).toEqual([]);
+    expect(events.filter((event) => event.kind === 'control-plane')).toEqual([]);
   });
 
   it('reproduces the count-off on serial: five turns, one activation at a time', async () => {
@@ -557,7 +587,7 @@ describe('RoomService dispatch on member posts', () => {
     await chain.settled();
 
     const events = await eventsOf(h.store);
-    expect(events.map(event => [event.author.id, event.body, event.wakeDepth])).toEqual([
+    expect(events.map((event) => [event.author.id, event.body, event.wakeDepth])).toEqual([
       ['director', '报数', 0],
       ['claude', '1', 1],
       ['codex', '2', 2],
@@ -565,14 +595,8 @@ describe('RoomService dispatch on member posts', () => {
     ]);
     // The admit wakes the first seat; each post queues the rest behind the
     // running turn, deduplicated, and the chain walks the seats in order.
-    expect(chain.wakes).toEqual([
-      keyOf('claude'),
-      keyOf('codex'),
-      keyOf('opencode'),
-      keyOf('claude'),
-      keyOf('codex'),
-    ]);
-    expect(h.turnLog.rows.map(row => [row.agentId, row.outcome])).toEqual([
+    expect(chain.wakes).toEqual([keyOf('claude'), keyOf('codex'), keyOf('opencode'), keyOf('claude'), keyOf('codex')]);
+    expect(h.turnLog.rows.map((row) => [row.agentId, row.outcome])).toEqual([
       ['claude', 'posted'],
       ['codex', 'posted'],
       ['opencode', 'posted'],
@@ -591,25 +615,23 @@ describe('RoomService dispatch on member posts', () => {
     // The admit charged three; the post's dispatch spends the fourth on codex
     // and refuses opencode. Codex's report still starts — it was charged —
     // but the dispatch it causes finds the round spent and wakes nobody more.
-    expect(chain.wakes).toEqual([
-      keyOf('claude'),
-      keyOf('codex'),
-      keyOf('opencode'),
-      keyOf('codex'),
-    ]);
+    expect(chain.wakes).toEqual([keyOf('claude'), keyOf('codex'), keyOf('opencode'), keyOf('codex')]);
     expect(h.turnLog.rows).toHaveLength(4);
-    expect(h.turnLog.rows.filter(row => row.outcome === 'posted').map(row => row.agentId))
-      .toEqual(['claude', 'codex']);
+    expect(h.turnLog.rows.filter((row) => row.outcome === 'posted').map((row) => row.agentId)).toEqual([
+      'claude',
+      'codex',
+    ]);
     // The notice is itself a record event: it lands between the two counts.
     const events = await eventsOf(h.store);
-    expect(events.map(event => [event.kind, event.author.id])).toEqual([
+    expect(events.map((event) => [event.kind, event.author.id])).toEqual([
       ['human', 'director'],
       ['posted', 'claude'],
       ['control-plane', 'room'],
       ['posted', 'codex'],
     ]);
-    expect(events.filter(event => event.kind === 'control-plane').map(event => event.body))
-      .toEqual([copy.say.roundBudgetReached]);
+    expect(events.filter((event) => event.kind === 'control-plane').map((event) => event.body)).toEqual([
+      copy.say.roundBudgetReached,
+    ]);
   });
 });
 
@@ -628,12 +650,13 @@ describe('RoomService turns', () => {
 
     // Codex calls room_speak once: no pass runs, the log carries the post.
     const codex = await h.runtime.activated(keyOf('codex'));
-    const posted = await codex.speakTool()
+    const posted = await codex
+      .speakTool()
       .handler({ body: '上游超时，重试没有退避', addressedTo: [] }, { sessionId: undefined });
     expect(posted).toMatchObject({ posted: { seq: 2 } });
-    await expect(codex.speakTool()
-      .handler({ body: '再说一次', addressedTo: [] }, { sessionId: undefined }))
-      .resolves.toEqual({ error: 'already-spoke' });
+    await expect(
+      codex.speakTool().handler({ body: '再说一次', addressedTo: [] }, { sessionId: undefined }),
+    ).resolves.toEqual({ error: 'already-spoke' });
     await codex.end();
     await h.turnLog.waitFor(2);
     expect(h.turnLog.rows[1]).toMatchObject({ agentId: 'codex', outcome: 'posted', postedSeq: 2 });
@@ -650,7 +673,7 @@ describe('RoomService turns', () => {
     const activation = await h.runtime.activated(keyOf('codex'));
     const { harness } = activation;
     expect(harness.systemPrompt).toBe('先给结论。');
-    const texts = harness.blocks.map(block => ('text' in block ? block.text : ''));
+    const texts = harness.blocks.map((block) => ('text' in block ? block.text : ''));
     expect(texts[0]).toContain('You are @codex (Codex), member 2 of 3 in room "测试房间"');
     expect(texts[0]).toContain('Members in seat order: @claude, @codex, @opencode');
     expect(texts[0]).toContain('You were woken by seq 1 from @director');
@@ -682,13 +705,16 @@ describe('RoomService turns', () => {
     const speak = codex.speakTool();
     const held = await speak.handler({ body: '我的结论', addressedTo: [] }, { sessionId: undefined });
     expect(held).toMatchObject({ held: { newer: [{ seq: 2 }] } });
-    await expect(speak.handler({ body: '再试', addressedTo: [] }, { sessionId: undefined }))
-      .resolves.toMatchObject({ held: {} });
-    await expect(speak.handler({ body: '三试', addressedTo: [] }, { sessionId: undefined }))
-      .resolves.toMatchObject({ held: {} });
+    await expect(speak.handler({ body: '再试', addressedTo: [] }, { sessionId: undefined })).resolves.toMatchObject({
+      held: {},
+    });
+    await expect(speak.handler({ body: '三试', addressedTo: [] }, { sessionId: undefined })).resolves.toMatchObject({
+      held: {},
+    });
     // Three HELDs close the tool: the turn cannot post any more.
-    await expect(speak.handler({ body: '四试', addressedTo: [] }, { sessionId: undefined }))
-      .resolves.toEqual({ error: 'held-limit' });
+    await expect(speak.handler({ body: '四试', addressedTo: [] }, { sessionId: undefined })).resolves.toEqual({
+      error: 'held-limit',
+    });
     await codex.end();
     await h.turnLog.waitFor(2);
     expect(h.turnLog.rows[1]).toMatchObject({ agentId: 'codex', outcome: 'passed', heldCount: 3 });
@@ -707,7 +733,7 @@ describe('RoomService turns', () => {
     // A second round: both cursors stand at 1, so only seq 2 is unread.
     await h.service.sendMessage('第二轮');
     const claudeAgain = await h.runtime.activated(keyOf('claude'));
-    const texts = claudeAgain.harness.blocks.map(block => ('text' in block ? block.text : ''));
+    const texts = claudeAgain.harness.blocks.map((block) => ('text' in block ? block.text : ''));
     expect(texts[1]).toContain('[seq 2]');
     expect(texts[1]).not.toContain('[seq 1]');
     await claudeAgain.end();
@@ -756,11 +782,7 @@ describe('RoomService turns', () => {
     await opencode.end();
     // Round 1 ran its seats; claude's round-2 entry is next, and after it the
     // queue is drained — one activation at a time throughout.
-    expect(h.runtime.wakes.slice(1)).toEqual([
-      keyOf('codex'),
-      keyOf('opencode'),
-      keyOf('claude'),
-    ]);
+    expect(h.runtime.wakes.slice(1)).toEqual([keyOf('codex'), keyOf('opencode'), keyOf('claude')]);
     const claudeAgain = await h.runtime.activated(keyOf('claude'));
     await claudeAgain.end();
     expect(h.runtime.wakes).toHaveLength(4);
@@ -783,11 +805,7 @@ describe('RoomService turns', () => {
     await codex.end();
     const opencode = await h.runtime.activated(keyOf('opencode'));
     await opencode.end();
-    expect(h.runtime.wakes).toEqual([
-      keyOf('claude'),
-      keyOf('codex'),
-      keyOf('opencode'),
-    ]);
+    expect(h.runtime.wakes).toEqual([keyOf('claude'), keyOf('codex'), keyOf('opencode')]);
   });
 
   it('logs an activation that failed before it was a turn and keeps the serial queue moving', async () => {
@@ -812,12 +830,12 @@ describe('RoomService turns', () => {
     const privateRoom = build({ manual: true, dm, parentTitle: () => '大房间' });
     await privateRoom.service.sendMessage('单独聊');
     await privateRoom.runtime.activated(keyOf('claude'));
-    expect(privateRoom.tools.at(-1)!.map(tool => tool.name)).not.toContain('room_dm');
+    expect(privateRoom.tools.at(-1)!.map((tool) => tool.name)).not.toContain('room_dm');
 
     const rootRoom = build({ manual: true, dm });
     await rootRoom.service.sendMessage('再聊');
     await rootRoom.runtime.activated(keyOf('claude'));
-    expect(rootRoom.tools.at(-1)!.map(tool => tool.name)).toContain('room_dm');
+    expect(rootRoom.tools.at(-1)!.map((tool) => tool.name)).toContain('room_dm');
   });
 
   it('denies writes outside cwd, writes that name no location, and symlinks out of cwd', async () => {
@@ -913,9 +931,7 @@ describe('RoomService pass cursor', () => {
     }
 
     read(key: string): LeaseRecord | undefined {
-      return this.held.has(key)
-        ? { key, holderPid: 1, holderId: 'test', heartbeatAt: '' }
-        : undefined;
+      return this.held.has(key) ? { key, holderPid: 1, holderId: 'test', heartbeatAt: '' } : undefined;
     }
 
     acquire(key: string): void {
@@ -924,7 +940,9 @@ describe('RoomService pass cursor', () => {
     }
 
     release(key: string): void {
-      if (this.held.delete(key)) this.events.push(`release:${key}`);
+      if (this.held.delete(key)) {
+        this.events.push(`release:${key}`);
+      }
     }
   }
 
@@ -993,7 +1011,12 @@ describe('RoomService pass cursor on sqlite', () => {
     const store = SqliteRoomStore.memory();
     // The room row first: room_events carries a foreign key to it.
     const catalog = new RoomCatalog([], undefined, store.agents);
-    catalog.create({ id: 'r_5e1ec0de5a', title: 'sqlite 房间', now: '2026-09-29T00:00:00.000Z', memberIds: ['claude'] });
+    catalog.create({
+      id: 'r_5e1ec0de5a',
+      title: 'sqlite 房间',
+      now: '2026-09-29T00:00:00.000Z',
+      memberIds: ['claude'],
+    });
     store.saveRoom(catalog.get('r_5e1ec0de5a'));
     const stream = store.stream('r_5e1ec0de5a');
     const lease = new LeaseManager({
@@ -1007,7 +1030,7 @@ describe('RoomService pass cursor on sqlite', () => {
       roomId: { tenantId: 'local', conversationId: 'r_5e1ec0de5a' },
       store: stream,
       registry: {
-        get: async id => agentOf(id, ''),
+        get: async (id) => agentOf(id, ''),
         list: async () => [agentOf('claude', '')],
         save: async () => {},
         remove: async () => {},
@@ -1033,12 +1056,16 @@ describe('RoomService pass cursor on sqlite', () => {
 
     // The rows the E2E cross-check compared: the turn row's read_up_to_seq
     // and the session's seen_seq. The defect left them apart; they agree now.
-    const turn = store.db.prepare(`
+    const turn = store.db
+      .prepare(`
       SELECT read_up_to_seq, outcome, error FROM turns WHERE room_id = 'r_5e1ec0de5a'
-    `).get() as unknown as { read_up_to_seq: number; outcome: string; error: string | null };
-    const cursor = store.db.prepare(`
+    `)
+      .get() as unknown as { read_up_to_seq: number; outcome: string; error: string | null };
+    const cursor = store.db
+      .prepare(`
       SELECT seen_seq FROM agent_sessions WHERE room_id = 'r_5e1ec0de5a' AND agent_id = 'claude'
-    `).get() as unknown as { seen_seq: number };
+    `)
+      .get() as unknown as { seen_seq: number };
     expect(Number(turn.read_up_to_seq)).toBe(1);
     expect(Number(cursor.seen_seq)).toBe(1);
     expect(turn.outcome).toBe('passed');
@@ -1061,7 +1088,9 @@ describe('RoomService truncated inbox', () => {
         readUpToSeq: head,
         triggerSeq: head,
       });
-      if (result.outcome !== 'posted') throw new Error('the seed post should have gone through');
+      if (result.outcome !== 'posted') {
+        throw new Error('the seed post should have gone through');
+      }
     }
   }
 
@@ -1070,7 +1099,7 @@ describe('RoomService truncated inbox', () => {
     await longRecord(h, 59); // head 60, codex's cursor 0: sixty unread.
 
     const codex = await h.runtime.activated(keyOf('codex'));
-    const texts = codex.harness.blocks.map(block => ('text' in block ? block.text : ''));
+    const texts = codex.harness.blocks.map((block) => ('text' in block ? block.text : ''));
     // Fifty carried, ten left out — and the transcript says so.
     expect(texts[1]).toContain('[seq 50]');
     expect(texts[1]).not.toContain('[seq 51]');
@@ -1079,23 +1108,22 @@ describe('RoomService truncated inbox', () => {
     // A speak is HELD against the events the turn never read — the newer
     // list starts where the inbox stopped — not let past by a cursor that
     // claims the whole record.
-    const held = await codex.speakTool()
-      .handler({ body: '我的结论', addressedTo: [] }, { sessionId: undefined }) as {
-        held?: { newer: ToolEvent[] };
-      };
-    expect(held.held?.newer.map(event => event.seq)).toEqual([51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
+    const held = (await codex.speakTool().handler({ body: '我的结论', addressedTo: [] }, { sessionId: undefined })) as {
+      held?: { newer: ToolEvent[] };
+    };
+    expect(held.held?.newer.map((event) => event.seq)).toEqual([51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
 
     // A room_read that skips ahead of the cursor returns its events but
     // advances the handle nowhere: the gap stays honestly unread.
     const read = h.toolOf('codex', 'room_read');
-    const skipped = await read.handler({ afterSeq: 55 }, { sessionId: undefined }) as { events: ToolEvent[] };
-    expect(skipped.events.map(event => event.seq)).toEqual([56, 57, 58, 59, 60]);
+    const skipped = (await read.handler({ afterSeq: 55 }, { sessionId: undefined })) as { events: ToolEvent[] };
+    expect(skipped.events.map((event) => event.seq)).toEqual([56, 57, 58, 59, 60]);
     await codex.end();
     expect(h.store.inspectSession(sessionId('codex'))?.seenSeq).toBe(50);
 
     // The next turn carries exactly what was left, and its pass stands on it.
     const again = await h.runtime.activated(keyOf('codex'));
-    const againTexts = again.harness.blocks.map(block => ('text' in block ? block.text : ''));
+    const againTexts = again.harness.blocks.map((block) => ('text' in block ? block.text : ''));
     expect(againTexts[1]).toContain('[seq 51]');
     expect(againTexts[1]).not.toContain('[seq 50]');
     await again.end();
@@ -1112,7 +1140,10 @@ describe('RoomService reset', () => {
     resetChild?: (roomId: string) => { reset(): Promise<unknown> } | undefined;
   }
 
-  async function buildOnSqlite(roundBudget: number, options: SqliteOptions = {}): Promise<{
+  async function buildOnSqlite(
+    roundBudget: number,
+    options: SqliteOptions = {},
+  ): Promise<{
     store: SqliteRoomStore;
     turnLog: SqliteTurnLog;
     service: RoomService;
@@ -1138,12 +1169,12 @@ describe('RoomService reset', () => {
       roomId: { tenantId: 'local', conversationId: RESET_ROOM },
       store: store.stream(RESET_ROOM),
       registry: {
-        get: async id => agentOf(id, ''),
+        get: async (id) => agentOf(id, ''),
         list: async () => [agentOf('claude', ''), agentOf('codex', '')],
         save: async () => {},
         remove: async () => {},
       },
-      runtime: { wake: key => wakes.push(key) },
+      runtime: { wake: (key) => wakes.push(key) },
       lease: { fence: (_key, op) => op(), read: () => undefined },
       turnLog,
       members: () => ['claude', 'codex'],
@@ -1174,8 +1205,10 @@ describe('RoomService reset', () => {
       wakes,
       tools,
       toolOf: (agentId, name) => {
-        const found = toolsByAgent.get(agentId)?.find(definition => definition.name === name);
-        if (!found) throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+        const found = toolsByAgent.get(agentId)?.find((definition) => definition.name === name);
+        if (!found) {
+          throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+        }
         return found;
       },
     };
@@ -1194,7 +1227,8 @@ describe('RoomService reset', () => {
 
     await service.reset();
     // The record is empty; the log that described it is too.
-    const cleared = await store.stream(RESET_ROOM)
+    const cleared = await store
+      .stream(RESET_ROOM)
       .readSlice({ tenantId: 'local', conversationId: RESET_ROOM }, 0, { maxEvents: 10 });
     expect(cleared.events).toEqual([]);
     expect(cleared.head).toBe(0);
@@ -1210,9 +1244,11 @@ describe('RoomService reset', () => {
       outcome: 'failed',
       error: 'room was reset during this turn',
     });
-    const cursor = store.db.prepare(`
+    const cursor = store.db
+      .prepare(`
       SELECT seen_seq FROM agent_sessions WHERE room_id = ? AND agent_id = 'codex'
-    `).get(RESET_ROOM) as unknown as { seen_seq: number };
+    `)
+      .get(RESET_ROOM) as unknown as { seen_seq: number };
     expect(Number(cursor.seen_seq)).toBe(0);
 
     // The budget went with the log: the next round wakes the full roster
@@ -1232,13 +1268,14 @@ describe('RoomService reset', () => {
     // endpoint outlives the turn — so the gate is what has to hold.
     await service.reset();
     await service.sendMessage('第二轮', 'web:reset-tools-2');
-    await expect(
-      speak.handler({ body: '迟到的发言', addressedTo: [] }, { sessionId: undefined }),
-    ).resolves.toEqual({ error: 'turn-closed' });
+    await expect(speak.handler({ body: '迟到的发言', addressedTo: [] }, { sessionId: undefined })).resolves.toEqual({
+      error: 'turn-closed',
+    });
     // The new record holds only the person's message: nothing posted into it.
-    const events = await store.stream(RESET_ROOM)
+    const events = await store
+      .stream(RESET_ROOM)
       .readSlice({ tenantId: 'local', conversationId: RESET_ROOM }, 0, { maxEvents: 10 });
-    expect(events.events.map(event => event.kind)).toEqual(['human']);
+    expect(events.events.map((event) => event.kind)).toEqual(['human']);
     await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
   });
 
@@ -1254,14 +1291,22 @@ describe('RoomService reset', () => {
 
     // Without the wiring, the child's turn rows still go with the reset.
     const plain = await buildOnSqlite(12, { childRooms: () => ['r_feedface00'] });
-    plain.store.db.prepare(`
+    plain.store.db
+      .prepare(`
       INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
       VALUES ('r_feedface00', '子房间', NULL, '2026-09-30T00:00:00.000Z', '2026-09-30T00:00:00.000Z', '2026-09-30T00:00:00.000Z')
-    `).run();
+    `)
+      .run();
     plain.turnLog.append({
-      id: 'turn:child', roomId: 'r_feedface00', agentId: 'claude', roundSeq: 1,
-      triggerSeq: 1, readUpToSeq: 1, startedAt: '2026-09-30T00:00:00.000Z',
-      outcome: 'passed', heldCount: 0,
+      id: 'turn:child',
+      roomId: 'r_feedface00',
+      agentId: 'claude',
+      roundSeq: 1,
+      triggerSeq: 1,
+      readUpToSeq: 1,
+      startedAt: '2026-09-30T00:00:00.000Z',
+      outcome: 'passed',
+      heldCount: 0,
     });
     await plain.service.reset();
     expect(plain.turnLog.listByRoom('r_feedface00')).toEqual([]);

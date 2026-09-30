@@ -13,8 +13,18 @@ describe('ReviewLoopService', () => {
       .mockResolvedValueOnce({ resultSummary: 'round-2', sessionId: 'exec-2', sessionName: 'task-201-claude-r2' });
     const review = vi
       .fn()
-      .mockResolvedValueOnce({ verdict: '驳回', findings: '1. [高] fix one', sessionId: 'review-1', sessionName: 'task-201-review-codex-r1' })
-      .mockResolvedValueOnce({ verdict: '通过', findings: '', sessionId: 'review-2', sessionName: 'task-201-review-codex-r2' });
+      .mockResolvedValueOnce({
+        verdict: '驳回',
+        findings: '1. [高] fix one',
+        sessionId: 'review-1',
+        sessionName: 'task-201-review-codex-r1',
+      })
+      .mockResolvedValueOnce({
+        verdict: '通过',
+        findings: '',
+        sessionId: 'review-2',
+        sessionName: 'task-201-review-codex-r2',
+      });
     const updateReviewState = vi.fn();
     const updatePublishResult = vi.fn();
     const publishForAcceptance = vi.fn().mockResolvedValue({
@@ -599,5 +609,4 @@ describe('ReviewLoopService', () => {
     expect(updatePublishResult).not.toHaveBeenCalled();
     expect(updateReviewState).not.toHaveBeenCalled();
   });
-
 });

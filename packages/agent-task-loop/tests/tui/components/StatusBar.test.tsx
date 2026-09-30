@@ -4,10 +4,7 @@ import type { Pane } from '../../../src/tui/types';
 import { StatusBar } from '../../../src/tui/components/StatusBar';
 import { stripAnsi } from '../helpers';
 
-function renderBar(props: {
-  focusedPane: Pane;
-  filtering: boolean;
-}): string {
+function renderBar(props: { focusedPane: Pane; filtering: boolean }): string {
   const { lastFrame } = render(<StatusBar {...props} />);
   return stripAnsi(lastFrame() ?? '');
 }
@@ -49,9 +46,7 @@ describe('StatusBar', () => {
   });
 
   it('shows [n] new only when creating is available', () => {
-    const without = stripAnsi(
-      render(<StatusBar focusedPane="list" filtering={false} />).lastFrame() ?? '',
-    );
+    const without = stripAnsi(render(<StatusBar focusedPane="list" filtering={false} />).lastFrame() ?? '');
     expect(without).not.toContain('[n] new');
 
     const withCreate = stripAnsi(

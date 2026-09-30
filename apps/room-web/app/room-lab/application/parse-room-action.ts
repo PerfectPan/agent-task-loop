@@ -1,4 +1,4 @@
-import type { KnownAgentIds, } from '../domain/agent-registry';
+import type { KnownAgentIds } from '../domain/agent-registry';
 import type { RoomWakeMode } from '../domain/room-catalog';
 import type { RoomLabAction } from '../read-model';
 import { RoomInputError } from './room-service.server';
@@ -19,23 +19,20 @@ export function parseRoomAction(value: unknown, known: KnownAgentIds): RoomLabAc
         return {
           action: 'message',
           body: input.body,
-          ...(typeof input.clientMessageId === 'string'
-            ? { clientMessageId: input.clientMessageId }
-            : {}),
+          ...(typeof input.clientMessageId === 'string' ? { clientMessageId: input.clientMessageId } : {}),
         };
       }
       break;
     case 'compose':
-      if (
-        Array.isArray(input.agentIds) &&
-        input.agentIds.every(isRoomLabAgentId)
-      ) {
+      if (Array.isArray(input.agentIds) && input.agentIds.every(isRoomLabAgentId)) {
         return { action: 'compose', agentIds: input.agentIds };
       }
       break;
     case 'settings': {
       const settings = settingsOf(input, isWake);
-      if (settings) return { action: 'settings', ...settings };
+      if (settings) {
+        return { action: 'settings', ...settings };
+      }
       break;
     }
     case 'create':
@@ -63,8 +60,14 @@ function settingsOf(
   isWake: (candidate: unknown) => candidate is RoomWakeMode,
 ): { wake?: RoomWakeMode; serial?: boolean; cwd?: string } | undefined {
   const settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string } = {};
-  if (isWake(input.wake)) settings.wake = input.wake;
-  if (typeof input.serial === 'boolean') settings.serial = input.serial;
-  if (typeof input.cwd === 'string') settings.cwd = input.cwd;
+  if (isWake(input.wake)) {
+    settings.wake = input.wake;
+  }
+  if (typeof input.serial === 'boolean') {
+    settings.serial = input.serial;
+  }
+  if (typeof input.cwd === 'string') {
+    settings.cwd = input.cwd;
+  }
   return Object.keys(settings).length > 0 ? settings : undefined;
 }

@@ -86,7 +86,9 @@ export class ToolServer {
   }
 
   async hostTools(input: HostToolsInput): Promise<HostedTools> {
-    if (!input.token.trim()) throw new Error('ToolServer needs a non-empty token');
+    if (!input.token.trim()) {
+      throw new Error('ToolServer needs a non-empty token');
+    }
     /** The running turn's registration; every tool wrapper reads it at call time. */
     let turn: TurnTools = { tools: input.tools, authorize: input.authorize };
     const clients: ClientEntry[] = [];
@@ -98,9 +100,13 @@ export class ToolServer {
         tool.name,
         { ...(tool.description ? { description: tool.description } : {}), inputSchema: tool.inputSchema },
         async (args, extra) => {
-          if (!turn.authorize()) return TURN_CLOSED;
-          const current = turn.tools.find(candidate => candidate.name === tool.name);
-          if (!current) return TURN_CLOSED;
+          if (!turn.authorize()) {
+            return TURN_CLOSED;
+          }
+          const current = turn.tools.find((candidate) => candidate.name === tool.name);
+          if (!current) {
+            return TURN_CLOSED;
+          }
           const result = await current.handler((args ?? {}) as Record<string, unknown>, { sessionId: extra.sessionId });
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(result ?? null) }],
@@ -115,8 +121,11 @@ export class ToolServer {
 
     const httpServer = createServer((request, response) => {
       void handle(request, response).catch(() => {
-        if (!response.headersSent) response.writeHead(500).end();
-        else response.end();
+        if (!response.headersSent) {
+          response.writeHead(500).end();
+        } else {
+          response.end();
+        }
       });
     });
     const url = await new Promise<string>((resolve, reject) => {
@@ -149,13 +158,15 @@ export class ToolServer {
         // (The Room tools' schemas and descriptions do not change per turn.)
         for (const client of clients) {
           for (const [name, registered] of Array.from(client.tools)) {
-            if (!next.tools.some(tool => tool.name === name)) {
+            if (!next.tools.some((tool) => tool.name === name)) {
               registered.remove();
               client.tools.delete(name);
             }
           }
           for (const tool of next.tools) {
-            if (!client.tools.has(tool.name)) register(client, tool);
+            if (!client.tools.has(tool.name)) {
+              register(client, tool);
+            }
           }
         }
       },
@@ -240,7 +251,9 @@ export class ToolServer {
   }
 
   private resolveShimPath(): string {
-    if (this.shimPath) return this.shimPath;
+    if (this.shimPath) {
+      return this.shimPath;
+    }
     // src/application/tool-server.ts in the workspace tree; dist/*.js once
     // built. Both end two levels above the package's bin/ directory.
     const here = import.meta.url;
@@ -255,7 +268,9 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   for await (const chunk of request) {
     const buffer = chunk as Buffer;
     size += buffer.length;
-    if (size > MAX_BODY_BYTES) throw new Error('body too large');
+    if (size > MAX_BODY_BYTES) {
+      throw new Error('body too large');
+    }
     chunks.push(buffer);
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));

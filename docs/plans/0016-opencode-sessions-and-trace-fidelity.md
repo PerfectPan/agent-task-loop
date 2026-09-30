@@ -10,8 +10,8 @@
 
 1. Background and goals
 2. Outline
-6. Execution plan
-7. Risks, open questions, and follow-up
+3. Execution plan
+4. Risks, open questions, and follow-up
 
 ## 1. Background and goals
 
@@ -52,11 +52,11 @@ MoonBit.
 
 ### 2.2 Design decisions
 
-| Decision | Status |
-| --- | --- |
+| Decision                                                                              | Status                     |
+| ------------------------------------------------------------------------------------- | -------------------------- |
 | SQLite reader: `node:sqlite` vs `better-sqlite3` (native dependency in a bundled CLI) | unresolved, needs SPIKE-OC |
-| Does `opencode` expose a resume command keyed by `ses_…` | unresolved, needs SPIKE-OC |
-| `TranscriptEntry` extension shape for tool results and code blocks | unresolved |
+| Does `opencode` expose a resume command keyed by `ses_…`                              | unresolved, needs SPIKE-OC |
+| `TranscriptEntry` extension shape for tool results and code blocks                    | unresolved                 |
 
 ## 6. Execution plan
 
@@ -100,9 +100,9 @@ does not depend on SPIKE-OC.
 
 ### 6.4 Validation ledger
 
-| Batch | Command or evidence | Expected result |
-| --- | --- | --- |
-| each | `pnpm test`, `pnpm build`, `pnpm typecheck` | pass |
+| Batch | Command or evidence                         | Expected result |
+| ----- | ------------------------------------------- | --------------- |
+| each  | `pnpm test`, `pnpm build`, `pnpm typecheck` | pass            |
 
 ### 6.5 Rollback per batch
 
@@ -111,8 +111,8 @@ with a changeset.
 
 ## 7. Risks, open questions, and follow-up
 
-| Item | Type | Impact | Owner | Next step or deadline |
-| --- | --- | --- | --- | --- |
-| A native SQLite dependency complicates the bundled CLI | risk | Install failures | unconfirmed | Prefer `node:sqlite` if SPIKE-OC shows it suffices |
-| OpenCode's store schema changes between releases | risk | Broken listing | unconfirmed | S2 keeps other agents working |
-| Agent attribution comes from the source root | risk | Misattributed sessions if roots overlap | unconfirmed | Keep roots disjoint |
+| Item                                                   | Type | Impact                                  | Owner       | Next step or deadline                              |
+| ------------------------------------------------------ | ---- | --------------------------------------- | ----------- | -------------------------------------------------- |
+| A native SQLite dependency complicates the bundled CLI | risk | Install failures                        | unconfirmed | Prefer `node:sqlite` if SPIKE-OC shows it suffices |
+| OpenCode's store schema changes between releases       | risk | Broken listing                          | unconfirmed | S2 keeps other agents working                      |
+| Agent attribution comes from the source root           | risk | Misattributed sessions if roots overlap | unconfirmed | Keep roots disjoint                                |

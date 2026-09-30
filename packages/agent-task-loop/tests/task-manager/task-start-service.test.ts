@@ -22,9 +22,7 @@ describe('TaskStartService', () => {
       orchestration,
     });
 
-    await expect(service.startTask({ taskId: 'TASK-404', maxRounds: 4 })).rejects.toThrow(
-      'Task TASK-404 not found',
-    );
+    await expect(service.startTask({ taskId: 'TASK-404', maxRounds: 4 })).rejects.toThrow('Task TASK-404 not found');
     expect(orchestration.open).not.toHaveBeenCalled();
   });
 
@@ -94,9 +92,7 @@ describe('TaskStartService', () => {
       orchestration,
     });
 
-    await expect(
-      service.startTask({ taskId: 'TASK-25', maxRounds: 5, targetAgent: 'claude' }),
-    ).rejects.toThrow(
+    await expect(service.startTask({ taskId: 'TASK-25', maxRounds: 5, targetAgent: 'claude' })).rejects.toThrow(
       'Task TASK-25 already has an active orchestration (pid 99)',
     );
     expect(existingTask.targetAgent).toBe('codex');
@@ -111,7 +107,7 @@ describe('TaskStartService', () => {
     let finish: () => void = () => undefined;
     const run = vi.fn().mockImplementation(
       () =>
-        new Promise<void>(resolve => {
+        new Promise<void>((resolve) => {
           finish = resolve;
         }),
     );
@@ -166,9 +162,7 @@ describe('TaskStartService', () => {
       orchestration,
     });
 
-    await expect(service.startTask({ taskId: 'TASK-26', maxRounds: 4 })).rejects.toThrow(
-      'runner exploded',
-    );
+    await expect(service.startTask({ taskId: 'TASK-26', maxRounds: 4 })).rejects.toThrow('runner exploded');
     expect(orchestration.release).toHaveBeenCalledWith('task:TASK-26');
   });
 

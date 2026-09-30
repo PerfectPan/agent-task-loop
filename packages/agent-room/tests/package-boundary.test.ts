@@ -19,7 +19,7 @@ function walk(dir: string): string[] {
 
 describe('package boundary', () => {
   it('keeps domain files free of application, infrastructure, and Node imports', () => {
-    const files = walk(srcRoot).filter(file => file.includes(`${path.sep}domain${path.sep}`));
+    const files = walk(srcRoot).filter((file) => file.includes(`${path.sep}domain${path.sep}`));
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       const text = readFileSync(file, 'utf8');

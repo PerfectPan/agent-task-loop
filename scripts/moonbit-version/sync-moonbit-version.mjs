@@ -19,9 +19,7 @@ export async function syncMoonBitVersion(input) {
   }
 
   if (input.check) {
-    throw new Error(
-      `MoonBit version ${moonBitVersion} does not match ${packageJson.name} version ${packageVersion}`,
-    );
+    throw new Error(`MoonBit version ${moonBitVersion} does not match ${packageJson.name} version ${packageVersion}`);
   }
 
   await writeFile(input.moonModJsonPath, JSON.stringify({ ...moonModJson, version: packageVersion }, null, 2) + '\n');

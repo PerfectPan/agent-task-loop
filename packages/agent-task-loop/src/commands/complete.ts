@@ -57,7 +57,7 @@ export const completeCommand = defineCommand({
       publishContextService: new PublishContextService(),
       gitPublishService: new GitPublishService(),
       pullRequestService: new GitHubPullRequestService(),
-      generateCommitMessage: async input => {
+      generateCommitMessage: async (input) => {
         const generated = await runStructuredAi<{ message: string }>({
           cwd: input.workspacePath,
           prompt: buildCommitPrompt(input),
@@ -74,7 +74,7 @@ export const completeCommand = defineCommand({
           sessionName: generated.sessionName,
         };
       },
-      generatePullRequestContent: async input => {
+      generatePullRequestContent: async (input) => {
         const generated = await runStructuredAi<{ title: string; body: string }>({
           cwd: input.workspacePath,
           prompt: buildPullRequestPrompt(input),

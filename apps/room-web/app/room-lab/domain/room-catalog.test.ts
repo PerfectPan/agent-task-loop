@@ -18,7 +18,7 @@ describe('RoomCatalog', () => {
     });
     catalog.touch('r_aaaaaaaaaa', '2026-09-06T03:00:00.000Z');
 
-    expect(catalog.list().map(room => room.id)).toEqual(['r_aaaaaaaaaa', 'r_bbbbbbbbbb']);
+    expect(catalog.list().map((room) => room.id)).toEqual(['r_aaaaaaaaaa', 'r_bbbbbbbbbb']);
     expect(catalog.get('r_aaaaaaaaaa')).toMatchObject({
       title: 'Q3 定价方案',
       memberIds: ['codex', 'claude'],
@@ -30,17 +30,21 @@ describe('RoomCatalog', () => {
 
   it('rejects a blank title and an empty crew', () => {
     const catalog = new RoomCatalog([], undefined, testRegistry());
-    expect(() => catalog.create({
-      id: 'r_cccccccccc',
-      title: '   ',
-      now: '2026-09-06T01:00:00.000Z',
-    })).toThrow('Room title is required');
-    expect(() => catalog.create({
-      id: 'r_cccccccccc',
-      title: '空房间',
-      now: '2026-09-06T01:00:00.000Z',
-      memberIds: [],
-    })).toThrow('A Room needs at least one active agent');
+    expect(() =>
+      catalog.create({
+        id: 'r_cccccccccc',
+        title: '   ',
+        now: '2026-09-06T01:00:00.000Z',
+      }),
+    ).toThrow('Room title is required');
+    expect(() =>
+      catalog.create({
+        id: 'r_cccccccccc',
+        title: '空房间',
+        now: '2026-09-06T01:00:00.000Z',
+        memberIds: [],
+      }),
+    ).toThrow('A Room needs at least one active agent');
   });
 
   it('opens a private room under its parent without taking the last-opened slot', () => {
@@ -66,24 +70,28 @@ describe('RoomCatalog', () => {
     });
     // A private room opens under its parent, not on the desk.
     expect(catalog.lastOpened()?.id).toBe('r_dddddddddd');
-    expect(() => catalog.openPrivate({
-      id: 'r_ffffffffff',
-      title: '孤儿房',
-      parentRoomId: 'r_9999999999',
-      openedBy: 'claude',
-      openedAtSeq: 1,
-      memberIds: ['claude', 'codex'],
-      now: '2026-09-06T03:00:00.000Z',
-    })).toThrow('Unknown Room');
-    expect(() => catalog.openPrivate({
-      id: 'r_ffffffffff',
-      title: '三人私聊',
-      parentRoomId: 'r_dddddddddd',
-      openedBy: 'claude',
-      openedAtSeq: 1,
-      memberIds: ['claude', 'codex', 'opencode'],
-      now: '2026-09-06T03:00:00.000Z',
-    })).toThrow('exactly two members');
+    expect(() =>
+      catalog.openPrivate({
+        id: 'r_ffffffffff',
+        title: '孤儿房',
+        parentRoomId: 'r_9999999999',
+        openedBy: 'claude',
+        openedAtSeq: 1,
+        memberIds: ['claude', 'codex'],
+        now: '2026-09-06T03:00:00.000Z',
+      }),
+    ).toThrow('Unknown Room');
+    expect(() =>
+      catalog.openPrivate({
+        id: 'r_ffffffffff',
+        title: '三人私聊',
+        parentRoomId: 'r_dddddddddd',
+        openedBy: 'claude',
+        openedAtSeq: 1,
+        memberIds: ['claude', 'codex', 'opencode'],
+        now: '2026-09-06T03:00:00.000Z',
+      }),
+    ).toThrow('exactly two members');
   });
 
   it('finds the one room a pair shares under a parent, whoever calls', () => {

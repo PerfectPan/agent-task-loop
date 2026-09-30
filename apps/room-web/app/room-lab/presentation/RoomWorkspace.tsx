@@ -10,37 +10,53 @@ import { RoomTimeline } from './RoomTimeline';
 import { formatElapsed } from './format-time';
 import { useElapsed } from './use-elapsed';
 
-export function RoomWorkspace({ state, pending, sending, error, value, onValueChange, onAction }: {
-  state: RoomLabState; pending: boolean; sending?: boolean; error?: string; value: string;
-  onValueChange: (value: string) => void; onAction: (action: RoomLabAction) => void;
+export function RoomWorkspace({
+  state,
+  pending,
+  sending,
+  error,
+  value,
+  onValueChange,
+  onAction,
+}: {
+  state: RoomLabState;
+  pending: boolean;
+  sending?: boolean;
+  error?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  onAction: (action: RoomLabAction) => void;
 }) {
   const [contextOpen, setContextOpen] = useState(false);
   const [editingCrew, setEditingCrew] = useState(false);
   const commandLocked = pending && !sending;
-  const activeAgents = state.activeAgentIds.flatMap(id => state.agents.filter(agent => agent.id === id));
+  const activeAgents = state.activeAgentIds.flatMap((id) => state.agents.filter((agent) => agent.id === id));
   // Identity colour for anyone the registry knows, including a member who has
   // since left this room but still speaks in its transcript.
-  const colorOf = (agentId: string) => state.agents.find(agent => agent.id === agentId)?.color;
+  const colorOf = (agentId: string) => state.agents.find((agent) => agent.id === agentId)?.color;
   // Mid-turn members, in seat order: the only members a wait can be about.
-  const runningAgents = activeAgents.filter(agent => memberIsRunning(agent.status));
-  const elapsedOf = useElapsed(runningAgents.map(agent => agent.id));
+  const runningAgents = activeAgents.filter((agent) => memberIsRunning(agent.status));
+  const elapsedOf = useElapsed(runningAgents.map((agent) => agent.id));
 
   // Switching rooms closes any open panel; the new room starts at rest.
-  useEffect(() => { setContextOpen(false); setEditingCrew(false); }, [state.roomId]);
+  useEffect(() => {
+    setContextOpen(false);
+    setEditingCrew(false);
+  }, [state.roomId]);
 
   // A turn can run for minutes; that has to be visible from another window
   // too, so the tab title carries who is running and for how long.
   const nowId = runningAgents[0]?.id;
   const nowSeconds = nowId ? elapsedOf(nowId) : undefined;
   useEffect(() => {
-    const wait = nowId
-      ? `${nowId}${nowSeconds === undefined ? '' : ` ${formatElapsed(nowSeconds)}`} · `
-      : '';
+    const wait = nowId ? `${nowId}${nowSeconds === undefined ? '' : ` ${formatElapsed(nowSeconds)}`} · ` : '';
     document.title = `${wait}${state.title}`;
   }, [nowId, nowSeconds, state.title]);
 
   const submit = () => {
-    if (sending || !value.trim()) return;
+    if (sending || !value.trim()) {
+      return;
+    }
     onAction({ action: 'message', body: value });
   };
   const openMembers = (edit: boolean) => {
@@ -60,7 +76,7 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
         rooms={state.catalog}
         currentRoomId={state.roomId}
         disabled={commandLocked}
-        onCreate={title => onAction({ action: 'create', title })}
+        onCreate={(title) => onAction({ action: 'create', title })}
       />
       <main className="flex min-h-0 min-w-0 flex-col bg-background" aria-labelledby="room-heading">
         <RoomHeader
@@ -72,19 +88,17 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
           onMembers={() => openMembers(false)}
           onManage={() => openMembers(true)}
           onReset={() => onAction({ action: 'reset' })}
-          onSettings={change => onAction(change)}
+          onSettings={(change) => onAction(change)}
         />
         {error && (
-          <div className="mx-7 mt-3 rounded-sm bg-destructive-soft px-2.5 py-[5px] text-[13px] leading-snug text-destructive-soft-foreground [overflow-wrap:anywhere]" role="alert">
+          <div
+            className="mx-7 mt-3 rounded-sm bg-destructive-soft px-2.5 py-[5px] text-[13px] leading-snug text-destructive-soft-foreground [overflow-wrap:anywhere]"
+            role="alert"
+          >
             {error}
           </div>
         )}
-        <RoomTimeline
-          events={state.events}
-          head={state.head}
-          agents={activeAgents}
-          colorOf={colorOf}
-        />
+        <RoomTimeline events={state.events} head={state.head} agents={activeAgents} colorOf={colorOf} />
         <RoomComposer
           value={value}
           sending={!!sending}
@@ -102,7 +116,7 @@ export function RoomWorkspace({ state, pending, sending, error, value, onValueCh
         disabled={commandLocked}
         onEditingChange={setEditingCrew}
         onClose={() => setContextOpen(false)}
-        onCompose={agentIds => onAction({ action: 'compose', agentIds })}
+        onCompose={(agentIds) => onAction({ action: 'compose', agentIds })}
       />
     </div>
   );

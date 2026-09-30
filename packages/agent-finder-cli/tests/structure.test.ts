@@ -1,37 +1,37 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
-const sourceRoot = join(process.cwd(), "src");
+const sourceRoot = join(process.cwd(), 'src');
 
-describe("@rivus/agent-finder-cli structure", () => {
-  test("keeps the entrypoint thin and delegates commands to modules", () => {
-    const cli = readFileSync(join(sourceRoot, "cli.ts"), "utf8");
+describe('@rivus/agent-finder-cli structure', () => {
+  test('keeps the entrypoint thin and delegates commands to modules', () => {
+    const cli = readFileSync(join(sourceRoot, 'cli.ts'), 'utf8');
 
-    expect(cli.split("\n")).toHaveLength(5);
+    expect(cli.split('\n')).toHaveLength(5);
     expect(cli).toMatch(/import \{ main \} from ["']\.\/main\.js["'];/);
-    expect(cli).toContain("runMain(main);");
+    expect(cli).toContain('runMain(main);');
   });
 
-  test("organizes command, formatter, and summary responsibilities", () => {
+  test('organizes command, formatter, and summary responsibilities', () => {
     for (const path of [
-      "main.ts",
-      "commands/provider-command.ts",
-      "commands/provider-list-command.ts",
-      "commands/provider-inspect-command.ts",
-      "commands/scan-command.ts",
-      "commands/doctor-command.ts",
-      "commands/sessions-command.ts",
-      "commands/sessions-list-command.ts",
-      "commands/sessions-inspect-command.ts",
-      "commands/sessions-browse-command.tsx",
-      "commands/sessions-resume-command.ts",
-      "formatters/provider-lines.ts",
-      "formatters/render.ts",
-      "formatters/agent-table.ts",
-      "sessions/view.ts",
-      "tui/SessionsBrowser.tsx",
-      "summary/summarize-agents.ts"
+      'main.ts',
+      'commands/provider-command.ts',
+      'commands/provider-list-command.ts',
+      'commands/provider-inspect-command.ts',
+      'commands/scan-command.ts',
+      'commands/doctor-command.ts',
+      'commands/sessions-command.ts',
+      'commands/sessions-list-command.ts',
+      'commands/sessions-inspect-command.ts',
+      'commands/sessions-browse-command.tsx',
+      'commands/sessions-resume-command.ts',
+      'formatters/provider-lines.ts',
+      'formatters/render.ts',
+      'formatters/agent-table.ts',
+      'sessions/view.ts',
+      'tui/SessionsBrowser.tsx',
+      'summary/summarize-agents.ts',
     ]) {
       expect(existsSync(join(sourceRoot, path)), path).toBe(true);
     }

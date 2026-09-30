@@ -20,11 +20,7 @@ export type PassInput = Pick<PassCommand, 'readUpToSeq'>;
  * cursor moves to what the turn read and the outcome is never HELD; the
  * pending-wake rule brings the member back for anything it did not read.
  */
-export function pass(
-  room: Room,
-  session: AgentSessionAggregate,
-  input: PassInput,
-): PassResult {
+export function pass(room: Room, session: AgentSessionAggregate, input: PassInput): PassResult {
   const sessionId = session.id;
   if (!sameRoomId(room.id, sessionId.roomId)) {
     throw new RoomValidationError('agent session belongs to a different room');

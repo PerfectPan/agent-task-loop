@@ -18,8 +18,12 @@ function serverMigrations(): Plugin {
     name: 'rivus-server-migrations',
     apply: 'build',
     generateBundle() {
-      if (this.environment?.name !== 'ssr') return;
-      for (const file of readdirSync(MIGRATIONS_DIR).filter(name => name.endsWith('.sql')).sort()) {
+      if (this.environment?.name !== 'ssr') {
+        return;
+      }
+      for (const file of readdirSync(MIGRATIONS_DIR)
+        .filter((name) => name.endsWith('.sql'))
+        .sort()) {
         this.emitFile({
           type: 'asset',
           fileName: file,

@@ -5,13 +5,8 @@ import {
   type RivusPluginRegistry,
   type RivusToolDescriptor,
 } from '@rivus/agent';
-import type {
-  TaskManagerApplication,
-} from './task-manager/task-manager-application';
-import {
-  TaskManagerInputError,
-  TaskManagerOperationError,
-} from './task-manager/task-manager-application';
+import type { TaskManagerApplication } from './task-manager/task-manager-application';
+import { TaskManagerInputError, TaskManagerOperationError } from './task-manager/task-manager-application';
 import {
   createTaskInputJsonSchema,
   createTaskInputSchema,
@@ -39,9 +34,7 @@ export interface RivusTaskManagerPluginDependencies {
   createTaskManager?: () => Promise<TaskManagerApplication>;
 }
 
-export function createRivusTaskManagerPlugin(
-  dependencies: RivusTaskManagerPluginDependencies = {},
-): RivusPlugin {
+export function createRivusTaskManagerPlugin(dependencies: RivusTaskManagerPluginDependencies = {}): RivusPlugin {
   const createTaskManager = dependencies.createTaskManager ?? createDefaultTaskManager;
 
   return {
@@ -68,9 +61,7 @@ export function createRivusTaskManagerPlugin(
   };
 }
 
-function taskManagerTools(
-  createTaskManager: () => Promise<TaskManagerApplication>,
-): RivusToolDescriptor[] {
+function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplication>): RivusToolDescriptor[] {
   return [
     descriptor({
       createTaskManager,
@@ -79,7 +70,7 @@ function taskManagerTools(
       id: TASK_LIST_TOOL_ID,
       idempotency: 'supported',
       inputSchema: listTasksInputJsonSchema,
-      parseInput: input => parseInput('task-list', listTasksInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-list', listTasksInputSchema.safeParse(input)),
       risk: 'observe',
       run: (application, input) => application.listTasks(input),
     }),
@@ -90,7 +81,7 @@ function taskManagerTools(
       id: TASK_GET_TOOL_ID,
       idempotency: 'supported',
       inputSchema: getTaskInputJsonSchema,
-      parseInput: input => parseInput('task-get', getTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-get', getTaskInputSchema.safeParse(input)),
       risk: 'observe',
       run: (application, input) => application.getTask(input),
     }),
@@ -101,7 +92,7 @@ function taskManagerTools(
       id: TASK_CREATE_TOOL_ID,
       idempotency: 'none',
       inputSchema: createTaskInputJsonSchema,
-      parseInput: input => parseInput('task-create', createTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-create', createTaskInputSchema.safeParse(input)),
       risk: 'mutate',
       run: (application, input) => application.createTask(input),
     }),
@@ -112,7 +103,7 @@ function taskManagerTools(
       id: TASK_START_TOOL_ID,
       idempotency: 'none',
       inputSchema: startTaskInputJsonSchema,
-      parseInput: input => parseInput('task-start', startTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-start', startTaskInputSchema.safeParse(input)),
       risk: 'mutate',
       run: (application, input) => application.startTask(input),
     }),
@@ -132,7 +123,7 @@ function descriptor<TInput>(input: {
 }): RivusToolDescriptor {
   return {
     createExecutor: () => ({
-      execute: async toolInput => {
+      execute: async (toolInput) => {
         const parsedInput = input.parseInput(toolInput);
         try {
           const application = await input.createTaskManager();
@@ -160,21 +151,19 @@ function descriptor<TInput>(input: {
 
 function parseInput<T>(
   toolName: string,
-  result: { success: true; data: T } | {
-    success: false;
-    error: { issues: Array<{ code: string; path: PropertyKey[] }> };
-  },
+  result:
+    | { success: true; data: T }
+    | {
+        success: false;
+        error: { issues: Array<{ code: string; path: PropertyKey[] }> };
+      },
 ): T {
   if (result.success) {
     return result.data;
   }
   const issue = result.error.issues[0];
-  const field = issue?.path.length
-    ? issue.path.slice(0, 3).join('.').slice(0, 64)
-    : 'input';
-  throw new RivusToolInputRejected(
-    `Invalid ${toolName} ${field}: ${inputRejectionReason(issue?.code)}`,
-  );
+  const field = issue?.path.length ? issue.path.slice(0, 3).join('.').slice(0, 64) : 'input';
+  throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue?.code)}`);
 }
 
 function inputRejectionReason(code: string | undefined): string {

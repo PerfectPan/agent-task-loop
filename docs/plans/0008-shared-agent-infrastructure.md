@@ -14,8 +14,8 @@ phases has started.
 1. Background and goals
 2. Outline
 3. Detailed design
-6. Execution plan
-7. Risks, open questions, and follow-up
+4. Execution plan
+5. Risks, open questions, and follow-up
 
 ## 1. Background and goals
 
@@ -25,13 +25,13 @@ phases has started.
 the same knowledge twice. Evidence was read at agent-presence v0.6.1; line
 numbers may have drifted.
 
-| Capability | Here | agent-presence |
-| --- | --- | --- |
-| Agent catalog and config roots | `agent-finder/agent_discovery_core/catalog/providers.mbt` | Hook installers hardcode `~/.claude/settings.json`, `~/.codex/hooks.json`, `~/.gemini/settings.json`, `~/.config/opencode/opencode.json`, `~/.pi/agent/settings.json` |
-| `~` expansion | `agent-finder/src/support/expand-path.ts` | Per-file `homedir()` + `join()` |
-| Transcript roots | `agent-sessions/src/session/fs-index.ts` `defaultSessionRoots` (`~/.codex/sessions`, `~/.claude/projects`) | `src/usage/scan-*.ts`: honors `CLAUDE_CONFIG_DIR`, adds Codex `archived_sessions` and `~/.pi/agent/sessions` |
-| `.jsonl` walking and line reading | `agent-sessions` `buildFsIndex`, `transcript/parse.ts` | `src/usage/read-jsonl.ts` |
-| Transcript parsing | `agent-sessions` reads messages and drops `token_count` | agent-presence reads token usage from the same files |
+| Capability                        | Here                                                                                                       | agent-presence                                                                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agent catalog and config roots    | `agent-finder/agent_discovery_core/catalog/providers.mbt`                                                  | Hook installers hardcode `~/.claude/settings.json`, `~/.codex/hooks.json`, `~/.gemini/settings.json`, `~/.config/opencode/opencode.json`, `~/.pi/agent/settings.json` |
+| `~` expansion                     | `agent-finder/src/support/expand-path.ts`                                                                  | Per-file `homedir()` + `join()`                                                                                                                                       |
+| Transcript roots                  | `agent-sessions/src/session/fs-index.ts` `defaultSessionRoots` (`~/.codex/sessions`, `~/.claude/projects`) | `src/usage/scan-*.ts`: honors `CLAUDE_CONFIG_DIR`, adds Codex `archived_sessions` and `~/.pi/agent/sessions`                                                          |
+| `.jsonl` walking and line reading | `agent-sessions` `buildFsIndex`, `transcript/parse.ts`                                                     | `src/usage/read-jsonl.ts`                                                                                                                                             |
+| Transcript parsing                | `agent-sessions` reads messages and drops `token_count`                                                    | agent-presence reads token usage from the same files                                                                                                                  |
 
 - `@rivus/agent-finder-core` is published and consumable today.
 - `@rivus/agent-sessions` is `private: true` at 0.0.0 and cannot be consumed
@@ -61,12 +61,12 @@ in both repositories with nothing linking them.
 
 ### 2.1 Boundaries and responsibilities
 
-| Capability | Owner |
-| --- | --- |
-| Agent identity, config roots, settings/hooks and transcript paths | `@rivus/agent-finder-core` |
-| `~` expansion, PATH command resolution | `@rivus/agent-finder-core` |
+| Capability                                                              | Owner                                      |
+| ----------------------------------------------------------------------- | ------------------------------------------ |
+| Agent identity, config roots, settings/hooks and transcript paths       | `@rivus/agent-finder-core`                 |
+| `~` expansion, PATH command resolution                                  | `@rivus/agent-finder-core`                 |
 | Transcript roots, `.jsonl` walking, line parsing, usage-bearing entries | `@rivus/agent-sessions` (after publishing) |
-| Hook install, pricing, window accounting | agent-presence |
+| Hook install, pricing, window accounting                                | agent-presence                             |
 
 ### 2.2 Design decisions
 
@@ -132,10 +132,10 @@ Only if duplication remains after Tasks 1–2.
 
 ### 6.4 Validation ledger
 
-| Batch | Command or evidence | Expected result |
-| --- | --- | --- |
-| each | `pnpm test`, `pnpm build`, `pnpm typecheck` here | pass |
-| each | agent-presence test suite | pass |
+| Batch | Command or evidence                              | Expected result |
+| ----- | ------------------------------------------------ | --------------- |
+| each  | `pnpm test`, `pnpm build`, `pnpm typecheck` here | pass            |
+| each  | agent-presence test suite                        | pass            |
 
 ### 6.5 Rollback per batch
 
@@ -144,9 +144,9 @@ repository's additive change if needed.
 
 ## 7. Risks, open questions, and follow-up
 
-| Item | Type | Impact | Owner | Next step or deadline |
-| --- | --- | --- | --- | --- |
-| Whether to publish `@rivus/agent-sessions` at all | open question | Gates Tasks 2–3 | unconfirmed | Owner decision |
-| Swapping agent-presence's Claude root would lose `CLAUDE_CONFIG_DIR` support | risk | Missed usage | unconfirmed | Task 2 adds it first |
-| UUID-name vs mtime-window file selection differ between the two walkers | risk | Wrong file sets | unconfirmed | Parameterize the filter |
-| Findings were read from source, not executed | risk | Stale line references | unconfirmed | Re-verify at start |
+| Item                                                                         | Type          | Impact                | Owner       | Next step or deadline   |
+| ---------------------------------------------------------------------------- | ------------- | --------------------- | ----------- | ----------------------- |
+| Whether to publish `@rivus/agent-sessions` at all                            | open question | Gates Tasks 2–3       | unconfirmed | Owner decision          |
+| Swapping agent-presence's Claude root would lose `CLAUDE_CONFIG_DIR` support | risk          | Missed usage          | unconfirmed | Task 2 adds it first    |
+| UUID-name vs mtime-window file selection differ between the two walkers      | risk          | Wrong file sets       | unconfirmed | Parameterize the filter |
+| Findings were read from source, not executed                                 | risk          | Stale line references | unconfirmed | Re-verify at start      |

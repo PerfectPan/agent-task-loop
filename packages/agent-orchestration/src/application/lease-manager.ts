@@ -43,11 +43,15 @@ export class LeaseManager {
       holderId: this.holderId,
       heartbeatAt: this.isoNow(),
     };
-    if (this.store.tryCreate(key, record)) return record;
+    if (this.store.tryCreate(key, record)) {
+      return record;
+    }
     const existing = this.store.read(key);
     if (!existing) {
       // The record vanished or is unreadable; one retry settles the race.
-      if (this.store.tryCreate(key, record)) return record;
+      if (this.store.tryCreate(key, record)) {
+        return record;
+      }
       throw new OrchestrationConflictError(key, this.store.read(key)?.holderPid);
     }
     if (isLockFresh(existing, this.clock.now(), this.staleAfterMs, (pid) => this.liveness.isAlive(pid))) {
@@ -72,7 +76,9 @@ export class LeaseManager {
   /** Release when this process still owns the record; a no-op otherwise. */
   release(key: string): void {
     const current = this.store.read(key);
-    if (!this.isOwned(current)) return;
+    if (!this.isOwned(current)) {
+      return;
+    }
     this.store.tryRelease(current);
   }
 
@@ -109,12 +115,8 @@ export class LeaseManager {
     const current = this.store.read(key);
     if (
       !current ||
-      !holdsLock(
-        current,
-        { pid: this.identity.pid, id: this.holderId },
-        this.clock.now(),
-        this.staleAfterMs,
-        (pid) => this.liveness.isAlive(pid),
+      !holdsLock(current, { pid: this.identity.pid, id: this.holderId }, this.clock.now(), this.staleAfterMs, (pid) =>
+        this.liveness.isAlive(pid),
       )
     ) {
       throw new OrchestrationConflictError(key, current?.holderPid);

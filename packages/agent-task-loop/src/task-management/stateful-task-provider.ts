@@ -90,7 +90,7 @@ export class StatefulTaskProvider implements TaskProvider {
   }
 
   async listTasks(): Promise<TaskRecord[]> {
-    return (await this.inner.listTasks()).map(record => this.overlay(record));
+    return (await this.inner.listTasks()).map((record) => this.overlay(record));
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
@@ -99,7 +99,7 @@ export class StatefulTaskProvider implements TaskProvider {
     // 待处理 on its raw record; only after overlaying the run-time store does the
     // true status (执行中 / 已失败 / 已完成 / …) appear. Delegating the filter to
     // the inner provider would re-offer such a task as pending — re-claimable.
-    return (await this.listTasks()).filter(task => task.targetAgent === agent && task.status === '待处理');
+    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {

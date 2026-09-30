@@ -5,10 +5,7 @@ import type { AgentAdapter } from '../adapters/base';
 import type { TaskRecord } from '../types/task';
 import type { TaskMutationFence, TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
-import {
-  formatFailureMessage,
-  type FailureMessageFormatter,
-} from './failure-message';
+import { formatFailureMessage, type FailureMessageFormatter } from './failure-message';
 
 function buildSessionName(task: TaskRecord): string {
   return `${task.taskId}-${task.targetAgent}`
@@ -22,7 +19,12 @@ export class ExecutionService {
     private readonly deps: {
       taskService: Pick<
         TaskService,
-        'claimTask' | 'updateTaskProgress' | 'markTaskSucceeded' | 'markTaskFailed' | 'updateReviewState' | 'updateRunnerState'
+        | 'claimTask'
+        | 'updateTaskProgress'
+        | 'markTaskSucceeded'
+        | 'markTaskFailed'
+        | 'updateReviewState'
+        | 'updateRunnerState'
       >;
       adapter: AgentAdapter;
       adapterCommand: {
@@ -38,7 +40,12 @@ export class ExecutionService {
     },
   ) {}
 
-  async executeTask(task: TaskRecord, workspacePath: string, round = 1, signal?: AbortSignal): Promise<{
+  async executeTask(
+    task: TaskRecord,
+    workspacePath: string,
+    round = 1,
+    signal?: AbortSignal,
+  ): Promise<{
     runId: string;
     logPath: string;
     workspacePath: string;
@@ -74,13 +81,15 @@ export class ExecutionService {
       latestHeartbeatAt = new Date(now).toISOString();
       lastHeartbeatPersistedAt = now;
       try {
-        await this.persist(() => this.deps.taskService.updateRunnerState(task, {
-          runnerPid: latestRunnerPid,
-          runnerKind: 'execute',
-          runnerAgent: task.targetAgent,
-          runnerRound: round,
-          lastHeartbeatAt: latestHeartbeatAt,
-        }));
+        await this.persist(() =>
+          this.deps.taskService.updateRunnerState(task, {
+            runnerPid: latestRunnerPid,
+            runnerKind: 'execute',
+            runnerAgent: task.targetAgent,
+            runnerRound: round,
+            lastHeartbeatAt: latestHeartbeatAt,
+          }),
+        );
       } catch (error) {
         signal?.throwIfAborted();
         if (this.deps.onHeartbeatError) {
@@ -99,19 +108,21 @@ export class ExecutionService {
 
       signal?.throwIfAborted();
       latestProgressSummary = summary;
-      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
-        progressSummary: summary,
-        workspacePath,
-        logPath,
-        sessionId: latestSessionId,
-        sessionName,
-        sessionHistory: latestSessionHistory,
-        runnerPid: latestRunnerPid,
-        runnerKind: 'execute',
-        runnerAgent: task.targetAgent,
-        runnerRound: round,
-        lastHeartbeatAt: latestHeartbeatAt,
-      }));
+      await this.persist(() =>
+        this.deps.taskService.updateTaskProgress(task, {
+          progressSummary: summary,
+          workspacePath,
+          logPath,
+          sessionId: latestSessionId,
+          sessionName,
+          sessionHistory: latestSessionHistory,
+          runnerPid: latestRunnerPid,
+          runnerKind: 'execute',
+          runnerAgent: task.targetAgent,
+          runnerRound: round,
+          lastHeartbeatAt: latestHeartbeatAt,
+        }),
+      );
       signal?.throwIfAborted();
     };
     const writeSession = async (payload: { sessionId?: string; sessionName?: string }) => {
@@ -140,19 +151,21 @@ export class ExecutionService {
       }
       latestSessionId = nextSessionId;
       signal?.throwIfAborted();
-      await this.persist(() => this.deps.taskService.updateTaskProgress(task, {
-        progressSummary: latestProgressSummary,
-        workspacePath,
-        logPath,
-        sessionId: nextSessionId,
-        sessionName: nextSessionName,
-        sessionHistory: latestSessionHistory,
-        runnerPid: latestRunnerPid,
-        runnerKind: 'execute',
-        runnerAgent: task.targetAgent,
-        runnerRound: round,
-        lastHeartbeatAt: latestHeartbeatAt,
-      }));
+      await this.persist(() =>
+        this.deps.taskService.updateTaskProgress(task, {
+          progressSummary: latestProgressSummary,
+          workspacePath,
+          logPath,
+          sessionId: nextSessionId,
+          sessionName: nextSessionName,
+          sessionHistory: latestSessionHistory,
+          runnerPid: latestRunnerPid,
+          runnerKind: 'execute',
+          runnerAgent: task.targetAgent,
+          runnerRound: round,
+          lastHeartbeatAt: latestHeartbeatAt,
+        }),
+      );
       signal?.throwIfAborted();
     };
 
@@ -161,22 +174,24 @@ export class ExecutionService {
     writeLog(`[agent-task-loop] logPath=${logPath}\n`);
 
     signal?.throwIfAborted();
-    await this.persist(() => this.deps.taskService.claimTask(task, {
-      claimedBy: `${task.targetAgent}@local`,
-      claimedAt: new Date().toISOString(),
-      runId,
-      workspacePath,
-      logPath,
-      progressSummary: latestProgressSummary,
-      sessionId: latestSessionId,
-      sessionName,
-      sessionHistory: latestSessionHistory,
-      runnerPid: latestRunnerPid,
-      runnerKind: 'execute',
-      runnerAgent: task.targetAgent,
-      runnerRound: round,
-      lastHeartbeatAt: latestHeartbeatAt,
-    }));
+    await this.persist(() =>
+      this.deps.taskService.claimTask(task, {
+        claimedBy: `${task.targetAgent}@local`,
+        claimedAt: new Date().toISOString(),
+        runId,
+        workspacePath,
+        logPath,
+        progressSummary: latestProgressSummary,
+        sessionId: latestSessionId,
+        sessionName,
+        sessionHistory: latestSessionHistory,
+        runnerPid: latestRunnerPid,
+        runnerKind: 'execute',
+        runnerAgent: task.targetAgent,
+        runnerRound: round,
+        lastHeartbeatAt: latestHeartbeatAt,
+      }),
+    );
     signal?.throwIfAborted();
 
     try {
@@ -191,7 +206,7 @@ export class ExecutionService {
         env: this.deps.adapterCommand.env,
         sessionName,
         signal,
-        onSpawn: async payload => {
+        onSpawn: async (payload) => {
           latestRunnerPid = payload.pid;
           await persistHeartbeat(true);
         },
@@ -206,20 +221,22 @@ export class ExecutionService {
 
       if (result.status === 'success') {
         signal?.throwIfAborted();
-        await this.persist(() => this.deps.taskService.updateReviewState(task, {
-          status: '待复核',
-          currentOwner: 'codex',
-          reviewRound: round,
-          resultSummary: result.summary,
-          workspacePath: result.workspacePath,
-          logPath,
-          progressSummary: '执行完成，等待 codex 复核',
-          executionSessionId: latestSessionId,
-          executionSessionName: sessionName,
-          sessionHistory: latestSessionHistory,
-          runnerKind: '',
-          runnerAgent: '',
-        }));
+        await this.persist(() =>
+          this.deps.taskService.updateReviewState(task, {
+            status: '待复核',
+            currentOwner: 'codex',
+            reviewRound: round,
+            resultSummary: result.summary,
+            workspacePath: result.workspacePath,
+            logPath,
+            progressSummary: '执行完成，等待 codex 复核',
+            executionSessionId: latestSessionId,
+            executionSessionName: sessionName,
+            sessionHistory: latestSessionHistory,
+            runnerKind: '',
+            runnerAgent: '',
+          }),
+        );
         signal?.throwIfAborted();
         writeLog('\n[agent-task-loop] status=待复核\n');
         return {
@@ -234,23 +251,25 @@ export class ExecutionService {
       }
 
       signal?.throwIfAborted();
-      await this.persist(() => this.deps.taskService.updateReviewState(task, {
-        status: '已失败',
-        currentOwner: '董事长',
-        lastError: formatFailureMessage(
-          this.deps.formatFailure,
-          result.error ?? 'unknown error',
-          'Task execution failed',
-        ),
-        workspacePath: result.workspacePath,
-        logPath,
-        progressSummary: '执行失败，请查看 LastError 和日志',
-        executionSessionId: latestSessionId,
-        executionSessionName: sessionName,
-        sessionHistory: latestSessionHistory,
-        runnerKind: '',
-        runnerAgent: '',
-      }));
+      await this.persist(() =>
+        this.deps.taskService.updateReviewState(task, {
+          status: '已失败',
+          currentOwner: '董事长',
+          lastError: formatFailureMessage(
+            this.deps.formatFailure,
+            result.error ?? 'unknown error',
+            'Task execution failed',
+          ),
+          workspacePath: result.workspacePath,
+          logPath,
+          progressSummary: '执行失败，请查看 LastError 和日志',
+          executionSessionId: latestSessionId,
+          executionSessionName: sessionName,
+          sessionHistory: latestSessionHistory,
+          runnerKind: '',
+          runnerAgent: '',
+        }),
+      );
       signal?.throwIfAborted();
       writeLog('\n[agent-task-loop] status=已失败\n');
       return {
@@ -264,24 +283,22 @@ export class ExecutionService {
       };
     } catch (error) {
       signal?.throwIfAborted();
-      const message = formatFailureMessage(
-        this.deps.formatFailure,
-        error,
-        'Task execution failed',
+      const message = formatFailureMessage(this.deps.formatFailure, error, 'Task execution failed');
+      await this.persist(() =>
+        this.deps.taskService.updateReviewState(task, {
+          status: '已失败',
+          currentOwner: '董事长',
+          lastError: message,
+          workspacePath,
+          logPath,
+          progressSummary: '执行异常中断，请查看 LastError 和日志',
+          executionSessionId: latestSessionId,
+          executionSessionName: sessionName,
+          sessionHistory: latestSessionHistory,
+          runnerKind: '',
+          runnerAgent: '',
+        }),
       );
-      await this.persist(() => this.deps.taskService.updateReviewState(task, {
-        status: '已失败',
-        currentOwner: '董事长',
-        lastError: message,
-        workspacePath,
-        logPath,
-        progressSummary: '执行异常中断，请查看 LastError 和日志',
-        executionSessionId: latestSessionId,
-        executionSessionName: sessionName,
-        sessionHistory: latestSessionHistory,
-        runnerKind: '',
-        runnerAgent: '',
-      }));
       writeLog(`\n[agent-task-loop] status=已失败\n[agent-task-loop] error=${message}\n`);
       return {
         runId,

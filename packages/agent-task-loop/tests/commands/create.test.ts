@@ -81,7 +81,7 @@ describe('createCommand', () => {
       } as never),
     ).rejects.toThrow('exit');
 
-    expect(err.mock.calls.map(call => String(call[0])).join('\n')).toContain(
+    expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
       'Missing required flag(s): --project, --agent, --priority',
     );
     expect(createTaskSpy).not.toHaveBeenCalled();
@@ -104,9 +104,7 @@ describe('createCommand', () => {
       } as never),
     ).rejects.toThrow('exit');
 
-    expect(err.mock.calls.map(call => String(call[0])).join('\n')).toContain(
-      'Invalid --agent: Invalid enum value',
-    );
+    expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain('Invalid --agent: Invalid enum value');
     expect(createTaskSpy).not.toHaveBeenCalled();
   });
 
@@ -127,7 +125,7 @@ describe('createCommand', () => {
       } as never),
     ).rejects.toThrow('exit');
 
-    expect(err.mock.calls.map(call => String(call[0])).join('\n')).toContain(
+    expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
       'Invalid --priority: Number must be less than or equal to 9',
     );
     expect(createTaskSpy).not.toHaveBeenCalled();

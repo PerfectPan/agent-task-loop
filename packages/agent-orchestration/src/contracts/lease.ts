@@ -13,9 +13,7 @@ export interface LeaseRecord {
  */
 export type FencingToken = Pick<LeaseRecord, 'key' | 'holderPid' | 'holderId'>;
 
-export type FencedResult<T> =
-  | { executed: true; value: T }
-  | { executed: false };
+export type FencedResult<T> = { executed: true; value: T } | { executed: false };
 
 /**
  * Port over durable leases. Key shape for a Room:

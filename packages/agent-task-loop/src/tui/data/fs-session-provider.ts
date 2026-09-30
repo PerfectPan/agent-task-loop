@@ -49,11 +49,11 @@ export class FsSessionProvider implements SessionProvider {
 
   constructor(opts: FsSessionProviderOptions = {}) {
     this.maxLines = opts.maxLines ?? DEFAULT_MAX_LINES;
-    this.readFile = opts.readFile ?? (path => nodeReadFile(path, 'utf8'));
-    const readdir: ReadDir = opts.readdir ?? (path => nodeReaddir(path, { withFileTypes: true }));
+    this.readFile = opts.readFile ?? ((path) => nodeReadFile(path, 'utf8'));
+    const readdir: ReadDir = opts.readdir ?? ((path) => nodeReaddir(path, { withFileTypes: true }));
     // agent-task-loop resolves transcripts purely by session id, so the agent
     // attribution is irrelevant here — tag every root "unknown".
-    const roots: SessionRoot[] = (opts.sessionRoots ?? defaultSessionRoots()).map(path => ({
+    const roots: SessionRoot[] = (opts.sessionRoots ?? defaultSessionRoots()).map((path) => ({
       path,
       agent: 'unknown',
     }));
@@ -68,9 +68,11 @@ export class FsSessionProvider implements SessionProvider {
 
     if (tail.length === 0) {
       const sessionId = reviewing
-        ? task.reviewSessionId ?? task.sessionId
-        : task.executionSessionId ?? task.sessionId;
-      if (sessionId) tail = await this.getTranscript(sessionId);
+        ? (task.reviewSessionId ?? task.sessionId)
+        : (task.executionSessionId ?? task.sessionId);
+      if (sessionId) {
+        tail = await this.getTranscript(sessionId);
+      }
     }
 
     return buildPreviewFromTask(task, now, tail);
@@ -78,18 +80,22 @@ export class FsSessionProvider implements SessionProvider {
 
   /** Resolve and parse the transcript for a single session id (one round). */
   async getTranscript(sessionId: string): Promise<string[]> {
-    if (!sessionId) return [];
+    if (!sessionId) {
+      return [];
+    }
     return toLines(await this.sessions.getTranscript(sessionId, this.maxLines));
   }
 
   /** Session ids that have a resolvable transcript on disk. */
   async listAvailableSessionIds(): Promise<string[]> {
-    return (await this.sessions.list()).map(session => session.id);
+    return (await this.sessions.list()).map((session) => session.id);
   }
 
   /** Tail of the live log file (not a transcript); empty on missing/unreadable. */
   private async readLogTail(path: string | undefined | null): Promise<string[]> {
-    if (!path) return [];
+    if (!path) {
+      return [];
+    }
     try {
       return tailLines(await this.readFile(path), this.maxLines);
     } catch {

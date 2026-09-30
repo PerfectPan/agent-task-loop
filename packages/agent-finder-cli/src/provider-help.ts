@@ -1,5 +1,5 @@
 export function printProviderHelpAndExitIfRequested(argv: string[]): void {
-  if (argv[2] !== "provider" || (argv[3] !== "-h" && argv[3] !== "--help")) {
+  if (argv[2] !== 'provider' || (argv[3] !== '-h' && argv[3] !== '--help')) {
     return;
   }
 

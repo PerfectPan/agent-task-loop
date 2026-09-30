@@ -1,11 +1,4 @@
-import type {
-  AdmitResult,
-  AdmitRoomEvent,
-  RoomId,
-  RoomSeq,
-  RoomSlice,
-  SliceBudget,
-} from '../domain/model';
+import type { AdmitResult, AdmitRoomEvent, RoomId, RoomSeq, RoomSlice, SliceBudget } from '../domain/model';
 import type { PassCommand, PassResult } from '../domain/pass';
 import type { SpeakCommand, SpeakResult } from '../domain/speak';
 

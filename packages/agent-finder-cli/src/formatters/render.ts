@@ -10,8 +10,10 @@
 const ESC = String.fromCharCode(27);
 const useColor = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
 
-const sgr = (open: number, close = 0) => (text: string): string =>
-  useColor ? `${ESC}[${open}m${text}${ESC}[${close}m` : text;
+const sgr =
+  (open: number, close = 0) =>
+  (text: string): string =>
+    useColor ? `${ESC}[${open}m${text}${ESC}[${close}m` : text;
 
 export const style = {
   bold: sgr(1, 22),
@@ -20,29 +22,31 @@ export const style = {
   yellow: sgr(33, 39),
   red: sgr(31, 39),
   cyan: sgr(36, 39),
-  gray: sgr(90, 39)
+  gray: sgr(90, 39),
 };
 
-const ANSI_PATTERN = new RegExp(`${ESC}\\[[0-9;]*m`, "g");
+const ANSI_PATTERN = new RegExp(`${ESC}\\[[0-9;]*m`, 'g');
 
 /** Visible width, ignoring ANSI escape sequences. */
 function visibleWidth(text: string): number {
-  return text.replace(ANSI_PATTERN, "").length;
+  return text.replace(ANSI_PATTERN, '').length;
 }
 
 /** Collapse newlines/runs of whitespace so a value always renders on one row. */
 function clean(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 function truncate(text: string, max: number): string {
-  if (max <= 1 || text.length <= max) return text;
+  if (max <= 1 || text.length <= max) {
+    return text;
+  }
   return `${text.slice(0, max - 1)}…`;
 }
 
 function padEnd(text: string, width: number): string {
   const pad = width - visibleWidth(text);
-  return pad > 0 ? text + " ".repeat(pad) : text;
+  return pad > 0 ? text + ' '.repeat(pad) : text;
 }
 
 export interface Column<T> {
@@ -57,7 +61,7 @@ export interface Column<T> {
   flex?: boolean;
 }
 
-const GAP = "  ";
+const GAP = '  ';
 const DEFAULT_TERM_WIDTH = 80;
 
 /**
@@ -79,7 +83,9 @@ export function renderTable<T>(columns: Column<T>[], rows: T[]): string[] {
     const fixed = widths.reduce((sum, w, i) => (i === flexIndex ? sum : sum + w), 0);
     const gaps = GAP.length * (columns.length - 1);
     const budget = termWidth - fixed - gaps;
-    if (budget > 0) widths[flexIndex] = Math.min(widths[flexIndex], Math.max(budget, 8));
+    if (budget > 0) {
+      widths[flexIndex] = Math.min(widths[flexIndex], Math.max(budget, 8));
+    }
   }
 
   const header = columns
@@ -94,7 +100,7 @@ export function renderTable<T>(columns: Column<T>[], rows: T[]): string[] {
         return col.color ? col.color(row)(cell) : cell;
       })
       .join(GAP)
-      .trimEnd()
+      .trimEnd(),
   );
 
   return [header, ...body];

@@ -1,9 +1,5 @@
 import { inspect } from 'node:util';
-import type {
-  Agent,
-  AgentId,
-  AgentRegistry,
-} from '../contracts/agent';
+import type { Agent, AgentId, AgentRegistry } from '../contracts/agent';
 import { OrchestrationConflictError } from '../contracts/errors';
 import type {
   AgentConnection,
@@ -125,7 +121,9 @@ export class AgentRuntime {
 
   /** Coalesces; never blocks the caller. */
   wake(key: string): void {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     const inbox = this.inboxRecord(key);
     if (inbox.state === 'running') {
       // Not dropped, not queued as a second run: one more activation that
@@ -140,7 +138,9 @@ export class AgentRuntime {
 
   async cancel(key: string): Promise<void> {
     const inbox = this.inboxes.get(key);
-    if (!inbox) return;
+    if (!inbox) {
+      return;
+    }
     inbox.pending = false;
     inbox.controller?.abort();
     await inbox.activation;
@@ -148,7 +148,9 @@ export class AgentRuntime {
 
   inbox(key: string): Inbox | undefined {
     const record = this.inboxes.get(key);
-    if (!record) return undefined;
+    if (!record) {
+      return undefined;
+    }
     return {
       key: record.key,
       state: record.state,
@@ -277,7 +279,9 @@ export class AgentRuntime {
         }
       }
     } finally {
-      if (timeoutHandle) this.scheduler.clearInterval(timeoutHandle);
+      if (timeoutHandle) {
+        this.scheduler.clearInterval(timeoutHandle);
+      }
       unwire.forEach((unsubscribe) => unsubscribe());
       // The activation order — prompt, afterTurn, release. The
       // endpoint's afterTurn writes fenced under this lease (the pass's
@@ -288,8 +292,12 @@ export class AgentRuntime {
         inbox.lastError ??= errorText(error);
       });
       await activationFailed;
-      if (heartbeatHandle) this.scheduler.clearInterval(heartbeatHandle);
-      if (record) this.lease.release(key);
+      if (heartbeatHandle) {
+        this.scheduler.clearInterval(heartbeatHandle);
+      }
+      if (record) {
+        this.lease.release(key);
+      }
       inbox.controller = undefined;
       inbox.activation = undefined;
       inbox.state = 'idle';
@@ -311,7 +319,9 @@ export class AgentRuntime {
     unsubscribers.push(
       connection.onPermissionRequest(async (request) => {
         const veto = harness.hooks?.onToolCall?.(request.toolCall);
-        if (veto === 'deny') return denyOutcome(request);
+        if (veto === 'deny') {
+          return denyOutcome(request);
+        }
         return harness.permissions(request);
       }),
     );
@@ -343,24 +353,28 @@ export class AgentRuntime {
 
   private async requireAgent(key: string): Promise<Agent> {
     const agentId = agentIdOf(key);
-    if (!agentId) throw new Error(`runtime key ${key} does not name a member`);
+    if (!agentId) {
+      throw new Error(`runtime key ${key} does not name a member`);
+    }
     const agent = await this.registry.get(agentId);
-    if (!agent) throw new Error(`no agent ${agentId} in the registry`);
+    if (!agent) {
+      throw new Error(`no agent ${agentId} in the registry`);
+    }
     return agent;
   }
 
   private async requireHarness(key: string): Promise<Harness> {
-    if (!this.activateHandler) throw new Error('AgentRuntime has no onActivate handler');
+    if (!this.activateHandler) {
+      throw new Error('AgentRuntime has no onActivate handler');
+    }
     return this.activateHandler(key);
   }
 
-  private async connectionFor(
-    inbox: InboxRecord,
-    agent: Agent,
-    signal?: AbortSignal,
-  ): Promise<AgentConnection> {
+  private async connectionFor(inbox: InboxRecord, agent: Agent, signal?: AbortSignal): Promise<AgentConnection> {
     // The process is long-lived: reuse it across activations of this key.
-    if (inbox.connection) return inbox.connection;
+    if (inbox.connection) {
+      return inbox.connection;
+    }
     const connection = await this.connector.connect(agent.binding, signal);
     inbox.connection = connection;
     return connection;
@@ -381,8 +395,8 @@ export class AgentRuntime {
       inbox.pending = false;
       inbox.controller?.abort();
     }
-    await Promise.all(inboxes.map(inbox => inbox.activation?.catch(() => undefined) ?? Promise.resolve()));
-    await Promise.all(inboxes.map(inbox => inbox.connection?.close().catch(() => undefined) ?? Promise.resolve()));
+    await Promise.all(inboxes.map((inbox) => inbox.activation?.catch(() => undefined) ?? Promise.resolve()));
+    await Promise.all(inboxes.map((inbox) => inbox.connection?.close().catch(() => undefined) ?? Promise.resolve()));
   }
 }
 
@@ -399,16 +413,18 @@ function denyOutcome(request: PermissionRequest): PermissionOutcome {
  * activation moves on to discard the connection it was running on.
  */
 function raceAborted<T>(promise: Promise<T>, signal: AbortSignal, label: string): Promise<T> {
-  if (signal.aborted) return Promise.reject(abortError(signal, label));
+  if (signal.aborted) {
+    return Promise.reject(abortError(signal, label));
+  }
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(abortError(signal, label));
     signal.addEventListener('abort', onAbort, { once: true });
     promise.then(
-      value => {
+      (value) => {
         signal.removeEventListener('abort', onAbort);
         resolve(value);
       },
-      error => {
+      (error) => {
         signal.removeEventListener('abort', onAbort);
         reject(error);
       },
@@ -422,8 +438,12 @@ function abortError(signal: AbortSignal, label: string): Error {
 }
 
 function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error === undefined) return '';
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error === undefined) {
+    return '';
+  }
   return typeof error === 'string' ? error : inspect(error);
 }
 

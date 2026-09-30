@@ -20,7 +20,13 @@ describe('buildTaskProvider', () => {
   it('github multi-repo → a composite with one source per repo', () => {
     const provider = buildTaskProvider({
       ...base,
-      githubIssues: { defaultAgent: 'codex', repositories: [{ owner: 'o', repo: 'a' }, { owner: 'o', repo: 'b' }] },
+      githubIssues: {
+        defaultAgent: 'codex',
+        repositories: [
+          { owner: 'o', repo: 'a' },
+          { owner: 'o', repo: 'b' },
+        ],
+      },
     } as AppConfig);
     expect((provider as { source?: string }).source).toBeUndefined();
     expect((provider as { sources?: string[] }).sources).toEqual(['github:o/a', 'github:o/b']);

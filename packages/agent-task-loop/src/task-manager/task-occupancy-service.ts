@@ -66,12 +66,14 @@ export class TaskOccupancyService {
     }, this.heartbeatMs);
     timer.unref();
     const mutationFence: TaskMutationFence = {
-      run: mutation => this.orchestration.fence(key, mutation, controller.signal),
+      run: (mutation) => this.orchestration.fence(key, mutation, controller.signal),
     };
 
     try {
       const result = await workflow({ signal: controller.signal, mutationFence });
-      if (leaseError) throw leaseError;
+      if (leaseError) {
+        throw leaseError;
+      }
       return result;
     } finally {
       clearInterval(timer);

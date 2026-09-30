@@ -140,76 +140,75 @@ export function SessionPreview({
     >
       <ModeTabs mode={mode} />
       <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
-      <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
-      {!preview ? (
-        <Text dimColor>{isLoading ? 'Loading…' : 'No session'}</Text>
-      ) : mode === 'output' ? (
-        <Box flexDirection="column">
-          {preview.sessionName ? <MetaRow label="name" value={preview.sessionName} /> : null}
-          {preview.sessionId ? <MetaRow label="id" value={preview.sessionId} /> : null}
-          <MetaRow label="runner" value={runnerLabel(preview.runner)} />
-          <HeartbeatLine preview={preview} />
-          <Box flexDirection="column" marginTop={1}>
-            <Text dimColor>recent</Text>
-            {preview.history.length === 0 ? (
-              <Text dimColor>—</Text>
-            ) : (
-              preview.history.slice(-4).map((e, i) => (
-                <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
-                  r{e.round} {e.kind} {e.agent}
-                </Text>
-              ))
-            )}
-          </Box>
-        </Box>
-      ) : mode === 'history' ? (
-        <Box flexDirection="column">
-          {preview.history.length === 0 ? (
-            <Text dimColor>No rounds</Text>
-          ) : (
-            preview.history.map((e, i) => {
-              const selected = focused && i === roundIndex;
-              const viewable = !!e.sessionId && (availableIds?.has(e.sessionId) ?? false);
-              return (
-                <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
-                  <Text color={selected ? 'cyan' : undefined}>{selected ? '❯ ' : '  '}</Text>
-                  <Text color={viewable ? 'green' : 'gray'}>{viewable ? '●' : '○'} </Text>
-                  <Text dimColor={!selected}>r{e.round}</Text> {e.kind}{' '}
-                  <Text color="cyan">{e.agent}</Text>
-                </Text>
-              );
-            })
-          )}
-          {focused ? <Text dimColor>{'\n'}[↑↓] round  [Enter] open transcript</Text> : null}
-        </Box>
-      ) : (
-        <Box flexDirection="column">
-          {(() => {
-            const round = preview.history[roundIndex];
-            return (
-              <>
-                <Text wrap="truncate-end">
-                  {round ? (
-                    <Text dimColor>
-                      r{round.round} {round.kind} {round.agent}
-                    </Text>
-                  ) : (
-                    <Text dimColor>transcript</Text>
-                  )}
-                </Text>
-                {transcriptLoading ? (
-                  <Text dimColor>Loading…</Text>
-                ) : transcript.length === 0 ? (
-                  <Text dimColor>Transcript not found on this machine</Text>
+        <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
+          {!preview ? (
+            <Text dimColor>{isLoading ? 'Loading…' : 'No session'}</Text>
+          ) : mode === 'output' ? (
+            <Box flexDirection="column">
+              {preview.sessionName ? <MetaRow label="name" value={preview.sessionName} /> : null}
+              {preview.sessionId ? <MetaRow label="id" value={preview.sessionId} /> : null}
+              <MetaRow label="runner" value={runnerLabel(preview.runner)} />
+              <HeartbeatLine preview={preview} />
+              <Box flexDirection="column" marginTop={1}>
+                <Text dimColor>recent</Text>
+                {preview.history.length === 0 ? (
+                  <Text dimColor>—</Text>
                 ) : (
-                  transcript.map((line, i) => <TranscriptEntry key={i} line={line} />)
+                  preview.history.slice(-4).map((e, i) => (
+                    <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
+                      r{e.round} {e.kind} {e.agent}
+                    </Text>
+                  ))
                 )}
-              </>
-            );
-          })()}
+              </Box>
+            </Box>
+          ) : mode === 'history' ? (
+            <Box flexDirection="column">
+              {preview.history.length === 0 ? (
+                <Text dimColor>No rounds</Text>
+              ) : (
+                preview.history.map((e, i) => {
+                  const selected = focused && i === roundIndex;
+                  const viewable = !!e.sessionId && (availableIds?.has(e.sessionId) ?? false);
+                  return (
+                    <Text key={`${e.round}-${e.kind}-${i}`} wrap="truncate-end">
+                      <Text color={selected ? 'cyan' : undefined}>{selected ? '❯ ' : '  '}</Text>
+                      <Text color={viewable ? 'green' : 'gray'}>{viewable ? '●' : '○'} </Text>
+                      <Text dimColor={!selected}>r{e.round}</Text> {e.kind} <Text color="cyan">{e.agent}</Text>
+                    </Text>
+                  );
+                })
+              )}
+              {focused ? <Text dimColor>{'\n'}[↑↓] round [Enter] open transcript</Text> : null}
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              {(() => {
+                const round = preview.history[roundIndex];
+                return (
+                  <>
+                    <Text wrap="truncate-end">
+                      {round ? (
+                        <Text dimColor>
+                          r{round.round} {round.kind} {round.agent}
+                        </Text>
+                      ) : (
+                        <Text dimColor>transcript</Text>
+                      )}
+                    </Text>
+                    {transcriptLoading ? (
+                      <Text dimColor>Loading…</Text>
+                    ) : transcript.length === 0 ? (
+                      <Text dimColor>Transcript not found on this machine</Text>
+                    ) : (
+                      transcript.map((line, i) => <TranscriptEntry key={i} line={line} />)
+                    )}
+                  </>
+                );
+              })()}
+            </Box>
+          )}
         </Box>
-      )}
-      </Box>
       </Box>
     </Box>
   );

@@ -55,9 +55,7 @@ describe('useSessionPreview', () => {
 
   it('returns null preview and does not fetch when task is null', () => {
     const provider = makeFakeProvider();
-    const { lastFrame: frame } = render(
-      <ProbeReal provider={provider} task={null} />,
-    );
+    const { lastFrame: frame } = render(<ProbeReal provider={provider} task={null} />);
     expect(provider.getPreview).not.toHaveBeenCalled();
     expect(lastFrame(frame())).toContain('id=none');
   });
@@ -65,9 +63,7 @@ describe('useSessionPreview', () => {
   it('fetches immediately and renders the task id when a task is set', async () => {
     const provider = makeFakeProvider();
     const task = makeTask('T-1');
-    const { lastFrame: frame } = render(
-      <ProbeReal provider={provider} task={task} />,
-    );
+    const { lastFrame: frame } = render(<ProbeReal provider={provider} task={task} />);
     await vi.advanceTimersByTimeAsync(0);
     expect(provider.getPreview).toHaveBeenCalledTimes(1);
     expect(provider.getPreview).toHaveBeenCalledWith(task, FIXED_NOW);
@@ -101,48 +97,29 @@ describe('useSessionPreview', () => {
 
   it('refetches for the new id when task.taskId changes', async () => {
     const provider = makeFakeProvider();
-    const { rerender, lastFrame: frame } = render(
-      <ProbeReal provider={provider} task={makeTask('T-1')} />,
-    );
+    const { rerender, lastFrame: frame } = render(<ProbeReal provider={provider} task={makeTask('T-1')} />);
     await vi.advanceTimersByTimeAsync(0);
     expect(lastFrame(frame())).toContain('id=T-1');
     expect(provider.getPreview).toHaveBeenCalledTimes(1);
 
     rerender(<ProbeReal provider={provider} task={makeTask('T-2')} />);
     await vi.advanceTimersByTimeAsync(0);
-    expect(provider.getPreview).toHaveBeenLastCalledWith(
-      expect.objectContaining({ taskId: 'T-2' }),
-      FIXED_NOW,
-    );
+    expect(provider.getPreview).toHaveBeenLastCalledWith(expect.objectContaining({ taskId: 'T-2' }), FIXED_NOW);
     expect(lastFrame(frame())).toContain('id=T-2');
   });
 });
 
 // ---- real probe components used by the tests above ----
 
-function ProbeReal({
-  provider,
-  task,
-}: {
-  provider: SessionProvider;
-  task: TaskRecord | null;
-}) {
+function ProbeReal({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
   const { preview, isLoading } = useSessionPreview(provider, task, {
     intervalMs: INTERVAL,
     now: () => FIXED_NOW,
   });
-  return (
-    <Text>{`id=${preview?.taskId ?? 'none'} loading=${String(isLoading)}`}</Text>
-  );
+  return <Text>{`id=${preview?.taskId ?? 'none'} loading=${String(isLoading)}`}</Text>;
 }
 
-function ProbeDisabled({
-  provider,
-  task,
-}: {
-  provider: SessionProvider;
-  task: TaskRecord | null;
-}) {
+function ProbeDisabled({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
   const { preview } = useSessionPreview(provider, task, {
     intervalMs: INTERVAL,
     now: () => FIXED_NOW,

@@ -6,9 +6,7 @@ const packageRoot = path.resolve(new URL('..', import.meta.url).pathname);
 
 describe('published package surface', () => {
   it('publishes the CLI and Rivus Plugin as separate entrypoints', async () => {
-    const packageJson = JSON.parse(
-      await readFile(path.join(packageRoot, 'package.json'), 'utf8'),
-    ) as {
+    const packageJson = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8')) as {
       bin: Record<string, string>;
       exports: Record<string, { types: string; import: string }>;
       files: string[];

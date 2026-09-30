@@ -29,10 +29,7 @@ export class TaskStartService {
   private readonly occupancy: TaskOccupancyService;
 
   constructor(private readonly dependencies: TaskStartServiceDependencies) {
-    this.occupancy = new TaskOccupancyService(
-      dependencies.orchestration,
-      dependencies.occupancyHeartbeatMs,
-    );
+    this.occupancy = new TaskOccupancyService(dependencies.orchestration, dependencies.occupancyHeartbeatMs);
   }
 
   async startTask(input: StartTaskInput): Promise<TaskRecord> {
@@ -93,15 +90,17 @@ export class TaskStartService {
     await this.dependencies.runner.run({
       task,
       maxRounds: maxRoundsForStartRound(input.maxRounds, recoveryStartRound),
-      ...(recoveryStartRound ? {
-        startRound: recoveryStartRound,
-        promptOverride: buildReworkPrompt({
-          taskDescription: task.description,
-          resultSummary: task.resultSummary,
-          reviewFindings: task.reviewFindings,
-          acceptanceFeedback: task.acceptanceFeedback,
-        }),
-      } : {}),
+      ...(recoveryStartRound
+        ? {
+            startRound: recoveryStartRound,
+            promptOverride: buildReworkPrompt({
+              taskDescription: task.description,
+              resultSummary: task.resultSummary,
+              reviewFindings: task.reviewFindings,
+              acceptanceFeedback: task.acceptanceFeedback,
+            }),
+          }
+        : {}),
       signal,
       mutationFence,
     });

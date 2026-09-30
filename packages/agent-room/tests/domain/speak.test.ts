@@ -50,7 +50,7 @@ describe('speak domain service', () => {
     );
     expect(held.outcome).toBe('held');
     if (held.outcome === 'held') {
-      expect(held.newer.map(event => event.seq)).toEqual([2]);
+      expect(held.newer.map((event) => event.seq)).toEqual([2]);
       expect(held.newer[0]).toMatchObject({ author: { id: 'bot-a' }, body: 'alpha' });
     }
     expect(second.snapshot()).toEqual({
@@ -121,7 +121,9 @@ describe('speak domain service', () => {
       '2026-08-29T00:01:00.000Z',
     );
     expect(first.outcome).toBe('posted');
-    if (first.outcome !== 'posted') return;
+    if (first.outcome !== 'posted') {
+      return;
+    }
     expect(first.event.wakeDepth).toBe(1);
 
     const secondSession = new AgentSessionAggregate({ ...sessionId, agentId: 'bot-b' });
@@ -132,7 +134,9 @@ describe('speak domain service', () => {
       '2026-08-29T00:02:00.000Z',
     );
     expect(second.outcome).toBe('posted');
-    if (second.outcome !== 'posted') return;
+    if (second.outcome !== 'posted') {
+      return;
+    }
     expect(second.event.wakeDepth).toBe(2);
   });
 

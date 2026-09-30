@@ -13,15 +13,13 @@ const provider = createFakeSessionProvider();
 /** Let ink mount, run effects, and settle the async initial fetch. */
 async function settle(): Promise<void> {
   for (let i = 0; i < 4; i++) {
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }
 
 function renderApp(tasks = demoTasks(FIXED_NOW)) {
   const onFetch: FetchTasks = async () => tasks;
-  return render(
-    <App agent="claude" onFetchTasks={onFetch} sessionProvider={provider} now={now} />,
-  );
+  return render(<App agent="claude" onFetchTasks={onFetch} sessionProvider={provider} now={now} />);
 }
 
 describe('App dashboard', () => {
@@ -94,9 +92,7 @@ describe('App dashboard', () => {
 
   it('refetches on r', async () => {
     const fetchSpy = vi.fn(async () => demoTasks(FIXED_NOW));
-    const app = render(
-      <App agent="claude" onFetchTasks={fetchSpy} sessionProvider={provider} now={now} />,
-    );
+    const app = render(<App agent="claude" onFetchTasks={fetchSpy} sessionProvider={provider} now={now} />);
     await settle();
     const callsBefore = fetchSpy.mock.calls.length;
     app.stdin.write('r');
@@ -116,7 +112,7 @@ describe('App dashboard', () => {
   });
 
   it('does not tag rows when every task shares one source', async () => {
-    const tasks = demoTasks(FIXED_NOW).map(t => ({ ...t, source: 'feishu' }));
+    const tasks = demoTasks(FIXED_NOW).map((t) => ({ ...t, source: 'feishu' }));
     const app = renderApp(tasks);
     await settle();
     expect(stripAnsi(app.lastFrame() ?? '')).not.toContain('feishu');
@@ -124,7 +120,7 @@ describe('App dashboard', () => {
   });
 
   it('tags rows when multiple sources are configured even if tasks share one', async () => {
-    const tasks = demoTasks(FIXED_NOW).map(t => ({ ...t, source: 'feishu' }));
+    const tasks = demoTasks(FIXED_NOW).map((t) => ({ ...t, source: 'feishu' }));
     const app = render(
       <App
         agent="claude"
@@ -144,7 +140,7 @@ describe('App dashboard', () => {
     // Put the first task on repo "a" and the rest on repo "b".
     const mixed = all.map((t, i) => ({ ...t, source: i === 0 ? 'github:o/a' : 'github:o/b' }));
     const onlyA = mixed[0].taskId;
-    const someB = mixed.find(t => t.source === 'github:o/b')!.taskId;
+    const someB = mixed.find((t) => t.source === 'github:o/b')!.taskId;
 
     const app = render(
       <App

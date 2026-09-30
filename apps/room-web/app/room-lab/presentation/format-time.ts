@@ -12,12 +12,20 @@ export function formatClock(iso: string): string {
 export function formatAgo(iso: string, now = Date.now()): string {
   const delta = Math.max(0, now - Date.parse(iso));
   const minutes = Math.floor(delta / 60_000);
-  if (minutes < 1) return copy.label.justNow;
-  if (minutes < 60) return copy.label.minutesAgo(minutes);
+  if (minutes < 1) {
+    return copy.label.justNow;
+  }
+  if (minutes < 60) {
+    return copy.label.minutesAgo(minutes);
+  }
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return copy.label.hoursAgo(hours);
+  if (hours < 24) {
+    return copy.label.hoursAgo(hours);
+  }
   const days = Math.floor(hours / 24);
-  if (days < 7) return copy.label.daysAgo(days);
+  if (days < 7) {
+    return copy.label.daysAgo(days);
+  }
   return new Date(iso).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', timeZone: 'Asia/Shanghai' });
 }
 

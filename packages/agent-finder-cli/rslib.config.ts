@@ -1,19 +1,19 @@
-import { defineConfig } from "@rslib/core";
-import { cliConfig } from "@rivus/rslib-config/cli.config";
+import { defineConfig } from '@rslib/core';
+import { cliConfig } from '@rivus/rslib-config/cli.config';
 
 export default defineConfig({
   ...cliConfig,
   lib: [
     {
-      format: "esm",
+      format: 'esm',
       dts: { abortOnError: false },
-      bundle: true
-    }
+      bundle: true,
+    },
   ],
-  source: { entry: { cli: "src/cli.ts" } },
+  source: { entry: { cli: 'src/cli.ts' } },
   tools: {
     rspack: {
-      externals: ["react-devtools-core"]
-    }
-  }
+      externals: ['react-devtools-core'],
+    },
+  },
 });

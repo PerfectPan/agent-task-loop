@@ -19,7 +19,7 @@ export function normalizeGitHubRepos(config: GitHubIssuesConfig): ResolvedGitHub
   const fallbackAgent = (config.defaultAgent ?? 'codex') as TargetAgent;
 
   if (config.repositories && config.repositories.length > 0) {
-    return config.repositories.map(entry => ({
+    return config.repositories.map((entry) => ({
       owner: entry.owner,
       repo: entry.repo,
       token: config.token,

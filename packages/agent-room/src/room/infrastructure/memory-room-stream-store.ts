@@ -3,15 +3,7 @@ import type { AgentSession, AgentSessionId } from '../../agent-session/domain/mo
 import type { RoomStreamStore } from '../application/room-stream-store';
 import { RoomStreamService } from '../application/room-stream-service';
 import type { RoomUnitOfWork } from '../application/room-unit-of-work';
-import type {
-  AdmitResult,
-  AdmitRoomEvent,
-  RoomId,
-  RoomEvent,
-  RoomSeq,
-  RoomSlice,
-  SliceBudget,
-} from '../domain/model';
+import type { AdmitResult, AdmitRoomEvent, RoomId, RoomEvent, RoomSeq, RoomSlice, SliceBudget } from '../domain/model';
 import type { PassCommand, PassResult } from '../domain/pass';
 import type { SpeakCommand, SpeakResult } from '../domain/speak';
 import { Room } from '../domain/room';
@@ -63,9 +55,7 @@ export class MemoryRoomStreamStore implements RoomStreamStore {
   }
 }
 
-export function createMemoryRoomStreamStore(
-  options: MemoryRoomStreamStoreOptions = {},
-): RoomStreamStore {
+export function createMemoryRoomStreamStore(options: MemoryRoomStreamStoreOptions = {}): RoomStreamStore {
   return new MemoryRoomStreamStore(options);
 }
 
@@ -87,10 +77,7 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
     return result;
   }
 
-  withRoomAndSession<T>(
-    id: AgentSessionId,
-    work: (room: Room, session: AgentSessionAggregate) => T,
-  ): T {
+  withRoomAndSession<T>(id: AgentSessionId, work: (room: Room, session: AgentSessionAggregate) => T): T {
     const room = this.loadRoom(id.roomId);
     const session = this.loadSession(id);
     const result = work(room, session);
@@ -115,7 +102,7 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
   }
 
   advanceSeen(id: AgentSessionId, seq: RoomSeq): AgentSession {
-    return this.changeSession(id, session => session.advanceSeen(seq));
+    return this.changeSession(id, (session) => session.advanceSeen(seq));
   }
 
   private loadRoom(id: RoomId): Room {

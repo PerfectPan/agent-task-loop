@@ -56,8 +56,8 @@ describe('resolveTaskExecutionContext', () => {
   });
 
   it('throws a clear error for unknown repository', () => {
-    expect(() =>
-      resolveTaskExecutionContext(config, makeTask({ repository: 'demo_repo' })),
-    ).toThrow(/unknown repository "demo_repo"/);
+    expect(() => resolveTaskExecutionContext(config, makeTask({ repository: 'demo_repo' }))).toThrow(
+      /unknown repository "demo_repo"/,
+    );
   });
 });

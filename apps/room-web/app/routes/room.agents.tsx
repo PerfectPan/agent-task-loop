@@ -46,7 +46,9 @@ export async function action({ request }: ActionFunctionArgs) {
     const intent = formText(form, 'intent', 'scan');
     if (intent === 'save-prompt') {
       const agentId = formText(form, 'agentId');
-      if (!host.agents.has(agentId)) throw new RoomInputError('Unknown agent');
+      if (!host.agents.has(agentId)) {
+        throw new RoomInputError('Unknown agent');
+      }
       host.saveSystemPrompt(agentId, formText(form, 'systemPrompt'));
       return data<AgentDeskView>(await host.agentDesk(), { headers: noStoreHeaders });
     }
@@ -67,10 +69,7 @@ export async function action({ request }: ActionFunctionArgs) {
     if (error instanceof LocalRequestError) {
       throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
     }
-    return data(
-      { error: roomActionMessage(error) },
-      { status: roomActionStatus(error), headers: noStoreHeaders },
-    );
+    return data({ error: roomActionMessage(error) }, { status: roomActionStatus(error), headers: noStoreHeaders });
   }
 }
 

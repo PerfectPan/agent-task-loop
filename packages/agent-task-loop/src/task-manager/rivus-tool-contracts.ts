@@ -2,15 +2,25 @@ import { z } from 'zod';
 import { TASK_STATUSES, TARGET_AGENTS } from '../types/task';
 
 const requiredText = (maxLength: number) =>
-  z.string().min(1).max(maxLength).regex(/\S/).transform(value => value.trim());
+  z
+    .string()
+    .min(1)
+    .max(maxLength)
+    .regex(/\S/)
+    .transform((value) => value.trim());
 const optionalText = (maxLength: number) =>
-  z.string().max(maxLength).transform(value => value.trim());
+  z
+    .string()
+    .max(maxLength)
+    .transform((value) => value.trim());
 
-export const listTasksInputSchema = z.object({
-  status: z.enum(TASK_STATUSES).optional(),
-  targetAgent: z.enum(TARGET_AGENTS).optional(),
-  limit: z.number().int().min(1).max(100).default(50),
-}).strict();
+export const listTasksInputSchema = z
+  .object({
+    status: z.enum(TASK_STATUSES).optional(),
+    targetAgent: z.enum(TARGET_AGENTS).optional(),
+    limit: z.number().int().min(1).max(100).default(50),
+  })
+  .strict();
 
 export const listTasksInputJsonSchema = {
   additionalProperties: false,
@@ -22,9 +32,11 @@ export const listTasksInputJsonSchema = {
   type: 'object',
 } as const;
 
-export const getTaskInputSchema = z.object({
-  taskId: requiredText(128),
-}).strict();
+export const getTaskInputSchema = z
+  .object({
+    taskId: requiredText(128),
+  })
+  .strict();
 
 export const getTaskInputJsonSchema = {
   additionalProperties: false,
@@ -35,15 +47,17 @@ export const getTaskInputJsonSchema = {
   type: 'object',
 } as const;
 
-export const createTaskInputSchema = z.object({
-  taskId: requiredText(128),
-  title: requiredText(200),
-  project: requiredText(120),
-  targetAgent: z.enum(TARGET_AGENTS),
-  priority: z.number().int().min(0).max(9),
-  description: optionalText(8_000).optional(),
-  source: requiredText(240).optional(),
-}).strict();
+export const createTaskInputSchema = z
+  .object({
+    taskId: requiredText(128),
+    title: requiredText(200),
+    project: requiredText(120),
+    targetAgent: z.enum(TARGET_AGENTS),
+    priority: z.number().int().min(0).max(9),
+    description: optionalText(8_000).optional(),
+    source: requiredText(240).optional(),
+  })
+  .strict();
 
 export const createTaskInputJsonSchema = {
   additionalProperties: false,
@@ -60,11 +74,13 @@ export const createTaskInputJsonSchema = {
   type: 'object',
 } as const;
 
-export const startTaskInputSchema = z.object({
-  taskId: requiredText(128),
-  targetAgent: z.enum(TARGET_AGENTS).optional(),
-  maxRounds: z.number().int().min(1).max(20).default(5),
-}).strict();
+export const startTaskInputSchema = z
+  .object({
+    taskId: requiredText(128),
+    targetAgent: z.enum(TARGET_AGENTS).optional(),
+    maxRounds: z.number().int().min(1).max(20).default(5),
+  })
+  .strict();
 
 export const startTaskInputJsonSchema = {
   additionalProperties: false,

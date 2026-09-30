@@ -80,7 +80,7 @@ describe('ToolServer', () => {
     });
     const client = new Client({ name: 'tool-server-test', version: '0.0.0' });
     const wrongUrl = hosted.url.replace('/turn-token-2/', '/wrong-token/');
-    await expect(client.connect(new StreamableHTTPClientTransport(new URL(wrongUrl)))).rejects.toThrow();
+    await expect(client.connect(new StreamableHTTPClientTransport(new URL(wrongUrl)))).rejects.toThrow(Error);
     await client.close().catch(() => undefined);
     await hosted.close();
   });

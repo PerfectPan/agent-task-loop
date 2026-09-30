@@ -63,6 +63,8 @@ function headSlice(text: string, budget: number): string {
 
 /** Take a trailing slice of `text` whose display width does not exceed `budget`. */
 function tailSlice(text: string, budget: number): string {
+  // Display width is measured per code point, like the rest of this file.
+  // oxlint-disable-next-line typescript/no-misused-spread
   const chars = [...text];
   let out = '';
   let used = 0;

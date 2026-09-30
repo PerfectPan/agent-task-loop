@@ -6,7 +6,7 @@ const cli = join(process.cwd(), "src", "cli.ts");
 const loader = join(process.cwd(), "node_modules", "tsx", "dist", "loader.mjs");
 
 function runCli(args: string[]) {
-  const { VITEST, VITEST_WORKER_ID, ...env } = process.env;
+  const { VITEST: _vitest, VITEST_WORKER_ID: _vitestWorkerId, ...env } = process.env;
   return spawnSync(process.execPath, ["--conditions=development", "--import", loader, cli, ...args], {
     cwd: process.cwd(),
     encoding: "utf8",

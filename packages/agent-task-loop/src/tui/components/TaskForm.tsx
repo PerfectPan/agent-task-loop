@@ -90,7 +90,7 @@ export function TaskForm({ onSubmit, onCancel, submitting, error, sources, onRef
       setRefining(true);
       setRefineError(null);
       Promise.resolve(onRefineDescription({ title: title.trim(), description: description.trim() }))
-        .then(next => { if (mounted.current) setDescription(next); })
+        .then(refined => { if (mounted.current) setDescription(refined); })
         .catch(err => { if (mounted.current) setRefineError(err instanceof Error ? err.message : String(err)); })
         .finally(() => { if (mounted.current) setRefining(false); });
       return;

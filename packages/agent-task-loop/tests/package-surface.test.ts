@@ -34,8 +34,8 @@ describe('published package surface', () => {
   it('builds a dedicated Rivus Plugin entry', async () => {
     const config = await readFile(path.join(packageRoot, 'rslib.config.ts'), 'utf8');
 
-    expect(config).toContain('"rivus-plugin": "src/rivus-plugin.ts"');
-    expect(config).toContain('"task-delivery": "src/task-delivery.ts"');
+    expect(config).toMatch(/["']rivus-plugin["']: ["']src\/rivus-plugin\.ts["']/);
+    expect(config).toMatch(/["']task-delivery["']: ["']src\/task-delivery\.ts["']/);
   });
 
   it('keeps the Task Delivery domain and application free of infrastructure imports', async () => {

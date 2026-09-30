@@ -9,6 +9,7 @@ import {
   type HeadersFunction,
   type LoaderFunctionArgs,
 } from 'react-router';
+import { formText } from '../lib/form';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import {
@@ -46,11 +47,11 @@ export async function action({ request }: ActionFunctionArgs) {
     assertLocalRuntime();
     assertSameOriginForm(request);
     const form = await request.formData();
-    const goal = String(form.get('goal') ?? '');
-    const wake = String(form.get('wake') ?? '');
-    const cwd = String(form.get('cwd') ?? '');
+    const goal = formText(form, 'goal');
+    const wake = formText(form, 'wake');
+    const cwd = formText(form, 'cwd');
     const created = await getRoomLabHost().create({
-      title: String(form.get('title') ?? ''),
+      title: formText(form, 'title'),
       ...(goal.trim() ? { goal } : {}),
       ...(wake === 'addressed' ? { wake: 'addressed' as const } : {}),
       ...(form.get('serial') === 'on' ? { serial: true } : {}),

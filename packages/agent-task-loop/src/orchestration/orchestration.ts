@@ -116,8 +116,8 @@ export class Orchestration {
     const bound = this.requireHolder(key).run.requireAllowedSeat(seat);
     if (!bound.cmd) throw new OrchestrationSeatError(key, `seat ${seat} has no command bound`);
     const env = {
-      ...(this.envs.get(key)?.get(seat) ?? {}),
-      ...(input.env ?? {}),
+      ...this.envs.get(key)?.get(seat),
+      ...input.env,
     };
     const args = [...(bound.args ?? []), ...(input.extraArgs ?? [])];
 

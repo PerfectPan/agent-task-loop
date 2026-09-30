@@ -87,7 +87,7 @@ describe('SqliteLeaseStore', () => {
     expect(leases.read(KEY)?.holderId).toBe('holder-b');
 
     // And a lease that is minutes old cannot be taken again.
-    expect(() => manager(leases, 'holder-c', startedAt + 60_001).acquire(KEY)).toThrow();
+    expect(() => manager(leases, 'holder-c', startedAt + 60_001).acquire(KEY)).toThrow(Error);
   });
 
   it('runs a fenced write when the holder still owns the key', async () => {
@@ -190,6 +190,6 @@ describe('SqliteLeaseStore', () => {
 
     await expect(
       leases.runFenced({ key: KEY, holderPid: 1, holderId: 'holder-a' }, async () => 'written', controller.signal),
-    ).rejects.toThrow();
+    ).rejects.toThrow(Error);
   });
 });

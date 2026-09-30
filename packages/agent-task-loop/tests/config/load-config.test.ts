@@ -60,7 +60,7 @@ describe('resolveConfigPath / loadConfig (JSON only, 3-step)', () => {
     const file = path.join(dir, 'cfg.ts');
     await writeFile(file, 'export default { feishu: {} }', 'utf8');
     try {
-      await expect(loadConfig(file)).rejects.toThrow();
+      await expect(loadConfig(file)).rejects.toThrow(Error);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

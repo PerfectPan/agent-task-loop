@@ -170,7 +170,7 @@ describe('GitHubIssuesTaskProvider', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/issues/7');
     const patch = fetchMock.mock.calls[1];
     expect((patch[1] as RequestInit).method).toBe('PATCH');
-    const body = JSON.parse(String((patch[1] as RequestInit).body));
+    const body = JSON.parse((patch[1] as RequestInit).body as string);
     // Old agent label dropped, P3 kept, new agent label added.
     expect(body.labels).toEqual(['P3', 'agent:claude']);
   });
@@ -190,7 +190,7 @@ describe('GitHubIssuesTaskProvider', () => {
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain('/repos/rivus/idea/issues');
-    const payload = JSON.parse(String((init as RequestInit).body));
+    const payload = JSON.parse((init as RequestInit).body as string);
     expect(payload.title).toBe('New feature');
     expect(payload.body).toContain('<!-- task-id: IDEA-901 -->');
     expect(payload.labels).toEqual(['agent:codex', 'P2']);
@@ -225,7 +225,7 @@ describe('GitHubIssuesTaskProvider', () => {
     const patch = fetchMock.mock.calls[1];
     expect(patch[0]).toContain('/issues/7');
     expect((patch[1] as RequestInit).method).toBe('PATCH');
-    expect(JSON.parse(String((patch[1] as RequestInit).body))).toEqual({ state: 'closed' });
+    expect(JSON.parse((patch[1] as RequestInit).body as string)).toEqual({ state: 'closed' });
   });
 
   it('does not close the issue on a non-terminal review state (待发布)', async () => {

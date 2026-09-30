@@ -12,6 +12,9 @@
     "build": "pnpm -r build",
     "changeset": "changeset",
     "check:moonbit-version": "node scripts/sync-moonbit-version.mjs --check",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint",
     "release": "pnpm build && changeset publish",
     "sync:moonbit-version": "node scripts/sync-moonbit-version.mjs",
     "test": "node --test tests/**/*.test.mjs && pnpm -r test && moon -C packages/agent-finder test",
@@ -22,9 +25,13 @@
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
     "@microsoft/api-extractor": "^7.58.8",
+    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.2.1",
     "@rslib/core": "^0.21.3",
     "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0"
+    "@types/react-dom": "^19.2.0",
+    "oxfmt": "0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2003"
   },
   "pnpm": {
     "packageExtensions": {

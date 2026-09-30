@@ -53,7 +53,6 @@ describe('CleanupService', () => {
       updateCleanupState: vi.fn(),
     };
     const exec = vi.fn().mockResolvedValue({ stdout: '' });
-    const removeDir = vi.fn().mockResolvedValue(undefined);
 
     const service = new CleanupService({
       config,

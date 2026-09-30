@@ -9,7 +9,7 @@ describe("@rivus/agent-finder-cli structure", () => {
     const cli = readFileSync(join(sourceRoot, "cli.ts"), "utf8");
 
     expect(cli.split("\n")).toHaveLength(5);
-    expect(cli).toContain('import { main } from "./main.js";');
+    expect(cli).toMatch(/import \{ main \} from ["']\.\/main\.js["'];/);
     expect(cli).toContain("runMain(main);");
   });
 

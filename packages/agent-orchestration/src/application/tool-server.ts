@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import type { McpServer as AcpMcpServer } from '@agentclientprotocol/sdk';
 import { McpServer, type RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -148,7 +148,7 @@ export class ToolServer {
         // wrapper, which reads the running turn's registration at call time.
         // (The Room tools' schemas and descriptions do not change per turn.)
         for (const client of clients) {
-          for (const [name, registered] of [...client.tools]) {
+          for (const [name, registered] of Array.from(client.tools)) {
             if (!next.tools.some(tool => tool.name === name)) {
               registered.remove();
               client.tools.delete(name);

@@ -1,4 +1,3 @@
-import React from "react";
 import { defineCommand } from "citty";
 import { render } from "ink";
 import { defaultRegistry } from "@rivus/agent-sessions";

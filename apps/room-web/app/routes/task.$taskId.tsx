@@ -22,7 +22,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
   return detail;
 }
 
-function hasValue(val: unknown): boolean {
+function hasValue(val: string | number | null | undefined): boolean {
   return val !== undefined && val !== null && String(val).trim() !== '';
 }
 

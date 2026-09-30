@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@perfectpan/lint-config/tsconfig/bundler.json",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    // Off until the existing code is migrated: turning them on reports 144
+    // (exactOptionalPropertyTypes) and 95 (noUncheckedIndexedAccess) errors
+    // that need case-by-case fixes rather than mechanical ones.
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
+  }
+}

@@ -10,7 +10,8 @@ export interface MentionAgent {
 }
 
 export interface MentionOption {
-  id: 'all' | RoomLabAgentId;
+  /** An agent id, or `'all'` for every member. */
+  id: RoomLabAgentId;
   label: string;
   description: string;
   /** Absent for `@all`, which is the room rather than a member. */

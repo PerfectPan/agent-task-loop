@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { lstat, readFile, readlink, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import os from 'node:os';
 import { Readable, Writable } from 'node:stream';
 import {

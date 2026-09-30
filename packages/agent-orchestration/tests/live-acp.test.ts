@@ -12,9 +12,7 @@ import { AcpConnector } from '../src/infrastructure/acp-connector';
  * when the adapters are not on PATH under these names.
  */
 const live = process.env.RIVUS_LIVE_ACP === '1';
-const watch = describe.skipIf(!live);
-
-watch('live ACP probes', () => {
+describe.skipIf(!live)('live ACP probes', () => {
   const cases: [string, AgentBinding][] = [
     ['claude', { command: process.env.RIVUS_LIVE_ACP_CLAUDE ?? 'claude-agent-acp' }],
     ['codex', { command: process.env.RIVUS_LIVE_ACP_CODEX ?? 'codex-acp' }],

@@ -1,6 +1,5 @@
 import type { RoomStreamStore } from './room-stream-store';
 import type { RoomUnitOfWork } from './room-unit-of-work';
-import type { AgentSessionId } from '../../agent-session/domain/model';
 import type {
   AdmitResult,
   AdmitRoomEvent,

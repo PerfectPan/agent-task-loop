@@ -203,7 +203,7 @@ class FakeRuntime implements RoomMemberRuntime {
     return {
       harness,
       end: async (result?: { stopReason?: string | null; error?: string }) => {
-        harness.hooks?.afterTurn?.({
+        void harness.hooks?.afterTurn?.({
           stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
           // `null` with no error is the runtime's watchdog, the only way a
           // turn ends as timeout; anything else ended as itself.
@@ -372,7 +372,7 @@ describe('room_dm', () => {
     expect((await eventsOf(h.store, PARENT))[0]).toMatchObject({ kind: 'human', wakeDepth: 0 });
 
     // @opencode passes.
-    (await h.runtime.activated(runtimeKey(PARENT, 'opencode'))).end();
+    void (await h.runtime.activated(runtimeKey(PARENT, 'opencode'))).end();
     await h.turnLog.waitFor(1);
 
     // @claude opens the private room instead of speaking; the dm does not
@@ -482,7 +482,7 @@ describe('room_dm', () => {
       .handler({ body: '对完了', addressedTo: [] }, { sessionId: undefined });
     await codexInChild.end();
     await h.turnLog.waitFor(2);
-    (await h.runtime.activated(runtimeKey(PARENT, 'opencode'))).end();
+    void (await h.runtime.activated(runtimeKey(PARENT, 'opencode'))).end();
     await h.turnLog.waitFor(3);
 
     // The log for round 1 now holds two parent turns and one child turn. A

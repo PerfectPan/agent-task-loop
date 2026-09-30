@@ -62,7 +62,7 @@ function fakeGitHub(seed: FakeIssue[]) {
     const patch = pathname.match(/\/issues\/(\d+)$/);
     if (method === 'PATCH' && patch) {
       const number = Number(patch[1]);
-      const body = JSON.parse(String(init?.body ?? '{}')) as { state?: 'open' | 'closed' };
+      const body = JSON.parse((init?.body as string | undefined) ?? '{}') as { state?: 'open' | 'closed' };
       const current = byNumber.get(number);
       if (current && body.state) {
         byNumber.set(number, { ...current, state: body.state });

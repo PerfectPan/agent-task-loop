@@ -11,7 +11,7 @@ describe('claudeAdapter', () => {
 
   it('passes a stable session name and reports the parsed session id', async () => {
     const base = await import('../../src/adapters/base');
-    vi.mocked(base.runAgentCommand).mockImplementation(async (_command, args, _env, _cwd, _onSpawn, _onHeartbeat, onOutput) => {
+    vi.mocked(base.runAgentCommand).mockImplementation(async (_command, _args, _env, _cwd, _onSpawn, _onHeartbeat, onOutput) => {
       onOutput?.('{"type":"system","subtype":"init","session_id":"sess-123"}\n');
       onOutput?.('{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"Working..."}}}\n');
       return {

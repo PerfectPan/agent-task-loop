@@ -29,7 +29,7 @@ export async function isLarkCliAvailable(): Promise<boolean> {
 
 export async function discoverRunnableAgents(): Promise<Record<string, AgentEntry>> {
   const { collectHostProbe, discover } = await import('@rivus/agent-finder-core');
-  const probe = await collectHostProbe();
+  const probe = collectHostProbe();
   const report = discover(probe);
   const agents: Record<string, AgentEntry> = {};
   for (const agent of report.agents) {

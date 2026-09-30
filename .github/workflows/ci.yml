@@ -41,6 +41,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm format:check
+
       - run: pnpm check:moonbit-version
 
       - run: pnpm test
@@ -48,3 +50,7 @@ jobs:
       - run: pnpm build
 
       - run: pnpm typecheck
+
+      # Type-aware lint resolves workspace packages through their built `dist` types
+      # and room-web through the route types `pnpm typecheck` generates.
+      - run: pnpm lint

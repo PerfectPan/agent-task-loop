@@ -106,7 +106,7 @@ describe('AcpConnector', () => {
     controller.abort();
     await expect(
       connection.prompt(session, [{ type: 'text', text: 'too late' }], controller.signal),
-    ).rejects.toThrow();
+    ).rejects.toThrow(Error);
     expect(agent()?.prompts).toHaveLength(0);
     await connection.close();
   });
@@ -121,7 +121,7 @@ describe('AcpConnector', () => {
     controller.abort();
     // The SDK hands the abort reason through; what matters is that the
     // promise ends at all once the grace runs out.
-    await expect(turn).rejects.toThrow();
+    await expect(turn).rejects.toThrow(Error);
     expect(agent()?.cancels).toHaveLength(1);
     await connection.close();
   });

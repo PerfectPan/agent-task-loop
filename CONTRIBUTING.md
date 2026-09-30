@@ -49,11 +49,25 @@ gh repo-checks pr-body pr-body.md
 
 # Install and CI gates:
 pnpm install --frozen-lockfile
+pnpm format:check
 pnpm check:moonbit-version
 pnpm test
 pnpm build
 pnpm typecheck
+pnpm lint
 ```
+
+`pnpm format` applies the formatting. `pnpm lint` is type-aware: it resolves workspace packages through their built `dist` types and room-web through the route types that `pnpm typecheck` generates, so run it after `pnpm build` and `pnpm typecheck`.
+
+### Lint, Format, And TypeScript Config
+
+Shared rules come from [`@perfectpan/lint-config`](https://github.com/PerfectPan/lint-config), installed as a git dependency pinned to a tag. This repository keeps only its own settings:
+
+- `.oxlintrc.json` extends the shared oxlint config and adds ignore paths, `vitest/valid-expect` with a message argument, and test-only overrides. `vitest/require-mock-type-parameters` is off until the existing untyped mocks are migrated.
+- `oxfmt.config.ts` spreads the shared oxfmt options and keeps single quotes and trailing commas, the style most existing code used.
+- `tsconfig.base.json` extends the shared `bundler` tsconfig; every package and `apps/room-web` extend it and add only their own `jsx`, `types`, `outDir`, and `include`. `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` stay off until the existing code is migrated. `apps/web` keeps the Next.js tsconfig.
+
+Upgrade the shared rules by bumping the tag in `package.json`, then fix or explicitly override what the new release reports.
 
 For package-facing changes, also run `pnpm changeset status` and the `npm pack --dry-run` check in [Pull Request Expectations](#pull-request-expectations).
 

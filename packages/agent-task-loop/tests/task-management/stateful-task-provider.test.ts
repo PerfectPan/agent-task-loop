@@ -14,7 +14,7 @@ class MemStore implements TaskStateStore {
     return this.data.get(this.key(s, r));
   }
   merge(s: string, r: string, p: RuntimeTaskState) {
-    this.data.set(this.key(s, r), { ...(this.data.get(this.key(s, r)) ?? {}), ...p });
+    this.data.set(this.key(s, r), { ...this.data.get(this.key(s, r)), ...p });
   }
   clear(s: string, r: string) {
     this.data.delete(this.key(s, r));

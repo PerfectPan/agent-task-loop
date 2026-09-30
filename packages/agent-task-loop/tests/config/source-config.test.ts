@@ -17,8 +17,8 @@ describe('addGitHubRepo scaffolding', () => {
     expect(cfg.projects?.['r']).toMatchObject({ key: 'r', defaultRepository: 'o/r' });
     expect(cfg.repositories?.['o/r']).toMatchObject({ key: 'o/r', defaultBranch: 'main', workspaceStrategy: 'worktree' });
     // localPath/workspaceRoot are CHANGE_ME placeholders the user must replace.
-    expect((cfg.repositories?.['o/r'] as { localPath: string }).localPath).toContain('CHANGE_ME');
-    expect((cfg.projects?.['r'] as { workspaceRoot: string }).workspaceRoot).toContain('CHANGE_ME');
+    expect((cfg.repositories!['o/r'] as { localPath: string }).localPath).toContain('CHANGE_ME');
+    expect((cfg.projects!['r'] as { workspaceRoot: string }).workspaceRoot).toContain('CHANGE_ME');
   });
 
   it('does not clobber an existing project/repository entry', () => {
@@ -28,8 +28,8 @@ describe('addGitHubRepo scaffolding', () => {
       repositories: { 'o/r': { key: 'o/r', localPath: '/real', defaultBranch: 'main', installCommand: 'x', testCommand: 'x', buildCommand: 'x', workspaceStrategy: 'worktree' } },
     };
     const cfg = addGitHubRepo(seeded, { owner: 'o', repo: 'r' });
-    expect((cfg.repositories?.['o/r'] as { localPath: string }).localPath).toBe('/real');
-    expect((cfg.projects?.['r'] as { name: string }).name).toBe('mine');
+    expect((cfg.repositories!['o/r'] as { localPath: string }).localPath).toBe('/real');
+    expect((cfg.projects!['r'] as { name: string }).name).toBe('mine');
   });
 });
 

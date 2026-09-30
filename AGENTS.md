@@ -10,6 +10,7 @@ This repository is intended to be public. Treat every change as if it may be rea
 - Do not add internal company domains, private repository names, private tokens, or personal filesystem paths.
 - Use `rg` for searches when available.
 - Update tests and documentation when behavior changes.
+- Lint, format, and TypeScript rules come from `@perfectpan/lint-config` (a git dependency pinned to a tag). Keep only repository-specific settings in `.oxlintrc.json`, `oxfmt.config.ts`, and `tsconfig.base.json`; extend the shared configs instead of copying them.
 
 ## Project Commands
 
@@ -29,10 +30,12 @@ gh repo-checks pr-body pr-body.md
 
 # Install, then the CI gates:
 pnpm install --frozen-lockfile
+pnpm format:check   # `pnpm format` rewrites files
 pnpm check:moonbit-version
 pnpm test
 pnpm build
 pnpm typecheck
+pnpm lint           # after build and typecheck
 
 # Release checks:
 pnpm changeset status

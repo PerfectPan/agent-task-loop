@@ -111,6 +111,12 @@ export interface RoomServiceOptions {
    * the turns their members already spent on it.
    */
   childRooms?: () => readonly string[];
+  /**
+   * A child room's service, so a reset clears children the same way it
+   * clears this room — record, cursors, log, running turns — rather than
+   * only their turn rows. The host wires it; tests may stub it.
+   */
+  resetChild?: (roomId: string) => { reset(): Promise<unknown> } | undefined;
 }
 
 /**
@@ -232,7 +238,11 @@ export class RoomService {
 
     let hosted: HostedTools | undefined;
     if (this.options.toolHost) {
-      const isOpen = () => this.openTurns.get(agentId) === turn;
+      // Closed the moment the turn ends — or the moment a reset invalidates
+      // it: an invalidated turn must not speak, read or dm into the record
+      // that replaced the one it was running against. The gate is also the
+      // tool endpoint's authorize, so all three tools close together.
+      const isOpen = () => this.openTurns.get(agentId) === turn && !turn.invalidated;
       const tools: ToolDefinition[] = [
         roomSpeakTool(turn.handle, {
           isOpen,
@@ -460,9 +470,10 @@ export class RoomService {
   }
 
   /**
-   * Clears the record, the cursors, the turn log and the round bookkeeping,
-   * and stops the turns still running against the old record. Seating and
-   * settings are kept.
+   * Clears the record, the cursors, the turn log and the round bookkeeping —
+   * this room's and, via the host's wiring, its children's — and stops the
+   * turns still running against the old record. Seating and settings are
+   * kept.
    */
   async reset(): Promise<RoomView> {
     // A turn still running speaks or passes against a record that is about to
@@ -475,11 +486,15 @@ export class RoomService {
       );
     }
     this.options.store.clear();
-    // The log describes the record; a round spans its children, so their rows
-    // describe this room's rounds and go with it.
     this.options.turnLog.clear(this.homeRoomId);
+    // A round spans its children: a child reset halfway — rows gone, record
+    // kept — leaves its turns charging this room through dm roots whose seqs
+    // the new record will reuse. Each child resets whole: record, cursors,
+    // log, its own running turns, its own children.
     for (const childId of this.options.childRooms?.() ?? []) {
-      this.options.turnLog.clear(childId);
+      const child = this.options.resetChild?.(childId);
+      if (child) await child.reset();
+      else this.options.turnLog.clear(childId);
     }
     this.rounds.clear();
     this.budgetNotices.clear();
@@ -517,13 +532,18 @@ export class RoomService {
       wanted = wanted.filter(memberId => event.addressedTo.includes(memberId));
     }
     if (settings.serial) {
-      // One entry per member: a post that dispatches while its woken set is
-      // still queued collapses, the way a wake collapses in the runtime's
-      // inbox. The entry keeps the round it was dispatched for — the budget
-      // it charges is the round's, not whichever round the record has reached
-      // by the time its turn starts.
+      // One wake per member: a member already queued for an earlier round has
+      // not run yet, so its single activation will read both rounds'
+      // messages — the entry is re-tagged to the newer round it was
+      // dispatched for, which is also the budget it charges. Without the
+      // re-tag, a dedupe by member alone would leave the newer round's wake
+      // inside an entry that dies with the older round's budget.
       for (const memberId of wanted) {
-        if (this.serialQueue.some(entry => entry.agentId === memberId)) continue;
+        const queued = this.serialQueue.find(entry => entry.agentId === memberId);
+        if (queued) {
+          queued.round = round;
+          continue;
+        }
         this.serialQueue.push({ round, agentId: memberId });
       }
       this.wakeNextInQueue();
@@ -821,7 +841,14 @@ function cwdPermissionPolicy(cwd: string): PermissionPolicy {
       .map(location => location.path)
       .filter((value): value is string => typeof value === 'string');
     const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
-    const outside = paths.some(candidate => !isInside(root, resolvedTarget(candidate)));
+    // A relative path would resolve against this server's cwd — a place the
+    // room never named — and a chain the walker gives up on is exactly where
+    // the OS would follow it out of the root; both are denied.
+    const outside = paths.some(candidate => {
+      if (!path.isAbsolute(candidate)) return true;
+      const resolved = resolvedTarget(candidate);
+      return resolved === undefined || !isInside(root, resolved);
+    });
     const wanted = outside || (writeKind && paths.length === 0)
       ? ['reject_once', 'reject_always']
       : ['allow_once', 'allow_always'];
@@ -834,8 +861,11 @@ function cwdPermissionPolicy(cwd: string): PermissionPolicy {
 }
 
 function isInside(root: string, target: string): boolean {
-  const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  const within = path.relative(root, target);
+  // `..` and `..`-prefixed components only: a name that merely starts with
+  // two dots (`..foo`) is an ordinary in-root name.
+  return within === ''
+    || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
 }
 
 function realPathOf(target: string): string | undefined {
@@ -851,11 +881,12 @@ function realPathOf(target: string): string | undefined {
  * walked and each link followed, so a link that lives inside the root but
  * points out is judged by where it points. Past the first component that
  * does not exist nothing below can exist either — there is no link left to
- * hide in — so the rest hangs off the last real directory as written. A
- * path that cannot be resolved at all is itself the answer, and the caller
- * compares it against the root.
+ * hide in — so the rest hangs off the last real directory as written.
+ * Returns undefined when the walk gives up: an unreadable link, or a chain
+ * long enough to be a loop — the caller denies, because handing such a path
+ * to the OS is exactly how it would follow the rest of the way out.
  */
-function resolvedTarget(target: string): string {
+function resolvedTarget(target: string): string | undefined {
   let current = path.resolve(target);
   for (let hops = 0; hops < 40; hops += 1) {
     const parts = current.split(path.sep);
@@ -879,7 +910,7 @@ function resolvedTarget(target: string): string {
       try {
         linkTarget = readlinkSync(next);
       } catch {
-        return next;
+        return undefined;
       }
       // The link's own target may hold links of its own: walk it next pass,
       // with the rest of the original path hanging off it.
@@ -893,7 +924,7 @@ function resolvedTarget(target: string): string {
     }
     if (!followed) return walked;
   }
-  return current;
+  return undefined;
 }
 
 function defaultWorkRoot(): string {

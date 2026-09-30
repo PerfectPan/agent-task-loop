@@ -356,6 +356,7 @@ export class RoomLabHost {
       childRooms: () => this.catalog.list()
         .filter(room => room.parentRoomId === roomId)
         .map(room => room.id),
+      resetChild: id => this.open(id),
     });
     this.services.set(roomId, service);
     return service;

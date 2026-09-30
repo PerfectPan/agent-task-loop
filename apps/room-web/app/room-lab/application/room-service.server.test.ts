@@ -1,4 +1,4 @@
-import { mkdtempSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -766,6 +766,30 @@ describe('RoomService turns', () => {
     expect(h.runtime.wakes).toHaveLength(4);
   });
 
+  it('re-tags a queued member to the newer round, so an exhausted round cannot drop its wake', async () => {
+    const h = build({ manual: true, settings: { serial: true, roundBudget: 2 } });
+    await h.service.sendMessage('第一轮');
+    expect(h.runtime.wakes).toEqual([keyOf('claude')]);
+    const claude = await h.runtime.activated(keyOf('claude'));
+
+    // Round 2 while claude still runs: codex and opencode are queued for
+    // round 1, and their entries take the newer round's tag.
+    await h.service.sendMessage('第二轮');
+    await claude.end();
+
+    // Round 1's budget holds only claude's wake. The queue walks on into
+    // round 2: both queued members run, and opencode sees message 2.
+    const codex = await h.runtime.activated(keyOf('codex'));
+    await codex.end();
+    const opencode = await h.runtime.activated(keyOf('opencode'));
+    await opencode.end();
+    expect(h.runtime.wakes).toEqual([
+      keyOf('claude'),
+      keyOf('codex'),
+      keyOf('opencode'),
+    ]);
+  });
+
   it('logs an activation that failed before it was a turn and keeps the serial queue moving', async () => {
     const h = build({ manual: true, settings: { serial: true } });
     await h.service.sendMessage('报数');
@@ -841,6 +865,29 @@ describe('RoomService turns', () => {
     expect(noLocations).toEqual({ outcome: 'selected', optionId: 'reject-once' });
     const bareExecute = await ask({ toolCallId: 'c5', kind: 'execute' });
     expect(bareExecute).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+
+    // A name that starts with two dots is an ordinary in-root name, not a
+    // parent hop; a relative path names no place the room gave; a chain of
+    // links longer than the walker follows is denied rather than handed to
+    // the OS to finish.
+    writeFileSync(join(claude.harness.cwd, '..dots.md'), 'x', 'utf8');
+    const dotDots = await ask({
+      toolCallId: 'c6',
+      kind: 'edit',
+      locations: [{ path: join(claude.harness.cwd, '..dots.md') }],
+    });
+    expect(dotDots).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+    const relative = await ask({ toolCallId: 'c7', kind: 'edit', locations: [{ path: 'note.md' }] });
+    expect(relative).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    const chainEnd = mkdtempSync(join(tmpdir(), 'rivus-chain-end-'));
+    let chainLink: string = join(chainEnd, 'far.md');
+    for (let index = 0; index < 45; index += 1) {
+      const next = join(claude.harness.cwd, `l${index}`);
+      symlinkSync(chainLink, next);
+      chainLink = next;
+    }
+    const viaChain = await ask({ toolCallId: 'c8', kind: 'edit', locations: [{ path: chainLink }] });
+    expect(viaChain).toEqual({ outcome: 'selected', optionId: 'reject-once' });
 
     await claude.end();
   });
@@ -1059,11 +1106,20 @@ describe('RoomService truncated inbox', () => {
 describe('RoomService reset', () => {
   const RESET_ROOM = 'r_deadbeef00';
 
-  async function buildOnSqlite(roundBudget: number): Promise<{
+  interface SqliteOptions {
+    /** The child rooms the host would list, and how it would open them. */
+    childRooms?: () => readonly string[];
+    resetChild?: (roomId: string) => { reset(): Promise<unknown> } | undefined;
+  }
+
+  async function buildOnSqlite(roundBudget: number, options: SqliteOptions = {}): Promise<{
     store: SqliteRoomStore;
     turnLog: SqliteTurnLog;
     service: RoomService;
     wakes: string[];
+    /** The Room tool definitions of each activation, in activation order. */
+    tools: ToolDefinition[][];
+    toolOf(agentId: string, name: string): ToolDefinition;
   }> {
     const store = SqliteRoomStore.memory();
     const catalog = new RoomCatalog([], undefined, store.agents);
@@ -1076,6 +1132,8 @@ describe('RoomService reset', () => {
     store.saveRoom(catalog.get(RESET_ROOM));
     const turnLog = new SqliteTurnLog(store.db);
     const wakes: string[] = [];
+    const tools: ToolDefinition[][] = [];
+    const toolsByAgent = new Map<string, ToolDefinition[]>();
     const service = new RoomService({
       roomId: { tenantId: 'local', conversationId: RESET_ROOM },
       store: store.stream(RESET_ROOM),
@@ -1096,8 +1154,31 @@ describe('RoomService reset', () => {
       settings: () => ({ wake: 'broadcast', serial: false, roundBudget }),
       roomTitle: () => '重置房间',
       workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-reset-')),
+      toolHost: async ({ agentId, tools: definitions }) => {
+        tools.push(definitions);
+        toolsByAgent.set(agentId, definitions);
+        return {
+          endpoint: {} as unknown as McpServer,
+          url: 'http://127.0.0.1:0/mcp',
+          serveTurn: () => undefined,
+          close: async () => {},
+        };
+      },
+      ...(options.childRooms ? { childRooms: options.childRooms } : {}),
+      ...(options.resetChild ? { resetChild: options.resetChild } : {}),
     });
-    return { store, turnLog, service, wakes };
+    return {
+      store,
+      turnLog,
+      service,
+      wakes,
+      tools,
+      toolOf: (agentId, name) => {
+        const found = toolsByAgent.get(agentId)?.find(definition => definition.name === name);
+        if (!found) throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+        return found;
+      },
+    };
   }
 
   it('clears the log and the budget with the record, and stops the turns still running', async () => {
@@ -1138,5 +1219,51 @@ describe('RoomService reset', () => {
     // again under the same limit that had just been spent.
     await service.sendMessage('第二轮', 'web:reset-2');
     expect(wakes.slice(2)).toEqual([runtimeKey(RESET_ROOM, 'claude'), runtimeKey(RESET_ROOM, 'codex')]);
+  });
+
+  it('closes the Room tools of a turn the reset invalidated', async () => {
+    const { store, service, toolOf } = await buildOnSqlite(12);
+    await service.sendMessage('第一轮', 'web:reset-tools-1');
+    const codex = await service.activate('codex');
+    const speak = toolOf('codex', 'room_speak');
+
+    // The reset invalidates the turn; the person's next message reopens the
+    // record. The tool definitions the activation hosted still exist — the
+    // endpoint outlives the turn — so the gate is what has to hold.
+    await service.reset();
+    await service.sendMessage('第二轮', 'web:reset-tools-2');
+    await expect(
+      speak.handler({ body: '迟到的发言', addressedTo: [] }, { sessionId: undefined }),
+    ).resolves.toEqual({ error: 'turn-closed' });
+    // The new record holds only the person's message: nothing posted into it.
+    const events = await store.stream(RESET_ROOM)
+      .readSlice({ tenantId: 'local', conversationId: RESET_ROOM }, 0, { maxEvents: 10 });
+    expect(events.events.map(event => event.kind)).toEqual(['human']);
+    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+  });
+
+  it('resets child rooms whole when the host wires them, and falls back to clearing their rows', async () => {
+    const childReset = vi.fn(async () => undefined);
+    const wired = await buildOnSqlite(12, {
+      childRooms: () => ['r_feedface00'],
+      resetChild: () => ({ reset: childReset }),
+    });
+    await wired.service.sendMessage('第一轮', 'web:reset-child-1');
+    await wired.service.reset();
+    expect(childReset).toHaveBeenCalledTimes(1);
+
+    // Without the wiring, the child's turn rows still go with the reset.
+    const plain = await buildOnSqlite(12, { childRooms: () => ['r_feedface00'] });
+    plain.store.db.prepare(`
+      INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
+      VALUES ('r_feedface00', '子房间', NULL, '2026-09-30T00:00:00.000Z', '2026-09-30T00:00:00.000Z', '2026-09-30T00:00:00.000Z')
+    `).run();
+    plain.turnLog.append({
+      id: 'turn:child', roomId: 'r_feedface00', agentId: 'claude', roundSeq: 1,
+      triggerSeq: 1, readUpToSeq: 1, startedAt: '2026-09-30T00:00:00.000Z',
+      outcome: 'passed', heldCount: 0,
+    });
+    await plain.service.reset();
+    expect(plain.turnLog.listByRoom('r_feedface00')).toEqual([]);
   });
 });

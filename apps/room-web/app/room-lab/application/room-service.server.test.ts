@@ -377,7 +377,7 @@ class ChainRuntime implements RoomMemberRuntime {
       const harness = await this.service!.activate(agentId);
       const speak = this.toolOf!(agentId, 'room_speak');
       const read = this.toolOf!(agentId, 'room_read');
-      // The RFC's HELD rule: a held speak reads the newer events and decides
+      // The HELD rule: a held speak reads the newer events and decides
       // again inside the same turn, until it posts, passes, or the tool closes.
       const readBodies: string[] = [];
       for (let attempt = 0; attempt <= HELD_LIMIT; attempt += 1) {
@@ -931,7 +931,7 @@ describe('RoomService pass cursor', () => {
   /**
    * One activation, run the way the runtime runs it: lease in, harness, the
    * afterTurn hook's promise awaited, lease out — the activation order the
-   * RFC fixes.
+   * design fixes.
    */
   async function runTurn(
     h: Built,

@@ -1,4 +1,4 @@
-/** Real product content, sourced from the repo README, RFCs and CLI surface. */
+/** Real product content, sourced from the repo README, docs and CLI surface. */
 
 export const FEATURES = [
   {

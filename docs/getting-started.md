@@ -7,7 +7,7 @@ Agent Task Loop runs local coding agents through a task lifecycle: pick a task, 
 - Node.js 20 or newer
 - pnpm
 - GitHub CLI authenticated with access to the target repository
-- `lark-cli` configured for Feishu Base access
+- `lark-cli` configured for Feishu Base access, when using a Feishu source
 - At least one local coding agent command, such as `codex` or `claude`
 
 ## Install
@@ -33,13 +33,13 @@ npx @rivus/agent-task-loop --help
 
 ## First Run
 
-1. Copy the example config.
+1. Create the global config.
 
    ```bash
-   cp packages/agent-task-loop/task.config.example.ts task.config.ts
+   npx --no-install @rivus/agent-task-loop init
    ```
 
-2. Edit `task.config.ts` with your Feishu Base table, repository, workspace root, and local agent commands.
+2. Edit `~/.agent-task-loop/config.json` with your projects, repositories, and local agent commands. See [configuration.md](./configuration.md).
 
 3. Check that the config can be loaded.
 
@@ -47,7 +47,7 @@ npx @rivus/agent-task-loop --help
    npx --no-install @rivus/agent-task-loop sync
    ```
 
-4. Check the Feishu Base table schema.
+4. For a Feishu source, check the Base table schema.
 
    ```bash
    npx --no-install @rivus/agent-task-loop schema

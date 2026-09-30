@@ -316,7 +316,7 @@ describe('sqlite Room persistence', () => {
       at: '2026-09-06T01:01:00.000Z',
     }]));
     // A legacy directory's workspace.json is not imported: every field it held
-    // moved elsewhere or went with the count-off (RFC 0015 Storage).
+    // moved elsewhere or went with the count-off (docs/architecture/agent-collaboration.md).
     writeFileSync(join(root, 'rooms', 'r_aaaaaaaaaa', 'workspace.json'), JSON.stringify({
       countOff: { runId: 'COUNT-001', status: 'completed' },
     }));

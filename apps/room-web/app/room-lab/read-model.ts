@@ -37,7 +37,7 @@ export interface RoomLabEventView {
 }
 
 /**
- * What one probe of a row's command answers (RFC 0015): the process did not
+ * What one probe of a row's command answers (docs/architecture/agent-collaboration.md): the process did not
  * start, it started but must be logged into, or it opened a session.
  */
 export type AgentProbeStatus = 'missing' | 'needs-login' | 'ready';
@@ -69,7 +69,7 @@ export interface RoomAgentProbeItem {
 }
 
 /**
- * A member's state as the person scans it (RFC 0015). It is derived from the
+ * A member's state as the person scans it (docs/architecture/agent-collaboration.md). It is derived from the
  * lease, the ACP update stream and the last row in `turns` — never stored as
  * truth, and HELD is not shown: it happens inside a turn and resolves there.
  */

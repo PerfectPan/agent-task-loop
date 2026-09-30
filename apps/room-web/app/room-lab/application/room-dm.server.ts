@@ -8,7 +8,7 @@ import type { RoomRecordStore, RoomRound } from './ports';
  * The message id prefix of a dm post, and the round it names. The id is the
  * only trace of a private room's opening that survives inside the child's
  * record, so it carries the round's home: every event under it — this restart
- * included — resolves its round, and charges its budget, there (RFC 0015: a
+ * included — resolves its round, and charges its budget, there (docs/architecture/agent-collaboration.md: a
  * round spans the private rooms opened inside it). The record stamps the seq,
  * which is why the parse reads five parts.
  */
@@ -53,7 +53,7 @@ export interface RoomDmDeps {
 }
 
 /**
- * The `room_dm` write path (RFC 0015 Private rooms): find or open the child
+ * The `room_dm` write path (private rooms, docs/architecture/agent-collaboration.md): find or open the child
  * room the caller shares with one peer, post the body there at the trigger's
  * depth plus one, addressed to the peer so either wake mode reaches exactly
  * the other member, then let the child's dispatcher wake them. The post does

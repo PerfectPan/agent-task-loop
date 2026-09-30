@@ -32,8 +32,8 @@ interface HeldRun {
 }
 
 /**
- * The Task pipeline's run baton, taken over from the control plane in RFC 0015
- * S2. Seat turn-taking is this package's own concern; the lease behind every
+ * The Task pipeline's run baton, moved here from the control plane. Seat
+ * turn-taking is this package's own concern; the lease behind every
  * `open`, `heartbeat`, `fence` and `release` is the control plane's
  * `LeaseManager`.
  */

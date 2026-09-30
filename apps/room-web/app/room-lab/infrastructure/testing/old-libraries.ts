@@ -43,7 +43,7 @@ export function createVersionTwoLibrary(
 }
 
 /**
- * A library at version 3: prompts are columns, and nothing RFC 0015 added yet.
+ * A library at version 3: prompts are columns, and nothing the control plane added yet.
  * This is the shape every library this project shipped before the control
  * plane — the state the migration tests stand in for the real
  * `rooms.sqlite` on a machine that has one.

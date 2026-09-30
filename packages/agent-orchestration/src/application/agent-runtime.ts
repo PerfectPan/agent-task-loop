@@ -50,7 +50,7 @@ export interface AgentRuntimeOptions {
   clock?: Clock;
   scheduler?: IntervalScheduler;
   heartbeatIntervalMs?: number;
-  /** Used when the agent row has no `timeoutMs`. RFC 0015 bounds: 10 minutes. */
+  /** Used when the agent row has no `timeoutMs`. The collaboration design bounds a turn at 10 minutes. */
   defaultTimeoutMs?: number;
 }
 
@@ -65,7 +65,7 @@ interface InboxRecord extends Inbox {
 }
 
 /**
- * The actor-model scheduler between the endpoint and the agents (RFC 0015):
+ * The actor-model scheduler between the endpoint and the agents (docs/architecture/agent-collaboration.md):
  * `wake` never blocks the caller, an activation acquires the lease, reuses or
  * starts the process and the session, asks `onActivate` for the Harness,
  * applies the profile, prompts, runs `afterTurn` and releases. A timeout
@@ -281,7 +281,7 @@ export class AgentRuntime {
     } finally {
       if (timeoutHandle) this.scheduler.clearInterval(timeoutHandle);
       unwire.forEach((unsubscribe) => unsubscribe());
-      // RFC 0015's activation order — prompt, afterTurn, release. The
+      // The activation order — prompt, afterTurn, release. The
       // endpoint's afterTurn writes fenced under this lease (the pass's
       // cursor write among them), so the release waits for it and the
       // heartbeat keeps the lease fresh meanwhile; releasing first is how a

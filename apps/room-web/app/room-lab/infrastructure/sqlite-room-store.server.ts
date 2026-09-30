@@ -232,7 +232,7 @@ export class SqliteRoomStore {
     );
   }
 
-  /** The record and its write points for one room (RFC 0015). */
+  /** The record and its write points for one room (docs/architecture/agent-collaboration.md). */
   stream(roomId: string): SqliteRoomStreamStore {
     const id: RoomId = { tenantId: TENANT, conversationId: roomId };
     return new SqliteRoomStreamStore(this.db, id);
@@ -298,7 +298,7 @@ export class SqliteRoomStore {
    * The one-time import of a pre-sqlite room: its event file and its session
    * cursors, read raw and written raw. The workspace snapshot a legacy
    * directory may also carry is not imported — every field it held moved
-   * elsewhere or went with the count-off (RFC 0015 Storage).
+   * elsewhere or went with the count-off (docs/architecture/agent-collaboration.md).
    */
   private importLegacyRoom(roomId: string, directory: string): void {
     const events = readJson<RoomEvent[]>(join(directory, 'events.json'), []);

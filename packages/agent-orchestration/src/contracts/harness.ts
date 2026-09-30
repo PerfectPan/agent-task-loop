@@ -23,7 +23,7 @@ export interface Harness {
     onToolCall?(call: ToolCall): 'allow' | 'deny';
     /**
      * The runtime awaits a returned promise before it releases the lease, so
-     * the turn's fenced writes land inside the held window (RFC 0015: prompt,
+     * the turn's fenced writes land inside the held window (docs/architecture/agent-collaboration.md: prompt,
      * afterTurn, release).
      */
     afterTurn?(result: TurnResult): void | Promise<void>;

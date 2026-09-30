@@ -4,7 +4,7 @@ Tool-agnostic coding-agent **session** discovery and transcript parsing, shared
 by `agent-finder-cli` (standalone, cross-tool browsing) and `agent-task-loop`
 (task-linked TUI). Internal package — bundled into consumers, not published.
 
-See the design in [`docs/plans/issue-25-shared-sessions.md`](../../docs/plans/issue-25-shared-sessions.md).
+See [`docs/architecture/agent-sessions.md`](../../docs/architecture/agent-sessions.md).
 
 ## Status
 
@@ -32,8 +32,13 @@ Implemented:
 - `SessionRegistry` — aggregates providers: `list` merges newest-first,
   `getTranscript` / `resumeCommand` delegate to the owning provider.
   `defaultRegistry()` wires Codex + Claude.
-- `resumeCommand` returns `null` by default; verified per-tool resume commands
-  are wired in P5 (not guessed).
+- `resumeCommand` returns `null` unless the provider is given a verified
+  per-tool resume command.
 
-Still to come (see the plan): `agent-task-loop` composing this core (P3), the
-browsing TUI (P4), resume (P5). OpenCode stays behind `SPIKE-OC` (SQLite).
+**Consumers**
+- `agent-task-loop`'s TUI composes this core (`toLines()`).
+- `agent-finder-cli sessions` browses, lists, inspects, and prints resume
+  commands (Codex `codex resume <id>`, Claude `claude --resume <id>`).
+
+Not yet: OpenCode (SQLite store) and higher-fidelity traces, tracked in
+[`specs/0016-opencode-sessions-and-trace-fidelity.md`](../../specs/0016-opencode-sessions-and-trace-fidelity.md).

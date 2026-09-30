@@ -41,9 +41,11 @@ Stores nothing; exposes ports and a memory implementation.
 | `pass({ readUpToSeq })` | a turn ending without a post | Move the cursor; never HELD |
 | `speak` with `origin: 'control-plane'` | endpoint, for a notice such as the round budget | Append a control-plane event, which wakes nobody |
 
-HELD resolves inside the turn: the member reads the newer events and either
-speaks again with a later `readUpToSeq` or ends the turn. Three HELD results in
-one turn close the tool and the turn ends as a pass.
+HELD resolves inside the turn, but a HELD answer does not advance the turn's
+`readUpToSeq`. The member must call `room_read` to read what it missed; only a
+read that continues from the cursor moves it (`room-tools.server.ts`). A
+`room_speak` without that read is HELD again. The third HELD in one turn closes
+the tool (`held-limit`), and the turn ends as a pass.
 
 Wake rule: a control-plane event wakes nobody, an event never wakes its own
 author, and an event at or above the room's depth ceiling wakes nobody.
@@ -75,8 +77,12 @@ Its noun is the Agent; it never hears about rooms and owns no database.
 - `AcpConnector` (`./acp` entry) on `@agentclientprotocol/sdk`, with profiles
   for `claude-agent-acp`, `codex-acp`, and `opencode acp`. The claude profile
   passes the system prompt through `_meta.systemPrompt`; agents without such a
-  channel get it as the first block. The default permission policy allows
-  writes inside `cwd` and denies them outside.
+  channel get it as the first block. The connector has no permission policy
+  of its own: without a `permissionHandler` it answers every permission
+  request `cancelled` (`acp-connector.ts`). The client file system it
+  advertises (`fs/read_text_file`, `fs/write_text_file`) resolves every path
+  against the session's `cwd` and refuses anything outside it, symlinks
+  included.
 - `ToolServer` hosts the endpoint's tool definitions as one streamable-HTTP
   MCP endpoint on `127.0.0.1` per (room, agent) session, created at the first
   `session/new` (ACP carries `mcpServers` only there) and re-served on every
@@ -119,6 +125,14 @@ directory), with a forward-only migration chain in
   as four prompt blocks: the agent's system prompt, room facts (who you are,
   seat order, what woke you), the inbox one line per event, and the
   instruction to call `room_speak` once or end the turn silently.
+- Permission policy: each turn's Harness carries `cwdPermissionPolicy(cwd)`
+  (`room-service.server.ts`). It picks a reject option when the tool call
+  reports a location outside the room's `cwd` (paths resolved through
+  symlinks; relative or unresolvable paths count as outside), or when an
+  `edit`, `delete`, or `move` call reports no location at all. Every other
+  request gets an allow option. An `execute` call that reports no locations
+  is therefore allowed, so a shell command can still write outside `cwd`; the
+  policy only sees the locations the adapter reports.
 - Room tools: `room_speak({ body, addressedTo? })` returns `posted`, `held`
   with the newer events, or `turn-closed`, `already-spoke`, `held-limit`;
   `room_read({ afterSeq?, limit? })`; `room_dm({ to, body })` finds or opens
@@ -134,8 +148,23 @@ directory), with a forward-only migration chain in
   status is derived, never stored: 在场 (no lease), 阅读中 / 工作中 (lease
   held, before and after a tool call update), then the last outcome. HELD is
   not shown to the person.
-- Mutations require a same-origin JSON request, and every person-facing
-  string goes through `app/room-lab/copy.ts` and its grammar test.
+- Room mutations (`routes/room.$roomId.tsx`) require `Content-Type:
+  application/json` and an `Origin` of `http://127.0.0.1` or
+  `http://localhost` (`assertSameOriginJson`). The form actions for creating a
+  room (`routes/room._index.tsx`) and managing agents (`routes/room.agents.tsx`)
+  use `assertSameOriginForm`: no content-type check, and a request without an
+  `Origin` header is allowed because browsers omit it on some same-origin form
+  posts; a present `Origin` must be local. Every route also refuses to run
+  outside a local runtime (`assertLocalRuntime`).
+- Every person-facing string goes through `app/room-lab/copy.ts` and its
+  grammar test.
+- `passed`, `timeout`, and `failed` must stay distinct in the UI: silence and
+  failure look alike from outside, and each has its own status label
+  (`presentation/agent-status.ts`). The runtime reports `stopReason: null` both
+  when its watchdog ends a turn and when a prompt dies another way; the
+  `timedOut` flag on the turn result separates them. A null stop reason with an
+  error and no `timedOut` is recorded as `failed`, not `timeout`
+  (`room-service.server.ts`).
 
 A turn is never replayed on restart. A session lost to a restart is recreated
 on the next activation, which carries the member's unread events; only the

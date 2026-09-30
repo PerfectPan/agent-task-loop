@@ -72,16 +72,25 @@ otherwise lose them, breaking `resume`, `watch`, `complete`, and the TUI.
   stored keys onto the backend record: for a key present in the store the local
   value wins, including a cleared value; a key absent from the store falls back
   to the backend. Key presence, not `undefined`, decides.
-- `updateCleanupState` deletes the task's file, so reads fall back to the
-  backend afterwards. `buildTaskProvider` also prunes files older than 180 days
-  to bound orphans.
+- `updateCleanupState` does not delete the task's file. It merges a cleared
+  value for each transient run-time field (workspace and log paths, runner
+  pid/kind/agent/round, heartbeat, last error, review and acceptance verdicts
+  and feedback) and keeps the lifecycle `status`, result summary, PR link,
+  publish info, and session ids and history (`CLEANUP_CLEARED_STATE` in
+  `stateful-task-provider.ts`). Cleanup must never revert a finished task: on a
+  binary backend such as GitHub, dropping the stored `status` would make a
+  done task read as 待处理 again. `TaskStateStore.clear()` exists but nothing
+  in `src/` calls it; files leave the store only through the 180-day prune in
+  `buildTaskProvider`.
 
 Limits:
 
 - The store is machine-local. Resuming a GitHub task on another machine has no
   run-time state; agent transcripts are machine-local too.
-- Manual edits to run-time columns in the Feishu Base are overwritten by the
-  loop's next write for those fields.
+- For any run-time key the store holds, the local value shadows the Feishu
+  Base on read (`overlayRuntimeState` in `runtime-state.ts`): a manual edit of
+  such a column in the Base is not visible to the loop, and the loop's next
+  write for that field overwrites it.
 - The file store has no cross-process lock beyond atomic replace. Exclusive
   task runs rely on the task lease below.
 

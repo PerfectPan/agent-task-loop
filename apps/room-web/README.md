@@ -60,7 +60,9 @@ Open <http://127.0.0.1:3210/room>.
 
 Both development and production scripts bind to `127.0.0.1`; the production
 route is disabled unless it was started by the package's local-only script.
-Mutations also require a same-origin JSON request. This process starts locally
+Room mutations also require a JSON request from a local origin; the room
+creation and agent forms check only a present `Origin` (see
+[agent collaboration](../../docs/architecture/agent-collaboration.md)). This process starts locally
 authenticated CLI tools and must not be exposed through a proxy or public
 deployment.
 

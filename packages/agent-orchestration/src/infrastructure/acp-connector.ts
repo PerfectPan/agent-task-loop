@@ -169,7 +169,7 @@ export class AcpConnector implements AgentConnector {
       // The advertised fs is the session's cwd and nothing else: the handler
       // resolves the path against the root the session opened with, so an
       // agent cannot read or write through the client to somewhere the room
-      // never gave it (docs/architecture/agent-collaboration.md: writes stay inside the room's cwd).
+      // never gave it (docs/architecture/agent-collaboration.md: the client fs is confined to the session cwd).
       readTextFile: async (params) => {
         const path = await scopedPath(runtime, params.sessionId, params.path, 'fs/read_text_file');
         return { content: await readFile(path, 'utf8') };

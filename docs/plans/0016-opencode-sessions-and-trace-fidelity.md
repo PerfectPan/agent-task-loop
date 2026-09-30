@@ -23,6 +23,9 @@
 - OpenCode keeps sessions in SQLite (`~/.local/share/opencode/opencode.db`,
   tables `session` / `message` / `part`, ids `ses_…`), not JSONL. This was
   observed when the original plan was written and has not been re-verified.
+- `Session` has no `resumable` field (`src/session/types.ts`); resumability is
+  only visible as `resumeCommand(id)` returning a command or `null`
+  (`src/session/provider.ts`).
 - `parseTranscript` drops tool results and other non-message payloads.
 - The browser (`packages/agent-finder-cli/src/commands/sessions-browse-command.tsx`)
   has no viewport scrolling or search.
@@ -33,7 +36,7 @@ See the paired Spec.
 
 ### 1.3 Goals and success criteria
 
-Spec 0016 S1–S4 pass as tests with fixture stores.
+Spec 0016 S1–S5 pass as tests with fixture stores.
 
 ### 1.4 Non-goals
 
@@ -57,7 +60,8 @@ MoonBit.
 
 ## 6. Execution plan
 
-Blocked until SPIKE-OC answers the two questions above.
+Tasks 1–3 are blocked until SPIKE-OC answers the two questions above. Task 4
+does not depend on SPIKE-OC.
 
 #### Task 0: SPIKE-OC (no PR)
 
@@ -82,6 +86,17 @@ Blocked until SPIKE-OC answers the two questions above.
 - Files: `sessions-browse-command.tsx`, `sessions-resume-command.ts`.
 - Tests: S4; component tests for scroll and search.
 - Exit condition: execute flag starts the agent only when given.
+
+#### Task 4: `Session.resumable`
+
+- Files: `packages/agent-sessions/src/session/types.ts`, `provider.ts`,
+  `registry.ts`; `sessions-list-command.ts`, `sessions-inspect-command.ts`,
+  `sessions-browse-command.tsx` and formatters in `packages/agent-finder-cli`.
+- Change: providers set `resumable` from whether a resume command is
+  configured for the session; the CLI prints it in JSON and gates the resume
+  hint in the browser on it.
+- Tests: S5; existing `resumeCommand` tests stay green.
+- Exit condition: `sessions list --json` shows `resumable` for every session.
 
 ### 6.4 Validation ledger
 

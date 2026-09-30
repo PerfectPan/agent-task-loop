@@ -54,15 +54,15 @@ export interface TaskManagerApplicationDependencies {
   startTask(input: StartTaskInput): Promise<TaskRecord>;
 }
 
-export function createTaskManagerApplication(
-  dependencies: TaskManagerApplicationDependencies,
-): TaskManagerApplication {
+export function createTaskManagerApplication(dependencies: TaskManagerApplicationDependencies): TaskManagerApplication {
   return {
     async listTasks(input) {
       const tasks = await callBackend('Unable to list tasks', () => dependencies.taskProvider.listTasks());
-      const matchingTasks = tasks.filter(task =>
-        (!input.status || task.status === input.status) &&
-        (!input.targetAgent || task.targetAgent === input.targetAgent));
+      const matchingTasks = tasks.filter(
+        (task) =>
+          (!input.status || task.status === input.status) &&
+          (!input.targetAgent || task.targetAgent === input.targetAgent),
+      );
       const visibleTasks = matchingTasks.slice(0, input.limit).map(toPublicTask);
       return {
         count: visibleTasks.length,
@@ -91,7 +91,8 @@ export function createTaskManagerApplication(
         throw new TaskManagerOperationError('task-run-failed', 'Unable to start task run');
       }
       const authoritativeTask = await callBackend('Unable to refresh task', () =>
-        dependencies.taskProvider.getTaskById(input.taskId));
+        dependencies.taskProvider.getTaskById(input.taskId),
+      );
       if (!authoritativeTask) {
         throw new TaskManagerOperationError('task-backend-failed', 'Unable to refresh task');
       }

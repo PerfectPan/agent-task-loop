@@ -7,7 +7,10 @@ export const ORCHESTRATION_RUN_CODE = 'orchestration-run';
 export class OrchestrationConflictError extends Error {
   readonly code = ORCHESTRATION_CONFLICT_CODE;
 
-  constructor(readonly key: string, readonly holderPid?: number) {
+  constructor(
+    readonly key: string,
+    readonly holderPid?: number,
+  ) {
     super(
       holderPid === undefined
         ? `Orchestration ${key} is already occupied`
@@ -29,7 +32,10 @@ export class OrchestrationNotFoundError extends Error {
 export class OrchestrationSeatError extends Error {
   readonly code = ORCHESTRATION_SEAT_CODE;
 
-  constructor(readonly key: string, message: string) {
+  constructor(
+    readonly key: string,
+    message: string,
+  ) {
     super(message);
     this.name = 'OrchestrationSeatError';
   }

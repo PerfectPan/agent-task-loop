@@ -59,5 +59,5 @@ export function buildSourceOptions(
     }
   }
 
-  return ordered.map(id => ({ id, label: sourceLabel(id), count: counts.get(id) ?? 0 }));
+  return ordered.map((id) => ({ id, label: sourceLabel(id), count: counts.get(id) ?? 0 }));
 }

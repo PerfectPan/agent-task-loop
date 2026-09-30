@@ -82,7 +82,10 @@ const TASK_FIELD_DEFINITIONS: TaskFieldDefinition[] = [
     },
   },
   { name: 'ReviewFindings', json: { type: 'text', name: 'ReviewFindings' } },
-  { name: 'AcceptanceRound', json: { type: 'number', name: 'AcceptanceRound', style: { type: 'plain', precision: 0 } } },
+  {
+    name: 'AcceptanceRound',
+    json: { type: 'number', name: 'AcceptanceRound', style: { type: 'plain', precision: 0 } },
+  },
   {
     name: 'AcceptanceVerdict',
     json: {
@@ -106,7 +109,10 @@ const TASK_FIELD_DEFINITIONS: TaskFieldDefinition[] = [
   { name: 'RunnerKind', json: { type: 'text', name: 'RunnerKind' } },
   { name: 'RunnerAgent', json: { type: 'text', name: 'RunnerAgent' } },
   { name: 'RunnerRound', json: { type: 'number', name: 'RunnerRound', style: { type: 'plain', precision: 0 } } },
-  { name: 'LastHeartbeatAt', json: { type: 'datetime', name: 'LastHeartbeatAt', style: { format: 'yyyy-MM-dd HH:mm' } } },
+  {
+    name: 'LastHeartbeatAt',
+    json: { type: 'datetime', name: 'LastHeartbeatAt', style: { format: 'yyyy-MM-dd HH:mm' } },
+  },
   { name: 'PublishBranch', json: { type: 'text', name: 'PublishBranch', style: { type: 'plain' } } },
   { name: 'PublishCommit', json: { type: 'text', name: 'PublishCommit', style: { type: 'plain' } } },
   { name: 'PublishedAt', json: { type: 'datetime', name: 'PublishedAt', style: { format: 'yyyy-MM-dd HH:mm' } } },
@@ -151,10 +157,9 @@ function normalizeExistingField(item: Record<string, unknown>): ExistingField | 
     return null;
   }
 
-  const options =
-    Array.isArray(item.options) ?
-      item.options
-        .map(option => {
+  const options = Array.isArray(item.options)
+    ? item.options
+        .map((option) => {
           if (option && typeof option === 'object' && typeof (option as Record<string, unknown>).name === 'string') {
             return (option as Record<string, unknown>).name as string;
           }
@@ -203,26 +208,23 @@ export class TaskTableSchemaService {
     const data = JSON.parse(stdout) as FieldListResponse;
     const items = data.items ?? data.data?.items ?? data.data?.fields ?? [];
 
-    return items
-      .map(item => normalizeExistingField(item))
-      .filter((field): field is ExistingField => Boolean(field));
+    return items.map((item) => normalizeExistingField(item)).filter((field): field is ExistingField => Boolean(field));
   }
 
   async checkSchema(): Promise<{ existing: string[]; missing: string[] }> {
     const existingFields = await this.listExistingFields();
-    const existing = existingFields.map(field => field.name);
+    const existing = existingFields.map((field) => field.name);
     const existingSet = new Set(existing);
-    const missing = TASK_FIELD_DEFINITIONS.map(field => field.name).filter(name => !existingSet.has(name));
+    const missing = TASK_FIELD_DEFINITIONS.map((field) => field.name).filter((name) => !existingSet.has(name));
     return { existing, missing };
   }
 
   async applyMissingFields(existing?: string[]): Promise<{ created: string[]; updated: string[] }> {
-    const fieldDetails: ExistingField[] =
-      existing ?
-        existing.map(name => ({ name }))
+    const fieldDetails: ExistingField[] = existing
+      ? existing.map((name) => ({ name }))
       : await this.listExistingFields();
-    const existingFields = new Set(fieldDetails.map(field => field.name));
-    const existingByName = new Map(fieldDetails.map(field => [field.name, field]));
+    const existingFields = new Set(fieldDetails.map((field) => field.name));
+    const existingByName = new Map(fieldDetails.map((field) => [field.name, field]));
     const created: string[] = [];
     const updated: string[] = [];
 
@@ -244,14 +246,16 @@ export class TaskTableSchemaService {
       }
 
       const existingField = existingByName.get(field.name);
-      const requiredOptions = Array.isArray(field.json.options) ?
-        field.json.options
-          .map(option => (option && typeof option === 'object' ? (option as Record<string, unknown>).name : undefined))
-          .filter((option): option is string => typeof option === 'string')
-      : [];
+      const requiredOptions = Array.isArray(field.json.options)
+        ? field.json.options
+            .map((option) =>
+              option && typeof option === 'object' ? (option as Record<string, unknown>).name : undefined,
+            )
+            .filter((option): option is string => typeof option === 'string')
+        : [];
       const existingOptions = existingField?.options ?? [];
       const isSelectField = field.json.type === 'select';
-      const missingOption = isSelectField && requiredOptions.some(option => !existingOptions.includes(option));
+      const missingOption = isSelectField && requiredOptions.some((option) => !existingOptions.includes(option));
 
       if (missingOption) {
         try {

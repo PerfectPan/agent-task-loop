@@ -17,21 +17,25 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   const stateSelector = useRef(new RoomLabStateSelector());
 
   useEffect(() => {
-    setState(current => stateSelector.current.takeLoader(current, initialState));
+    setState((current) => stateSelector.current.takeLoader(current, initialState));
   }, [initialState]);
 
   useEffect(() => {
     const data = fetcher.data;
-    if (!data || data === handledResponse.current) return;
+    if (!data || data === handledResponse.current) {
+      return;
+    }
     handledResponse.current = data;
     if (!data.ok) {
       setError(data.error);
       if (submittedAction.current?.action === 'message') {
         const failed = submittedAction.current;
-        setValue(current => current || failed.body);
+        setValue((current) => current || failed.body);
         if (failed.clientMessageId) {
           const failedId = failed.clientMessageId;
-          setOptimistic(events => events.map(event => event.messageId === failedId ? { ...event, failed: true } : event));
+          setOptimistic((events) =>
+            events.map((event) => (event.messageId === failedId ? { ...event, failed: true } : event)),
+          );
         }
       }
       submittedAction.current = undefined;
@@ -42,11 +46,13 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       submittedAction.current = undefined;
       return;
     }
-    if (data.state.epoch !== state.epoch) void revalidator.revalidate();
-    setState(current => stateSelector.current.takeAction(current, data.state));
+    if (data.state.epoch !== state.epoch) {
+      void revalidator.revalidate();
+    }
+    setState((current) => stateSelector.current.takeAction(current, data.state));
     if (submittedAction.current?.action === 'message') {
       const acceptedId = submittedAction.current.clientMessageId;
-      setOptimistic(events => events.filter(event => event.messageId !== acceptedId));
+      setOptimistic((events) => events.filter((event) => event.messageId !== acceptedId));
       setValue('');
     }
     submittedAction.current = undefined;
@@ -55,18 +61,24 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   const pending = fetcher.state !== 'idle';
   const sending = pending && submittedAction.current?.action === 'message';
   // Members mid-turn show it in their derived status; the poll follows them.
-  const live = pending || state.agents.some(agent => agent.status === 'reading' || agent.status === 'working');
+  const live = pending || state.agents.some((agent) => agent.status === 'reading' || agent.status === 'working');
   useEffect(() => {
-    if (!live) return;
+    if (!live) {
+      return;
+    }
     const poll = window.setInterval(() => {
-      if (revalidator.state === 'idle') void revalidator.revalidate();
+      if (revalidator.state === 'idle') {
+        void revalidator.revalidate();
+      }
     }, 900);
     return () => window.clearInterval(poll);
   }, [live, revalidator]);
 
   const runAction = (action: RoomLabAction) => {
     if (action.action === 'message') {
-      if (sending) return;
+      if (sending) {
+        return;
+      }
       const clientMessageId = action.clientMessageId ?? crypto.randomUUID();
       const pendingEvent: RoomLabEventView = {
         seq: state.head + 1,
@@ -78,18 +90,23 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
         at: new Date().toISOString(),
         pending: true,
       };
-      setOptimistic(events => [...events.filter(event => event.messageId !== clientMessageId), pendingEvent]);
+      setOptimistic((events) => [...events.filter((event) => event.messageId !== clientMessageId), pendingEvent]);
       submittedAction.current = { ...action, clientMessageId };
       setError(undefined);
-      void fetcher.submit({ ...action, clientMessageId }, {
-        method: 'POST',
-        action: `/room/${state.roomId}`,
-        encType: 'application/json',
-      });
+      void fetcher.submit(
+        { ...action, clientMessageId },
+        {
+          method: 'POST',
+          action: `/room/${state.roomId}`,
+          encType: 'application/json',
+        },
+      );
       setValue('');
       return;
     }
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     submittedAction.current = action;
     setError(undefined);
     void fetcher.submit(action, { method: 'POST', action: `/room/${state.roomId}`, encType: 'application/json' });
@@ -100,11 +117,20 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
     events: mergeEvents(state.events, optimistic),
   };
 
-  return <RoomWorkspace state={visible} pending={pending} sending={sending} error={error}
-    value={value} onValueChange={setValue} onAction={runAction} />;
+  return (
+    <RoomWorkspace
+      state={visible}
+      pending={pending}
+      sending={sending}
+      error={error}
+      value={value}
+      onValueChange={setValue}
+      onAction={runAction}
+    />
+  );
 }
 
 function mergeEvents(events: RoomLabEventView[], optimistic: RoomLabEventView[]): RoomLabEventView[] {
-  const posted = new Set(events.map(event => event.messageId));
-  return [...events, ...optimistic.filter(event => !posted.has(event.messageId))];
+  const posted = new Set(events.map((event) => event.messageId));
+  return [...events, ...optimistic.filter((event) => !posted.has(event.messageId))];
 }

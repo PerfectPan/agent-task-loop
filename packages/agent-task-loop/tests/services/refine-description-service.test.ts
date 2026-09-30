@@ -23,11 +23,7 @@ describe('refineDescription', () => {
       sessionName: 'refine-description-claude',
     });
 
-    const result = await refineDescription(
-      withClaude,
-      { title: 'T', description: 'd' },
-      { runStructuredAi },
-    );
+    const result = await refineDescription(withClaude, { title: 'T', description: 'd' }, { runStructuredAi });
 
     expect(result).toBe('refined text');
     expect(runStructuredAi).toHaveBeenCalledWith(

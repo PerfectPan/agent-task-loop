@@ -48,7 +48,7 @@ export class GitHubPullRequestService {
     ]);
 
     const pullRequests = JSON.parse(stdout) as GhPullRequestListItem[];
-    const hit = pullRequests.find(item => item.headRefName === input.branch) ?? pullRequests[0];
+    const hit = pullRequests.find((item) => item.headRefName === input.branch) ?? pullRequests[0];
     if (!hit) {
       return undefined;
     }
@@ -60,13 +60,7 @@ export class GitHubPullRequestService {
   }
 
   async getPullRequest(input: { number: number }): Promise<PullRequestSummary> {
-    const { stdout } = await this.exec('gh', [
-      'pr',
-      'view',
-      String(input.number),
-      '--json',
-      'number,url,body',
-    ]);
+    const { stdout } = await this.exec('gh', ['pr', 'view', String(input.number), '--json', 'number,url,body']);
 
     const pullRequest = JSON.parse(stdout) as GhPullRequestView;
     return {
@@ -76,11 +70,7 @@ export class GitHubPullRequestService {
     };
   }
 
-  async updatePullRequest(input: {
-    number: number;
-    description: string;
-    title?: string;
-  }): Promise<PullRequestSummary> {
+  async updatePullRequest(input: { number: number; description: string; title?: string }): Promise<PullRequestSummary> {
     await this.exec('gh', [
       'pr',
       'edit',

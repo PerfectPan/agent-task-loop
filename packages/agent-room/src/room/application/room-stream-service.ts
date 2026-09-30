@@ -1,13 +1,6 @@
 import type { RoomStreamStore } from './room-stream-store';
 import type { RoomUnitOfWork } from './room-unit-of-work';
-import type {
-  AdmitResult,
-  AdmitRoomEvent,
-  RoomId,
-  RoomSeq,
-  RoomSlice,
-  SliceBudget,
-} from '../domain/model';
+import type { AdmitResult, AdmitRoomEvent, RoomId, RoomSeq, RoomSlice, SliceBudget } from '../domain/model';
 import { postControlPlane } from '../domain/post-control-plane';
 import { pass, type PassCommand, type PassResult } from '../domain/pass';
 import { speak, type SpeakCommand, type SpeakResult } from '../domain/speak';
@@ -19,20 +12,20 @@ export class RoomStreamService implements RoomStreamStore {
   ) {}
 
   async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
-    return this.unitOfWork.withRoom(input.roomId, room => room.admit(input, this.isoNow()));
+    return this.unitOfWork.withRoom(input.roomId, (room) => room.admit(input, this.isoNow()));
   }
 
   async head(roomId: RoomId): Promise<RoomSeq> {
-    return this.unitOfWork.readRoom(roomId, room => room.head);
+    return this.unitOfWork.readRoom(roomId, (room) => room.head);
   }
 
   async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
-    return this.unitOfWork.readRoom(roomId, room => room.readSlice(afterSeq, budget));
+    return this.unitOfWork.readRoom(roomId, (room) => room.readSlice(afterSeq, budget));
   }
 
   async speak(input: SpeakCommand): Promise<SpeakResult> {
     if (input.origin === 'control-plane') {
-      return this.unitOfWork.withRoom(input.session.roomId, room =>
+      return this.unitOfWork.withRoom(input.session.roomId, (room) =>
         postControlPlane(room, input.session, input.body, this.isoNow()),
       );
     }

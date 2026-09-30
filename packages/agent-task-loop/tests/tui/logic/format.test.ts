@@ -105,12 +105,12 @@ describe('formatDetailFields', () => {
   it('maps updated via timeAgo', () => {
     const task = makeTask({ updatedAt: isoSecondsAgo(60 * 60) });
     const rows = formatDetailFields(task, NOW);
-    expect(rows.find(r => r.label === '更新')).toEqual({ label: '更新', value: '1h ago' });
+    expect(rows.find((r) => r.label === '更新')).toEqual({ label: '更新', value: '1h ago' });
   });
 
   it("includes round '0' since it is a non-empty value", () => {
     const task = makeTask({ reviewRound: 0 });
-    expect(formatDetailFields(task, NOW).find(r => r.label === '轮次')).toEqual({
+    expect(formatDetailFields(task, NOW).find((r) => r.label === '轮次')).toEqual({
       label: '轮次',
       value: '0',
     });

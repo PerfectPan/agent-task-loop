@@ -38,7 +38,9 @@ export async function loader(_args: LoaderFunctionArgs) {
     throw error;
   }
   const last = getRoomLabHost().lastOpened();
-  if (last) return redirect(`/room/${last.id}`);
+  if (last) {
+    return redirect(`/room/${last.id}`);
+  }
   return data({ empty: true as const }, { headers: noStoreHeaders });
 }
 
@@ -75,16 +77,16 @@ export default function RoomHome() {
           <Wordmark />
         </div>
         <h1 className="m-0 mb-1.5 text-2xl font-bold leading-tight tracking-[-0.02em]">{copy.say.createTitle}</h1>
-        <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">
-          {copy.say.createIntro}
-        </p>
+        <p className="m-0 mb-5 text-sm leading-relaxed text-foreground/75">{copy.say.createIntro}</p>
         <Form method="post" className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
             {copy.label.roomName}
             <Input name="title" required maxLength={80} placeholder={copy.label.roomNamePlaceholder} autoFocus />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span>{copy.label.goal} <span className="ml-1 text-xs text-muted-foreground">{copy.label.optional}</span></span>
+            <span>
+              {copy.label.goal} <span className="ml-1 text-xs text-muted-foreground">{copy.label.optional}</span>
+            </span>
             <Textarea name="goal" maxLength={400} rows={3} placeholder={copy.label.goalPlaceholder} />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
@@ -103,16 +105,26 @@ export default function RoomHome() {
             {copy.label.roomSerial}
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span>{copy.label.roomCwd} <span className="ml-1 text-xs text-muted-foreground">{copy.label.optional}</span></span>
+            <span>
+              {copy.label.roomCwd} <span className="ml-1 text-xs text-muted-foreground">{copy.label.optional}</span>
+            </span>
             <Input name="cwd" maxLength={400} placeholder={copy.label.roomCwdPlaceholder} />
           </label>
-          <p data-error className="m-0 min-h-4 text-xs text-destructive" role={actionData && !actionData.ok ? 'alert' : undefined}>
+          <p
+            data-error
+            className="m-0 min-h-4 text-xs text-destructive"
+            role={actionData && !actionData.ok ? 'alert' : undefined}
+          >
             {actionData && !actionData.ok ? actionData.error : ''}
           </p>
-          <Button type="submit" className="self-start">{copy.action.createRoom}</Button>
+          <Button type="submit" className="self-start">
+            {copy.action.createRoom}
+          </Button>
         </Form>
         <p className="mt-5 mb-0 text-xs text-muted-foreground">
-          <Link className="text-primary" to="/room/agents">{copy.label.agents}</Link>
+          <Link className="text-primary" to="/room/agents">
+            {copy.label.agents}
+          </Link>
           ：{copy.say.agentsLink}
         </p>
       </section>

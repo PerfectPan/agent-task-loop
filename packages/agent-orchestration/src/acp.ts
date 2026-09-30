@@ -5,11 +5,7 @@
  * ACP and MCP SDKs into their bundles.
  */
 export { AcpConnector, loginShellProcess, AUTH_REQUIRED_ERROR_CODE } from './infrastructure/acp-connector';
-export type {
-  AcpConnectorOptions,
-  AcpProcessHandle,
-  AcpProcessSpawner,
-} from './infrastructure/acp-connector';
+export type { AcpConnectorOptions, AcpProcessHandle, AcpProcessSpawner } from './infrastructure/acp-connector';
 
 export {
   claudeProfile,

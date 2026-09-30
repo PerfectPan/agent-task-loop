@@ -26,12 +26,16 @@ export type MentionId = RoomLabAgentId;
  * make an otherwise blank message look non-empty.
  */
 export function docToText(doc: JSONContent | null | undefined): string {
-  if (!doc?.content) return '';
+  if (!doc?.content) {
+    return '';
+  }
   return doc.content.map(blockToText).join('\n').trim();
 }
 
 function blockToText(block: JSONContent): string {
-  if (!block.content) return '';
+  if (!block.content) {
+    return '';
+  }
   return block.content.map(inlineToText).join('');
 }
 
@@ -40,7 +44,9 @@ function inlineToText(node: JSONContent): string {
     const id = node.attrs?.id;
     return typeof id === 'string' ? `@${id}` : '';
   }
-  if (node.type === 'hardBreak') return '\n';
+  if (node.type === 'hardBreak') {
+    return '\n';
+  }
   return node.text ?? '';
 }
 
@@ -55,7 +61,7 @@ export function textToDoc(value: string, mentionable: readonly MentionId[]): JSO
   const lines = value.split('\n');
   return {
     type: 'doc',
-    content: lines.map(line => ({
+    content: lines.map((line) => ({
       type: 'paragraph',
       ...(line.length > 0 ? { content: lineToInline(line, allowed) } : {}),
     })),
@@ -66,11 +72,17 @@ function lineToInline(line: string, allowed: Set<string>): JSONContent[] {
   const pattern = new RegExp(ROOM_MENTION_SOURCE, 'gi');
   const nodes: JSONContent[] = [];
   let cursor = 0;
-  const push = (text: string) => { if (text) nodes.push({ type: 'text', text }); };
+  const push = (text: string) => {
+    if (text) {
+      nodes.push({ type: 'text', text });
+    }
+  };
 
   for (const match of line.matchAll(pattern)) {
     const id = match[1]?.toLowerCase();
-    if (!id || !allowed.has(id)) continue;
+    if (!id || !allowed.has(id)) {
+      continue;
+    }
     push(line.slice(cursor, match.index));
     nodes.push({ type: MENTION_NODE, attrs: { id, label: id } });
     cursor = (match.index ?? 0) + match[0].length;

@@ -2,9 +2,9 @@ import {
   command_candidates_json,
   path_candidates_json,
   providers_json,
-  scan_json
-} from "../moonbit/agent_discovery_core.js";
-import type { DiscoveryReport, HostProbe, ProviderSpec } from "../contracts/types.js";
+  scan_json,
+} from '../moonbit/agent_discovery_core.js';
+import type { DiscoveryReport, HostProbe, ProviderSpec } from '../contracts/types.js';
 
 interface MoonBitError {
   error: string;
@@ -38,7 +38,7 @@ export const moonbitApi = {
 
   discover(probe: HostProbe): DiscoveryReport {
     return parseMoonBitResult(scan_json(JSON.stringify(toMoonBitProbe(probe))));
-  }
+  },
 };
 
 function parseMoonBitResult<T>(json: string): T {
@@ -54,7 +54,7 @@ function parseJson<T>(json: string): T {
 }
 
 function isMoonBitError(value: unknown): value is MoonBitError {
-  return typeof value === "object" && value !== null && "error" in value;
+  return typeof value === 'object' && value !== null && 'error' in value;
 }
 
 function toMoonBitProbe(probe: HostProbe) {
@@ -66,7 +66,7 @@ function toMoonBitProbe(probe: HostProbe) {
     commands: probe.commands,
     executable_paths: probe.executablePaths,
     existing_paths: probe.existingPaths,
-    versions: probe.versions
+    versions: probe.versions,
   };
 }
 
@@ -81,6 +81,6 @@ function mapProviderSpec(provider: MoonBitProviderSpec): ProviderSpec {
     configPathCandidates: [...provider.config_path_candidates],
     mcpConfigPathCandidates: [...provider.mcp_config_path_candidates],
     versionProbe: provider.version_probe,
-    warnings: [...provider.warnings]
+    warnings: [...provider.warnings],
   };
 }

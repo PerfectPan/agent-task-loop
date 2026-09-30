@@ -42,7 +42,7 @@ export const tuiCommand = defineCommand({
     const sources = [
       ...(config.feishu ? ['feishu'] : []),
       ...(config.githubIssues
-        ? normalizeGitHubRepos(config.githubIssues).map(repo => githubSource(repo.owner, repo.repo))
+        ? normalizeGitHubRepos(config.githubIssues).map((repo) => githubSource(repo.owner, repo.repo))
         : []),
     ];
     // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
@@ -61,7 +61,7 @@ export const tuiCommand = defineCommand({
         agent={agent ?? 'all'}
         onFetchTasks={() => (agent ? service.listPendingTasks(agent) : service.listTasks())}
         sessionProvider={new FsSessionProvider()}
-        onCreateTask={payload => service.createTask(payload)}
+        onCreateTask={(payload) => service.createTask(payload)}
         sources={sources}
         onRefineDescription={onRefineDescription}
       />,

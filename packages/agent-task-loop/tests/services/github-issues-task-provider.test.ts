@@ -101,7 +101,7 @@ describe('GitHubIssuesTaskProvider', () => {
 
     // PR (#8) skipped; unmanaged issue (#11, no marker/no agent label) excluded.
     expect(tasks).toHaveLength(3);
-    expect(tasks.map(t => t.recordId)).toEqual(['7', '9', '10']);
+    expect(tasks.map((t) => t.recordId)).toEqual(['7', '9', '10']);
     expect(tasks[0]).toMatchObject({
       source: 'github:rivus/idea',
       recordId: '7',
@@ -333,7 +333,9 @@ describe('GitHubIssuesTaskProvider', () => {
   it('explains rate-limit failures when no GitHub token was resolved', async () => {
     delete process.env.GITHUB_TOKEN;
     execaMock.mockRejectedValue(new Error('gh: command not found'));
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for 203.0.113.10.' }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for 203.0.113.10.' }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(new GitHubIssuesTaskProvider(tokenlessConfig).listTasks()).rejects.toThrow(
@@ -342,7 +344,9 @@ describe('GitHubIssuesTaskProvider', () => {
   });
 
   it('explains rate-limit failures when an authenticated token is exhausted', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for user ID 1.' }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(403, { message: 'API rate limit exceeded for user ID 1.' }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(new GitHubIssuesTaskProvider(config).listTasks()).rejects.toThrow(

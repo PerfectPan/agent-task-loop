@@ -27,14 +27,14 @@ export function buildMentionOptions(
   activeAgentIds: readonly RoomLabAgentId[],
   agents: readonly MentionAgent[] = [],
 ): MentionOption[] {
-  const byId = new Map(agents.map(agent => [agent.id, agent]));
+  const byId = new Map(agents.map((agent) => [agent.id, agent]));
   return [
     {
       id: 'all',
       label: `All ${activeAgentIds.length} active agents`,
       description: copy.say.everyoneDescription,
     },
-    ...activeAgentIds.map(id => {
+    ...activeAgentIds.map((id) => {
       const agent = byId.get(id);
       return {
         id,
@@ -49,9 +49,9 @@ export function buildMentionOptions(
 /** Tiptap's suggestion plugin owns finding the query and inserting; this narrows the list. */
 export const mentionCompletion = {
   filter(query: string, options: readonly MentionOption[]): MentionOption[] {
-    if (!query) return [...options];
-    return options.filter(option =>
-      option.id.includes(query) || option.label.toLowerCase().includes(query),
-    );
+    if (!query) {
+      return [...options];
+    }
+    return options.filter((option) => option.id.includes(query) || option.label.toLowerCase().includes(query));
   },
 };

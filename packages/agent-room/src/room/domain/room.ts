@@ -22,9 +22,7 @@ export class Room {
     this.roomId = { ...id };
     this.events = events.map(cloneRoomEvent);
     this.byTransportMessageId = new Map(
-      this.events.flatMap(event =>
-        event.transportMessageId ? [[event.transportMessageId, event] as const] : [],
-      ),
+      this.events.flatMap((event) => (event.transportMessageId ? [[event.transportMessageId, event] as const] : [])),
     );
   }
 
@@ -67,10 +65,7 @@ export class Room {
     return this.append(input, at);
   }
 
-  private append(
-    input: PostRoomEvent & { transportMessageId?: string },
-    at: string,
-  ): RoomEvent {
+  private append(input: PostRoomEvent & { transportMessageId?: string }, at: string): RoomEvent {
     if (!input.messageId.trim()) {
       throw new RoomValidationError('room event messageId cannot be blank');
     }
@@ -81,9 +76,7 @@ export class Room {
       seq: this.head + 1,
       roomId: { ...this.roomId },
       messageId: input.messageId,
-      ...(input.transportMessageId
-        ? { transportMessageId: input.transportMessageId }
-        : {}),
+      ...(input.transportMessageId ? { transportMessageId: input.transportMessageId } : {}),
       author: { ...input.author },
       kind: input.kind,
       body: input.body,
@@ -100,9 +93,7 @@ export class Room {
   }
 
   eventsAfter(seq: RoomSeq, excludingAuthorId?: string): RoomEvent[] {
-    return this.events
-      .filter(event => event.seq > seq && event.author.id !== excludingAuthorId)
-      .map(cloneRoomEvent);
+    return this.events.filter((event) => event.seq > seq && event.author.id !== excludingAuthorId).map(cloneRoomEvent);
   }
 
   readSlice(afterSeq: RoomSeq, budget: SliceBudget): RoomSlice {
@@ -110,18 +101,21 @@ export class Room {
     if (!Number.isSafeInteger(budget.maxEvents) || budget.maxEvents < 0) {
       throw new RoomValidationError('maxEvents must be a non-negative integer');
     }
-    if (
-      budget.maxChars !== undefined &&
-      (!Number.isSafeInteger(budget.maxChars) || budget.maxChars < 0)
-    ) {
+    if (budget.maxChars !== undefined && (!Number.isSafeInteger(budget.maxChars) || budget.maxChars < 0)) {
       throw new RoomValidationError('maxChars must be a non-negative integer');
     }
     const events: RoomEvent[] = [];
     let chars = 0;
     for (const event of this.events) {
-      if (event.seq <= afterSeq) continue;
-      if (events.length >= budget.maxEvents) break;
-      if (budget.maxChars !== undefined && chars + event.body.length > budget.maxChars) break;
+      if (event.seq <= afterSeq) {
+        continue;
+      }
+      if (events.length >= budget.maxEvents) {
+        break;
+      }
+      if (budget.maxChars !== undefined && chars + event.body.length > budget.maxChars) {
+        break;
+      }
       events.push(cloneRoomEvent(event));
       chars += event.body.length;
     }
@@ -155,11 +149,11 @@ function validateRoomState(id: RoomId, events: RoomEvent[]): void {
       event.transportMessageId !== undefined &&
       (!event.transportMessageId.trim() || transportMessageIds.has(event.transportMessageId))
     ) {
-      throw new RoomValidationError(
-        'restored room contains an invalid or duplicate transport messageId',
-      );
+      throw new RoomValidationError('restored room contains an invalid or duplicate transport messageId');
     }
-    if (event.transportMessageId) transportMessageIds.add(event.transportMessageId);
+    if (event.transportMessageId) {
+      transportMessageIds.add(event.transportMessageId);
+    }
   }
 }
 

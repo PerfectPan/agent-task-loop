@@ -8,10 +8,7 @@ export interface TaskDetailView {
   error?: string;
 }
 
-export async function loadTaskDetail(
-  taskId: string,
-  provider?: TaskProvider,
-): Promise<TaskDetailView> {
+export async function loadTaskDetail(taskId: string, provider?: TaskProvider): Promise<TaskDetailView> {
   const trimmedId = (taskId ?? '').trim();
   if (!trimmedId) {
     return {

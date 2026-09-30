@@ -27,11 +27,7 @@ export class TaskDeliveryApplication {
     return task ? { ...task, ...this.runtimeView(taskId) } : undefined;
   }
 
-  async start(input: {
-    taskId: string;
-    title: string;
-    maxRounds?: number;
-  }): Promise<TaskDeliveryView> {
+  async start(input: { taskId: string; title: string; maxRounds?: number }): Promise<TaskDeliveryView> {
     const task = TaskDelivery.start({
       taskId: input.taskId,
       title: input.title,
@@ -45,10 +41,10 @@ export class TaskDeliveryApplication {
     try {
       await this.options.runtime.open({ taskId, title: canonicalTask.title });
       opened = true;
-      created = await this.options.runtime.fence(taskId, async () =>
-        this.options.repository.create(task.snapshot()),
-      );
-      if (!created) throw new Error(`Task ${taskId} already exists`);
+      created = await this.options.runtime.fence(taskId, async () => this.options.repository.create(task.snapshot()));
+      if (!created) {
+        throw new Error(`Task ${taskId} already exists`);
+      }
       this.notify(task);
       await this.publish({ type: 'accepted', task: task.snapshot() });
 
@@ -60,11 +56,7 @@ export class TaskDeliveryApplication {
           prompt: buildImplementationPrompt(current),
         });
         task.recordImplementation(implementation.text);
-        this.options.runtime.appendFact(
-          current.taskId,
-          'impl',
-          `round ${current.round} implementation completed`,
-        );
+        this.options.runtime.appendFact(current.taskId, 'impl', `round ${current.round} implementation completed`);
         this.options.runtime.allow(current.taskId, 'review');
         await this.save(task);
         await this.publish({
@@ -82,11 +74,7 @@ export class TaskDeliveryApplication {
           prompt: buildReviewPrompt(reviewing),
         });
         const verdict = parseTaskReviewVerdict(review.text);
-        this.options.runtime.appendFact(
-          reviewing.taskId,
-          'review',
-          `round ${reviewing.round} verdict ${verdict}`,
-        );
+        this.options.runtime.appendFact(reviewing.taskId, 'review', `round ${reviewing.round} verdict ${verdict}`);
         task.recordReview(verdict, review.text);
         await this.save(task);
         await this.publish({
@@ -122,14 +110,18 @@ export class TaskDeliveryApplication {
         await this.save(task);
       }
     } catch (error) {
-      if (!created) throw error;
+      if (!created) {
+        throw error;
+      }
       const reason = errorMessage(error);
       task.fail(reason);
       await this.save(task);
       await this.publish({ type: 'failed', task: task.snapshot(), reason });
     } finally {
       try {
-        if (opened) await this.options.runtime.release(taskId);
+        if (opened) {
+          await this.options.runtime.release(taskId);
+        }
       } catch (error) {
         if (created) {
           await this.publish({
@@ -139,7 +131,9 @@ export class TaskDeliveryApplication {
           });
         }
       } finally {
-        if (created) this.notify(task);
+        if (created) {
+          this.notify(task);
+        }
       }
     }
 
@@ -179,9 +173,10 @@ export class TaskDeliveryApplication {
 }
 
 function buildImplementationPrompt(task: TaskDeliverySnapshot): string {
-  const rework = task.status === 'reworking' && task.findings
-    ? `Address this independent review:\n${task.findings}`
-    : 'State assumptions and provide a verifiable result.';
+  const rework =
+    task.status === 'reworking' && task.findings
+      ? `Address this independent review:\n${task.findings}`
+      : 'State assumptions and provide a verifiable result.';
   return `You occupy the impl seat for ${task.taskId}. Produce a concise Chinese deliverable for this task: ${task.title}. Round ${task.round}. ${rework} Do not use tools. Return only the deliverable.`;
 }
 
@@ -190,7 +185,5 @@ function buildReviewPrompt(task: TaskDeliverySnapshot): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim()
-    ? error.message
-    : 'Task delivery failed';
+  return error instanceof Error && error.message.trim() ? error.message : 'Task delivery failed';
 }

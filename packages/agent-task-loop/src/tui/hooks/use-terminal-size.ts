@@ -27,7 +27,9 @@ export function useTerminalSize(): TerminalSize {
   const [size, setSize] = useState<TerminalSize>(read);
 
   useEffect(() => {
-    if (!stdout) return;
+    if (!stdout) {
+      return;
+    }
     const onResize = (): void => setSize(read());
     stdout.on('resize', onResize);
     // Sync once in case the size changed before the listener attached.

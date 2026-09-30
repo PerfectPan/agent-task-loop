@@ -1,5 +1,5 @@
 /** The coding-agent tool a session belongs to. */
-export type AgentKind = "codex" | "claude" | "opencode" | "unknown";
+export type AgentKind = 'codex' | 'claude' | 'opencode' | 'unknown';
 
 /**
  * A tool-agnostic coding-agent session. Filesystem-backed tools (Codex, Claude)

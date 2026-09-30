@@ -136,13 +136,15 @@ class FakeConnector implements AgentConnector {
   }
 }
 
-async function runtimeWith(overrides: {
-  connectorOptions?: FakeConnectionOptions;
-  agent?: Partial<Agent>;
-  onActivate?: (key: string) => Promise<Harness>;
-  defaultTimeoutMs?: number;
-  leaseStore?: MemoryLeaseStore;
-} = {}): Promise<{
+async function runtimeWith(
+  overrides: {
+    connectorOptions?: FakeConnectionOptions;
+    agent?: Partial<Agent>;
+    onActivate?: (key: string) => Promise<Harness>;
+    defaultTimeoutMs?: number;
+    leaseStore?: MemoryLeaseStore;
+  } = {},
+): Promise<{
   runtime: AgentRuntime;
   lease: LeaseManager;
   connector: FakeConnector;
@@ -203,7 +205,9 @@ describe('Inbox and runtime', () => {
       onActivate: async () =>
         harness({
           hooks: {
-            afterTurn: (result) => { afterTurns.push(result); },
+            afterTurn: (result) => {
+              afterTurns.push(result);
+            },
           },
         }),
     });
@@ -221,7 +225,9 @@ describe('Inbox and runtime', () => {
 
   it('releases the lease only after the afterTurn hook settles', async () => {
     let finishAfterTurn: (() => void) | undefined;
-    const turnOver = new Promise<void>((resolve) => { finishAfterTurn = resolve; });
+    const turnOver = new Promise<void>((resolve) => {
+      finishAfterTurn = resolve;
+    });
     const fencedWrites: string[] = [];
     const { runtime, lease } = await runtimeWith({
       onActivate: async () =>
@@ -230,7 +236,9 @@ describe('Inbox and runtime', () => {
             afterTurn: async () => {
               // The endpoint's pass, fenced under the still-held lease: it
               // must execute now, and the release must wait for this hook.
-              await lease.fence(key, async () => { fencedWrites.push('pass'); });
+              await lease.fence(key, async () => {
+                fencedWrites.push('pass');
+              });
               await turnOver;
             },
           },
@@ -319,7 +327,9 @@ describe('Inbox and runtime', () => {
       onActivate: async () =>
         harness({
           hooks: {
-            afterTurn: (result) => { afterTurns.push(result); },
+            afterTurn: (result) => {
+              afterTurns.push(result);
+            },
           },
         }),
     });
@@ -339,7 +349,9 @@ describe('Inbox and runtime', () => {
       onActivate: async () =>
         harness({
           hooks: {
-            afterTurn: (result) => { afterTurns.push(result); },
+            afterTurn: (result) => {
+              afterTurns.push(result);
+            },
           },
         }),
     });
@@ -376,7 +388,9 @@ describe('Inbox and runtime', () => {
         throw new Error('no agent claude in the registry');
       },
     });
-    runtime.onActivationFailure((failedKey, error) => { failures.push({ key: failedKey, error }); });
+    runtime.onActivationFailure((failedKey, error) => {
+      failures.push({ key: failedKey, error });
+    });
     runtime.wake(key);
     await settled(runtime, key);
 
@@ -398,7 +412,9 @@ describe('Inbox and runtime', () => {
     });
     const failures: { key: string; error: string }[] = [];
     const { runtime } = await runtimeWith({ leaseStore });
-    runtime.onActivationFailure((failedKey, error) => { failures.push({ key: failedKey, error }); });
+    runtime.onActivationFailure((failedKey, error) => {
+      failures.push({ key: failedKey, error });
+    });
     foreignLease.acquire(key);
     runtime.wake(key);
     await settled(runtime, key);
@@ -435,7 +451,7 @@ describe('Inbox and runtime', () => {
     // A wake after close — the abandoned-activation shape — is dropped, and
     // the process close() ended stays the only one.
     runtime.wake(key);
-    await new Promise(resolve => setTimeout(resolve, 25));
+    await new Promise((resolve) => setTimeout(resolve, 25));
     expect(connector.connections[0]?.promptCalls).toBe(1);
     expect(connector.connections[0]?.closed).toBe(1);
     expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
@@ -535,9 +551,9 @@ describe('tools live with the session', () => {
    * later activation re-serves its tools on the same endpoint, the gate is
    * open while the turn runs, and `onSessionDiscard` releases the endpoint.
    */
-  async function runtimeWithSessionTools(options: FakeConnectionOptions = {}): Promise<
-    Awaited<ReturnType<typeof runtimeWith>> & SessionToolWiring
-  > {
+  async function runtimeWithSessionTools(
+    options: FakeConnectionOptions = {},
+  ): Promise<Awaited<ReturnType<typeof runtimeWith>> & SessionToolWiring> {
     const toolServer = new ToolServer();
     let hosted: HostedTools | undefined;
     let turnOpen = false;
@@ -565,7 +581,9 @@ describe('tools live with the session', () => {
         } else {
           hosted.serveTurn({ tools: toolsFor(), authorize: () => turnOpen });
         }
-        if (!hostedUrls.includes(hosted.url)) hostedUrls.push(hosted.url);
+        if (!hostedUrls.includes(hosted.url)) {
+          hostedUrls.push(hosted.url);
+        }
         turnOpen = true;
         return harness({
           tools: [hosted.endpoint],
@@ -578,7 +596,9 @@ describe('tools live with the session', () => {
       },
     });
     built.runtime.onSessionDiscard(async () => {
-      if (!hosted) return;
+      if (!hosted) {
+        return;
+      }
       turnOpen = false;
       await hosted.close();
       discardedUrls.push(hosted.url);
@@ -589,7 +609,9 @@ describe('tools live with the session', () => {
       hostedUrls,
       discardedUrls,
       closeHosted: async () => {
-        if (!hosted) return;
+        if (!hosted) {
+          return;
+        }
         await hosted.close();
         hosted = undefined;
       },
@@ -601,10 +623,9 @@ describe('tools live with the session', () => {
     const client = new Client({ name: 'agent-runtime-test', version: '0.0.0' });
     await client.connect(new StreamableHTTPClientTransport(new URL(url)));
     try {
-      const result = (await client.callTool(
-        { name: 'room_echo', arguments: { text } },
-        CallToolResultSchema,
-      )) as { content: { type: string; text: string }[] };
+      const result = (await client.callTool({ name: 'room_echo', arguments: { text } }, CallToolResultSchema)) as {
+        content: { type: string; text: string }[];
+      };
       return result.content;
     } finally {
       await client.close();

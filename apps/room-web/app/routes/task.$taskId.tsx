@@ -43,39 +43,23 @@ function StatusBadge({ status }: { status: TaskRecord['status'] }) {
   const lane = laneOfUnknown(status);
   const cls = lane ? LANE_BADGE[lane] : 'bg-muted text-foreground border-border';
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border ${cls}`}
-    >
-      {status}
-    </span>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border ${cls}`}>{status}</span>
   );
 }
 
 function ReviewVerdictBadge({ verdict }: { verdict: string }) {
   const isPass = verdict === '通过';
-  const cls = isPass
-    ? 'bg-muted text-primary border-primary/40'
-    : 'bg-muted text-destructive border-destructive/40';
+  const cls = isPass ? 'bg-muted text-primary border-primary/40' : 'bg-muted text-destructive border-destructive/40';
   return (
-    <span
-      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
-    >
-      {verdict}
-    </span>
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}>{verdict}</span>
   );
 }
 
 function AcceptanceVerdictBadge({ verdict }: { verdict: string }) {
   const isPass = verdict === '通过';
-  const cls = isPass
-    ? 'bg-muted text-primary border-primary/40'
-    : 'bg-muted text-destructive border-destructive/40';
+  const cls = isPass ? 'bg-muted text-primary border-primary/40' : 'bg-muted text-destructive border-destructive/40';
   return (
-    <span
-      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}
-    >
-      {verdict}
-    </span>
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}>{verdict}</span>
   );
 }
 
@@ -92,20 +76,14 @@ export default function TaskDetailRoute() {
           >
             ← 返回看板
           </Link>
-          {task ? (
-            <span className="text-xs text-muted-foreground">
-              {task.taskId}
-            </span>
-          ) : null}
+          {task ? <span className="text-xs text-muted-foreground">{task.taskId}</span> : null}
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error ? (
           <div className="rounded-lg border border-destructive bg-muted p-6">
-            <h2 className="text-base font-semibold text-destructive mb-2">
-              无法显示任务
-            </h2>
+            <h2 className="text-base font-semibold text-destructive mb-2">无法显示任务</h2>
             <p className="text-sm text-destructive">{error}</p>
           </div>
         ) : task ? (
@@ -121,32 +99,25 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
   const hasLastError = hasValue(task.lastError);
   const hasProgressSummary = hasValue(task.progressSummary);
   const hasResultSummary = hasValue(task.resultSummary);
-  const showProgressSection =
-    hasLastError || hasProgressSummary || hasResultSummary;
+  const showProgressSection = hasLastError || hasProgressSummary || hasResultSummary;
 
   const hasReviewRound = hasValue(task.reviewRound);
   const hasReviewVerdict = hasValue(task.reviewVerdict);
   const hasReviewFindings = hasValue(task.reviewFindings);
-  const showReviewSection =
-    hasReviewRound || hasReviewVerdict || hasReviewFindings;
+  const showReviewSection = hasReviewRound || hasReviewVerdict || hasReviewFindings;
 
   const hasAcceptanceRound = hasValue(task.acceptanceRound);
   const hasAcceptanceVerdict = hasValue(task.acceptanceVerdict);
   const hasAcceptanceFeedback = hasValue(task.acceptanceFeedback);
-  const reviewPassedWithoutAcceptance =
-    task.reviewVerdict === '通过' && !hasAcceptanceVerdict;
+  const reviewPassedWithoutAcceptance = task.reviewVerdict === '通过' && !hasAcceptanceVerdict;
   const showAcceptanceSection =
-    hasAcceptanceRound ||
-    hasAcceptanceVerdict ||
-    hasAcceptanceFeedback ||
-    reviewPassedWithoutAcceptance;
+    hasAcceptanceRound || hasAcceptanceVerdict || hasAcceptanceFeedback || reviewPassedWithoutAcceptance;
 
   const hasPrLink = hasValue(task.prLink);
   const hasPublishBranch = hasValue(task.publishBranch);
   const hasPublishCommit = hasValue(task.publishCommit);
   const hasPublishedAt = hasValue(task.publishedAt);
-  const showPublicationSection =
-    hasPrLink || hasPublishBranch || hasPublishCommit || hasPublishedAt;
+  const showPublicationSection = hasPrLink || hasPublishBranch || hasPublishCommit || hasPublishedAt;
 
   const hasWorkspacePath = hasValue(task.workspacePath);
   const hasLogPath = hasValue(task.logPath);
@@ -154,19 +125,13 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
   const hasReviewSessionName = hasValue(task.reviewSessionName);
   const hasLastHeartbeatAt = hasValue(task.lastHeartbeatAt);
   const showRunSection =
-    hasWorkspacePath ||
-    hasLogPath ||
-    hasExecutionSessionName ||
-    hasReviewSessionName ||
-    hasLastHeartbeatAt;
+    hasWorkspacePath || hasLogPath || hasExecutionSessionName || hasReviewSessionName || hasLastHeartbeatAt;
 
   return (
     <article className="space-y-8">
       {/* 1. The title, and under it the exact status, the project, the targetAgent and the source that owns this record */}
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {task.title}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{task.title}</h1>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <StatusBadge status={task.status} />
           <span className="text-muted-foreground">·</span>
@@ -211,9 +176,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasProgressSummary ? (
               <div>
-                <span className="block text-xs font-medium text-muted-foreground mb-1">
-                  进度说明
-                </span>
+                <span className="block text-xs font-medium text-muted-foreground mb-1">进度说明</span>
                 <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.progressSummary}
                 </p>
@@ -222,9 +185,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasResultSummary ? (
               <div>
-                <span className="block text-xs font-medium text-muted-foreground mb-1">
-                  结果摘要
-                </span>
+                <span className="block text-xs font-medium text-muted-foreground mb-1">结果摘要</span>
                 <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.resultSummary}
                 </p>
@@ -266,9 +227,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasReviewFindings ? (
               <div>
-                <span className="block text-xs font-medium text-muted-foreground mb-1">
-                  评审意见
-                </span>
+                <span className="block text-xs font-medium text-muted-foreground mb-1">评审意见</span>
                 <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.reviewFindings}
                 </p>
@@ -305,9 +264,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
 
             {hasAcceptanceFeedback ? (
               <div>
-                <span className="block text-xs font-medium text-muted-foreground mb-1">
-                  验收反馈
-                </span>
+                <span className="block text-xs font-medium text-muted-foreground mb-1">验收反馈</span>
                 <p className="max-w-[70ch] text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {task.acceptanceFeedback}
                 </p>
@@ -341,27 +298,21 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
             {hasPublishBranch ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">发布分支</dt>
-                <dd className="mt-0.5 text-foreground text-xs">
-                  {task.publishBranch}
-                </dd>
+                <dd className="mt-0.5 text-foreground text-xs">{task.publishBranch}</dd>
               </div>
             ) : null}
 
             {hasPublishCommit ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">发布 Commit</dt>
-                <dd className="mt-0.5 text-foreground text-xs">
-                  {task.publishCommit}
-                </dd>
+                <dd className="mt-0.5 text-foreground text-xs">{task.publishCommit}</dd>
               </div>
             ) : null}
 
             {hasPublishedAt ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">发布时间</dt>
-                <dd className="mt-0.5 text-foreground">
-                  {task.publishedAt}
-                </dd>
+                <dd className="mt-0.5 text-foreground">{task.publishedAt}</dd>
               </div>
             ) : null}
           </dl>
@@ -385,36 +336,28 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
             {hasLogPath ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">日志路径</dt>
-                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-foreground break-all">
-                  {task.logPath}
-                </dd>
+                <dd className="mt-0.5 max-w-[70ch] font-mono text-xs text-foreground break-all">{task.logPath}</dd>
               </div>
             ) : null}
 
             {hasExecutionSessionName ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">执行会话名称</dt>
-                <dd className="mt-0.5 text-foreground">
-                  {task.executionSessionName}
-                </dd>
+                <dd className="mt-0.5 text-foreground">{task.executionSessionName}</dd>
               </div>
             ) : null}
 
             {hasReviewSessionName ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">评审会话名称</dt>
-                <dd className="mt-0.5 text-foreground">
-                  {task.reviewSessionName}
-                </dd>
+                <dd className="mt-0.5 text-foreground">{task.reviewSessionName}</dd>
               </div>
             ) : null}
 
             {hasLastHeartbeatAt ? (
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">最后心跳时间</dt>
-                <dd className="mt-0.5 text-foreground">
-                  {task.lastHeartbeatAt}
-                </dd>
+                <dd className="mt-0.5 text-foreground">{task.lastHeartbeatAt}</dd>
               </div>
             ) : null}
           </dl>

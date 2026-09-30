@@ -4,7 +4,9 @@ const rejectSpy = vi.fn();
 const runnerRunSpy = vi.fn();
 const occupancySignal = new AbortController().signal;
 const mutationFence = { run: <T>(mutation: () => Promise<T>) => mutation() };
-let capturedRunLoop: ((input: { task: unknown; promptOverride: string; startRound: number }) => Promise<void>) | undefined;
+let capturedRunLoop:
+  | ((input: { task: unknown; promptOverride: string; startRound: number }) => Promise<void>)
+  | undefined;
 
 vi.mock('../../src/config/load-config', () => ({
   loadConfig: vi.fn().mockResolvedValue({
@@ -30,10 +32,12 @@ vi.mock('../../src/services/task-service', () => ({
 
 vi.mock('../../src/task-manager/task-occupancy-service', () => ({
   TaskOccupancyService: vi.fn().mockImplementation(() => ({
-    run: vi.fn((_input, workflow) => workflow({
-      signal: occupancySignal,
-      mutationFence,
-    })),
+    run: vi.fn((_input, workflow) =>
+      workflow({
+        signal: occupancySignal,
+        mutationFence,
+      }),
+    ),
   })),
 }));
 

@@ -60,7 +60,9 @@ export class FakeAcpAgent {
     agentInfo?: { name: string; version: string };
   }> {
     this.initializeRequests.push(params);
-    if (this.config.initializeError) throw new Error(this.config.initializeError);
+    if (this.config.initializeError) {
+      throw new Error(this.config.initializeError);
+    }
     return {
       protocolVersion: params.protocolVersion,
       ...(this.config.agentCapabilities ? { agentCapabilities: this.config.agentCapabilities } : {}),
@@ -74,8 +76,12 @@ export class FakeAcpAgent {
     if (this.config.hangNewSession) {
       return new Promise<{ sessionId: string }>(() => undefined);
     }
-    if (this.config.authRequired) throw RequestError.authRequired();
-    if (this.config.newSessionError) throw new Error(this.config.newSessionError);
+    if (this.config.authRequired) {
+      throw RequestError.authRequired();
+    }
+    if (this.config.newSessionError) {
+      throw new Error(this.config.newSessionError);
+    }
     return { sessionId: `fake-session-${this.newSessionRequests.length}` };
   }
 
@@ -161,7 +167,9 @@ export class FakeAcpAgent {
 
   async cancel(params: { sessionId: string }): Promise<void> {
     this.cancels.push(params);
-    if (this.config.ignoreCancel) return;
+    if (this.config.ignoreCancel) {
+      return;
+    }
     this.pendingPrompt?.resolve({ stopReason: 'cancelled' });
     this.pendingPrompt = undefined;
   }
@@ -205,7 +213,9 @@ export function fakeAcpProcess(config: FakeAgentConfig = {}): {
       exit,
       kill: (signal) => {
         kills.push(signal);
-        if (config.ignoreSigterm && signal !== 'SIGKILL') return;
+        if (config.ignoreSigterm && signal !== 'SIGKILL') {
+          return;
+        }
         killed?.();
       },
     },

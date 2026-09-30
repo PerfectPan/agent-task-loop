@@ -91,7 +91,7 @@ export const TABS: readonly TabDef[] = [
 ];
 
 export function tabIncludes(tab: TabKey, status: TaskStatus): boolean {
-  const def = TABS.find(t => t.key === tab);
+  const def = TABS.find((t) => t.key === tab);
   if (!def || def.buckets === null) {
     return true;
   }

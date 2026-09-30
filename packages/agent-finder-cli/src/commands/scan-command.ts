@@ -1,18 +1,18 @@
-import { defineCommand } from "citty";
-import { collectHostProbe, discover } from "@rivus/agent-finder-core";
-import { renderAgentTable, renderScanSummary } from "../formatters/agent-table.js";
+import { defineCommand } from 'citty';
+import { collectHostProbe, discover } from '@rivus/agent-finder-core';
+import { renderAgentTable, renderScanSummary } from '../formatters/agent-table.js';
 
 export const scanCommand = defineCommand({
   meta: {
-    name: "scan",
-    description: "Scan local provider inventory"
+    name: 'scan',
+    description: 'Scan local provider inventory',
   },
   args: {
     json: {
-      type: "boolean",
+      type: 'boolean',
       default: false,
-      description: "Print stable JSON"
-    }
+      description: 'Print stable JSON',
+    },
   },
   run({ args }) {
     const report = discover(collectHostProbe());
@@ -24,9 +24,9 @@ export const scanCommand = defineCommand({
     for (const line of renderAgentTable(report.agents)) {
       console.log(line);
     }
-    console.log("");
+    console.log('');
     for (const line of renderScanSummary(report.agents)) {
       console.log(line);
     }
-  }
+  },
 });

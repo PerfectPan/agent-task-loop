@@ -4,12 +4,7 @@ import {
   OrchestrationSeatError,
 } from '@rivus/agent-orchestration';
 import type { LeaseManager } from '@rivus/agent-orchestration';
-import type {
-  Clock,
-  IntervalScheduler,
-  LockRecord,
-  ProcessIdentity,
-} from '@rivus/agent-orchestration';
+import type { Clock, IntervalScheduler, LockRecord, ProcessIdentity } from '@rivus/agent-orchestration';
 import type { OpenRunInput, ObservedRun, ProcessRunner, RunSnapshot, SeatBind, SpawnResult } from './types';
 import type { RunStateStore } from './ports';
 import { Run } from './run';
@@ -73,7 +68,9 @@ export class Orchestration {
     this.lease.acquire(input.key);
     this.clearEnvs(input.key);
     for (const [seat, bound] of Object.entries(input.bind ?? {})) {
-      if (bound.env) this.setEnv(input.key, seat, bound.env);
+      if (bound.env) {
+        this.setEnv(input.key, seat, bound.env);
+      }
     }
     const snapshot = run.snapshot();
     this.state.writeState(snapshot);
@@ -82,7 +79,9 @@ export class Orchestration {
 
   inspect(key: string): RunSnapshot {
     const snapshot = this.state.readState(key);
-    if (!snapshot) throw new OrchestrationNotFoundError(key);
+    if (!snapshot) {
+      throw new OrchestrationNotFoundError(key);
+    }
     return snapshot;
   }
 
@@ -114,7 +113,9 @@ export class Orchestration {
     input: { cwd: string; extraArgs?: string[]; env?: Record<string, string> },
   ): Promise<SpawnResult> {
     const bound = this.requireHolder(key).run.requireAllowedSeat(seat);
-    if (!bound.cmd) throw new OrchestrationSeatError(key, `seat ${seat} has no command bound`);
+    if (!bound.cmd) {
+      throw new OrchestrationSeatError(key, `seat ${seat} has no command bound`);
+    }
     const env = {
       ...this.envs.get(key)?.get(seat),
       ...input.env,
@@ -143,7 +144,9 @@ export class Orchestration {
         signal: controller.signal,
         onSpawn: (pid) => this.mutateRun(key, (run) => run.recordSeatPid(seat, pid)),
       });
-      if (heartbeatError) throw heartbeatError;
+      if (heartbeatError) {
+        throw heartbeatError;
+      }
       this.mutateRun(key, (run) => run.markSeatExited(seat));
       return result;
     } catch (error) {
@@ -162,19 +165,19 @@ export class Orchestration {
     this.touch(this.requireHolder(key));
   }
 
-  async fence<T>(
-    key: string,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<T> {
+  async fence<T>(key: string, operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     return this.lease.fence(key, operation, signal);
   }
 
   release(key: string): void {
     const lock = this.lease.read(key);
-    if (!lock || lock.holderPid !== this.identity.pid || lock.holderId !== this.holderId) return;
+    if (!lock || lock.holderPid !== this.identity.pid || lock.holderId !== this.holderId) {
+      return;
+    }
     const snapshot = this.state.readState(key);
-    if (!snapshot || snapshot.holderId !== this.holderId) return;
+    if (!snapshot || snapshot.holderId !== this.holderId) {
+      return;
+    }
     const run = Run.restore(snapshot);
     run.release(this.isoNow());
     // The released state lands before the lease goes, so a successor holder
@@ -193,8 +196,11 @@ export class Orchestration {
   bind(key: string, seat: string, bind: SeatBind): RunSnapshot {
     const held = this.requireHolder(key);
     held.run.bind(seat, bind);
-    if (bind.env) this.setEnv(key, seat, bind.env);
-    else this.deleteEnv(key, seat);
+    if (bind.env) {
+      this.setEnv(key, seat, bind.env);
+    } else {
+      this.deleteEnv(key, seat);
+    }
     return this.touch(held);
   }
 
@@ -204,7 +210,9 @@ export class Orchestration {
 
   private requireHolder(key: string): HeldRun {
     const snapshot = this.inspect(key);
-    if (!snapshot.occupied) throw new OrchestrationNotFoundError(key);
+    if (!snapshot.occupied) {
+      throw new OrchestrationNotFoundError(key);
+    }
     const lock = this.lease.requireHeld(key);
     if (snapshot.holderId !== this.holderId) {
       throw new OrchestrationConflictError(key, lock.holderPid);
@@ -242,9 +250,13 @@ export class Orchestration {
 
   private deleteEnv(key: string, seat: string): void {
     const bySeat = this.envs.get(key);
-    if (!bySeat) return;
+    if (!bySeat) {
+      return;
+    }
     bySeat.delete(seat);
-    if (bySeat.size === 0) this.envs.delete(key);
+    if (bySeat.size === 0) {
+      this.envs.delete(key);
+    }
   }
 
   private isoNow(): string {

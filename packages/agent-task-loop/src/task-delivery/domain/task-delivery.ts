@@ -1,8 +1,5 @@
 import { TaskDeliveryTransitionError, TaskDeliveryValidationError } from './errors';
-import type {
-  TaskDeliverySnapshot,
-  TaskReviewVerdict,
-} from './model';
+import type { TaskDeliverySnapshot, TaskReviewVerdict } from './model';
 
 const MAX_TEXT_LENGTH = 2_000;
 
@@ -10,15 +7,15 @@ const MAX_TEXT_LENGTH = 2_000;
 export class TaskDelivery {
   private constructor(private state: TaskDeliverySnapshot) {}
 
-  static start(input: {
-    taskId: string;
-    title: string;
-    maxRounds: number;
-  }): TaskDelivery {
+  static start(input: { taskId: string; title: string; maxRounds: number }): TaskDelivery {
     const taskId = input.taskId.trim();
     const title = input.title.trim();
-    if (!taskId) throw new TaskDeliveryValidationError('task id is required');
-    if (!title) throw new TaskDeliveryValidationError('task title is required');
+    if (!taskId) {
+      throw new TaskDeliveryValidationError('task id is required');
+    }
+    if (!title) {
+      throw new TaskDeliveryValidationError('task title is required');
+    }
     if (title.length > MAX_TEXT_LENGTH) {
       throw new TaskDeliveryValidationError(`task title must be at most ${MAX_TEXT_LENGTH} characters`);
     }
@@ -36,9 +33,7 @@ export class TaskDelivery {
 
   recordImplementation(body: string): void {
     if (this.state.status !== 'executing' && this.state.status !== 'reworking') {
-      throw new TaskDeliveryTransitionError(
-        `cannot record implementation while task is ${this.state.status}`,
-      );
+      throw new TaskDeliveryTransitionError(`cannot record implementation while task is ${this.state.status}`);
     }
     const implementation = requireOutput(body, 'implementation');
     this.state = {
@@ -102,15 +97,15 @@ export class TaskDelivery {
 
 function requireOutput(value: string, label: string): string {
   const output = value.trim();
-  if (!output) throw new TaskDeliveryValidationError(`${label} is required`);
+  if (!output) {
+    throw new TaskDeliveryValidationError(`${label} is required`);
+  }
   return output;
 }
 
 function requireReviewVerdict(value: unknown): TaskReviewVerdict {
   if (value !== 'PASS' && value !== 'CHANGES_REQUESTED') {
-    throw new TaskDeliveryValidationError(
-      'review verdict must be PASS or CHANGES_REQUESTED',
-    );
+    throw new TaskDeliveryValidationError('review verdict must be PASS or CHANGES_REQUESTED');
   }
   return value;
 }

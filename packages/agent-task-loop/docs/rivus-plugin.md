@@ -55,10 +55,7 @@ The smallest read-only Deployment is:
       "profileId": "task-manager",
       "skills": { "allow": [] },
       "tools": {
-        "allow": [
-          "agent-task-loop/task-list",
-          "agent-task-loop/task-get"
-        ]
+        "allow": ["agent-task-loop/task-list", "agent-task-loop/task-get"]
       }
     }
   ],
@@ -95,10 +92,7 @@ the Host Deployment manifest:
       "profileId": "task-manager",
       "skills": { "allow": [] },
       "tools": {
-        "allow": [
-          "agent-task-loop/task-list",
-          "agent-task-loop/task-get"
-        ]
+        "allow": ["agent-task-loop/task-list", "agent-task-loop/task-get"]
       }
     }
   ],
@@ -140,12 +134,12 @@ const plugin = createRivusTaskManagerPlugin({
 
 ## Tool contracts
 
-| Tool | Risk | Replay idempotency | Purpose |
-| --- | --- | --- | --- |
-| `agent-task-loop/task-list` | `observe` | `supported` | List at most 100 filtered tasks |
-| `agent-task-loop/task-get` | `observe` | `supported` | Read one task by stable task ID |
-| `agent-task-loop/task-create` | `mutate` | `none` | Create one backend-owned task |
-| `agent-task-loop/task-start` | `mutate` | `none` | Start or recover execution and review |
+| Tool                          | Risk      | Replay idempotency | Purpose                               |
+| ----------------------------- | --------- | ------------------ | ------------------------------------- |
+| `agent-task-loop/task-list`   | `observe` | `supported`        | List at most 100 filtered tasks       |
+| `agent-task-loop/task-get`    | `observe` | `supported`        | Read one task by stable task ID       |
+| `agent-task-loop/task-create` | `mutate`  | `none`             | Create one backend-owned task         |
+| `agent-task-loop/task-start`  | `mutate`  | `none`             | Start or recover execution and review |
 
 All input schemas are strict and reject unknown properties. `task-create` and
 `task-start` are deliberately non-replayable: the Host must require the normal

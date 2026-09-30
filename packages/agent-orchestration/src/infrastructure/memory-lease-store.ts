@@ -45,14 +45,10 @@ export class MemoryLeaseStore implements LeaseStore {
     return record ? { ...record } : undefined;
   }
 
-  async runFenced<T>(
-    token: FencingToken,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<FencedResult<T>> {
+  async runFenced<T>(token: FencingToken, operation: () => Promise<T>, signal?: AbortSignal): Promise<FencedResult<T>> {
     const previous = this.fenceTails.get(token.key) ?? Promise.resolve();
     let unlock: () => void = () => undefined;
-    const slot = new Promise<void>(resolve => {
+    const slot = new Promise<void>((resolve) => {
       unlock = resolve;
     });
     const tail = previous.then(() => slot);
@@ -61,11 +57,7 @@ export class MemoryLeaseStore implements LeaseStore {
       await previous;
       signal?.throwIfAborted();
       const current = this.records.get(token.key);
-      if (
-        !current ||
-        current.holderPid !== token.holderPid ||
-        current.holderId !== token.holderId
-      ) {
+      if (!current || current.holderPid !== token.holderPid || current.holderId !== token.holderId) {
         return { executed: false };
       }
       return { executed: true, value: await operation() };

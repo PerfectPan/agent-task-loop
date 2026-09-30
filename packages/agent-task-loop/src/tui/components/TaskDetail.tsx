@@ -30,41 +30,41 @@ export function TaskDetail({ task, now, width, focused, scroll = 0 }: TaskDetail
         detail{focused && scroll > 0 ? <Text dimColor> ↑{scroll}</Text> : null}
       </Text>
       <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
-      {!task ? (
-        <Text dimColor>Select a task</Text>
-      ) : (
-        <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
-          <Text bold wrap="truncate-end">
-            {task.taskId} {task.title}
-          </Text>
-          <Box flexDirection="column" marginTop={1}>
-            {formatDetailFields(task, now).map(field => (
-              <Box key={field.label}>
-                <Box width={8} flexShrink={0}>
-                  <Text dimColor>{field.label}</Text>
+        {!task ? (
+          <Text dimColor>Select a task</Text>
+        ) : (
+          <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
+            <Text bold wrap="truncate-end">
+              {task.taskId} {task.title}
+            </Text>
+            <Box flexDirection="column" marginTop={1}>
+              {formatDetailFields(task, now).map((field) => (
+                <Box key={field.label}>
+                  <Box width={8} flexShrink={0}>
+                    <Text dimColor>{field.label}</Text>
+                  </Box>
+                  <Text color={field.label === '状态' ? statusConfig(task.status).color : undefined}>
+                    {field.value}
+                  </Text>
                 </Box>
-                <Text color={field.label === '状态' ? statusConfig(task.status).color : undefined}>
-                  {field.value}
+              ))}
+            </Box>
+            {task.progressSummary ? (
+              <Box flexDirection="column" marginTop={1}>
+                <Text dimColor>进展</Text>
+                <Text wrap="wrap">{task.progressSummary}</Text>
+              </Box>
+            ) : null}
+            {task.lastError ? (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="red">错误</Text>
+                <Text color="red" wrap="wrap">
+                  {task.lastError}
                 </Text>
               </Box>
-            ))}
+            ) : null}
           </Box>
-          {task.progressSummary ? (
-            <Box flexDirection="column" marginTop={1}>
-              <Text dimColor>进展</Text>
-              <Text wrap="wrap">{task.progressSummary}</Text>
-            </Box>
-          ) : null}
-          {task.lastError ? (
-            <Box flexDirection="column" marginTop={1}>
-              <Text color="red">错误</Text>
-              <Text color="red" wrap="wrap">
-                {task.lastError}
-              </Text>
-            </Box>
-          ) : null}
-        </Box>
-      )}
+        )}
       </Box>
     </Box>
   );

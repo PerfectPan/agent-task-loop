@@ -1,26 +1,26 @@
-import { defineConfig } from "@rslib/core";
-import { cliConfig } from "@rivus/rslib-config/cli.config";
+import { defineConfig } from '@rslib/core';
+import { cliConfig } from '@rivus/rslib-config/cli.config';
 
 export default defineConfig({
   ...cliConfig,
   lib: [
     {
-      format: "esm",
+      format: 'esm',
       dts: { abortOnError: false, bundle: true },
-      bundle: true
-    }
+      bundle: true,
+    },
   ],
   source: {
     entry: {
-      cli: "src/cli.ts",
-      "rivus-plugin": "src/rivus-plugin.ts",
-      "task-delivery": "src/task-delivery.ts",
-      "task-management": "src/task-management.ts"
-    }
+      cli: 'src/cli.ts',
+      'rivus-plugin': 'src/rivus-plugin.ts',
+      'task-delivery': 'src/task-delivery.ts',
+      'task-management': 'src/task-management.ts',
+    },
   },
   tools: {
     rspack: {
-      externals: ["react-devtools-core"]
-    }
-  }
+      externals: ['react-devtools-core'],
+    },
+  },
 });

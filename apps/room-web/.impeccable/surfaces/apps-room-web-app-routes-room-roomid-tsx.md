@@ -1,8 +1,8 @@
 ---
 version: 1
-slug: "apps-room-web-app-routes-room-roomid-tsx"
-primary_target: "apps/room-web/app/routes/room.$roomId.tsx"
-related_targets: ["apps/room-web/app/routes/room._index.tsx","apps/room-web/app/routes/room.agents.tsx"]
+slug: 'apps-room-web-app-routes-room-roomid-tsx'
+primary_target: 'apps/room-web/app/routes/room.$roomId.tsx'
+related_targets: ['apps/room-web/app/routes/room._index.tsx', 'apps/room-web/app/routes/room.agents.tsx']
 ---
 
 # Room surface (room.$roomId, room._index, room.agents)

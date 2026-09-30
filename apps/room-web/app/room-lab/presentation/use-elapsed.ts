@@ -7,7 +7,9 @@ import type { RoomLabAgentId } from '../read-model';
  * one poll interval, and it is the only thing that can tell a 90-second wait
  * from a hung one.
  */
-export function useElapsed(runningAgentIds: readonly RoomLabAgentId[]): (agentId: RoomLabAgentId) => number | undefined {
+export function useElapsed(
+  runningAgentIds: readonly RoomLabAgentId[],
+): (agentId: RoomLabAgentId) => number | undefined {
   const startedAt = useRef(new Map<RoomLabAgentId, number>());
   const [, setTick] = useState(0);
   const key = runningAgentIds.join(',');
@@ -16,18 +18,24 @@ export function useElapsed(runningAgentIds: readonly RoomLabAgentId[]): (agentId
     const now = Date.now();
     const running = new Set(runningAgentIds);
     for (const id of runningAgentIds) {
-      if (!startedAt.current.has(id)) startedAt.current.set(id, now);
+      if (!startedAt.current.has(id)) {
+        startedAt.current.set(id, now);
+      }
     }
     for (const id of Array.from(startedAt.current.keys())) {
-      if (!running.has(id)) startedAt.current.delete(id);
+      if (!running.has(id)) {
+        startedAt.current.delete(id);
+      }
     }
-    setTick(tick => tick + 1);
-    if (runningAgentIds.length === 0) return;
-    const timer = window.setInterval(() => setTick(tick => tick + 1), 1000);
+    setTick((tick) => tick + 1);
+    if (runningAgentIds.length === 0) {
+      return;
+    }
+    const timer = window.setInterval(() => setTick((tick) => tick + 1), 1000);
     return () => window.clearInterval(timer);
   }, [key]);
 
-  return agentId => {
+  return (agentId) => {
     const start = startedAt.current.get(agentId);
     return start === undefined ? undefined : Math.floor((Date.now() - start) / 1000);
   };

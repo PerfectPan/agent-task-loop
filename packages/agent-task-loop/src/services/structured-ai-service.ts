@@ -23,7 +23,10 @@ export interface StructuredAiResult<T> {
 
 /** Strips a wrapping ```json fence (if any) and trims. */
 export function stripCodeFences(text: string): string {
-  return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
 }
 
 /**

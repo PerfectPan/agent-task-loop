@@ -102,11 +102,11 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 Every change needs a requirement record. Use the smallest set of artifacts that makes behavior and implementation reviewable.
 
-| Change type | Required artifact |
-| --- | --- |
-| Product behavior | One Spec plus one detailed Plan for the same deliverable |
-| Technical refactor without changed user behavior | Detailed Plan with compatibility and acceptance conditions |
-| Narrow maintenance, tests, or documentation | Requirement and PR checklist; a separate Plan only when useful |
+| Change type                                      | Required artifact                                              |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| Product behavior                                 | One Spec plus one detailed Plan for the same deliverable       |
+| Technical refactor without changed user behavior | Detailed Plan with compatibility and acceptance conditions     |
+| Narrow maintenance, tests, or documentation      | Requirement and PR checklist; a separate Plan only when useful |
 
 In this repository, changes to public CLI behavior, package publishing or the release process, task lifecycle semantics, configuration shape, security boundaries, repository or package structure, and long-term integration strategy count as product behavior or technical refactors, not narrow maintenance.
 

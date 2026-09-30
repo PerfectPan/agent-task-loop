@@ -5,7 +5,11 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { AgentDesk } from './AgentDesk';
 
 vi.mock('react-router', () => ({
-  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => <a href={to} {...rest}>{children}</a>,
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
   Form: ({ children, ...rest }: { children: React.ReactNode }) => <form {...rest}>{children}</form>,
   useNavigation: () => ({ state: 'idle', formData: undefined }),
 }));
@@ -25,10 +29,12 @@ const CODEX_SEATED = {
 
 it('shows a system-prompt field per selected agent and does not send CLI probes', () => {
   const { container } = render(
-    <AgentDesk desk={{
-      lastOpenedId: 'r_aaaaaaaaaa',
-      agents: [CODEX_SEATED],
-    }} />,
+    <AgentDesk
+      desk={{
+        lastOpenedId: 'r_aaaaaaaaaa',
+        agents: [CODEX_SEATED],
+      }}
+    />,
   );
   expect(screen.getByText(copy.label.product)).toBeTruthy();
   expect(screen.getByRole('heading', { name: '智能体' })).toBeTruthy();
@@ -47,14 +53,43 @@ it('shows a system-prompt field per selected agent and does not send CLI probes'
 
 it('maps each probe state to its state word', () => {
   render(
-    <AgentDesk desk={{
-      agents: [
-        { ...CODEX_SEATED },
-        { id: 'claude', label: 'Claude', role: '审核', color: 1, availability: 'ready', command: 'claude-agent-acp', systemPrompt: '', seatedIn: [] },
-        { id: 'gemini', label: 'Gemini', role: '调研', color: 2, availability: 'needs-login', command: 'gemini-acp', systemPrompt: '', seatedIn: [] },
-        { id: 'relay', label: 'Relay', role: '成员', color: 4, availability: 'missing', command: 'relay-acp', systemPrompt: '', seatedIn: [] },
-      ],
-    }} />,
+    <AgentDesk
+      desk={{
+        agents: [
+          { ...CODEX_SEATED },
+          {
+            id: 'claude',
+            label: 'Claude',
+            role: '审核',
+            color: 1,
+            availability: 'ready',
+            command: 'claude-agent-acp',
+            systemPrompt: '',
+            seatedIn: [],
+          },
+          {
+            id: 'gemini',
+            label: 'Gemini',
+            role: '调研',
+            color: 2,
+            availability: 'needs-login',
+            command: 'gemini-acp',
+            systemPrompt: '',
+            seatedIn: [],
+          },
+          {
+            id: 'relay',
+            label: 'Relay',
+            role: '成员',
+            color: 4,
+            availability: 'missing',
+            command: 'relay-acp',
+            systemPrompt: '',
+            seatedIn: [],
+          },
+        ],
+      }}
+    />,
   );
   // The four words are copy's, keyed by the domain state, never the raw status.
   expect(screen.getByText(copy.availability.seated)).toBeTruthy();
@@ -70,9 +105,7 @@ function field(name: string): HTMLInputElement {
 }
 
 it('rejects an add-agent id that is not ^[a-z][a-z0-9-]*$ without posting', () => {
-  const { container } = render(
-    <AgentDesk desk={{ agents: [CODEX_SEATED] }} />,
-  );
+  const { container } = render(<AgentDesk desk={{ agents: [CODEX_SEATED] }} />);
   const form = container.querySelector('form input[name="intent"][value="add-agent"]')!.closest('form')!;
   fireEvent.input(field('ID'), { target: { value: 'Gemini_1' } });
   fireEvent.submit(form);
@@ -83,9 +116,7 @@ it('rejects an add-agent id that is not ^[a-z][a-z0-9-]*$ without posting', () =
 });
 
 it('accepts an add-agent id on the mention grammar and posts the four fields', () => {
-  const { container } = render(
-    <AgentDesk desk={{ agents: [CODEX_SEATED] }} />,
-  );
+  const { container } = render(<AgentDesk desk={{ agents: [CODEX_SEATED] }} />);
   const form = container.querySelector('form input[name="intent"][value="add-agent"]')!.closest('form')!;
   fireEvent.input(field('ID'), { target: { value: 'gemini' } });
   fireEvent.input(field('名称'), { target: { value: 'Gemini' } });

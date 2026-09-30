@@ -33,36 +33,40 @@ export class SqliteTurnLog {
   constructor(private readonly db: DatabaseSync) {}
 
   append(record: TurnRecord): void {
-    this.db.prepare(`
+    this.db
+      .prepare(`
       INSERT INTO turns (
         id, room_id, agent_id, round_seq, trigger_seq, read_up_to_seq,
         started_at, ended_at, outcome, posted_seq, stop_reason, held_count, error
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      record.id,
-      record.roomId,
-      record.agentId,
-      record.roundSeq,
-      record.triggerSeq,
-      record.readUpToSeq,
-      record.startedAt,
-      record.endedAt ?? null,
-      record.outcome ?? null,
-      record.postedSeq ?? null,
-      record.stopReason ?? null,
-      record.heldCount ?? 0,
-      record.error ?? null,
-    );
+    `)
+      .run(
+        record.id,
+        record.roomId,
+        record.agentId,
+        record.roundSeq,
+        record.triggerSeq,
+        record.readUpToSeq,
+        record.startedAt,
+        record.endedAt ?? null,
+        record.outcome ?? null,
+        record.postedSeq ?? null,
+        record.stopReason ?? null,
+        record.heldCount ?? 0,
+        record.error ?? null,
+      );
   }
 
   /** A room's turns, oldest first. */
   listByRoom(roomId: string): RoomTurnView[] {
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(`
       SELECT id, room_id, agent_id, round_seq, trigger_seq, read_up_to_seq,
              started_at, ended_at, outcome, posted_seq, stop_reason, held_count, error
       FROM turns WHERE room_id = ?
       ORDER BY started_at ASC, rowid ASC
-    `).all(roomId) as unknown as TurnRow[];
+    `)
+      .all(roomId) as unknown as TurnRow[];
     return rows.map(toRecord);
   }
 

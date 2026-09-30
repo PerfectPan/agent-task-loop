@@ -71,10 +71,7 @@ export interface ColumnWidths {
  * Each visible pane is floored to {@link MIN_PANE}, and the result never sums
  * past `totalCols` (any rounding slack is left as unused margin).
  */
-export function computeColumnWidths(
-  totalCols: number,
-  opts: { previewOpen: boolean },
-): ColumnWidths {
+export function computeColumnWidths(totalCols: number, opts: { previewOpen: boolean }): ColumnWidths {
   const total = Math.max(0, Math.floor(totalCols));
 
   if (!opts.previewOpen) {
@@ -96,9 +93,7 @@ export function computeColumnWidths(
  */
 function clamp(w: ColumnWidths, total: number, previewOpen: boolean): ColumnWidths {
   const result: ColumnWidths = { ...w };
-  const panes: Array<keyof ColumnWidths> = previewOpen
-    ? ['list', 'detail', 'preview']
-    : ['list', 'detail'];
+  const panes: Array<keyof ColumnWidths> = previewOpen ? ['list', 'detail', 'preview'] : ['list', 'detail'];
 
   let overflow = result.list + result.detail + result.preview - total;
   while (overflow > 0) {

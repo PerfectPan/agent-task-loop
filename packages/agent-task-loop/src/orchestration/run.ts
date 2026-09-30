@@ -110,8 +110,11 @@ export class Run {
   recordSeatPid(seat: string, pid?: number): void {
     this.assertOccupied();
     const state = this.requireSeat(seat);
-    if (pid === undefined) delete state.pid;
-    else state.pid = pid;
+    if (pid === undefined) {
+      delete state.pid;
+    } else {
+      state.pid = pid;
+    }
   }
 
   markSeatExited(seat: string): void {
@@ -158,7 +161,9 @@ export class Run {
 
   private requireSeat(seat: string): SeatState {
     const state = this.state.seats[seat];
-    if (!state) throw new OrchestrationSeatError(this.key, `unknown seat ${seat}`);
+    if (!state) {
+      throw new OrchestrationSeatError(this.key, `unknown seat ${seat}`);
+    }
     return state;
   }
 
@@ -170,9 +175,13 @@ export class Run {
 }
 
 function validateSnapshot(snapshot: RunSnapshot): void {
-  if (!snapshot.key.trim()) throw new OrchestrationRunError('run key is required');
+  if (!snapshot.key.trim()) {
+    throw new OrchestrationRunError('run key is required');
+  }
   const seats = Object.keys(snapshot.seats);
-  if (seats.length === 0) throw new OrchestrationRunError(`run ${snapshot.key} has no seats`);
+  if (seats.length === 0) {
+    throw new OrchestrationRunError(`run ${snapshot.key} has no seats`);
+  }
   if (!snapshot.seats[snapshot.allowed]) {
     throw new OrchestrationRunError(`run ${snapshot.key} allows unknown seat ${snapshot.allowed}`);
   }

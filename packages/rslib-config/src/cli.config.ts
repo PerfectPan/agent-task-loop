@@ -1,3 +1,3 @@
 export const cliConfig = {
-  output: { target: "node" as const }
+  output: { target: 'node' as const },
 };

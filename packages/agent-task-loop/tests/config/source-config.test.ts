@@ -15,7 +15,11 @@ describe('addGitHubRepo scaffolding', () => {
     const cfg = addGitHubRepo(empty, { owner: 'o', repo: 'r' });
     // mapIssue stamps project = repo name, repository = owner/repo.
     expect(cfg.projects?.['r']).toMatchObject({ key: 'r', defaultRepository: 'o/r' });
-    expect(cfg.repositories?.['o/r']).toMatchObject({ key: 'o/r', defaultBranch: 'main', workspaceStrategy: 'worktree' });
+    expect(cfg.repositories?.['o/r']).toMatchObject({
+      key: 'o/r',
+      defaultBranch: 'main',
+      workspaceStrategy: 'worktree',
+    });
     // localPath/workspaceRoot are CHANGE_ME placeholders the user must replace.
     expect((cfg.repositories!['o/r'] as { localPath: string }).localPath).toContain('CHANGE_ME');
     expect((cfg.projects!['r'] as { workspaceRoot: string }).workspaceRoot).toContain('CHANGE_ME');
@@ -24,8 +28,20 @@ describe('addGitHubRepo scaffolding', () => {
   it('does not clobber an existing project/repository entry', () => {
     const seeded: EditableConfig = {
       ...empty,
-      projects: { r: { key: 'r', name: 'mine', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
-      repositories: { 'o/r': { key: 'o/r', localPath: '/real', defaultBranch: 'main', installCommand: 'x', testCommand: 'x', buildCommand: 'x', workspaceStrategy: 'worktree' } },
+      projects: {
+        r: { key: 'r', name: 'mine', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' },
+      },
+      repositories: {
+        'o/r': {
+          key: 'o/r',
+          localPath: '/real',
+          defaultBranch: 'main',
+          installCommand: 'x',
+          testCommand: 'x',
+          buildCommand: 'x',
+          workspaceStrategy: 'worktree',
+        },
+      },
     };
     const cfg = addGitHubRepo(seeded, { owner: 'o', repo: 'r' });
     expect((cfg.repositories!['o/r'] as { localPath: string }).localPath).toBe('/real');
@@ -38,7 +54,13 @@ describe('listSources', () => {
     const cfg: EditableConfig = {
       ...empty,
       feishu,
-      githubIssues: { defaultAgent: 'codex', repositories: [{ owner: 'o', repo: 'a' }, { owner: 'o', repo: 'b' }] },
+      githubIssues: {
+        defaultAgent: 'codex',
+        repositories: [
+          { owner: 'o', repo: 'a' },
+          { owner: 'o', repo: 'b' },
+        ],
+      },
     };
     expect(listSources(cfg)).toEqual([
       { id: 'feishu', label: 'Feishu Base', isDefault: true },
@@ -112,7 +134,13 @@ describe('removeSource', () => {
   it('removes one github repo and collapses to single shorthand', () => {
     const cfg: EditableConfig = {
       ...empty,
-      githubIssues: { defaultAgent: 'codex', repositories: [{ owner: 'o', repo: 'a' }, { owner: 'o', repo: 'b' }] },
+      githubIssues: {
+        defaultAgent: 'codex',
+        repositories: [
+          { owner: 'o', repo: 'a' },
+          { owner: 'o', repo: 'b' },
+        ],
+      },
     };
     const out = removeSource(cfg, 'github:o/a');
     expect(out.githubIssues).toMatchObject({ owner: 'o', repo: 'b' });

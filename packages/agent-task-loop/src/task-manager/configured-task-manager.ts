@@ -3,10 +3,7 @@ import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import { TaskService } from '../services/task-service';
-import {
-  createTaskManagerApplication,
-  type TaskManagerApplication,
-} from './task-manager-application';
+import { createTaskManagerApplication, type TaskManagerApplication } from './task-manager-application';
 import { TaskStartService } from './task-start-service';
 
 export async function createConfiguredTaskManagerApplication(): Promise<TaskManagerApplication> {
@@ -25,7 +22,7 @@ export async function createConfiguredTaskManagerApplication(): Promise<TaskMana
 
   return createTaskManagerApplication({
     taskProvider: taskService,
-    startTask: async input => {
+    startTask: async (input) => {
       assertRuntimeConfig(config);
       return startService.startTask(input);
     },

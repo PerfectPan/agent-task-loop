@@ -31,9 +31,7 @@ export class TaskRunnerLivenessService {
     const lastHeartbeatAt = task.lastHeartbeatAt ? new Date(task.lastHeartbeatAt).getTime() : undefined;
     const hasFreshHeartbeat = lastHeartbeatAt !== undefined && now - lastHeartbeatAt <= staleAfterMs;
     const mode = task.runnerKind ?? (task.status === '待复核' ? 'review' : 'execute');
-    const round =
-      task.runnerRound ??
-      (mode === 'review' ? (task.reviewRound ?? 1) : (task.reviewRound ?? 0) + 1);
+    const round = task.runnerRound ?? (mode === 'review' ? (task.reviewRound ?? 1) : (task.reviewRound ?? 0) + 1);
 
     if (task.runnerPid) {
       const isProcessAlive = (this.deps.isProcessAlive ?? defaultIsProcessAlive)(task.runnerPid);

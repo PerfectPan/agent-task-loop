@@ -6,6 +6,8 @@ const MISSING_CONFIG_MESSAGE =
 
 export function formatTaskLoadError(error: unknown, subject: string): string {
   const raw = error instanceof Error ? error.message : String(error);
-  if (MISSING_CONFIG.some(phrase => raw.includes(phrase))) return MISSING_CONFIG_MESSAGE;
+  if (MISSING_CONFIG.some((phrase) => raw.includes(phrase))) {
+    return MISSING_CONFIG_MESSAGE;
+  }
   return `无法加载${subject}：${raw}`;
 }

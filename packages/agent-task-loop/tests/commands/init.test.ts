@@ -16,7 +16,12 @@ vi.mock('@rivus/agent-finder-core', () => ({
 }));
 
 import { resolveCommand } from '@rivus/agent-finder-core';
-import { createGlobalConfig, discoverRunnableAgents, globalConfigPath, isLarkCliAvailable } from '../../src/commands/init';
+import {
+  createGlobalConfig,
+  discoverRunnableAgents,
+  globalConfigPath,
+  isLarkCliAvailable,
+} from '../../src/commands/init';
 
 const originalHome = os.homedir;
 let fakeHome: string;
@@ -96,7 +101,11 @@ describe('createGlobalConfig', () => {
   it('returns "exists" and does not overwrite when config already exists', async () => {
     const configPath = globalConfigPath();
     await mkdir(path.dirname(configPath), { recursive: true });
-    writeFileSync(configPath, JSON.stringify({ feishu: { baseToken: 'original', tableId: 't' }, projects: {}, repositories: {}, agents: {} }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ feishu: { baseToken: 'original', tableId: 't' }, projects: {}, repositories: {}, agents: {} }),
+      'utf8',
+    );
 
     const result = createGlobalConfig({
       feishu: { baseToken: 'new-tok', tableId: 'new-tbl' },

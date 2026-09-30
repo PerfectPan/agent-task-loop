@@ -61,16 +61,16 @@ export class AgentRegistry implements KnownAgentIds {
   }
 
   get(id: string): AgentDefinition | undefined {
-    const found = this.definitions.find(agent => agent.id === id);
+    const found = this.definitions.find((agent) => agent.id === id);
     return found ? clone(found) : undefined;
   }
 
   has(id: string): boolean {
-    return this.definitions.some(agent => agent.id === id);
+    return this.definitions.some((agent) => agent.id === id);
   }
 
   ids(): string[] {
-    return this.definitions.map(agent => agent.id);
+    return this.definitions.map((agent) => agent.id);
   }
 
   get size(): number {

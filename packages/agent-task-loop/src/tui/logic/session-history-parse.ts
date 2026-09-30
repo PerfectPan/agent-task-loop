@@ -28,7 +28,10 @@ function parseKeyValue(segment: string): { key: string; value: string } | null {
 
 /** Parse one trimmed, non-empty line into an entry, or null when malformed. */
 function parseLine(line: string): SessionHistoryEntry | null {
-  const segments = line.split('|').map(part => part.trim()).filter(Boolean);
+  const segments = line
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (segments.length === 0) {
     return null;
   }

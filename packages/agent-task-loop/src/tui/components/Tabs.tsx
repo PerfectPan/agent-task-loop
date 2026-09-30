@@ -21,12 +21,7 @@ export function Tabs({ active, counts }: TabsProps): React.ReactElement {
         const chip = `${tab.label}(${counts[tab.key] ?? 0})`;
         return (
           <Box key={tab.key} marginRight={index < TABS.length - 1 ? 1 : 0}>
-            <Text
-              color={isActive ? 'cyan' : undefined}
-              inverse={isActive}
-              bold={isActive}
-              dimColor={!isActive}
-            >
+            <Text color={isActive ? 'cyan' : undefined} inverse={isActive} bold={isActive} dimColor={!isActive}>
               {` ${chip} `}
             </Text>
           </Box>

@@ -10,8 +10,8 @@
 
 1. Background and goals
 2. Outline
-6. Execution plan
-7. Risks, open questions, and follow-up
+3. Execution plan
+4. Risks, open questions, and follow-up
 
 ## 1. Background and goals
 
@@ -59,13 +59,13 @@ As in the Spec.
 
 ### 2.2 Design decisions
 
-| Decision | Status |
-| --- | --- |
-| What a Room promotes into a Task (a selected message, the room title and goal, or a person-written intake) | unresolved |
-| Where the CLI reads the roster when room-web's sqlite library is absent | unresolved |
-| How `TargetAgent` stays compatible for published consumers | unresolved |
-| Claim compare-and-set per backend (Feishu record version, GitHub label or assignee) | unresolved |
-| SSE endpoint per room and per task run | chosen by RFC 0014, not yet built |
+| Decision                                                                                                   | Status                            |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| What a Room promotes into a Task (a selected message, the room title and goal, or a person-written intake) | unresolved                        |
+| Where the CLI reads the roster when room-web's sqlite library is absent                                    | unresolved                        |
+| How `TargetAgent` stays compatible for published consumers                                                 | unresolved                        |
+| Claim compare-and-set per backend (Feishu record version, GitHub label or assignee)                        | unresolved                        |
+| SSE endpoint per room and per task run                                                                     | chosen by RFC 0014, not yet built |
 
 ## 6. Execution plan
 
@@ -115,10 +115,10 @@ PR, in this order (from RFC 0014's slice table):
 
 ### 6.4 Validation ledger
 
-| Batch | Command or evidence | Expected result |
-| --- | --- | --- |
-| each | `pnpm test`, `pnpm build`, `pnpm typecheck` | pass |
-| 1 | detector at 1280x800 and 390x844 | no new findings |
+| Batch | Command or evidence                         | Expected result |
+| ----- | ------------------------------------------- | --------------- |
+| each  | `pnpm test`, `pnpm build`, `pnpm typecheck` | pass            |
+| 1     | detector at 1280x800 and 390x844            | no new findings |
 
 ### 6.5 Rollback per batch
 
@@ -127,9 +127,9 @@ it leaves existing records valid.
 
 ## 7. Risks, open questions, and follow-up
 
-| Item | Type | Impact | Owner | Next step or deadline |
-| --- | --- | --- | --- | --- |
-| The Feishu Base is live user data | risk | A wrong unattended write | unconfirmed | Writes only from a person's action; tests use fakes or GitHub |
-| Five lanes hide exact statuses | risk | Confusion between 待决策, 待发布, 待验收 | unconfirmed | Cards keep the exact status |
-| Replacing the visual world discards design work | risk | Rework | unconfirmed | Decide with Task 1 review |
-| A task run that opens its own Room | follow-up | New collaboration mode | unconfirmed | Separate Spec when wanted |
+| Item                                            | Type      | Impact                                   | Owner       | Next step or deadline                                         |
+| ----------------------------------------------- | --------- | ---------------------------------------- | ----------- | ------------------------------------------------------------- |
+| The Feishu Base is live user data               | risk      | A wrong unattended write                 | unconfirmed | Writes only from a person's action; tests use fakes or GitHub |
+| Five lanes hide exact statuses                  | risk      | Confusion between 待决策, 待发布, 待验收 | unconfirmed | Cards keep the exact status                                   |
+| Replacing the visual world discards design work | risk      | Rework                                   | unconfirmed | Decide with Task 1 review                                     |
+| A task run that opens its own Room              | follow-up | New collaboration mode                   | unconfirmed | Separate Spec when wanted                                     |

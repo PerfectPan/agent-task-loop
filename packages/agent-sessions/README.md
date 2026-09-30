@@ -11,6 +11,7 @@ See [`docs/architecture/agent-sessions.md`](../../docs/architecture/agent-sessio
 Implemented:
 
 **P2a — transcript model + parser**
+
 - `TranscriptEntry` — structured turn (`role`, `text`, optional `toolName` /
   `timestamp`), replacing the lossy `role: text` strings the parser used to emit.
 - `parseTranscript` / `parseTranscriptLine` — parse Codex rollout
@@ -19,6 +20,7 @@ Implemented:
   renderer stays byte-identical during migration.
 
 **P2b — session model + bounded fs index**
+
 - `Session` / `AgentKind` — tool-agnostic session shape.
 - `buildFsIndex` — bounded (`scanBudget` / `maxDepth`), never-throwing walk that
   maps `id → Session` from UUID-named `.jsonl` transcripts, attributing the
@@ -27,6 +29,7 @@ Implemented:
 - `defaultSessionRoots` — the standard Codex/Claude roots.
 
 **P2c — providers + registry**
+
 - `SessionProvider` interface + `FsSessionProvider` (list / getTranscript /
   resumeCommand over a fs root), and `codexProvider` / `claudeProvider` factories.
 - `SessionRegistry` — aggregates providers: `list` merges newest-first,
@@ -36,6 +39,7 @@ Implemented:
   per-tool resume command.
 
 **Consumers**
+
 - `agent-task-loop`'s TUI composes this core (`toLines()`).
 - `agent-finder-cli sessions` browses, lists, inspects, and prints resume
   commands (Codex `codex resume <id>`, Claude `claude --resume <id>`).

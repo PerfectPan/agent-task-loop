@@ -14,7 +14,7 @@ const forceSource = process.env.AGENT_TASK_LOOP_FORCE_SOURCE === '1';
 const canRunFromSource = existsSync(sourceEntrypoint) && existsSync(tsxLoader);
 const command = process.execPath;
 const args =
-  (forceSource || canRunFromSource)
+  forceSource || canRunFromSource
     ? ['--import', tsxLoader, sourceEntrypoint, ...process.argv.slice(2)]
     : [distEntrypoint, ...process.argv.slice(2)];
 

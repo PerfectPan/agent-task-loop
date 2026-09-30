@@ -21,7 +21,7 @@ function fakeProvider(source: string, tasks: TaskRecord[]): SourceProvider {
     source,
     listTasks: vi.fn().mockResolvedValue(tasks),
     listPendingTasks: vi.fn().mockResolvedValue(tasks),
-    getTaskById: vi.fn(async (id: string) => tasks.find(task => task.taskId === id)),
+    getTaskById: vi.fn(async (id: string) => tasks.find((task) => task.taskId === id)),
     createTask: vi.fn().mockResolvedValue(undefined),
     claimTask: vi.fn().mockResolvedValue(undefined),
     updateTaskProgress: vi.fn().mockResolvedValue(undefined),
@@ -52,8 +52,8 @@ describe('CompositeTaskProvider', () => {
     const composite = new CompositeTaskProvider([feishu, github]);
 
     const tasks = await composite.listTasks();
-    expect(tasks.map(task => task.taskId)).toEqual(['GH-7']); // not blanked by feishu's failure
-    const warned = warn.mock.calls.map(call => String(call[0])).join('\n');
+    expect(tasks.map((task) => task.taskId)).toEqual(['GH-7']); // not blanked by feishu's failure
+    const warned = warn.mock.calls.map((call) => String(call[0])).join('\n');
     expect(warned).toContain('feishu');
     expect(warned).toContain('base:record:read');
     warn.mockRestore();
@@ -64,7 +64,7 @@ describe('CompositeTaskProvider', () => {
     const feishu = failingProvider('feishu', 'boom');
     const github = fakeProvider('github', [record('GH-7', 'github')]);
     const composite = new CompositeTaskProvider([feishu, github]);
-    expect((await composite.listPendingTasks('codex')).map(t => t.taskId)).toEqual(['GH-7']);
+    expect((await composite.listPendingTasks('codex')).map((t) => t.taskId)).toEqual(['GH-7']);
   });
 
   it('getTaskById skips a failing source and finds the task in a healthy one', async () => {
@@ -77,10 +77,13 @@ describe('CompositeTaskProvider', () => {
 
   it('strict reads reject a partial list without logging raw backend failures', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const composite = new CompositeTaskProvider([
-      failingProvider('feishu', 'credential detail must stay private'),
-      fakeProvider('github', [record('GH-7', 'github')]),
-    ], { readFailureMode: 'strict' });
+    const composite = new CompositeTaskProvider(
+      [
+        failingProvider('feishu', 'credential detail must stay private'),
+        fakeProvider('github', [record('GH-7', 'github')]),
+      ],
+      { readFailureMode: 'strict' },
+    );
 
     await expect(composite.listTasks()).rejects.toThrow('One or more task sources failed to read');
     expect(warn).not.toHaveBeenCalled();
@@ -93,12 +96,8 @@ describe('CompositeTaskProvider', () => {
     const github = fakeProvider('github', [record('GH-7', 'github')]);
     const composite = new CompositeTaskProvider([failing, github], { readFailureMode: 'strict' });
 
-    await expect(composite.getTaskById('missing')).rejects.toThrow(
-      'One or more task sources failed to read',
-    );
-    await expect(composite.getTaskById('GH-7')).rejects.toThrow(
-      'One or more task sources failed to read',
-    );
+    await expect(composite.getTaskById('missing')).rejects.toThrow('One or more task sources failed to read');
+    await expect(composite.getTaskById('GH-7')).rejects.toThrow('One or more task sources failed to read');
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
   });
@@ -109,7 +108,7 @@ describe('CompositeTaskProvider', () => {
     const composite = new CompositeTaskProvider([feishu, github]);
 
     const tasks = await composite.listTasks();
-    expect(tasks.map(task => task.taskId)).toEqual(['IDEA-1', 'GH-7']);
+    expect(tasks.map((task) => task.taskId)).toEqual(['IDEA-1', 'GH-7']);
     expect(composite.sources).toEqual(['feishu', 'github']);
   });
 
@@ -142,10 +141,7 @@ describe('CompositeTaskProvider', () => {
     const github = fakeProvider('github', []);
     const composite = new CompositeTaskProvider([feishu, github]);
 
-    await composite.claimTask(
-      { taskId: 'IDEA-1' },
-      { claimedBy: 'me', claimedAt: 'now', runId: 'r1' },
-    );
+    await composite.claimTask({ taskId: 'IDEA-1' }, { claimedBy: 'me', claimedAt: 'now', runId: 'r1' });
 
     expect(feishu.claimTask).toHaveBeenCalledTimes(1);
     expect(github.claimTask).not.toHaveBeenCalled();
@@ -162,9 +158,9 @@ describe('CompositeTaskProvider', () => {
 
   it('rejects writes to an unknown source', async () => {
     const composite = new CompositeTaskProvider([fakeProvider('feishu', [])]);
-    await expect(
-      composite.markTaskFailed({ taskId: 'X', source: 'nope' }, { lastError: 'boom' }),
-    ).rejects.toThrow(/No task source registered for "nope"/);
+    await expect(composite.markTaskFailed({ taskId: 'X', source: 'nope' }, { lastError: 'boom' })).rejects.toThrow(
+      /No task source registered for "nope"/,
+    );
   });
 
   it('rejects duplicate source ids and an empty provider list', () => {

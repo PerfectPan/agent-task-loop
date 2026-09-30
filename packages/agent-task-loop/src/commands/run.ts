@@ -45,9 +45,7 @@ export const runCommand = defineCommand({
     assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const tasks = await taskService.listPendingTasks(agent);
-    const task = args.task
-      ? tasks.find(item => item.taskId === String(args.task))
-      : pickNextTask(tasks);
+    const task = args.task ? tasks.find((item) => item.taskId === String(args.task)) : pickNextTask(tasks);
 
     if (!task) {
       console.log(`No pending task for agent ${agent}`);

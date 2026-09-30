@@ -29,7 +29,9 @@ describe('source add', () => {
 
   it('appends a second github repo to repositories[]', async () => {
     await sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', repo: 'a', config: file } } as never);
-    await sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', repo: 'b', agent: 'claude', config: file } } as never);
+    await sourceAddCommand.run?.({
+      args: { type: 'github', owner: 'o', repo: 'b', agent: 'claude', config: file },
+    } as never);
     const cfg = read();
     expect(cfg.githubIssues.repositories).toEqual([
       { owner: 'o', repo: 'a', defaultAgent: 'codex' },
@@ -45,7 +47,7 @@ describe('source add', () => {
     await expect(
       sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', config: file } } as never),
     ).rejects.toThrow('exit');
-    expect(err.mock.calls.map(c => String(c[0])).join('\n')).toContain('GitHub repo is required');
+    expect(err.mock.calls.map((c) => String(c[0])).join('\n')).toContain('GitHub repo is required');
     expect(exit).toHaveBeenCalledWith(1);
   });
 
@@ -63,7 +65,7 @@ describe('source list', () => {
     await sourceAddCommand.run?.({ args: { type: 'github', owner: 'o', repo: 'r', config: file } } as never);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     sourceListCommand.run?.({ args: { config: file } } as never);
-    const printed = log.mock.calls.map(c => String(c[0])).join('\n');
+    const printed = log.mock.calls.map((c) => String(c[0])).join('\n');
     expect(printed).toContain('* github:o/r');
   });
 });

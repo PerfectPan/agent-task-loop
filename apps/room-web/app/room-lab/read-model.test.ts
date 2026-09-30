@@ -91,12 +91,7 @@ describe('RoomLabStateSelector', () => {
   });
 });
 
-function stateAt(
-  revision: number,
-  epoch = 'epoch-a',
-  roomId = 'r_aaaaaaaaaa',
-  title = '产品讨论',
-): RoomLabState {
+function stateAt(revision: number, epoch = 'epoch-a', roomId = 'r_aaaaaaaaaa', title = '产品讨论'): RoomLabState {
   return {
     roomId,
     title,

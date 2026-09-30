@@ -35,12 +35,12 @@ export const MIGRATIONS: readonly Migration[] = [
   {
     version: 1,
     name: 'rooms',
-    up: db => db.exec(ROOMS_SQL),
+    up: (db) => db.exec(ROOMS_SQL),
   },
   {
     version: 2,
     name: 'agents',
-    up: db => {
+    up: (db) => {
       db.exec(AGENTS_SQL);
       seedAgents(db);
     },
@@ -48,7 +48,7 @@ export const MIGRATIONS: readonly Migration[] = [
   {
     version: 3,
     name: 'agent_system_prompt',
-    up: db => {
+    up: (db) => {
       db.exec(SYSTEM_PROMPT_SQL);
       adoptSystemPrompts(db);
     },
@@ -56,22 +56,22 @@ export const MIGRATIONS: readonly Migration[] = [
   {
     version: 4,
     name: 'wake_depth',
-    up: db => db.exec(WAKE_DEPTH_SQL),
+    up: (db) => db.exec(WAKE_DEPTH_SQL),
   },
   {
     version: 5,
     name: 'room_settings',
-    up: db => db.exec(ROOM_SETTINGS_SQL),
+    up: (db) => db.exec(ROOM_SETTINGS_SQL),
   },
   {
     version: 6,
     name: 'control_plane',
-    up: db => db.exec(CONTROL_PLANE_SQL),
+    up: (db) => db.exec(CONTROL_PLANE_SQL),
   },
   {
     version: 7,
     name: 'drop_workspace',
-    up: db => db.exec(DROP_WORKSPACE_SQL),
+    up: (db) => db.exec(DROP_WORKSPACE_SQL),
   },
 ];
 
@@ -101,12 +101,13 @@ export function runMigrations(
   const now = options.now ?? (() => new Date().toISOString());
   db.exec(SCHEMA_MIGRATIONS);
   const applied = new Set(
-    (db.prepare('SELECT version FROM schema_migrations').all() as unknown as Array<{ version: number }>)
-      .map(row => Number(row.version)),
+    (db.prepare('SELECT version FROM schema_migrations').all() as unknown as Array<{ version: number }>).map((row) =>
+      Number(row.version),
+    ),
   );
   const pending = [...migrations]
     .sort((left, right) => left.version - right.version)
-    .filter(migration => !applied.has(migration.version));
+    .filter((migration) => !applied.has(migration.version));
 
   const record = db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)');
   for (const migration of pending) {
@@ -117,13 +118,10 @@ export function runMigrations(
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
-      throw new Error(
-        `Room migration ${migrationName(migration)} failed and was rolled back`,
-        { cause: error },
-      );
+      throw new Error(`Room migration ${migrationName(migration)} failed and was rolled back`, { cause: error });
     }
   }
-  return pending.map(migration => migration.version);
+  return pending.map((migration) => migration.version);
 }
 
 export function migrationName(migration: Migration): string {

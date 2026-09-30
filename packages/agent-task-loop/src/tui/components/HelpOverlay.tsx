@@ -42,7 +42,7 @@ export function HelpOverlay({ visible }: HelpOverlayProps): React.ReactElement |
       <Text bold color="cyan">
         Keyboard Shortcuts
       </Text>
-      {BINDINGS.map(binding => (
+      {BINDINGS.map((binding) => (
         <Box key={binding.keys}>
           <Box width={12}>
             <Text color="yellow">{binding.keys}</Text>

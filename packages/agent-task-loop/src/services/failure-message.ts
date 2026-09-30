@@ -1,7 +1,4 @@
-export type FailureMessageFormatter = (
-  error: unknown,
-  neutralMessage: string,
-) => string;
+export type FailureMessageFormatter = (error: unknown, neutralMessage: string) => string;
 
 export function formatFailureMessage(
   formatter: FailureMessageFormatter | undefined,

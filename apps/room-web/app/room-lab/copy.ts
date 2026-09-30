@@ -136,7 +136,8 @@ export const copy = {
     createTitle: '新建房间',
     createIntro: '用要做的事命名房间。成员收到消息后各自决定何时回话。',
     agentsLink: '查看并新增本机的 agent，为每位设置系统提示。',
-    agentsIntro: (total: number, seatable: number) => `本机 ${total} 位智能体，${seatable} 位可入座。系统提示会在房间调用时随请求带上。`,
+    agentsIntro: (total: number, seatable: number) =>
+      `本机 ${total} 位智能体，${seatable} 位可入座。系统提示会在房间调用时随请求带上。`,
     agentIdPattern: 'ID 需以小写字母开头，只能含小写字母、数字和连字符。',
     inNoRoom: '未加入任何房间',
     roomUnavailable: '无法打开这间房',

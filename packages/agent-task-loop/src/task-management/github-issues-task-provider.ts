@@ -68,7 +68,7 @@ interface GitHubIssue {
 }
 
 function labelNames(labels: GitHubIssue['labels']): string[] {
-  return labels.map(label => (typeof label === 'string' ? label : label.name));
+  return labels.map((label) => (typeof label === 'string' ? label : label.name));
 }
 
 function configuredToken(value: string | undefined): string | undefined {
@@ -78,16 +78,15 @@ function configuredToken(value: string | undefined): string | undefined {
 
 function ghCommandCandidates(): string[] {
   const candidates =
-    process.platform === 'win32' ?
-      ['gh', 'gh.exe']
-    : ['gh', '/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh', '/snap/bin/gh'];
+    process.platform === 'win32'
+      ? ['gh', 'gh.exe']
+      : ['gh', '/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh', '/snap/bin/gh'];
   return [...new Set(candidates)];
 }
 
 function describeGhResult(command: string, result: GhTokenResult): string {
-  const reason =
-    result.failed ?
-      `failed${typeof result.exitCode === 'number' ? ` with exit code ${result.exitCode}` : ''}`
+  const reason = result.failed
+    ? `failed${typeof result.exitCode === 'number' ? ` with exit code ${result.exitCode}` : ''}`
     : 'returned no token';
   const detail = result.stderr?.trim() || result.shortMessage?.trim();
   return detail ? `${command}: ${reason} (${detail})` : `${command}: ${reason}`;
@@ -95,11 +94,11 @@ function describeGhResult(command: string, result: GhTokenResult): string {
 
 function describeGhError(command: string, error: unknown): string {
   const detail =
-    error instanceof Error ?
-      'shortMessage' in error && typeof error.shortMessage === 'string' ?
-        error.shortMessage
-      : error.message
-    : String(error);
+    error instanceof Error
+      ? 'shortMessage' in error && typeof error.shortMessage === 'string'
+        ? error.shortMessage
+        : error.message
+      : String(error);
   return `${command}: ${detail}`;
 }
 
@@ -139,14 +138,22 @@ function isRateLimitFailure(response: Response, detail: string): boolean {
   );
 }
 
-function githubApiError(method: string, path: string, response: Response, detail: string, auth: GitHubAuthState): Error {
+function githubApiError(
+  method: string,
+  path: string,
+  response: Response,
+  detail: string,
+  auth: GitHubAuthState,
+): Error {
   const base = `GitHub API ${method} ${path} failed: ${response.status} ${detail}`.trim();
   if (!isRateLimitFailure(response, detail)) {
     return new Error(base);
   }
 
   if (auth.token) {
-    return new Error(`${base}. GitHub rate limit exceeded while using an authenticated GitHub token from ${auth.source}.`);
+    return new Error(
+      `${base}. GitHub rate limit exceeded while using an authenticated GitHub token from ${auth.source}.`,
+    );
   }
 
   const ghDetail = auth.detail ? ` gh auth token attempts: ${auth.detail}` : '';
@@ -180,15 +187,15 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     if (TASK_ID_MARKER.test(issue.body ?? '')) {
       return true;
     }
-    return labelNames(issue.labels).some(name => AGENT_LABEL.test(name));
+    return labelNames(issue.labels).some((name) => AGENT_LABEL.test(name));
   }
 
   async listTasks(): Promise<TaskRecord[]> {
     const issues = await this.listAllIssues();
     return issues
-      .filter(issue => !issue.pull_request)
-      .filter(issue => this.isManaged(issue))
-      .map(issue => this.mapIssue(issue));
+      .filter((issue) => !issue.pull_request)
+      .filter((issue) => this.isManaged(issue))
+      .map((issue) => this.mapIssue(issue));
   }
 
   /**
@@ -220,11 +227,11 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return (await this.listTasks()).filter(task => task.targetAgent === agent && task.status === '待处理');
+    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
-    return (await this.listTasks()).find(task => task.taskId === taskId);
+    return (await this.listTasks()).find((task) => task.taskId === taskId);
   }
 
   async createTask(payload: CreateTaskPayload): Promise<void> {
@@ -280,8 +287,11 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     // a re-read re-derives the old agent and listPendingTasks keeps offering the
     // task to the wrong agent.
     const number = this.issueNumber(task);
-    const issue = await this.api<GitHubIssue>('GET', `/repos/${this.config.owner}/${this.config.repo}/issues/${number}`);
-    const kept = labelNames(issue.labels).filter(name => !AGENT_LABEL.test(name));
+    const issue = await this.api<GitHubIssue>(
+      'GET',
+      `/repos/${this.config.owner}/${this.config.repo}/issues/${number}`,
+    );
+    const kept = labelNames(issue.labels).filter((name) => !AGENT_LABEL.test(name));
     await this.api('PATCH', `/repos/${this.config.owner}/${this.config.repo}/issues/${number}`, {
       labels: [...kept, `agent:${payload.targetAgent}`],
     });
@@ -311,8 +321,8 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
 
   private mapIssue(issue: GitHubIssue): TaskRecord {
     const names = labelNames(issue.labels);
-    const agent = names.map(name => AGENT_LABEL.exec(name)?.[1]).find(Boolean) as TargetAgent | undefined;
-    const priorityLabel = names.map(name => PRIORITY_LABEL.exec(name)?.[1]).find(Boolean);
+    const agent = names.map((name) => AGENT_LABEL.exec(name)?.[1]).find(Boolean) as TargetAgent | undefined;
+    const priorityLabel = names.map((name) => PRIORITY_LABEL.exec(name)?.[1]).find(Boolean);
     const body = issue.body ?? '';
     const taskId = TASK_ID_MARKER.exec(body)?.[1] ?? `GH-${issue.number}`;
     const status: TaskStatus = issue.state === 'closed' ? '已完成' : '待处理';

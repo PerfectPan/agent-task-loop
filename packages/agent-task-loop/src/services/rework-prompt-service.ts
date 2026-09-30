@@ -14,10 +14,7 @@ export function buildReworkPrompt(input: {
     lines.push('最新 review findings：', input.reviewFindings);
   }
   if (input.acceptanceFeedback) {
-    lines.push(
-      '董事长最新验收意见（硬约束，必须逐条落实，不能自行优化成别的方案）：',
-      input.acceptanceFeedback,
-    );
+    lines.push('董事长最新验收意见（硬约束，必须逐条落实，不能自行优化成别的方案）：', input.acceptanceFeedback);
   }
 
   lines.push(

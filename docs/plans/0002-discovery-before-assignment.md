@@ -10,8 +10,8 @@
 
 1. Background and goals
 2. Outline
-6. Execution plan
-7. Risks, open questions, and follow-up
+3. Execution plan
+4. Risks, open questions, and follow-up
 
 ## 1. Background and goals
 
@@ -51,11 +51,11 @@ infrastructure. The agent-finder package is unchanged.
 
 ### 2.2 Design decisions
 
-| Decision | Options | Choice |
-| --- | --- | --- |
-| Where to check | CLI command vs `TaskStartService` | `TaskStartService`, so CLI and Rivus behave the same |
-| Id mapping | Duplicate `init`'s map vs one shared map | One shared map used by `init` and the check |
-| Probe freshness | Every start / per process / TTL cache | **Unresolved**, see section 7 |
+| Decision        | Options                                  | Choice                                               |
+| --------------- | ---------------------------------------- | ---------------------------------------------------- |
+| Where to check  | CLI command vs `TaskStartService`        | `TaskStartService`, so CLI and Rivus behave the same |
+| Id mapping      | Duplicate `init`'s map vs one shared map | One shared map used by `init` and the check          |
+| Probe freshness | Every start / per process / TTL cache    | **Unresolved**, see section 7                        |
 
 ## 6. Execution plan
 
@@ -96,9 +96,9 @@ Blocked until the freshness decision in section 7 is made.
 ### 6.4 Validation ledger
 
 | Batch | Command or evidence | Expected result |
-| --- | --- | --- |
-| 1 | `pnpm test` | pass |
-| 1 | `pnpm typecheck` | pass |
+| ----- | ------------------- | --------------- |
+| 1     | `pnpm test`         | pass            |
+| 1     | `pnpm typecheck`    | pass            |
 
 ### 6.5 Rollback per batch
 
@@ -106,9 +106,9 @@ One PR; revert it. No persisted data changes.
 
 ## 7. Risks, open questions, and follow-up
 
-| Item | Type | Impact | Owner | Next step or deadline |
-| --- | --- | --- | --- | --- |
-| How fresh discovery must be before assignment: every start, once per process, or a TTL cache with manual refresh | open question | Blocks the plan; version probes add start latency | unconfirmed | Decide before implementation |
-| Should path evidence stay only in `evidence`, or should `config_paths` / `mcp_config_paths` become objects with `path` and `exists` | open question | Changes the discovery JSON contract (`schema_version`) | unconfirmed | Decide independently of this plan |
-| Which providers need platform-specific command names or install paths beyond the shared matrix | open question | Detection accuracy on Windows and Linux | unconfirmed | Collect reports |
-| Agent command names and config paths drift over time | risk | False `missing` refusals | unconfirmed | S3 skip rule limits the blast radius |
+| Item                                                                                                                                | Type          | Impact                                                 | Owner       | Next step or deadline                |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------ | ----------- | ------------------------------------ |
+| How fresh discovery must be before assignment: every start, once per process, or a TTL cache with manual refresh                    | open question | Blocks the plan; version probes add start latency      | unconfirmed | Decide before implementation         |
+| Should path evidence stay only in `evidence`, or should `config_paths` / `mcp_config_paths` become objects with `path` and `exists` | open question | Changes the discovery JSON contract (`schema_version`) | unconfirmed | Decide independently of this plan    |
+| Which providers need platform-specific command names or install paths beyond the shared matrix                                      | open question | Detection accuracy on Windows and Linux                | unconfirmed | Collect reports                      |
+| Agent command names and config paths drift over time                                                                                | risk          | False `missing` refusals                               | unconfirmed | S3 skip rule limits the blast radius |

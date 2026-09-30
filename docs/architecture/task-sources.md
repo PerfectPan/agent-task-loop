@@ -12,12 +12,12 @@ Configuration and commands are in [`../configuration.md`](../configuration.md).
 `buildTaskProvider` (`packages/agent-task-loop/src/task-management/build-task-provider.ts`)
 builds one leaf provider per configured source:
 
-| Config | Leaf providers | Default write target |
-| --- | --- | --- |
-| `feishu` only | `FeishuTaskProvider` | Feishu |
+| Config              | Leaf providers                                                                   | Default write target |
+| ------------------- | -------------------------------------------------------------------------------- | -------------------- |
+| `feishu` only       | `FeishuTaskProvider`                                                             | Feishu               |
 | `githubIssues` only | one `GitHubIssuesTaskProvider` per repository, source id `github:<owner>/<repo>` | the first repository |
-| both | all of the above | Feishu |
-| neither | rejected by the config schema and by `assertRuntimeConfig` | — |
+| both                | all of the above                                                                 | Feishu               |
+| neither             | rejected by the config schema and by `assertRuntimeConfig`                       | —                    |
 
 One leaf is used directly; several are wrapped in `CompositeTaskProvider`,
 which reads every source and routes each write to the record's `source`. In

@@ -45,8 +45,10 @@ export const startCommand = defineCommand({
       taskService,
       runner,
       livenessService: new TaskRunnerLivenessService(),
-      onRecovery: inspection => {
-        console.log(`[agent-task-loop] 检测到僵死 ${inspection.mode} 轮次，正在从当前现场恢复：${inspection.reason ?? 'unknown'}`);
+      onRecovery: (inspection) => {
+        console.log(
+          `[agent-task-loop] 检测到僵死 ${inspection.mode} 轮次，正在从当前现场恢复：${inspection.reason ?? 'unknown'}`,
+        );
       },
     });
     const task = await startService.startTask({

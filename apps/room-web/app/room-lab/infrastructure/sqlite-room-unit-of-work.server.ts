@@ -61,10 +61,7 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
     });
   }
 
-  withRoomAndSession<T>(
-    id: AgentSessionId,
-    work: (room: Room, session: AgentSessionAggregate) => T,
-  ): T {
+  withRoomAndSession<T>(id: AgentSessionId, work: (room: Room, session: AgentSessionAggregate) => T): T {
     return this.transact(() => {
       const room = this.openRoom(id.roomId);
       const session = this.loadSession(id);
@@ -137,15 +134,19 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
 
   private reload(): void {
     const roomId = this.roomId.conversationId;
-    const eventRows = this.db.prepare(`
+    const eventRows = this.db
+      .prepare(`
       SELECT seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
       FROM room_events WHERE room_id = ? ORDER BY seq ASC
-    `).all(roomId) as unknown as EventRow[];
-    this.events = eventRows.map(row => toEvent(this.roomId, row));
-    const sessionRows = this.db.prepare(`
+    `)
+      .all(roomId) as unknown as EventRow[];
+    this.events = eventRows.map((row) => toEvent(this.roomId, row));
+    const sessionRows = this.db
+      .prepare(`
       SELECT tenant_id, agent_id, room_id, runtime_generation_id, seen_seq
       FROM agent_sessions WHERE room_id = ?
-    `).all(roomId) as unknown as SessionRow[];
+    `)
+      .all(roomId) as unknown as SessionRow[];
     this.sessions.clear();
     for (const row of sessionRows) {
       const session = toSession(row);
@@ -172,7 +173,9 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     for (const event of this.events) {
-      if (event.seq <= this.dbHead) continue;
+      if (event.seq <= this.dbHead) {
+        continue;
+      }
       insertEvent.run(
         roomId,
         event.seq,
@@ -195,7 +198,9 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
       ON CONFLICT(tenant_id, agent_id, room_id, runtime_generation_id) DO UPDATE SET seen_seq = excluded.seen_seq
     `);
     for (const session of this.sessions.values()) {
-      if (this.dbSessions.get(sessionKey(session.id))?.seenSeq === session.seenSeq) continue;
+      if (this.dbSessions.get(sessionKey(session.id))?.seenSeq === session.seenSeq) {
+        continue;
+      }
       upsertSession.run(
         session.id.tenantId,
         session.id.agentId,
@@ -278,18 +283,20 @@ export class SqliteRoomStreamStore {
     addressedTo: AgentId[];
     wakeDepth: number;
   }): Promise<RoomEvent> {
-    return this.unitOfWork.withRoom(this.roomIdOf(), room => room.post(
-      {
-        messageId: `${input.messageId}:${room.head + 1}`,
-        author: input.author,
-        kind: 'posted',
-        body: input.body,
-        origin: 'endpoint',
-        addressedTo: [...input.addressedTo],
-        wakeDepth: input.wakeDepth,
-      },
-      new Date(this.now()).toISOString(),
-    ));
+    return this.unitOfWork.withRoom(this.roomIdOf(), (room) =>
+      room.post(
+        {
+          messageId: `${input.messageId}:${room.head + 1}`,
+          author: input.author,
+          kind: 'posted',
+          body: input.body,
+          origin: 'endpoint',
+          addressedTo: [...input.addressedTo],
+          wakeDepth: input.wakeDepth,
+        },
+        new Date(this.now()).toISOString(),
+      ),
+    );
   }
 
   private roomIdOf(): RoomId {

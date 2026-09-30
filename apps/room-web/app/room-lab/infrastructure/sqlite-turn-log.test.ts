@@ -18,10 +18,12 @@ function turn(input: Partial<TurnRecord> & { id: string }): TurnRecord {
 }
 
 function insertRoom(store: SqliteRoomStore, roomId = ROOM): void {
-  store.db.prepare(`
+  store.db
+    .prepare(`
     INSERT INTO rooms (id, title, goal, created_at, updated_at, last_opened_at)
     VALUES (?, '测试房间', NULL, '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z', '2026-09-28T00:00:00.000Z')
-  `).run(roomId);
+  `)
+    .run(roomId);
 }
 
 describe('SqliteTurnLog', () => {
@@ -30,29 +32,33 @@ describe('SqliteTurnLog', () => {
     insertRoom(store);
     const log = new SqliteTurnLog(store.db);
 
-    log.append(turn({
-      id: 'turn:1',
-      endedAt: '2026-09-28T10:04:00.000Z',
-      outcome: 'posted',
-      postedSeq: 5,
-      stopReason: 'end_turn',
-      heldCount: 1,
-    }));
+    log.append(
+      turn({
+        id: 'turn:1',
+        endedAt: '2026-09-28T10:04:00.000Z',
+        outcome: 'posted',
+        postedSeq: 5,
+        stopReason: 'end_turn',
+        heldCount: 1,
+      }),
+    );
 
     // The read model drops the room and the read watermark: the room is the
     // query's own key, and the cursor lives in agent_sessions.
-    expect(log.listByRoom(ROOM)).toEqual([{
-      id: 'turn:1',
-      agentId: 'codex',
-      roundSeq: 1,
-      triggerSeq: 1,
-      startedAt: '2026-09-28T10:00:00.000Z',
-      endedAt: '2026-09-28T10:04:00.000Z',
-      outcome: 'posted',
-      postedSeq: 5,
-      stopReason: 'end_turn',
-      heldCount: 1,
-    }]);
+    expect(log.listByRoom(ROOM)).toEqual([
+      {
+        id: 'turn:1',
+        agentId: 'codex',
+        roundSeq: 1,
+        triggerSeq: 1,
+        startedAt: '2026-09-28T10:00:00.000Z',
+        endedAt: '2026-09-28T10:04:00.000Z',
+        outcome: 'posted',
+        postedSeq: 5,
+        stopReason: 'end_turn',
+        heldCount: 1,
+      },
+    ]);
   });
 
   it('stores a turn that is still running or ended silently with the optional columns empty', () => {
@@ -64,17 +70,19 @@ describe('SqliteTurnLog', () => {
 
     // The row is there with its defaults; the record read back carries none of
     // the optional fields.
-    expect(log.listByRoom(ROOM)).toEqual([{
-      id: 'turn:open',
-      agentId: 'codex',
-      roundSeq: 1,
-      triggerSeq: 1,
-      startedAt: '2026-09-28T10:00:00.000Z',
-      heldCount: 0,
-    }]);
-    expect(store.db.prepare('SELECT ended_at, outcome, posted_seq, held_count FROM turns WHERE id = ?')
-      .get('turn:open'))
-      .toEqual({ ended_at: null, outcome: null, posted_seq: null, held_count: 0 });
+    expect(log.listByRoom(ROOM)).toEqual([
+      {
+        id: 'turn:open',
+        agentId: 'codex',
+        roundSeq: 1,
+        triggerSeq: 1,
+        startedAt: '2026-09-28T10:00:00.000Z',
+        heldCount: 0,
+      },
+    ]);
+    expect(
+      store.db.prepare('SELECT ended_at, outcome, posted_seq, held_count FROM turns WHERE id = ?').get('turn:open'),
+    ).toEqual({ ended_at: null, outcome: null, posted_seq: null, held_count: 0 });
   });
 
   it('reads only the room asked about, oldest first', () => {
@@ -86,8 +94,8 @@ describe('SqliteTurnLog', () => {
     log.append(turn({ id: 'turn:earlier', agentId: 'claude', startedAt: '2026-09-28T10:01:00.000Z' }));
     log.append(turn({ id: 'turn:other-room', roomId: 'r_bbbbbbbbbb', startedAt: '2026-09-28T09:00:00.000Z' }));
 
-    expect(log.listByRoom(ROOM).map(row => row.id)).toEqual(['turn:earlier', 'turn:later']);
-    expect(log.listByRoom('r_bbbbbbbbbb').map(row => row.id)).toEqual(['turn:other-room']);
+    expect(log.listByRoom(ROOM).map((row) => row.id)).toEqual(['turn:earlier', 'turn:later']);
+    expect(log.listByRoom('r_bbbbbbbbbb').map((row) => row.id)).toEqual(['turn:other-room']);
     expect(log.listByRoom('r_noperoom')).toEqual([]);
   });
 
@@ -122,6 +130,6 @@ describe('SqliteTurnLog clear', () => {
 
     log.clear(ROOM);
     expect(log.listByRoom(ROOM)).toEqual([]);
-    expect(log.listByRoom('r_otherroom00').map(row => row.id)).toEqual(['turn:2']);
+    expect(log.listByRoom('r_otherroom00').map((row) => row.id)).toEqual(['turn:2']);
   });
 });

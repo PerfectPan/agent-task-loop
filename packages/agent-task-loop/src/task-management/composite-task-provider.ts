@@ -64,7 +64,7 @@ export class CompositeTaskProvider implements TaskProvider {
 
   /** Source ids backing this provider, in registration order. */
   get sources(): string[] {
-    return this.providers.map(provider => provider.source);
+    return this.providers.map((provider) => provider.source);
   }
 
   private route(source: string | undefined): SourceProvider {
@@ -95,7 +95,7 @@ export class CompositeTaskProvider implements TaskProvider {
    */
   private async mergeReads(read: (provider: SourceProvider) => Promise<TaskRecord[]>): Promise<TaskRecord[]> {
     const settled = await Promise.allSettled(this.providers.map(read));
-    const failures = settled.filter(result => result.status === 'rejected');
+    const failures = settled.filter((result) => result.status === 'rejected');
     if (this.readFailureMode === 'strict' && failures.length > 0) {
       throw new Error('One or more task sources failed to read');
     }
@@ -111,11 +111,11 @@ export class CompositeTaskProvider implements TaskProvider {
   }
 
   async listTasks(): Promise<TaskRecord[]> {
-    return this.mergeReads(provider => provider.listTasks());
+    return this.mergeReads((provider) => provider.listTasks());
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return this.mergeReads(provider => provider.listPendingTasks(agent));
+    return this.mergeReads((provider) => provider.listPendingTasks(agent));
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {

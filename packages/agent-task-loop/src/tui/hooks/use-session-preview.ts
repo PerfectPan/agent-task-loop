@@ -54,13 +54,14 @@ export function useSessionPreview(
     const fetchPreview = async () => {
       setIsLoading(true);
       try {
-        const next = await providerRef.current.getPreview(
-          task,
-          nowRef.current(),
-        );
-        if (active) setPreview(next);
+        const next = await providerRef.current.getPreview(task, nowRef.current());
+        if (active) {
+          setPreview(next);
+        }
       } finally {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       }
     };
 

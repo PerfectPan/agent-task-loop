@@ -19,9 +19,13 @@ describe.skipIf(!live)('live ACP probes', () => {
     ['opencode', { command: process.env.RIVUS_LIVE_ACP_OPENCODE ?? 'opencode', args: ['acp'] }],
   ];
 
-  it.each(cases)('probes %s', async (_id, binding) => {
-    const connector = new AcpConnector();
-    const probe = await connector.probe(binding);
-    expect(['ready', 'needs-login', 'missing']).toContain(probe.status);
-  }, 180_000);
+  it.each(cases)(
+    'probes %s',
+    async (_id, binding) => {
+      const connector = new AcpConnector();
+      const probe = await connector.probe(binding);
+      expect(['ready', 'needs-login', 'missing']).toContain(probe.status);
+    },
+    180_000,
+  );
 });

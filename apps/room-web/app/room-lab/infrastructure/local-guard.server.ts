@@ -1,17 +1,17 @@
 export const noStoreHeaders = { 'Cache-Control': 'no-store' };
 
 export class LocalRequestError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
     super(message);
     this.name = 'LocalRequestError';
   }
 }
 
 export function assertLocalRuntime(): void {
-  if (
-    process.env.VERCEL ||
-    (process.env.NODE_ENV === 'production' && process.env.ROOM_LAB_LOCAL !== '1')
-  ) {
+  if (process.env.VERCEL || (process.env.NODE_ENV === 'production' && process.env.ROOM_LAB_LOCAL !== '1')) {
     throw new LocalRequestError(403, 'Room flight deck is local-only');
   }
 }
@@ -31,7 +31,9 @@ export function assertSameOriginJson(request: Request): void {
  */
 export function assertSameOriginForm(request: Request): void {
   const origin = request.headers.get('Origin');
-  if (origin) assertSameOrigin(request);
+  if (origin) {
+    assertSameOrigin(request);
+  }
 }
 
 function assertSameOrigin(request: Request): void {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Box, Text, useApp, useInput } from "ink";
-import type { Session, TranscriptEntry } from "@rivus/agent-sessions";
-import { relativeAge } from "../sessions/view.js";
+import { useEffect, useState } from 'react';
+import { Box, Text, useApp, useInput } from 'ink';
+import type { Session, TranscriptEntry } from '@rivus/agent-sessions';
+import { relativeAge } from '../sessions/view.js';
 
 export interface SessionsBrowserProps {
   sessions: Session[];
@@ -18,7 +18,13 @@ export interface SessionsBrowserProps {
  * selected session's transcript preview on the right. ↑/↓ (or k/j) navigate,
  * q/Esc quits.
  */
-export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, previewLines = 20 }: SessionsBrowserProps) {
+export function SessionsBrowser({
+  sessions,
+  loadTranscript,
+  nowMs,
+  loadResume,
+  previewLines = 20,
+}: SessionsBrowserProps) {
   const { exit } = useApp();
   const [selected, setSelected] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
@@ -26,12 +32,16 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, p
   const current = sessions[selected];
 
   useInput((input, key) => {
-    if (input === "q" || key.escape) {
+    if (input === 'q' || key.escape) {
       exit();
       return;
     }
-    if (key.downArrow || input === "j") setSelected((i) => Math.min(sessions.length - 1, i + 1));
-    if (key.upArrow || input === "k") setSelected((i) => Math.max(0, i - 1));
+    if (key.downArrow || input === 'j') {
+      setSelected((i) => Math.min(sessions.length - 1, i + 1));
+    }
+    if (key.upArrow || input === 'k') {
+      setSelected((i) => Math.max(0, i - 1));
+    }
   });
 
   useEffect(() => {
@@ -41,19 +51,23 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, p
     if (current) {
       loadTranscript(current.id).then(
         (t) => {
-          if (active) setTranscript(t);
+          if (active) {
+            setTranscript(t);
+          }
         },
         () => {
           /* ignore — preview stays empty */
-        }
+        },
       );
       loadResume?.(current.id).then(
         (cmd) => {
-          if (active) setResume(cmd);
+          if (active) {
+            setResume(cmd);
+          }
         },
         () => {
           /* ignore — no resume hint */
-        }
+        },
       );
     }
     return () => {
@@ -61,13 +75,13 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, p
     };
   }, [current?.id, loadTranscript, loadResume]);
 
-  if (sessions.length === 0) return <Text dimColor>No sessions found.</Text>;
+  if (sessions.length === 0) {
+    return <Text dimColor>No sessions found.</Text>;
+  }
 
   return (
     <Box flexDirection="column">
-      <Text bold>
-        Sessions ({sessions.length}) — ↑/↓ navigate · q quit
-      </Text>
+      <Text bold>Sessions ({sessions.length}) — ↑/↓ navigate · q quit</Text>
       <Box>
         <Box flexDirection="column" width={42} marginRight={2}>
           {sessions.map((session, i) => (
@@ -78,7 +92,7 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, p
         </Box>
         <Box flexDirection="column" flexGrow={1}>
           <Text dimColor wrap="truncate">
-            {current?.path ?? current?.id ?? ""}
+            {current?.path ?? current?.id ?? ''}
           </Text>
           {resume ? (
             <Text color="green" wrap="truncate">
@@ -90,7 +104,7 @@ export function SessionsBrowser({ sessions, loadTranscript, nowMs, loadResume, p
           ) : (
             transcript.slice(-previewLines).map((entry, i) => (
               <Text key={i} wrap="truncate">
-                {entry.role === "tool" ? `⚙ ${entry.toolName ?? entry.text}` : `${entry.role}: ${entry.text}`}
+                {entry.role === 'tool' ? `⚙ ${entry.toolName ?? entry.text}` : `${entry.role}: ${entry.text}`}
               </Text>
             ))
           )}

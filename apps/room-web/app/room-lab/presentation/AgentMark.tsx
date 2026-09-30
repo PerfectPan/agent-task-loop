@@ -17,7 +17,12 @@ import { Avatar, AvatarFallback } from '~/components/ui/avatar';
 /** 11px letters at 30px and above, 10px on the 22px mark in the lists. */
 const letterSize = (size: number) => (size <= 22 ? 'text-[10px]' : 'text-[11px]');
 
-export function AgentMark({ agentId, color, size = 30, className = '' }: {
+export function AgentMark({
+  agentId,
+  color,
+  size = 30,
+  className = '',
+}: {
   agentId: RoomLabAgentId;
   color: number | undefined;
   size?: number;

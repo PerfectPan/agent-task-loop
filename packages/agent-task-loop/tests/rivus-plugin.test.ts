@@ -77,13 +77,12 @@ describe('agent-task-loop Rivus Plugin', () => {
     const registrations = register(createRivusTaskManagerPlugin({ createTaskManager }));
     const listTool = registrations.tools.get(TASK_LIST_TOOL_ID)!;
 
-    const result = await listTool.createExecutor({
-      toolId: TASK_LIST_TOOL_ID,
-      toolVersion: '1.0.0',
-    }).execute(
-      { status: '待处理', targetAgent: 'codex', limit: 10 },
-      executionContext(TASK_LIST_TOOL_ID),
-    );
+    const result = await listTool
+      .createExecutor({
+        toolId: TASK_LIST_TOOL_ID,
+        toolVersion: '1.0.0',
+      })
+      .execute({ status: '待处理', targetAgent: 'codex', limit: 10 }, executionContext(TASK_LIST_TOOL_ID));
 
     expect(createTaskManager).toHaveBeenCalledTimes(1);
     expect(listTasks).toHaveBeenCalledTimes(1);
@@ -113,10 +112,7 @@ describe('agent-task-loop Rivus Plugin', () => {
     const unknownProperty = `sensitive-${'x'.repeat(2_000)}`;
 
     await expect(
-      executor.execute(
-        { taskId: 'TASK-30', [unknownProperty]: true },
-        executionContext(TASK_GET_TOOL_ID),
-      ),
+      executor.execute({ taskId: 'TASK-30', [unknownProperty]: true }, executionContext(TASK_GET_TOOL_ID)),
     ).rejects.toMatchObject({
       message: 'Invalid task-get input: contains unknown properties',
       name: 'RivusToolInputRejected',
@@ -131,13 +127,16 @@ describe('agent-task-loop Rivus Plugin', () => {
       .createExecutor({ toolId: TASK_CREATE_TOOL_ID, toolVersion: '1.0.0' });
 
     await expect(
-      executor.execute({
-        taskId: 'TASK-31',
-        title: `${'x'.repeat(200)} `,
-        project: 'project',
-        targetAgent: 'codex',
-        priority: 1,
-      }, executionContext(TASK_CREATE_TOOL_ID)),
+      executor.execute(
+        {
+          taskId: 'TASK-31',
+          title: `${'x'.repeat(200)} `,
+          project: 'project',
+          targetAgent: 'codex',
+          priority: 1,
+        },
+        executionContext(TASK_CREATE_TOOL_ID),
+      ),
     ).rejects.toMatchObject({
       message: 'Invalid task-create title: exceeds its maximum length',
       name: 'RivusToolInputRejected',
@@ -148,25 +147,27 @@ describe('agent-task-loop Rivus Plugin', () => {
   it('routes task-get through the injected Task Manager capability', async () => {
     const expected = { task: { taskId: 'TASK-30' } };
     const getTask = vi.fn().mockResolvedValue(expected);
-    const registrations = register(createRivusTaskManagerPlugin({
-      createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ getTask })),
-    }));
+    const registrations = register(
+      createRivusTaskManagerPlugin({
+        createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ getTask })),
+      }),
+    );
     const executor = registrations.tools.get(TASK_GET_TOOL_ID)!.createExecutor({
       toolId: TASK_GET_TOOL_ID,
       toolVersion: '1.0.0',
     });
 
-    await expect(
-      executor.execute({ taskId: 'TASK-30' }, executionContext(TASK_GET_TOOL_ID)),
-    ).resolves.toBe(expected);
+    await expect(executor.execute({ taskId: 'TASK-30' }, executionContext(TASK_GET_TOOL_ID))).resolves.toBe(expected);
     expect(getTask).toHaveBeenCalledWith({ taskId: 'TASK-30' });
   });
 
   it('routes task-create once with only validated public fields', async () => {
     const createTask = vi.fn().mockResolvedValue({ action: 'created', taskId: 'TASK-31' });
-    const registrations = register(createRivusTaskManagerPlugin({
-      createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ createTask })),
-    }));
+    const registrations = register(
+      createRivusTaskManagerPlugin({
+        createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ createTask })),
+      }),
+    );
     const executor = registrations.tools.get(TASK_CREATE_TOOL_ID)!.createExecutor({
       toolId: TASK_CREATE_TOOL_ID,
       toolVersion: '1.0.0',
@@ -192,17 +193,17 @@ describe('agent-task-loop Rivus Plugin', () => {
   it('routes task-start once and applies the bounded default round count', async () => {
     const result = { action: 'review-loop-completed', taskId: 'TASK-32', task: { taskId: 'TASK-32' } };
     const startTask = vi.fn().mockResolvedValue(result);
-    const registrations = register(createRivusTaskManagerPlugin({
-      createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ startTask })),
-    }));
+    const registrations = register(
+      createRivusTaskManagerPlugin({
+        createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ startTask })),
+      }),
+    );
     const executor = registrations.tools.get(TASK_START_TOOL_ID)!.createExecutor({
       toolId: TASK_START_TOOL_ID,
       toolVersion: '1.0.0',
     });
 
-    await expect(
-      executor.execute({ taskId: 'TASK-32' }, executionContext(TASK_START_TOOL_ID)),
-    ).resolves.toBe(result);
+    await expect(executor.execute({ taskId: 'TASK-32' }, executionContext(TASK_START_TOOL_ID))).resolves.toBe(result);
     expect(startTask).toHaveBeenCalledTimes(1);
     expect(startTask).toHaveBeenCalledWith({ taskId: 'TASK-32', maxRounds: 5 });
   });
@@ -213,13 +214,15 @@ describe('agent-task-loop Rivus Plugin', () => {
     expect(registrations.profile.tools.allow).toEqual(TASK_MANAGER_TOOL_IDS);
     expect(registrations.profile.skills.allow).toEqual([]);
     expect(registrations.profile.memory.scopes).toEqual([]);
-    expect([...registrations.tools.values()].map(tool => ({
-      digest: tool.digest,
-      id: tool.id,
-      idempotency: tool.idempotency,
-      risk: tool.risk,
-      version: tool.version,
-    }))).toEqual([
+    expect(
+      [...registrations.tools.values()].map((tool) => ({
+        digest: tool.digest,
+        id: tool.id,
+        idempotency: tool.idempotency,
+        risk: tool.risk,
+        version: tool.version,
+      })),
+    ).toEqual([
       {
         digest: 'sha256:f385f1d5c6ac3179535503e8da6188ce87e44f32ce5a308aeb54ed8664951946',
         id: TASK_LIST_TOOL_ID,
@@ -265,23 +268,23 @@ describe('agent-task-loop Rivus Plugin', () => {
   });
 
   it('maps stable business input errors to the Rivus Tool boundary', async () => {
-    const getTask = vi.fn().mockRejectedValue(
-      new TaskManagerInputError('task-not-found', 'Task TASK-404 not found'),
+    const getTask = vi.fn().mockRejectedValue(new TaskManagerInputError('task-not-found', 'Task TASK-404 not found'));
+    const registrations = register(
+      createRivusTaskManagerPlugin({
+        createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ getTask })),
+      }),
     );
-    const registrations = register(createRivusTaskManagerPlugin({
-      createTaskManager: vi.fn().mockResolvedValue(fakeTaskManager({ getTask })),
-    }));
     const executor = registrations.tools.get(TASK_GET_TOOL_ID)!.createExecutor({
       toolId: TASK_GET_TOOL_ID,
       toolVersion: '1.0.0',
     });
 
-    await expect(
-      executor.execute({ taskId: 'TASK-404' }, executionContext(TASK_GET_TOOL_ID)),
-    ).rejects.toEqual(expect.objectContaining({
-      message: 'Task TASK-404 not found',
-      name: 'RivusToolInputRejected',
-    }));
+    await expect(executor.execute({ taskId: 'TASK-404' }, executionContext(TASK_GET_TOOL_ID))).rejects.toEqual(
+      expect.objectContaining({
+        message: 'Task TASK-404 not found',
+        name: 'RivusToolInputRejected',
+      }),
+    );
   });
 
   it.each([
@@ -306,12 +309,14 @@ function register(plugin: { register(registry: RivusPluginRegistry): void }): {
   const profiles: RivusAgentProfile[] = [];
   const tools = new Map<string, RivusToolDescriptor>();
   plugin.register({
-    registerAgentProfile: profile => profiles.push(profile),
+    registerAgentProfile: (profile) => profiles.push(profile),
     registerAutomation: () => undefined,
     registerSkill: () => undefined,
-    registerTool: tool => tools.set(tool.id, tool),
+    registerTool: (tool) => tools.set(tool.id, tool),
   });
-  if (!profiles[0]) throw new Error('Task Manager Profile was not registered');
+  if (!profiles[0]) {
+    throw new Error('Task Manager Profile was not registered');
+  }
   return { profile: profiles[0], tools };
 }
 

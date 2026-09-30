@@ -12,10 +12,7 @@ export const HEARTBEAT_STALE_MS = 60000;
  * - ageMs is `now - parse(lastHeartbeatAt)`, with future heartbeats clamped to 0
  * - state: 'fresh' when ageMs < FRESH, 'stale' when < STALE, otherwise 'dead'
  */
-export function heartbeatFreshness(
-  lastHeartbeatAt: string | undefined,
-  now: number,
-): HeartbeatInfo {
+export function heartbeatFreshness(lastHeartbeatAt: string | undefined, now: number): HeartbeatInfo {
   if (!lastHeartbeatAt || lastHeartbeatAt.trim() === '') {
     return { state: 'none', ageMs: null };
   }
@@ -24,8 +21,7 @@ export function heartbeatFreshness(
     return { state: 'none', ageMs: null };
   }
   const ageMs = Math.max(0, now - parsed);
-  const state: HeartbeatState =
-    ageMs < HEARTBEAT_FRESH_MS ? 'fresh' : ageMs < HEARTBEAT_STALE_MS ? 'stale' : 'dead';
+  const state: HeartbeatState = ageMs < HEARTBEAT_FRESH_MS ? 'fresh' : ageMs < HEARTBEAT_STALE_MS ? 'stale' : 'dead';
   return { state, ageMs };
 }
 

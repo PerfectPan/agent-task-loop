@@ -13,16 +13,16 @@ endpoint). How to run room-web is in
 
 ## Principles and the rules they fix
 
-| Principle | Rule |
-| --- | --- |
-| Rooms are the only channel | No shared workspace, draft, blackboard, or mail. A member that wants others to know something posts it; a private exchange is a room with fewer members |
-| Members are peers | The write point is the same for a person's message and an agent's; only the caller differs |
-| Seeing is not speaking | A wake produces a turn; a turn ends in `speak` or `pass`; both advance the member's cursor |
-| Work is private, results are public | An agent speaks only by calling a Room tool. Printed text is never posted; there is no stdout fallback. Progress is not a message |
-| A member is single-threaded | One Inbox and one lease per (room, member). A wake for a busy member collapses into one pending flag |
-| Order is derived, not scheduled | `shouldWake` is a broadcast. The room's `serial` switch runs the woken set one at a time in seat order without changing the protocol |
-| Attention is bounded | Every event carries a wake depth; a depth ceiling and a per-round turn budget bound the work |
-| Mechanism below, policy above | The packages know nothing about count-offs, roles, tasks, or products; those live in the endpoint |
+| Principle                           | Rule                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rooms are the only channel          | No shared workspace, draft, blackboard, or mail. A member that wants others to know something posts it; a private exchange is a room with fewer members |
+| Members are peers                   | The write point is the same for a person's message and an agent's; only the caller differs                                                              |
+| Seeing is not speaking              | A wake produces a turn; a turn ends in `speak` or `pass`; both advance the member's cursor                                                              |
+| Work is private, results are public | An agent speaks only by calling a Room tool. Printed text is never posted; there is no stdout fallback. Progress is not a message                       |
+| A member is single-threaded         | One Inbox and one lease per (room, member). A wake for a busy member collapses into one pending flag                                                    |
+| Order is derived, not scheduled     | `shouldWake` is a broadcast. The room's `serial` switch runs the woken set one at a time in seat order without changing the protocol                    |
+| Attention is bounded                | Every event carries a wake depth; a depth ceiling and a per-round turn budget bound the work                                                            |
+| Mechanism below, policy above       | The packages know nothing about count-offs, roles, tasks, or products; those live in the endpoint                                                       |
 
 ## `@rivus/agent-room`: the protocol
 
@@ -34,12 +34,12 @@ Stores nothing; exposes ports and a memory implementation.
   optional `transportMessageId`.
 - `AgentSession` keeps `seenSeq` per (room, member).
 
-| Write point | Caller | Effect |
-| --- | --- | --- |
-| `admit(event)` | endpoint, for a human message | Append at depth 0; idempotent on `transportMessageId` |
-| `speak({ body, addressedTo, readUpToSeq, triggerSeq })` | a member's turn | HELD, with the newer events, if any event by another author has `seq > readUpToSeq`; otherwise append `posted` at trigger depth + 1 and move the cursor |
-| `pass({ readUpToSeq })` | a turn ending without a post | Move the cursor; never HELD |
-| `speak` with `origin: 'control-plane'` | endpoint, for a notice such as the round budget | Append a control-plane event, which wakes nobody |
+| Write point                                             | Caller                                          | Effect                                                                                                                                                  |
+| ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admit(event)`                                          | endpoint, for a human message                   | Append at depth 0; idempotent on `transportMessageId`                                                                                                   |
+| `speak({ body, addressedTo, readUpToSeq, triggerSeq })` | a member's turn                                 | HELD, with the newer events, if any event by another author has `seq > readUpToSeq`; otherwise append `posted` at trigger depth + 1 and move the cursor |
+| `pass({ readUpToSeq })`                                 | a turn ending without a post                    | Move the cursor; never HELD                                                                                                                             |
+| `speak` with `origin: 'control-plane'`                  | endpoint, for a notice such as the round budget | Append a control-plane event, which wakes nobody                                                                                                        |
 
 HELD resolves inside the turn, but a HELD answer does not advance the turn's
 `readUpToSeq`. The member must call `room_read` to read what it missed; only a
@@ -149,7 +149,7 @@ directory), with a forward-only migration chain in
   held, before and after a tool call update), then the last outcome. HELD is
   not shown to the person.
 - Room mutations (`routes/room.$roomId.tsx`) require `Content-Type:
-  application/json` and an `Origin` of `http://127.0.0.1` or
+application/json` and an `Origin` of `http://127.0.0.1` or
   `http://localhost` (`assertSameOriginJson`). The form actions for creating a
   room (`routes/room._index.tsx`) and managing agents (`routes/room.agents.tsx`)
   use `assertSameOriginForm`: no content-type check, and a request without an
@@ -177,13 +177,13 @@ member's private memory is lost.
 `loadConfig`, `TaskRecord`), read-only. The board groups the ten statuses into
 five lanes (`app/board/domain/lanes.ts`):
 
-| Lane | Statuses |
-| --- | --- |
-| 待办 | 待处理 |
-| 进行中 | 进行中, 执行中, 修复中 |
-| 审核中 | 待复核 |
+| Lane     | Statuses               |
+| -------- | ---------------------- |
+| 待办     | 待处理                 |
+| 进行中   | 进行中, 执行中, 修复中 |
+| 审核中   | 待复核                 |
 | 待你决定 | 待决策, 待发布, 待验收 |
-| 已结束 | 已完成, 已失败 |
+| 已结束   | 已完成, 已失败         |
 
 A model review PASS stays in 待你决定 until a person acts; the task detail
 page says so. Board and rooms are not linked to each other, and the board

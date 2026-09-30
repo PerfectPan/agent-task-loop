@@ -30,9 +30,7 @@ export const schemaCommand = defineCommand({
       printCommandOutput({
         json: Boolean(args.json),
         jsonValue: { skipped: true, reason: 'no-feishu-source' },
-        textLines: [
-          'No Feishu source configured; schema applies only to Feishu Base. GitHub Issues need no schema.',
-        ],
+        textLines: ['No Feishu source configured; schema applies only to Feishu Base. GitHub Issues need no schema.'],
       });
       return;
     }

@@ -22,10 +22,13 @@ describe('GitPublishService', () => {
 
     expect(exec).toHaveBeenCalledWith('git', ['-C', '/tmp/worktree', 'add', '-A']);
     expect(exec).toHaveBeenCalledWith('git', ['-C', '/tmp/worktree', 'reset', '--', '.agent-task-loop']);
-    expect(exec).toHaveBeenCalledWith(
-      'git',
-      ['-C', '/tmp/worktree', 'commit', '-F', expect.stringContaining('COMMIT_EDITMSG')],
-    );
+    expect(exec).toHaveBeenCalledWith('git', [
+      '-C',
+      '/tmp/worktree',
+      'commit',
+      '-F',
+      expect.stringContaining('COMMIT_EDITMSG'),
+    ]);
   });
 
   it('skips commit when workspace is clean', async () => {
@@ -96,7 +99,9 @@ describe('GitPublishService', () => {
   }, 10_000);
 
   it('turns a non-fast-forward push rejection into actionable guidance', async () => {
-    const exec = vi.fn().mockRejectedValue(new Error('! [rejected] task/x -> task/x (non-fast-forward)\nUpdates were rejected'));
+    const exec = vi
+      .fn()
+      .mockRejectedValue(new Error('! [rejected] task/x -> task/x (non-fast-forward)\nUpdates were rejected'));
     const service = new GitPublishService(exec as never);
 
     await expect(service.pushBranch({ workspacePath: '/tmp/worktree', branch: 'task/x' })).rejects.toThrow(

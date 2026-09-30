@@ -22,11 +22,15 @@ export class FileOrchestrationStore implements RunStateStore {
   }
 
   listKeys(): string[] {
-    if (!existsSync(this.baseDir)) return [];
+    if (!existsSync(this.baseDir)) {
+      return [];
+    }
     const keys: string[] = [];
     for (const name of readdirSync(this.baseDir)) {
       const snapshot = readJson<RunSnapshot>(path.join(this.baseDir, name, 'state.json'));
-      if (snapshot?.key) keys.push(snapshot.key);
+      if (snapshot?.key) {
+        keys.push(snapshot.key);
+      }
     }
     return keys;
   }

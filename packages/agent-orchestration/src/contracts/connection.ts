@@ -49,11 +49,7 @@ export type AgentProbe =
  */
 export interface AgentConnection {
   newSession(input: { cwd: string; mcpServers?: McpServer[]; meta?: Record<string, unknown> }): Promise<SessionId>;
-  prompt(
-    session: SessionId,
-    blocks: ContentBlock[],
-    signal?: AbortSignal,
-  ): Promise<{ stopReason: StopReason }>;
+  prompt(session: SessionId, blocks: ContentBlock[], signal?: AbortSignal): Promise<{ stopReason: StopReason }>;
   cancel(session: SessionId): Promise<void>;
   onUpdate(handler: (update: SessionUpdate) => void): Unsubscribe;
   onPermissionRequest(handler: (request: PermissionRequest) => Promise<PermissionOutcome>): Unsubscribe;
@@ -73,6 +69,4 @@ export interface PermissionRequest {
   options: PermissionOption[];
 }
 
-export type PermissionOutcome =
-  | { outcome: 'cancelled' }
-  | { outcome: 'selected'; optionId: string };
+export type PermissionOutcome = { outcome: 'cancelled' } | { outcome: 'selected'; optionId: string };

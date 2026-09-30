@@ -19,7 +19,12 @@ describe('appConfigSchema', () => {
   });
 
   it('accepts githubIssues with a repositories[] (multi-repo)', () => {
-    const multi = { repositories: [{ owner: 'o', repo: 'a' }, { owner: 'o', repo: 'b' }] };
+    const multi = {
+      repositories: [
+        { owner: 'o', repo: 'a' },
+        { owner: 'o', repo: 'b' },
+      ],
+    };
     expect(appConfigSchema.safeParse({ ...base, githubIssues: multi }).success).toBe(true);
   });
 
@@ -32,7 +37,7 @@ describe('appConfigSchema', () => {
     const result = appConfigSchema.safeParse(base);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some(i => i.message.includes('at least one task source'))).toBe(true);
+      expect(result.error.issues.some((i) => i.message.includes('at least one task source'))).toBe(true);
     }
   });
 });

@@ -50,7 +50,7 @@ function buildFieldsFromRow(fieldNames: string[], row: unknown[]): Record<string
 
 function buildRecords(response: LarkRecordListResponse): Array<{ recordId?: string; fields: Record<string, unknown> }> {
   if (response.items) {
-    return response.items.map(item => ({
+    return response.items.map((item) => ({
       recordId: item.recordId,
       fields: item.fields,
     }));
@@ -155,11 +155,11 @@ export class FeishuTaskProvider implements SourceProvider {
   }
 
   async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return (await this.listTasks()).filter(task => task.targetAgent === agent && task.status === '待处理');
+    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
-    return (await this.listTasks()).find(task => task.taskId === taskId);
+    return (await this.listTasks()).find((task) => task.taskId === taskId);
   }
 
   async createTask(payload: CreateTaskPayload): Promise<void> {
@@ -195,7 +195,7 @@ export class FeishuTaskProvider implements SourceProvider {
       grouped.set(task.taskId, bucket);
     }
 
-    return Array.from(grouped.values()).map(tasksForSameId => pickCanonicalTask(tasksForSameId));
+    return Array.from(grouped.values()).map((tasksForSameId) => pickCanonicalTask(tasksForSameId));
   }
 
   private async listTaskRows(): Promise<TaskRecord[]> {
@@ -215,8 +215,8 @@ export class FeishuTaskProvider implements SourceProvider {
 
     const data = JSON.parse(stdout) as LarkRecordListResponse;
     return buildRecords(data)
-      .map(item => this.mapFields(item.fields, item.recordId))
-      .filter(task => task.taskId.length > 0);
+      .map((item) => this.mapFields(item.fields, item.recordId))
+      .filter((task) => task.taskId.length > 0);
   }
 
   private async resolveRecordRef(task: TaskRef): Promise<TaskRef> {
@@ -224,7 +224,7 @@ export class FeishuTaskProvider implements SourceProvider {
       return task;
     }
 
-    const matches = (await this.listTaskRows()).filter(item => item.taskId === task.taskId);
+    const matches = (await this.listTaskRows()).filter((item) => item.taskId === task.taskId);
     if (matches.length === 0) {
       return task;
     }
@@ -236,10 +236,7 @@ export class FeishuTaskProvider implements SourceProvider {
     };
   }
 
-  async claimTask(
-    task: TaskRef,
-    payload: ClaimTaskPayload,
-  ): Promise<void> {
+  async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -250,32 +247,31 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        Status: '执行中',
-        ClaimedBy: payload.claimedBy,
-        ClaimedAt: payload.claimedAt,
-        RunId: payload.runId,
-        WorkspacePath: payload.workspacePath,
-        LogPath: payload.logPath,
-        ProgressSummary: payload.progressSummary,
-        SessionId: payload.sessionId,
-        SessionName: payload.sessionName,
-        SessionHistory: payload.sessionHistory,
-        RunnerPid: payload.runnerPid,
-        RunnerKind: payload.runnerKind,
-        RunnerAgent: payload.runnerAgent,
-        RunnerRound: payload.runnerRound,
-        LastHeartbeatAt: payload.lastHeartbeatAt,
-        CurrentOwner: payload.claimedBy.split('@')[0],
-        LastError: '',
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          Status: '执行中',
+          ClaimedBy: payload.claimedBy,
+          ClaimedAt: payload.claimedAt,
+          RunId: payload.runId,
+          WorkspacePath: payload.workspacePath,
+          LogPath: payload.logPath,
+          ProgressSummary: payload.progressSummary,
+          SessionId: payload.sessionId,
+          SessionName: payload.sessionName,
+          SessionHistory: payload.sessionHistory,
+          RunnerPid: payload.runnerPid,
+          RunnerKind: payload.runnerKind,
+          RunnerAgent: payload.runnerAgent,
+          RunnerRound: payload.runnerRound,
+          LastHeartbeatAt: payload.lastHeartbeatAt,
+          CurrentOwner: payload.claimedBy.split('@')[0],
+          LastError: '',
+        }),
+      ),
     ]);
   }
 
-  async updateTaskProgress(
-    task: TaskRef,
-    payload: UpdateTaskProgressPayload,
-  ): Promise<void> {
+  async updateTaskProgress(task: TaskRef, payload: UpdateTaskProgressPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -286,26 +282,25 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        ProgressSummary: payload.progressSummary,
-        WorkspacePath: payload.workspacePath,
-        LogPath: payload.logPath,
-        SessionId: payload.sessionId,
-        SessionName: payload.sessionName,
-        SessionHistory: payload.sessionHistory,
-        RunnerPid: payload.runnerPid,
-        RunnerKind: payload.runnerKind,
-        RunnerAgent: payload.runnerAgent,
-        RunnerRound: payload.runnerRound,
-        LastHeartbeatAt: payload.lastHeartbeatAt,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          ProgressSummary: payload.progressSummary,
+          WorkspacePath: payload.workspacePath,
+          LogPath: payload.logPath,
+          SessionId: payload.sessionId,
+          SessionName: payload.sessionName,
+          SessionHistory: payload.sessionHistory,
+          RunnerPid: payload.runnerPid,
+          RunnerKind: payload.runnerKind,
+          RunnerAgent: payload.runnerAgent,
+          RunnerRound: payload.runnerRound,
+          LastHeartbeatAt: payload.lastHeartbeatAt,
+        }),
+      ),
     ]);
   }
 
-  async updateRunnerState(
-    task: TaskRef,
-    payload: UpdateRunnerStatePayload,
-  ): Promise<void> {
+  async updateRunnerState(task: TaskRef, payload: UpdateRunnerStatePayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -316,20 +311,19 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        RunnerPid: payload.runnerPid,
-        RunnerKind: payload.runnerKind,
-        RunnerAgent: payload.runnerAgent,
-        RunnerRound: payload.runnerRound,
-        LastHeartbeatAt: payload.lastHeartbeatAt,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          RunnerPid: payload.runnerPid,
+          RunnerKind: payload.runnerKind,
+          RunnerAgent: payload.runnerAgent,
+          RunnerRound: payload.runnerRound,
+          LastHeartbeatAt: payload.lastHeartbeatAt,
+        }),
+      ),
     ]);
   }
 
-  async updateTaskAssignment(
-    task: TaskRef,
-    payload: UpdateTaskAssignmentPayload,
-  ): Promise<void> {
+  async updateTaskAssignment(task: TaskRef, payload: UpdateTaskAssignmentPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -340,20 +334,19 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        TargetAgent: [payload.targetAgent],
-        CurrentOwner: payload.currentOwner,
-        ProgressSummary: payload.progressSummary,
-        LastError: payload.lastError,
-        WorkspacePath: payload.workspacePath,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          TargetAgent: [payload.targetAgent],
+          CurrentOwner: payload.currentOwner,
+          ProgressSummary: payload.progressSummary,
+          LastError: payload.lastError,
+          WorkspacePath: payload.workspacePath,
+        }),
+      ),
     ]);
   }
 
-  async markTaskSucceeded(
-    task: TaskRef,
-    payload: MarkTaskSucceededPayload,
-  ): Promise<void> {
+  async markTaskSucceeded(task: TaskRef, payload: MarkTaskSucceededPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -364,25 +357,24 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        Status: '待验收',
-        ResultSummary: payload.resultSummary,
-        WorkspacePath: payload.workspacePath,
-        LogPath: payload.logPath,
-        ProgressSummary: payload.progressSummary,
-        SessionId: payload.sessionId,
-        SessionName: payload.sessionName,
-        SessionHistory: payload.sessionHistory,
-        PRLink: payload.prLink,
-        LastError: '',
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          Status: '待验收',
+          ResultSummary: payload.resultSummary,
+          WorkspacePath: payload.workspacePath,
+          LogPath: payload.logPath,
+          ProgressSummary: payload.progressSummary,
+          SessionId: payload.sessionId,
+          SessionName: payload.sessionName,
+          SessionHistory: payload.sessionHistory,
+          PRLink: payload.prLink,
+          LastError: '',
+        }),
+      ),
     ]);
   }
 
-  async markTaskFailed(
-    task: TaskRef,
-    payload: MarkTaskFailedPayload,
-  ): Promise<void> {
+  async markTaskFailed(task: TaskRef, payload: MarkTaskFailedPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -393,23 +385,22 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        Status: '已失败',
-        LastError: payload.lastError,
-        WorkspacePath: payload.workspacePath,
-        LogPath: payload.logPath,
-        ProgressSummary: payload.progressSummary,
-        SessionId: payload.sessionId,
-        SessionName: payload.sessionName,
-        SessionHistory: payload.sessionHistory,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          Status: '已失败',
+          LastError: payload.lastError,
+          WorkspacePath: payload.workspacePath,
+          LogPath: payload.logPath,
+          ProgressSummary: payload.progressSummary,
+          SessionId: payload.sessionId,
+          SessionName: payload.sessionName,
+          SessionHistory: payload.sessionHistory,
+        }),
+      ),
     ]);
   }
 
-  async updateReviewState(
-    task: TaskRef,
-    payload: UpdateReviewStatePayload,
-  ): Promise<void> {
+  async updateReviewState(task: TaskRef, payload: UpdateReviewStatePayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     const shouldClearRunner = !RUNNING_STATUSES.has(payload.status);
     await runLarkCli([
@@ -421,39 +412,38 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        Status: [payload.status],
-        CurrentOwner: payload.currentOwner,
-        ReviewRound: payload.reviewRound,
-        ReviewVerdict: payload.reviewVerdict ? [payload.reviewVerdict] : undefined,
-        ReviewFindings: payload.reviewFindings,
-        AcceptanceRound: payload.acceptanceRound,
-        AcceptanceVerdict: payload.acceptanceVerdict ? [payload.acceptanceVerdict] : undefined,
-        AcceptanceFeedback: payload.acceptanceFeedback,
-        ExecutionSessionId: payload.executionSessionId,
-        ExecutionSessionName: payload.executionSessionName,
-        ReviewSessionId: payload.reviewSessionId,
-        ReviewSessionName: payload.reviewSessionName,
-        ReviewLogPath: payload.reviewLogPath,
-        SessionHistory: payload.sessionHistory,
-        RunnerPid: shouldClearRunner ? null : payload.runnerPid,
-        RunnerKind: shouldClearRunner ? '' : (payload.runnerKind ?? ''),
-        RunnerAgent: shouldClearRunner ? '' : (payload.runnerAgent ?? ''),
-        RunnerRound: shouldClearRunner ? null : payload.runnerRound,
-        LastHeartbeatAt: shouldClearRunner ? '' : payload.lastHeartbeatAt,
-        ProgressSummary: payload.progressSummary,
-        ResultSummary: payload.resultSummary,
-        WorkspacePath: payload.workspacePath,
-        LogPath: payload.logPath,
-        LastError: payload.lastError,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          Status: [payload.status],
+          CurrentOwner: payload.currentOwner,
+          ReviewRound: payload.reviewRound,
+          ReviewVerdict: payload.reviewVerdict ? [payload.reviewVerdict] : undefined,
+          ReviewFindings: payload.reviewFindings,
+          AcceptanceRound: payload.acceptanceRound,
+          AcceptanceVerdict: payload.acceptanceVerdict ? [payload.acceptanceVerdict] : undefined,
+          AcceptanceFeedback: payload.acceptanceFeedback,
+          ExecutionSessionId: payload.executionSessionId,
+          ExecutionSessionName: payload.executionSessionName,
+          ReviewSessionId: payload.reviewSessionId,
+          ReviewSessionName: payload.reviewSessionName,
+          ReviewLogPath: payload.reviewLogPath,
+          SessionHistory: payload.sessionHistory,
+          RunnerPid: shouldClearRunner ? null : payload.runnerPid,
+          RunnerKind: shouldClearRunner ? '' : (payload.runnerKind ?? ''),
+          RunnerAgent: shouldClearRunner ? '' : (payload.runnerAgent ?? ''),
+          RunnerRound: shouldClearRunner ? null : payload.runnerRound,
+          LastHeartbeatAt: shouldClearRunner ? '' : payload.lastHeartbeatAt,
+          ProgressSummary: payload.progressSummary,
+          ResultSummary: payload.resultSummary,
+          WorkspacePath: payload.workspacePath,
+          LogPath: payload.logPath,
+          LastError: payload.lastError,
+        }),
+      ),
     ]);
   }
 
-  async updatePublishResult(
-    task: TaskRef,
-    payload: UpdatePublishResultPayload,
-  ): Promise<void> {
+  async updatePublishResult(task: TaskRef, payload: UpdatePublishResultPayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -464,23 +454,22 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(buildRecordPayload(task.taskId, {
-        PRLink: payload.prLink,
-        PublishBranch: payload.publishBranch,
-        PublishCommit: payload.publishCommit,
-        PublishedAt: payload.publishedAt,
-        ProgressSummary: payload.progressSummary,
-        ResultSummary: payload.resultSummary,
-        SessionHistory: payload.sessionHistory,
-        LastError: payload.lastError,
-      })),
+      JSON.stringify(
+        buildRecordPayload(task.taskId, {
+          PRLink: payload.prLink,
+          PublishBranch: payload.publishBranch,
+          PublishCommit: payload.publishCommit,
+          PublishedAt: payload.publishedAt,
+          ProgressSummary: payload.progressSummary,
+          ResultSummary: payload.resultSummary,
+          SessionHistory: payload.sessionHistory,
+          LastError: payload.lastError,
+        }),
+      ),
     ]);
   }
 
-  async updateCleanupState(
-    task: TaskRef,
-    payload: UpdateCleanupStatePayload,
-  ): Promise<void> {
+  async updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -545,12 +534,15 @@ export class FeishuTaskProvider implements SourceProvider {
       runId: optionalCellText(fields.RunId),
       updatedAt: optionalCellText(fields.UpdatedAt),
       currentOwner: optionalCellText(fields.CurrentOwner),
-      reviewRound: fields.ReviewRound !== undefined && fields.ReviewRound !== null ? Number(fields.ReviewRound) : undefined,
-      reviewVerdict: (optionalCellText(fields.ReviewVerdict) as ReviewVerdict | undefined),
+      reviewRound:
+        fields.ReviewRound !== undefined && fields.ReviewRound !== null ? Number(fields.ReviewRound) : undefined,
+      reviewVerdict: optionalCellText(fields.ReviewVerdict) as ReviewVerdict | undefined,
       reviewFindings: optionalCellText(fields.ReviewFindings),
       acceptanceRound:
-        fields.AcceptanceRound !== undefined && fields.AcceptanceRound !== null ? Number(fields.AcceptanceRound) : undefined,
-      acceptanceVerdict: (optionalCellText(fields.AcceptanceVerdict) as AcceptanceVerdict | undefined),
+        fields.AcceptanceRound !== undefined && fields.AcceptanceRound !== null
+          ? Number(fields.AcceptanceRound)
+          : undefined,
+      acceptanceVerdict: optionalCellText(fields.AcceptanceVerdict) as AcceptanceVerdict | undefined,
       acceptanceFeedback: optionalCellText(fields.AcceptanceFeedback),
       executionSessionId: optionalCellText(fields.ExecutionSessionId),
       executionSessionName: optionalCellText(fields.ExecutionSessionName),
@@ -559,12 +551,12 @@ export class FeishuTaskProvider implements SourceProvider {
       reviewLogPath: optionalCellText(fields.ReviewLogPath),
       sessionHistory: optionalCellText(fields.SessionHistory),
       runnerPid: fields.RunnerPid !== undefined && fields.RunnerPid !== null ? Number(fields.RunnerPid) : undefined,
-      runnerKind:
-        optionalCellText(fields.RunnerKind)?.trim() ?
-          (cellText(fields.RunnerKind) as 'execute' | 'review')
+      runnerKind: optionalCellText(fields.RunnerKind)?.trim()
+        ? (cellText(fields.RunnerKind) as 'execute' | 'review')
         : undefined,
       runnerAgent: optionalCellText(fields.RunnerAgent),
-      runnerRound: fields.RunnerRound !== undefined && fields.RunnerRound !== null ? Number(fields.RunnerRound) : undefined,
+      runnerRound:
+        fields.RunnerRound !== undefined && fields.RunnerRound !== null ? Number(fields.RunnerRound) : undefined,
       lastHeartbeatAt: optionalCellText(fields.LastHeartbeatAt),
       publishBranch: optionalCellText(fields.PublishBranch),
       publishCommit: optionalCellText(fields.PublishCommit),
@@ -576,8 +568,12 @@ export class FeishuTaskProvider implements SourceProvider {
 // Feishu returns these cells as text or numbers. Any other shape is kept as
 // JSON so it stays readable instead of becoming "[object Object]".
 function cellText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
   return JSON.stringify(value) ?? '';
 }
 

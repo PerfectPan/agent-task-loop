@@ -24,9 +24,7 @@ export function assertRuntimeConfig(config: AppConfig): void {
     const { baseToken, tableId } = config.feishu;
     const isPlaceholder = (value: string) => value.includes('demo') || value.includes('example');
     if (isPlaceholder(baseToken) || isPlaceholder(tableId)) {
-      throw new Error(
-        'Replace the example Feishu baseToken/tableId with real values before running live commands.',
-      );
+      throw new Error('Replace the example Feishu baseToken/tableId with real values before running live commands.');
     }
   }
 
@@ -43,11 +41,15 @@ export function assertRuntimeConfig(config: AppConfig): void {
         throw new Error(`GitHub source ${repositoryKey} has no matching repositories["${repositoryKey}"]. ${hint}`);
       }
       if (isUnsetPath(repository.localPath)) {
-        throw new Error(`repositories["${repositoryKey}"].localPath is not set — replace the placeholder with this repo's local clone path before running.`);
+        throw new Error(
+          `repositories["${repositoryKey}"].localPath is not set — replace the placeholder with this repo's local clone path before running.`,
+        );
       }
       const workspaceRoot = config.projects[projectKey]?.workspaceRoot;
       if (repository.workspaceStrategy === 'worktree' && isUnsetPath(workspaceRoot)) {
-        throw new Error(`projects["${projectKey}"].workspaceRoot is not set — replace the placeholder with a directory for task worktrees before running.`);
+        throw new Error(
+          `projects["${projectKey}"].workspaceRoot is not set — replace the placeholder with a directory for task worktrees before running.`,
+        );
       }
     }
   }

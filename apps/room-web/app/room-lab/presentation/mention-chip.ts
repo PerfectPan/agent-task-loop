@@ -21,8 +21,10 @@ export interface MentionChip {
   dotClass: string;
 }
 
-const CHIP = 'inline-flex items-center gap-1 rounded-full px-1.5 align-baseline font-sans text-[15px] leading-normal font-semibold';
-const DOT = 'inline-flex size-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none font-semibold';
+const CHIP =
+  'inline-flex items-center gap-1 rounded-full px-1.5 align-baseline font-sans text-[15px] leading-normal font-semibold';
+const DOT =
+  'inline-flex size-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none font-semibold';
 
 export const ALL_MENTION_CHIP: MentionChip = {
   letters: '@',
@@ -32,7 +34,9 @@ export const ALL_MENTION_CHIP: MentionChip = {
 };
 
 export function mentionChip(id: string, color?: number): MentionChip {
-  if (id === 'all') return ALL_MENTION_CHIP;
+  if (id === 'all') {
+    return ALL_MENTION_CHIP;
+  }
   return {
     letters: agentLetters(id),
     text: id,

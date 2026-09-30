@@ -683,13 +683,7 @@
       "washiNote": "washi 是 #f7f7f5，等于 muted / secondary / sidebar，不是 card（#ffffff）。映射到 bg-card 会重画这两个不在本轮范围的路由。"
     },
     "typographyMeta": {
-      "scale": [
-        12,
-        13,
-        14,
-        16,
-        24
-      ],
+      "scale": [12, 13, 14, 16, 24],
       "scaleNote": "阶梯之外四个例外，都是记号不是文字：空状态标题 18px，头像字母 11px（22px 头像上 10px），提及胶囊 15px 和胶囊圆点里的 8px。",
       "fontSans": "Inter, -apple-system, \"PingFang SC\", \"Hiragino Sans GB\", \"Noto Sans SC\", sans-serif",
       "fontSerif": "\"Noto Serif SC\", \"Songti SC\", \"STSong\", Georgia, serif",
@@ -698,10 +692,7 @@
       "proseLeading": 1.7,
       "proseLeadingNote": "宋体笔画细、字面小，比黑体的 1.65 多给一点行距。",
       "selfHosted": {
-        "packages": [
-          "@fontsource/inter (400/500/600/700)",
-          "@fontsource/noto-serif-sc (400/600)"
-        ],
+        "packages": ["@fontsource/inter (400/500/600/700)", "@fontsource/noto-serif-sc (400/600)"],
         "importedIn": "app/styles/global.css 顶部",
         "slicing": "noto-serif-sc 按 unicode-range 切成约 100 片，浏览器只拉这一页用到的那几片。",
         "display": "swap（fontsource 默认）：首屏用回退字，字体到了换一次，不做 FOIT。",
@@ -769,37 +760,18 @@
         "emptyState": "46ch",
         "desk": "min(760px, 100%)"
       },
-      "rhythm": [
-        4,
-        8,
-        10,
-        12,
-        14,
-        18,
-        22,
-        28
-      ],
+      "rhythm": [4, 8, 10, 12, 14, 18, 22, 28],
       "gutter": "中栏所有东西共用 28px 左右留白；左栏 10px，右栏 16px。",
       "separation": "栏与栏之间只有一根 1px border，没有色块、没有阴影、没有色相差。",
       "scrolling": "右栏与抽屉用 shadcn 的 ScrollArea；时间线保持原生滚动容器，因为它要直接读写 scrollTop。"
     },
     "marks": {
       "component": "shadcn Avatar + AvatarFallback，AgentMark 是薄封装。",
-      "sizes": [
-        30,
-        22,
-        36
-      ],
+      "sizes": [30, 22, 36],
       "letterType": "11px / 600 / letter-spacing 0.02em；22px 的头像上 10px。",
       "background": "bg-chart-N/15",
       "foreground": "text-chart-N",
-      "seating": [
-        "claude-relay",
-        "claude",
-        "codex",
-        "opencode",
-        "dsh"
-      ],
+      "seating": ["claude-relay", "claude", "codex", "opencode", "dsh"],
       "letters": {
         "claude-relay": "CR",
         "claude": "CL",
@@ -913,13 +885,7 @@
         "docToText": "段落间 \\n，HardBreak → \\n，Mention → @id，首尾 trim。",
         "textToDoc": "按 \\n 切段落，再用服务端同一条正则（ROOM_MENTION_SOURCE）把 @id 切成 Mention 节点；只有房间认识的 id 才变胶囊。",
         "why": "两个方向各在不同时刻用一次：敲键盘时序列化给 RoomLab，发送失败时从回填的原文重建。只在一个方向成立的提及，会在第一次发送失败时把胶囊变成散字。",
-        "unchanged": [
-          "RoomLab",
-          "parseRoomMessage",
-          "服务端",
-          "路由",
-          "read-model"
-        ]
+        "unchanged": ["RoomLab", "parseRoomMessage", "服务端", "路由", "read-model"]
       }
     },
     "mentionChip": {

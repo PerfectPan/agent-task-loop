@@ -30,11 +30,7 @@ export interface SessionProvider {
  * foundation logic (history parsing, heartbeat freshness, live status). It does
  * no I/O: callers pass any already-read `logTail` (defaults to none).
  */
-export function buildPreviewFromTask(
-  task: TaskRecord,
-  now: number,
-  logTail?: string[],
-): SessionPreview {
+export function buildPreviewFromTask(task: TaskRecord, now: number, logTail?: string[]): SessionPreview {
   const tail = logTail ?? [];
   return {
     taskId: task.taskId,

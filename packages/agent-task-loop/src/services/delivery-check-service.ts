@@ -24,24 +24,15 @@ export class DeliveryCheckService {
       return { isDeliverable: true, reason: 'published' };
     }
 
-    const statusResult = await this.runGit(
-      ['-C', input.workspacePath, 'status', '--short'],
-      input.signal,
-    );
+    const statusResult = await this.runGit(['-C', input.workspacePath, 'status', '--short'], input.signal);
     input.signal?.throwIfAborted();
     if (statusResult.stdout.trim().length > 0) {
       return { isDeliverable: true, reason: 'working-tree-changes' };
     }
 
-    const headResult = await this.runGit(
-      ['-C', input.workspacePath, 'rev-parse', 'HEAD'],
-      input.signal,
-    );
+    const headResult = await this.runGit(['-C', input.workspacePath, 'rev-parse', 'HEAD'], input.signal);
     input.signal?.throwIfAborted();
-    const baseResult = await this.runGit(
-      ['-C', input.workspacePath, 'rev-parse', input.baseRef],
-      input.signal,
-    );
+    const baseResult = await this.runGit(['-C', input.workspacePath, 'rev-parse', input.baseRef], input.signal);
     input.signal?.throwIfAborted();
 
     if (headResult.stdout.trim() !== baseResult.stdout.trim()) {
@@ -53,8 +44,6 @@ export class DeliveryCheckService {
 
   private runGit(args: string[], signal?: AbortSignal) {
     signal?.throwIfAborted();
-    return signal
-      ? this.exec('git', args, { cancelSignal: signal })
-      : this.exec('git', args);
+    return signal ? this.exec('git', args, { cancelSignal: signal }) : this.exec('git', args);
   }
 }

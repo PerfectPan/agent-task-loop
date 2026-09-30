@@ -85,10 +85,7 @@ describe('Rivus plugin isolation from Room', () => {
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       for (const specifier of moduleSpecifiers(file)) {
-        expect(
-          importsAgentRoom(specifier),
-          `${path.relative(srcRoot, file)} imports ${specifier}`,
-        ).toBe(false);
+        expect(importsAgentRoom(specifier), `${path.relative(srcRoot, file)} imports ${specifier}`).toBe(false);
       }
     }
   });

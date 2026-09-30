@@ -19,11 +19,17 @@ export function dmMessageId(round: RoomRound, triggerSeq: number): string {
 /** The round a dm post opened, read back off its message id; not a dm post otherwise. */
 export function dmRoundOf(event: RoomEvent): RoomRound | undefined {
   const parts = event.messageId.split(':');
-  if (parts[0] !== 'dm' || parts.length !== 5) return undefined;
+  if (parts[0] !== 'dm' || parts.length !== 5) {
+    return undefined;
+  }
   const roundSeq = Number(parts[2]);
   const triggerSeq = Number(parts[3]);
-  if (!parts[1] || !Number.isSafeInteger(roundSeq) || roundSeq < 0) return undefined;
-  if (!Number.isSafeInteger(triggerSeq) || triggerSeq < 0) return undefined;
+  if (!parts[1] || !Number.isSafeInteger(roundSeq) || roundSeq < 0) {
+    return undefined;
+  }
+  if (!Number.isSafeInteger(triggerSeq) || triggerSeq < 0) {
+    return undefined;
+  }
   return { roomId: parts[1], seq: roundSeq };
 }
 
@@ -75,15 +81,17 @@ export class RoomDm {
     const pair = [input.from, input.to].sort();
     const round: RoomRound = { roomId: input.roundRoomId, seq: input.roundSeq };
     const found = this.deps.findPrivate(input.parentRoomId, pair);
-    const roomId = found?.id ?? this.deps.openPrivate({
-      id: newRoomIdentity(),
-      title: copy.label.privateRoomTitle(pair[0]!, pair[1]!),
-      parentRoomId: input.parentRoomId,
-      openedBy: input.from,
-      openedAtSeq: input.triggerSeq,
-      memberIds: pair,
-      now: this.deps.now(),
-    }).id;
+    const roomId =
+      found?.id ??
+      this.deps.openPrivate({
+        id: newRoomIdentity(),
+        title: copy.label.privateRoomTitle(pair[0]!, pair[1]!),
+        parentRoomId: input.parentRoomId,
+        openedBy: input.from,
+        openedAtSeq: input.triggerSeq,
+        memberIds: pair,
+        now: this.deps.now(),
+      }).id;
     const event = await this.deps.stream(roomId).post({
       messageId: dmMessageId(round, input.triggerSeq),
       author: { kind: 'agent', id: input.from },

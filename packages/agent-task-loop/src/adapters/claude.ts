@@ -78,7 +78,7 @@ function extractClaudeSession(line: string): { sessionId?: string } | undefined 
 function extractClaudeSummary(output: string): string {
   const lines = output
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   for (let index = lines.length - 1; index >= 0; index -= 1) {
@@ -98,7 +98,7 @@ function extractClaudeSummary(output: string): string {
 function extractClaudeError(output: string): string | undefined {
   const lines = output
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   for (let index = lines.length - 1; index >= 0; index -= 1) {
@@ -136,7 +136,7 @@ export const claudeAdapter: AgentAdapter = {
       input.cwd,
       input.onSpawn,
       input.onHeartbeat,
-      chunk => {
+      (chunk) => {
         buffer += chunk;
         let newlineIndex = buffer.indexOf('\n');
         while (newlineIndex >= 0) {

@@ -47,12 +47,12 @@ describe('sqlite Room persistence', () => {
       body: '先比较三档价格',
       messageId: 'web:persist-1',
     });
-    expect(snapshot.catalog.map(room => room.title)).toEqual(['Q3 定价方案']);
+    expect(snapshot.catalog.map((room) => room.title)).toEqual(['Q3 定价方案']);
     expect(snapshot.settings).toEqual({ wake: 'broadcast', serial: false });
     expect(existsSync(join(root, 'rooms.sqlite'))).toBe(true);
   });
 
-  it('keeps a room\'s wake, serial and cwd settings across a reopen', async () => {
+  it("keeps a room's wake, serial and cwd settings across a reopen", async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const created = await host.create({ title: '串行房', memberIds: ['codex'] });
@@ -73,8 +73,8 @@ describe('sqlite Room persistence', () => {
     const first = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
     const second = await host.create({ title: 'README 改写', memberIds: ['codex'] });
     const snapshot = await host.snapshot(first.roomId);
-    expect(host.list().map(room => room.id)).toEqual([first.roomId, second.roomId]);
-    expect(snapshot.catalog.map(room => room.title)).toEqual(['Q3 定价方案', 'README 改写']);
+    expect(host.list().map((room) => room.id)).toEqual([first.roomId, second.roomId]);
+    expect(snapshot.catalog.map((room) => room.title)).toEqual(['Q3 定价方案', 'README 改写']);
   });
 
   it('does not rewrite lastOpened when snapshotting the same room', async () => {
@@ -86,7 +86,7 @@ describe('sqlite Room persistence', () => {
     expect(host.lastOpened()?.lastOpenedAt).toBe(first);
   });
 
-  it('persists a system prompt and carries it onto the next turn\'s harness', async () => {
+  it("persists a system prompt and carries it onto the next turn's harness", async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const store = SqliteRoomStore.open(root);
     const host = new RoomLabHost(store, probeReadyBinding);
@@ -121,7 +121,8 @@ describe('sqlite Room persistence', () => {
     // Someone edits the row with sqlite3 while the server is running: a second
     // connection to the same file, not this host's own.
     const editor = new DatabaseSync(join(root, 'rooms.sqlite'));
-    editor.prepare('UPDATE agents SET command = ?, label = ? WHERE id = ?')
+    editor
+      .prepare('UPDATE agents SET command = ?, label = ? WHERE id = ?')
       .run('claude-agent-acp --other', 'Claude 2', 'claude');
     editor.close();
     expect(host.agents.get('claude')?.command).toBe('claude-agent-acp');
@@ -129,7 +130,7 @@ describe('sqlite Room persistence', () => {
     const inventory = await host.refreshInventory();
 
     expect(host.agents.get('claude')?.command).toBe('claude-agent-acp --other');
-    expect(inventory.find(agent => agent.id === 'claude')).toMatchObject({
+    expect(inventory.find((agent) => agent.id === 'claude')).toMatchObject({
       label: 'Claude 2',
       command: 'claude-agent-acp --other',
     });
@@ -143,7 +144,8 @@ describe('sqlite Room persistence', () => {
 
     // The new row is the next seat at the end of the desk, on a drawn hue.
     expect(host.agents.get('gemini')).toMatchObject({ role: '调研', command: 'gemini-acp' });
-    const added = store.db.prepare('SELECT color, position, system_prompt FROM agents WHERE id = ?')
+    const added = store.db
+      .prepare('SELECT color, position, system_prompt FROM agents WHERE id = ?')
       .get('gemini') as unknown as { color: number; position: number; system_prompt: string };
     expect(added.color).toBeGreaterThanOrEqual(1);
     expect(added.color).toBeLessThanOrEqual(5);
@@ -151,7 +153,7 @@ describe('sqlite Room persistence', () => {
     expect(added.system_prompt).toBe('');
 
     const desk = await host.agentDesk();
-    expect(desk.agents.find(agent => agent.id === 'gemini')).toMatchObject({
+    expect(desk.agents.find((agent) => agent.id === 'gemini')).toMatchObject({
       label: 'Gemini',
       availability: 'ready',
       command: 'gemini-acp',
@@ -159,19 +161,16 @@ describe('sqlite Room persistence', () => {
   });
 
   it('refuses an add-agent row whose id is off the mention grammar or already seated', async () => {
-    const host = new RoomLabHost(SqliteRoomStore.open(mkdtempSync(join(tmpdir(), 'rivus-room-web-'))), probeReadyBinding);
-    await expect(host.addAgent({ id: 'Gemini', label: 'x', command: 'gemini-acp' }))
-      .rejects.toThrow(/must match/);
-    await expect(host.addAgent({ id: '1gemini', label: 'x', command: 'gemini-acp' }))
-      .rejects.toThrow(/must match/);
-    await expect(host.addAgent({ id: 'gemini_x', label: 'x', command: 'gemini-acp' }))
-      .rejects.toThrow(/must match/);
-    await expect(host.addAgent({ id: 'claude', label: 'x', command: 'gemini-acp' }))
-      .rejects.toThrow(/already exists/);
-    await expect(host.addAgent({ id: 'gemini', label: ' ', command: 'gemini-acp' }))
-      .rejects.toThrow(/needs a label/);
-    await expect(host.addAgent({ id: 'gemini', label: 'Gemini', command: ' ' }))
-      .rejects.toThrow(/needs a command/);
+    const host = new RoomLabHost(
+      SqliteRoomStore.open(mkdtempSync(join(tmpdir(), 'rivus-room-web-'))),
+      probeReadyBinding,
+    );
+    await expect(host.addAgent({ id: 'Gemini', label: 'x', command: 'gemini-acp' })).rejects.toThrow(/must match/);
+    await expect(host.addAgent({ id: '1gemini', label: 'x', command: 'gemini-acp' })).rejects.toThrow(/must match/);
+    await expect(host.addAgent({ id: 'gemini_x', label: 'x', command: 'gemini-acp' })).rejects.toThrow(/must match/);
+    await expect(host.addAgent({ id: 'claude', label: 'x', command: 'gemini-acp' })).rejects.toThrow(/already exists/);
+    await expect(host.addAgent({ id: 'gemini', label: ' ', command: 'gemini-acp' })).rejects.toThrow(/needs a label/);
+    await expect(host.addAgent({ id: 'gemini', label: 'Gemini', command: ' ' })).rejects.toThrow(/needs a command/);
   });
 
   it('lists which rooms an agent is seated in', async () => {
@@ -179,16 +178,16 @@ describe('sqlite Room persistence', () => {
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
     const desk = await host.agentDesk();
-    expect(desk.agents.find(agent => agent.id === 'codex')?.seatedIn).toEqual([
+    expect(desk.agents.find((agent) => agent.id === 'codex')?.seatedIn).toEqual([
       { id: created.roomId, title: 'Q3 定价方案' },
     ]);
-    expect(desk.agents.find(agent => agent.id === 'claude')?.seatedIn).toEqual([]);
+    expect(desk.agents.find((agent) => agent.id === 'claude')?.seatedIn).toEqual([]);
     // A ready probe plus a seat is 已入座, not 可入座.
-    expect(desk.agents.find(agent => agent.id === 'codex')?.availability).toBe('seated');
-    expect(desk.agents.find(agent => agent.id === 'claude')?.availability).toBe('ready');
+    expect(desk.agents.find((agent) => agent.id === 'codex')?.availability).toBe('seated');
+    expect(desk.agents.find((agent) => agent.id === 'claude')?.availability).toBe('ready');
   });
 
-  it('keeps a room\'s stored crew when one of its agents has no row', async () => {
+  it("keeps a room's stored crew when one of its agents has no row", async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const crew = await host.create({ title: '两人房', memberIds: ['codex', 'claude'] });
@@ -207,12 +206,12 @@ describe('sqlite Room persistence', () => {
     await reopened.snapshot(crew.roomId);
 
     const check = new DatabaseSync(join(root, 'rooms.sqlite'));
-    const seated = check.prepare(
-      'SELECT agent_id FROM room_members WHERE room_id = ? ORDER BY seat_order',
-    ).all(crew.roomId) as unknown as { agent_id: string }[];
+    const seated = check
+      .prepare('SELECT agent_id FROM room_members WHERE room_id = ? ORDER BY seat_order')
+      .all(crew.roomId) as unknown as { agent_id: string }[];
     check.close();
 
-    expect(seated.map(row => row.agent_id)).toEqual(['codex', 'claude']);
+    expect(seated.map((row) => row.agent_id)).toEqual(['codex', 'claude']);
   });
 
   it('seats a room again once the missing agent row comes back', async () => {
@@ -229,14 +228,21 @@ describe('sqlite Room persistence', () => {
     expect((await without.snapshot(crew.roomId)).activeAgentIds).toEqual(['codex']);
 
     const restore = new DatabaseSync(join(root, 'rooms.sqlite'));
-    restore.prepare(`
+    restore
+      .prepare(`
       INSERT INTO agents (id, label, role, command, color, position, created_at, system_prompt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      row.id as string, row.label as string, row.role as string, row.command as string,
-      row.color as number, row.position as number, row.created_at as string,
-      row.system_prompt as string,
-    );
+    `)
+      .run(
+        row.id as string,
+        row.label as string,
+        row.role as string,
+        row.command as string,
+        row.color as number,
+        row.position as number,
+        row.created_at as string,
+        row.system_prompt as string,
+      );
     restore.close();
 
     const back = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
@@ -251,7 +257,7 @@ describe('sqlite Room persistence', () => {
     expect(store.db.prepare('PRAGMA busy_timeout').get()).toMatchObject({ timeout: 5000 });
   });
 
-  it('keeps a private room\'s link to its parent across a reopen', async () => {
+  it("keeps a private room's link to its parent across a reopen", async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const store = SqliteRoomStore.open(root);
     const catalog = store.loadCatalog();
@@ -285,41 +291,54 @@ describe('sqlite Room persistence', () => {
 
     // The sidebar nests the child under its parent, titled by its members.
     const view = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding).catalogView();
-    expect(view.map(room => room.id)).toEqual(['r_cafecafeca']);
-    expect(view[0]?.children?.map(child => child.id)).toEqual(['r_dedededede']);
+    expect(view.map((room) => room.id)).toEqual(['r_cafecafeca']);
+    expect(view[0]?.children?.map((child) => child.id)).toEqual(['r_dedededede']);
   });
 
   it('imports a legacy JSON catalog into sqlite once', async () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     mkdirSync(join(root, 'rooms', 'r_aaaaaaaaaa'), { recursive: true });
-    writeFileSync(join(root, 'catalog.json'), JSON.stringify({
-      version: 1,
-      rooms: [{
-        id: 'r_aaaaaaaaaa',
-        title: 'Q3 定价方案',
-        createdAt: '2026-09-06T01:00:00.000Z',
-        updatedAt: '2026-09-06T01:00:00.000Z',
-        lastOpenedAt: '2026-09-06T01:00:00.000Z',
-        memberIds: ['codex'],
-      }],
-      lastOpenedId: 'r_aaaaaaaaaa',
-    }));
-    writeFileSync(join(root, 'rooms', 'r_aaaaaaaaaa', 'events.json'), JSON.stringify([{
-      seq: 1,
-      roomId: { tenantId: 'local', conversationId: 'r_aaaaaaaaaa' },
-      messageId: 'legacy:1',
-      author: { kind: 'human', id: 'director' },
-      kind: 'human',
-      body: '旧文件里的一句',
-      origin: 'endpoint',
-      addressedTo: [],
-      at: '2026-09-06T01:01:00.000Z',
-    }]));
+    writeFileSync(
+      join(root, 'catalog.json'),
+      JSON.stringify({
+        version: 1,
+        rooms: [
+          {
+            id: 'r_aaaaaaaaaa',
+            title: 'Q3 定价方案',
+            createdAt: '2026-09-06T01:00:00.000Z',
+            updatedAt: '2026-09-06T01:00:00.000Z',
+            lastOpenedAt: '2026-09-06T01:00:00.000Z',
+            memberIds: ['codex'],
+          },
+        ],
+        lastOpenedId: 'r_aaaaaaaaaa',
+      }),
+    );
+    writeFileSync(
+      join(root, 'rooms', 'r_aaaaaaaaaa', 'events.json'),
+      JSON.stringify([
+        {
+          seq: 1,
+          roomId: { tenantId: 'local', conversationId: 'r_aaaaaaaaaa' },
+          messageId: 'legacy:1',
+          author: { kind: 'human', id: 'director' },
+          kind: 'human',
+          body: '旧文件里的一句',
+          origin: 'endpoint',
+          addressedTo: [],
+          at: '2026-09-06T01:01:00.000Z',
+        },
+      ]),
+    );
     // A legacy directory's workspace.json is not imported: every field it held
     // moved elsewhere or went with the count-off (docs/architecture/agent-collaboration.md).
-    writeFileSync(join(root, 'rooms', 'r_aaaaaaaaaa', 'workspace.json'), JSON.stringify({
-      countOff: { runId: 'COUNT-001', status: 'completed' },
-    }));
+    writeFileSync(
+      join(root, 'rooms', 'r_aaaaaaaaaa', 'workspace.json'),
+      JSON.stringify({
+        countOff: { runId: 'COUNT-001', status: 'completed' },
+      }),
+    );
     const store = SqliteRoomStore.open(root);
     const host = new RoomLabHost(store, probeReadyBinding);
     const snapshot = await host.snapshot('r_aaaaaaaaaa');

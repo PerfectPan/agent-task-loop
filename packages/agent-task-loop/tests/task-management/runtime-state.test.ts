@@ -33,7 +33,15 @@ describe('pickRuntimeState', () => {
 });
 
 describe('overlayRuntimeState', () => {
-  const base = { taskId: 'T-1', title: 't', description: '', project: 'p', targetAgent: 'claude', priority: 0, status: '待处理' } as TaskRecord;
+  const base = {
+    taskId: 'T-1',
+    title: 't',
+    description: '',
+    project: 'p',
+    targetAgent: 'claude',
+    priority: 0,
+    status: '待处理',
+  } as TaskRecord;
 
   it('returns the record unchanged when there is no stored state', () => {
     expect(overlayRuntimeState(base, undefined)).toEqual(base);

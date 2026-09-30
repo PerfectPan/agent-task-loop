@@ -7,7 +7,9 @@
  * has fewer. Empty/undefined input or `n <= 0` yields an empty array.
  */
 export function tailLines(text: string | undefined, n: number): string[] {
-  if (!text || n <= 0) return [];
+  if (!text || n <= 0) {
+    return [];
+  }
 
   const lines = text.split('\n');
 

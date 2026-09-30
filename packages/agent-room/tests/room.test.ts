@@ -87,11 +87,7 @@ describe('Room aggregate', () => {
 
     const restored = { ...admitted.event };
     delete (restored as Partial<typeof restored>).wakeDepth;
-    expect(() => new Room(roomId, [restored as typeof admitted.event])).toThrow(
-      /invalid wakeDepth/,
-    );
-    expect(() =>
-      new Room(roomId, [{ ...admitted.event, wakeDepth: -1 }]),
-    ).toThrow(/invalid wakeDepth/);
+    expect(() => new Room(roomId, [restored as typeof admitted.event])).toThrow(/invalid wakeDepth/);
+    expect(() => new Room(roomId, [{ ...admitted.event, wakeDepth: -1 }])).toThrow(/invalid wakeDepth/);
   });
 });

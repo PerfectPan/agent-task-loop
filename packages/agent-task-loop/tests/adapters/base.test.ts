@@ -27,7 +27,7 @@ describe('runAgentCommand', () => {
     expect(result.stdout).toContain('step-2');
     expect(result.stderr).toContain('warn-1');
     expect(onOutput).toHaveBeenCalled();
-    const output = onOutput.mock.calls.map(call => String(call[0])).join('');
+    const output = onOutput.mock.calls.map((call) => String(call[0])).join('');
     expect(output).toContain('step-1');
     expect(output).toContain('warn-1');
   });

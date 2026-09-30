@@ -148,6 +148,7 @@ Configure **at least one** of `feishu` / `githubIssues`:
   `<!-- task-id: ... -->` marker (issues created through this tool) **or** an
   `agent:<name>` label (the way you hand off an existing issue). Issues with
   neither are ignored.
+
 - **Feishu-only** — set `feishu` (`baseToken`, `tableId`), omit `githubIssues`.
 - **Both** — tasks are read from both; writes route back to each task's owning
   backend, defaulting new creates to Feishu.

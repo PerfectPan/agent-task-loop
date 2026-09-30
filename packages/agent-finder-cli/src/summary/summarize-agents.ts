@@ -1,4 +1,4 @@
-import type { AgentRecord } from "@rivus/agent-finder-core";
+import type { AgentRecord } from '@rivus/agent-finder-core';
 
 export function summarizeAgents(agents: AgentRecord[]) {
   const summary = {
@@ -7,7 +7,7 @@ export function summarizeAgents(agents: AgentRecord[]) {
     found: 0,
     missing: 0,
     unknown: 0,
-    warnings: [] as string[]
+    warnings: [] as string[],
   };
 
   for (const agent of agents) {

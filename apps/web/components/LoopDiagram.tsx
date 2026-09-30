@@ -6,8 +6,8 @@ export function LoopDiagram() {
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">One loop, end to end</h2>
         <p className="mt-3 text-muted">
-          Every task flows through the same pipeline. Agents pick up work, do it, get reviewed, and
-          iterate until it&apos;s ready to ship.
+          Every task flows through the same pipeline. Agents pick up work, do it, get reviewed, and iterate until
+          it&apos;s ready to ship.
         </p>
       </div>
 

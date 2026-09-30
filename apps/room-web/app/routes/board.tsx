@@ -65,9 +65,7 @@ function LaneColumn({ lane }: { lane: Lane }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg bg-muted px-3 py-3">
       <header className="mb-1 flex items-baseline justify-between gap-2 border-b border-border pb-2">
-        <h2 className={`text-sm font-semibold ${isDecide ? 'text-primary' : 'text-muted-foreground'}`}>
-          {lane.title}
-        </h2>
+        <h2 className={`text-sm font-semibold ${isDecide ? 'text-primary' : 'text-muted-foreground'}`}>{lane.title}</h2>
         <span
           className={`rounded-full px-2 py-1 text-xs font-medium ${
             isDecide ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
@@ -83,7 +81,7 @@ function LaneColumn({ lane }: { lane: Lane }) {
         // Bounded so a long finished lane cannot outweigh the four lanes that
         // still need something from someone.
         <div className="flex max-h-[28rem] flex-col overflow-y-auto">
-          {lane.tasks.map(task => (
+          {lane.tasks.map((task) => (
             <TaskRow key={task.taskId} task={task} />
           ))}
         </div>
@@ -106,7 +104,7 @@ export default function BoardRoute() {
     );
   }
 
-  const waiting = data.lanes.find(lane => lane.id === 'decide')?.tasks.length ?? 0;
+  const waiting = data.lanes.find((lane) => lane.id === 'decide')?.tasks.length ?? 0;
 
   return (
     <main className="min-h-screen bg-background px-4 py-6 md:px-6">
@@ -121,7 +119,7 @@ export default function BoardRoute() {
         {data.sources.length > 0 ? (
           <ul className="flex items-center gap-2 text-xs text-muted-foreground">
             <li>来源</li>
-            {data.sources.map(source => (
+            {data.sources.map((source) => (
               <li key={source} className="rounded bg-muted px-2 py-1 text-foreground">
                 {source}
               </li>

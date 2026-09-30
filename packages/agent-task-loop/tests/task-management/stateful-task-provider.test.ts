@@ -40,7 +40,7 @@ function fakeInner(records: TaskRecord[] = []): TaskProvider {
   return {
     listTasks: vi.fn(async () => records),
     listPendingTasks: vi.fn(async () => records),
-    getTaskById: vi.fn(async (id: string) => records.find(r => r.taskId === id)),
+    getTaskById: vi.fn(async (id: string) => records.find((r) => r.taskId === id)),
     createTask: vi.fn(async () => {}),
     claimTask: vi.fn(async () => {}),
     updateTaskProgress: vi.fn(async () => {}),
@@ -78,8 +78,19 @@ describe('StatefulTaskProvider', () => {
     const store = new MemStore();
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
-    await sp.claimTask(ref, { claimedBy: 'me', claimedAt: 't0', runId: 'r1', executionSessionId: 'sess-1', runnerPid: 5 } as never);
-    expect(store.read('github:o/r', '7')).toMatchObject({ claimedBy: 'me', runId: 'r1', executionSessionId: 'sess-1', runnerPid: 5 });
+    await sp.claimTask(ref, {
+      claimedBy: 'me',
+      claimedAt: 't0',
+      runId: 'r1',
+      executionSessionId: 'sess-1',
+      runnerPid: 5,
+    } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({
+      claimedBy: 'me',
+      runId: 'r1',
+      executionSessionId: 'sess-1',
+      runnerPid: 5,
+    });
     expect(inner.claimTask).toHaveBeenCalledTimes(1);
   });
 
@@ -162,7 +173,14 @@ describe('StatefulTaskProvider', () => {
     const store = new MemStore();
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
-    await sp.createTask({ taskId: 'T-2', title: 'x', project: 'p', targetAgent: 'claude', priority: 0, source: 'github:o/r' });
+    await sp.createTask({
+      taskId: 'T-2',
+      title: 'x',
+      project: 'p',
+      targetAgent: 'claude',
+      priority: 0,
+      source: 'github:o/r',
+    });
     expect(store.data.size).toBe(0);
     expect(inner.createTask).toHaveBeenCalledTimes(1);
   });
@@ -175,7 +193,7 @@ describe('StatefulTaskProvider', () => {
     await sp.updateCleanupState(ref, { progressSummary: 'cleaned' });
     const state = store.read('github:o/r', '7')!;
     expect(state.executionSessionId).toBe('sess-1'); // session id kept → transcript stays findable
-    expect(state.workspacePath).toBe('');            // transient wiped
+    expect(state.workspacePath).toBe(''); // transient wiped
     expect(state.runnerPid).toBeNull();
     expect(inner.updateCleanupState).toHaveBeenCalledTimes(1);
   });
@@ -184,16 +202,25 @@ describe('StatefulTaskProvider', () => {
     const store = new MemStore();
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
-    await sp.claimTask({ taskId: 'T-1', source: 'github:o/r' } as never, { claimedBy: 'me', claimedAt: 't', runId: 'r' } as never);
+    await sp.claimTask(
+      { taskId: 'T-1', source: 'github:o/r' } as never,
+      { claimedBy: 'me', claimedAt: 't', runId: 'r' } as never,
+    );
     expect(store.data.size).toBe(0);
     expect(inner.claimTask).toHaveBeenCalledTimes(1);
   });
 
   it('a throwing store never breaks the delegate (best-effort)', async () => {
     const throwing: TaskStateStore = {
-      read: () => { throw new Error('boom'); },
-      merge: () => { throw new Error('boom'); },
-      clear: () => { throw new Error('boom'); },
+      read: () => {
+        throw new Error('boom');
+      },
+      merge: () => {
+        throw new Error('boom');
+      },
+      clear: () => {
+        throw new Error('boom');
+      },
     };
     const inner = fakeInner([record({})]);
     const sp = new StatefulTaskProvider(inner, throwing);

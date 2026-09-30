@@ -52,8 +52,6 @@ export class PublishContextService {
 
   private runGit(args: string[], signal?: AbortSignal) {
     signal?.throwIfAborted();
-    return signal
-      ? this.exec('git', args, { cancelSignal: signal })
-      : this.exec('git', args);
+    return signal ? this.exec('git', args, { cancelSignal: signal }) : this.exec('git', args);
   }
 }

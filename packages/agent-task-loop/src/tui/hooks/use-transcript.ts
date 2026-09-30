@@ -11,10 +11,7 @@ export interface UseTranscriptResult {
  * provider. Refetches whenever `sessionId` changes; yields `[]` when null. Stale
  * results are discarded if the id changed or the component unmounted.
  */
-export function useTranscript(
-  provider: SessionProvider,
-  sessionId: string | null,
-): UseTranscriptResult {
+export function useTranscript(provider: SessionProvider, sessionId: string | null): UseTranscriptResult {
   const [lines, setLines] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,14 +27,20 @@ export function useTranscript(
     let active = true;
     setIsLoading(true);
     Promise.resolve(providerRef.current.getTranscript(sessionId))
-      .then(result => {
-        if (active) setLines(result);
+      .then((result) => {
+        if (active) {
+          setLines(result);
+        }
       })
       .catch(() => {
-        if (active) setLines([]);
+        if (active) {
+          setLines([]);
+        }
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       });
     return () => {
       active = false;

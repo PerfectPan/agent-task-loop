@@ -1,8 +1,4 @@
-import {
-  buildTaskProvider,
-  loadConfig,
-  type TaskProvider,
-} from '@rivus/agent-task-loop/task-management';
+import { buildTaskProvider, loadConfig, type TaskProvider } from '@rivus/agent-task-loop/task-management';
 import { formatTaskLoadError } from './task-config-error';
 import { groupIntoLanes, type Lane } from '../domain/lanes';
 

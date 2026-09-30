@@ -99,8 +99,10 @@ export function App({
   useEffect(() => {
     let active = true;
     Promise.resolve(sessionProvider.listAvailableSessionIds())
-      .then(ids => {
-        if (active) setAvailableIds(new Set(ids));
+      .then((ids) => {
+        if (active) {
+          setAvailableIds(new Set(ids));
+        }
       })
       .catch(() => {});
     return () => {
@@ -118,7 +120,9 @@ export function App({
     const base = { active: 0, 'needs-input': 0, done: 0, all: 0 } as Record<TabKey, number>;
     for (const task of tasks) {
       for (const def of TABS) {
-        if (tabIncludes(def.key, task.status)) base[def.key] += 1;
+        if (tabIncludes(def.key, task.status)) {
+          base[def.key] += 1;
+        }
       }
     }
     return base;
@@ -131,18 +135,13 @@ export function App({
 
   // Sources available to the filter picker: configured ones (incl. empty) plus
   // any seen on a task, each with its current task count.
-  const sourceOptions = useMemo(
-    () => buildSourceOptions(tasks, sources ?? []),
-    [tasks, sources],
-  );
-  const sourceFilterText = sourceFilter.length > 0
-    ? `src:${sourceFilter.map(sourceLabel).join(',')}`
-    : undefined;
+  const sourceOptions = useMemo(() => buildSourceOptions(tasks, sources ?? []), [tasks, sources]);
+  const sourceFilterText = sourceFilter.length > 0 ? `src:${sourceFilter.map(sourceLabel).join(',')}` : undefined;
 
   // Tag rows with their backend when more than one source is in play — either
   // configured (multi-source setup) or actually present in the fetched tasks.
   const showSource = useMemo(
-    () => (sources?.length ?? 0) > 1 || new Set(tasks.map(task => task.source).filter(Boolean)).size > 1,
+    () => (sources?.length ?? 0) > 1 || new Set(tasks.map((task) => task.source).filter(Boolean)).size > 1,
     [sources, tasks],
   );
 
@@ -155,11 +154,10 @@ export function App({
     setSelectedIndex(0);
   }, [tab, query]);
 
-  const { preview, isLoading: previewLoading } = useSessionPreview(
-    sessionProvider,
-    selected,
-    { intervalMs: previewIntervalMs, now },
-  );
+  const { preview, isLoading: previewLoading } = useSessionPreview(sessionProvider, selected, {
+    intervalMs: previewIntervalMs,
+    now,
+  });
 
   const colWidths = computeColumnWidths(columns, { previewOpen });
   const visibleRows = Math.max(1, rows - reservedRows());
@@ -172,7 +170,7 @@ export function App({
   const effRound = roundIndex < 0 ? Math.max(0, history.length - 1) : clampIndex(roundIndex, history.length);
   const selectedRound = history[effRound];
   const transcriptSessionId =
-    previewMode === 'logs' ? selectedRound?.sessionId ?? selected?.executionSessionId ?? null : null;
+    previewMode === 'logs' ? (selectedRound?.sessionId ?? selected?.executionSessionId ?? null) : null;
   const { lines: transcript, isLoading: transcriptLoading } = useTranscript(
     sessionProvider,
     transcriptSessionId ?? null,
@@ -199,7 +197,9 @@ export function App({
   const detailLines = selected
     ? 1 +
       formatDetailFields(selected, nowMs).length +
-      (selected.progressSummary ? 1 + wrappedLineCount(selected.progressSummary, Math.max(1, colWidths.detail - 4)) : 0) +
+      (selected.progressSummary
+        ? 1 + wrappedLineCount(selected.progressSummary, Math.max(1, colWidths.detail - 4))
+        : 0) +
       (selected.lastError ? 1 + wrappedLineCount(selected.lastError, Math.max(1, colWidths.detail - 4)) : 0) +
       4 +
       SCROLL_SLACK
@@ -218,7 +218,9 @@ export function App({
 
   const submitNewTask = useCallback(
     async (payload: CreateTaskPayload) => {
-      if (!onCreateTask) return;
+      if (!onCreateTask) {
+        return;
+      }
       setCreating(true);
       setCreateError(null);
       try {
@@ -235,9 +237,11 @@ export function App({
   );
 
   const togglePreview = useCallback(() => {
-    setPreviewOpen(open => {
+    setPreviewOpen((open) => {
       const next = !open;
-      if (!next) setFocusedPane(p => (p === 'preview' ? 'list' : p));
+      if (!next) {
+        setFocusedPane((p) => (p === 'preview' ? 'list' : p));
+      }
       return next;
     });
   }, []);
@@ -251,9 +255,9 @@ export function App({
       } else if (key.return) {
         setFiltering(false);
       } else if (key.backspace || key.delete) {
-        setQuery(q => q.slice(0, -1));
+        setQuery((q) => q.slice(0, -1));
       } else if (input && !key.ctrl && !key.meta) {
-        setQuery(q => q + input);
+        setQuery((q) => q + input);
       }
     },
     { isActive: filtering },
@@ -278,31 +282,51 @@ export function App({
     (input, key) => {
       const previewRounds = focusedPane === 'preview' && previewMode === 'history';
       if (key.upArrow || input === 'k') {
-        if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s - 1, detailLines, paneViewport));
-        else if (previewRounds) setRoundIndex(clampIndex(effRound - 1, history.length));
-        else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s - 1, previewLines, paneViewport));
-        else setSelectedIndex(i => nextIndex(clampIndex(i, len), -1, len));
+        if (focusedPane === 'detail') {
+          setDetailScroll((s) => clampScroll(s - 1, detailLines, paneViewport));
+        } else if (previewRounds) {
+          setRoundIndex(clampIndex(effRound - 1, history.length));
+        } else if (focusedPane === 'preview') {
+          setPreviewScroll((s) => clampScroll(s - 1, previewLines, paneViewport));
+        } else {
+          setSelectedIndex((i) => nextIndex(clampIndex(i, len), -1, len));
+        }
       } else if (key.downArrow || input === 'j') {
-        if (focusedPane === 'detail') setDetailScroll(s => clampScroll(s + 1, detailLines, paneViewport));
-        else if (previewRounds) setRoundIndex(clampIndex(effRound + 1, history.length));
-        else if (focusedPane === 'preview') setPreviewScroll(s => clampScroll(s + 1, previewLines, paneViewport));
-        else setSelectedIndex(i => nextIndex(clampIndex(i, len), 1, len));
+        if (focusedPane === 'detail') {
+          setDetailScroll((s) => clampScroll(s + 1, detailLines, paneViewport));
+        } else if (previewRounds) {
+          setRoundIndex(clampIndex(effRound + 1, history.length));
+        } else if (focusedPane === 'preview') {
+          setPreviewScroll((s) => clampScroll(s + 1, previewLines, paneViewport));
+        } else {
+          setSelectedIndex((i) => nextIndex(clampIndex(i, len), 1, len));
+        }
       } else if (input === 'g') {
-        if (focusedPane === 'detail') setDetailScroll(0);
-        else if (previewRounds) setRoundIndex(0);
-        else if (focusedPane === 'preview') setPreviewScroll(0);
-        else setSelectedIndex(0);
+        if (focusedPane === 'detail') {
+          setDetailScroll(0);
+        } else if (previewRounds) {
+          setRoundIndex(0);
+        } else if (focusedPane === 'preview') {
+          setPreviewScroll(0);
+        } else {
+          setSelectedIndex(0);
+        }
       } else if (input === 'G') {
-        if (focusedPane === 'detail') setDetailScroll(detailMax);
-        else if (previewRounds) setRoundIndex(Math.max(0, history.length - 1));
-        else if (focusedPane === 'preview') setPreviewScroll(previewMax);
-        else setSelectedIndex(Math.max(0, len - 1));
+        if (focusedPane === 'detail') {
+          setDetailScroll(detailMax);
+        } else if (previewRounds) {
+          setRoundIndex(Math.max(0, history.length - 1));
+        } else if (focusedPane === 'preview') {
+          setPreviewScroll(previewMax);
+        } else {
+          setSelectedIndex(Math.max(0, len - 1));
+        }
       } else if (key.tab && key.shift) {
-        setFocusedPane(p => prevPane(p, previewOpen));
+        setFocusedPane((p) => prevPane(p, previewOpen));
       } else if (key.tab) {
-        setFocusedPane(p => nextPane(p, previewOpen));
+        setFocusedPane((p) => nextPane(p, previewOpen));
       } else if (input === 'm') {
-        setPreviewMode(m => nextPreviewMode(m));
+        setPreviewMode((m) => nextPreviewMode(m));
       } else if (input === 'p') {
         togglePreview();
       } else if (input === '/') {
@@ -321,9 +345,9 @@ export function App({
       } else if (/^[1-9]$/.test(input) && Number(input) <= TABS.length) {
         setTab(TABS[Number(input) - 1].key);
       } else if (input === ']') {
-        setTab(t => TABS[(TABS.findIndex(x => x.key === t) + 1) % TABS.length].key);
+        setTab((t) => TABS[(TABS.findIndex((x) => x.key === t) + 1) % TABS.length].key);
       } else if (input === '[') {
-        setTab(t => TABS[(TABS.findIndex(x => x.key === t) - 1 + TABS.length) % TABS.length].key);
+        setTab((t) => TABS[(TABS.findIndex((x) => x.key === t) - 1 + TABS.length) % TABS.length].key);
       } else if ((input === 'd' || input === 'x') && selected) {
         const task = selected;
         setConfirm({
@@ -335,15 +359,17 @@ export function App({
         });
       } else if (key.return) {
         // In the rounds list, Enter drills into that round's transcript.
-        if (previewRounds) setPreviewMode('logs');
-        else if (selected) onAttachTask?.(selected);
+        if (previewRounds) {
+          setPreviewMode('logs');
+        } else if (selected) {
+          onAttachTask?.(selected);
+        }
       } else if (input === 'q' || key.escape) {
         exit();
       }
     },
     {
-      isActive:
-        !filtering && !helpVisible && !workflowVisible && !formVisible && !sourceFilterVisible && !confirm,
+      isActive: !filtering && !helpVisible && !workflowVisible && !formVisible && !sourceFilterVisible && !confirm,
     },
   );
 
@@ -372,7 +398,7 @@ export function App({
             <SourceFilter
               options={sourceOptions}
               selected={sourceFilter}
-              onApply={next => {
+              onApply={(next) => {
                 setSourceFilter(next);
                 setSourceFilterVisible(false);
               }}
@@ -424,11 +450,7 @@ export function App({
           </Box>
         )}
         {confirm ? (
-          <ConfirmPrompt
-            message={confirm.message}
-            onConfirm={confirm.onConfirm}
-            onCancel={() => setConfirm(null)}
-          />
+          <ConfirmPrompt message={confirm.message} onConfirm={confirm.onConfirm} onCancel={() => setConfirm(null)} />
         ) : null}
         <StatusBar
           focusedPane={focusedPane}

@@ -32,13 +32,17 @@ export interface AgentProfile {
  * input, for agents with no native system-prompt channel.
  */
 export function withSystemPromptBlock(harness: Harness): ContentBlock[] {
-  if (!harness.systemPrompt) return harness.blocks;
+  if (!harness.systemPrompt) {
+    return harness.blocks;
+  }
   return [{ type: 'text', text: harness.systemPrompt }, ...harness.blocks];
 }
 
 /** Drops `workspaceFiles` into `cwd` before the session opens. */
 export function writeWorkspaceFiles(harness: Harness): void {
-  if (!harness.workspaceFiles) return;
+  if (!harness.workspaceFiles) {
+    return;
+  }
   for (const [relativePath, contents] of Object.entries(harness.workspaceFiles)) {
     const file = path.join(harness.cwd, relativePath);
     mkdirSync(path.dirname(file), { recursive: true });

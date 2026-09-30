@@ -204,7 +204,12 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     await sp.claimTask(ref, { claimedBy: 'codex@local', claimedAt: '2026-06-02T00:00:00Z', runId: 'run-3' });
     await sp.updateReviewState(ref, { status: '待复核', reviewRound: 1 });
     // review rejected ⇒ 修复中 with findings, then a re-claim for the next round.
-    await sp.updateReviewState(ref, { status: '修复中', reviewRound: 1, reviewVerdict: '驳回', reviewFindings: 'fix the edge case' });
+    await sp.updateReviewState(ref, {
+      status: '修复中',
+      reviewRound: 1,
+      reviewVerdict: '驳回',
+      reviewFindings: 'fix the edge case',
+    });
     const reworking = await sp.getTaskById('IDEA-52');
     expect(reworking?.status).toBe('修复中');
     expect(reworking?.reviewFindings).toBe('fix the edge case');

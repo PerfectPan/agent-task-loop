@@ -1,8 +1,4 @@
-import {
-  AGENT_ID_PATTERN,
-  type KnownAgentIds,
-  type RoomLabAgentId,
-} from './agent-registry';
+import { AGENT_ID_PATTERN, type KnownAgentIds, type RoomLabAgentId } from './agent-registry';
 
 // TODO(agents-registry): task gate still names two agents; make seats configurable.
 const TASK_GATE_AGENTS: readonly RoomLabAgentId[] = ['codex', 'claude'];
@@ -31,7 +27,7 @@ export class RoomComposition {
   }
 
   supportsTaskGate(): boolean {
-    return TASK_GATE_AGENTS.every(agentId => this.includes(agentId));
+    return TASK_GATE_AGENTS.every((agentId) => this.includes(agentId));
   }
 
   snapshot(): RoomLabAgentId[] {

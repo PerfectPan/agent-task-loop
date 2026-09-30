@@ -53,7 +53,9 @@ export function deriveAgentAvailability(input: {
   /** How many rooms currently seat this agent. */
   seatedIn: number;
 }): RoomAgentAvailability {
-  if (input.probe === 'ready' && input.seatedIn > 0) return 'seated';
+  if (input.probe === 'ready' && input.seatedIn > 0) {
+    return 'seated';
+  }
   return input.probe;
 }
 
@@ -73,21 +75,16 @@ export interface RoomAgentProbeItem {
  * lease, the ACP update stream and the last row in `turns` — never stored as
  * truth, and HELD is not shown: it happens inside a turn and resolves there.
  */
-export type RoomLabAgentStatus =
-  | 'present'
-  | 'reading'
-  | 'working'
-  | 'posted'
-  | 'passed'
-  | 'timeout'
-  | 'failed';
+export type RoomLabAgentStatus = 'present' | 'reading' | 'working' | 'posted' | 'passed' | 'timeout' | 'failed';
 
 export function deriveMemberStatus(input: {
   leaseHeld: boolean;
   toolCallSeen: boolean;
   lastOutcome?: RoomTurnOutcome;
 }): RoomLabAgentStatus {
-  if (input.leaseHeld) return input.toolCallSeen ? 'working' : 'reading';
+  if (input.leaseHeld) {
+    return input.toolCallSeen ? 'working' : 'reading';
+  }
   switch (input.lastOutcome) {
     case 'posted':
       return 'posted';
@@ -199,17 +196,21 @@ export type RoomLabAction =
     }
   | { action: 'reset' };
 
-export type RoomLabActionResponse =
-  | { ok: true; state: RoomLabState }
-  | { ok: false; error: string };
+export type RoomLabActionResponse = { ok: true; state: RoomLabState } | { ok: false; error: string };
 
 export class RoomLabStateSelector {
   private readonly retiredEpochs = new Set<string>();
 
   takeLoader(current: RoomLabState, incoming: RoomLabState): RoomLabState {
-    if (incoming.roomId !== current.roomId) return incoming;
-    if (incoming.epoch === current.epoch) return takeNewestRoomState(current, incoming);
-    if (this.retiredEpochs.has(incoming.epoch)) return current;
+    if (incoming.roomId !== current.roomId) {
+      return incoming;
+    }
+    if (incoming.epoch === current.epoch) {
+      return takeNewestRoomState(current, incoming);
+    }
+    if (this.retiredEpochs.has(incoming.epoch)) {
+      return current;
+    }
     this.retiredEpochs.add(current.epoch);
     return incoming;
   }
@@ -219,11 +220,12 @@ export class RoomLabStateSelector {
   }
 }
 
-export function takeNewestRoomState(
-  current: RoomLabState,
-  incoming: RoomLabState,
-): RoomLabState {
-  if (incoming.roomId !== current.roomId) return current;
-  if (incoming.epoch !== current.epoch) return current;
+export function takeNewestRoomState(current: RoomLabState, incoming: RoomLabState): RoomLabState {
+  if (incoming.roomId !== current.roomId) {
+    return current;
+  }
+  if (incoming.epoch !== current.epoch) {
+    return current;
+  }
   return incoming.revision > current.revision ? incoming : current;
 }

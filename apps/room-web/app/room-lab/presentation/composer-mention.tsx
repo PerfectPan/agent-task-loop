@@ -4,12 +4,7 @@ import type { SuggestionOptions } from '@tiptap/suggestion';
 import type { RoomLabAgentId } from '../read-model';
 import { mentionChip } from './mention-chip';
 import { MentionMenu, MENTION_LIST_ID, mentionOptionId, type MentionMenuHandle } from './MentionMenu';
-import {
-  buildMentionOptions,
-  mentionCompletion,
-  type MentionAgent,
-  type MentionOption,
-} from './mention-completion';
+import { buildMentionOptions, mentionCompletion, type MentionAgent, type MentionOption } from './mention-completion';
 
 /** What the composer needs to know to wire aria state to the popup. */
 export interface MentionBridge {
@@ -28,7 +23,9 @@ export interface MentionBridge {
  */
 const GAP = 6;
 function place(element: HTMLElement, rect: DOMRect | null) {
-  if (!rect) return;
+  if (!rect) {
+    return;
+  }
   const height = element.offsetHeight || 260;
   const above = rect.top - GAP - height;
   element.style.position = 'fixed';
@@ -41,10 +38,7 @@ export function roomMentionSuggestion(bridge: MentionBridge): Omit<SuggestionOpt
   return {
     char: '@',
     items: ({ query }) =>
-      mentionCompletion.filter(
-        query.toLowerCase(),
-        buildMentionOptions(bridge.activeAgentIds(), bridge.agents()),
-      ),
+      mentionCompletion.filter(query.toLowerCase(), buildMentionOptions(bridge.activeAgentIds(), bridge.agents())),
     render: () => {
       let renderer: ReactRenderer<MentionMenuHandle, MentionMenuProps> | undefined;
       let container: HTMLDivElement | undefined;
@@ -76,15 +70,17 @@ export function roomMentionSuggestion(bridge: MentionBridge): Omit<SuggestionOpt
 
       return {
         onStart: mount,
-        onUpdate: props => {
+        onUpdate: (props) => {
           renderer?.updateProps({
             options: props.items,
             onSelect: (option: MentionOption) => props.command({ id: option.id, label: option.id }),
             onActiveChange: bridge.onActiveOptionChange,
           });
-          if (container) place(container, props.clientRect?.() ?? null);
+          if (container) {
+            place(container, props.clientRect?.() ?? null);
+          }
         },
-        onKeyDown: props => {
+        onKeyDown: (props) => {
           if (props.event.key === 'Escape') {
             unmount();
             return true;
@@ -109,7 +105,7 @@ export function roomMention(bridge: MentionBridge) {
     renderText: ({ node }) => `@${node.attrs.id}`,
     renderHTML: ({ options, node }) => {
       const id = String(node.attrs.id ?? '');
-      const chip = mentionChip(id, bridge.agents().find(agent => agent.id === id)?.color);
+      const chip = mentionChip(id, bridge.agents().find((agent) => agent.id === id)?.color);
       return [
         'span',
         { ...options.HTMLAttributes, class: chip.chipClass, 'data-id': id },

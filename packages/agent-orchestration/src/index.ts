@@ -1,17 +1,7 @@
 // Contracts.
-export type {
-  Agent,
-  AgentBinding,
-  AgentId,
-  AgentRegistry,
-} from './contracts/agent';
+export type { Agent, AgentBinding, AgentId, AgentRegistry } from './contracts/agent';
 
-export type {
-  FencedResult,
-  FencingToken,
-  LeaseRecord,
-  LeaseStore,
-} from './contracts/lease';
+export type { FencedResult, FencingToken, LeaseRecord, LeaseStore } from './contracts/lease';
 
 export type {
   AgentConnection,
@@ -33,19 +23,9 @@ export type {
   ToolCallUpdate,
 } from './contracts/connection';
 
-export type {
-  Harness,
-  PermissionPolicy,
-  ToolCall,
-  ToolDefinition,
-  TurnResult,
-} from './contracts/harness';
+export type { Harness, PermissionPolicy, ToolCall, ToolDefinition, TurnResult } from './contracts/harness';
 
-export type {
-  Clock,
-  IntervalScheduler,
-  IntervalHandle,
-} from './contracts/ports';
+export type { Clock, IntervalScheduler, IntervalHandle } from './contracts/ports';
 export type { LockRecord, ProcessIdentity, ProcessLiveness } from './contracts/ports';
 
 export {

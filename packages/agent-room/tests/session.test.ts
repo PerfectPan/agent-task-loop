@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AgentSessionAggregate,
-  AgentSessionValidationError,
-  MemoryRoomStreamStore,
-  sessionKey,
-} from '../src/index';
+import { AgentSessionAggregate, AgentSessionValidationError, MemoryRoomStreamStore, sessionKey } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 const session = {
@@ -60,13 +55,10 @@ describe('AgentSession seen cursor', () => {
     expect(store.advanceSeen(session, 3).seenSeq).toBe(5);
   });
 
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, 1.5, -1])(
-    'rejects invalid sequence transitions: %s',
-    invalidSeq => {
-      const aggregate = new AgentSessionAggregate(session);
-      expect(() => aggregate.advanceSeen(invalidSeq)).toThrow(AgentSessionValidationError);
-      expect(() => aggregate.recordPost(invalidSeq)).toThrow(AgentSessionValidationError);
-      expect(aggregate.snapshot()).toEqual({ id: session, seenSeq: 0 });
-    },
-  );
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, 1.5, -1])('rejects invalid sequence transitions: %s', (invalidSeq) => {
+    const aggregate = new AgentSessionAggregate(session);
+    expect(() => aggregate.advanceSeen(invalidSeq)).toThrow(AgentSessionValidationError);
+    expect(() => aggregate.recordPost(invalidSeq)).toThrow(AgentSessionValidationError);
+    expect(aggregate.snapshot()).toEqual({ id: session, seenSeq: 0 });
+  });
 });

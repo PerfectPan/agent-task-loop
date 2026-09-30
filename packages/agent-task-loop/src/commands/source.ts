@@ -50,7 +50,7 @@ function printSources(config: EditableConfig): void {
 async function ask(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-    const answer = await new Promise<string>(resolve => rl.question(question, resolve));
+    const answer = await new Promise<string>((resolve) => rl.question(question, resolve));
     return answer.trim();
   } finally {
     rl.close();
@@ -75,7 +75,7 @@ const isTty = (): boolean => Boolean(process.stdin.isTTY && process.stdout.isTTY
 
 /** A CLI flag that must resolve to a non-empty trimmed string, with a clear message. */
 const requiredFlag = (message: string) =>
-  z.preprocess(value => (typeof value === 'string' ? value : ''), z.string().trim().min(1, message));
+  z.preprocess((value) => (typeof value === 'string' ? value : ''), z.string().trim().min(1, message));
 
 /** Validates the resolved `source add` inputs by type. Coercion, trimming and
  *  per-type required-ness all live here instead of hand-rolled checks. */
@@ -85,7 +85,7 @@ const addSourceSchema = z.discriminatedUnion('type', [
     owner: requiredFlag('GitHub owner is required (--owner).'),
     repo: requiredFlag('GitHub repo is required (--repo).'),
     agent: z.preprocess(
-      value => (typeof value === 'string' && value.trim() ? value.trim() : 'codex'),
+      (value) => (typeof value === 'string' && value.trim() ? value.trim() : 'codex'),
       z.enum(['claude', 'codex', 'coco', 'glm']),
     ),
   }),
@@ -97,7 +97,7 @@ const addSourceSchema = z.discriminatedUnion('type', [
 ]);
 
 function failValidation(error: z.ZodError): never {
-  console.error(error.issues.map(issue => issue.message).join('\n'));
+  console.error(error.issues.map((issue) => issue.message).join('\n'));
   process.exit(1);
 }
 
@@ -147,7 +147,8 @@ export const sourceAddCommand = defineCommand({
       raw.repo = args.repo;
       if ((!raw.owner || !raw.repo) && isTty()) {
         const detected = detectRepo();
-        raw.owner = raw.owner || (await ask(`GitHub owner${detected ? ` [${detected.owner}]` : ''}: `)) || detected?.owner;
+        raw.owner =
+          raw.owner || (await ask(`GitHub owner${detected ? ` [${detected.owner}]` : ''}: `)) || detected?.owner;
         raw.repo = raw.repo || (await ask(`GitHub repo${detected ? ` [${detected.repo}]` : ''}: `)) || detected?.repo;
       }
     } else {
@@ -178,7 +179,7 @@ export const sourceAddCommand = defineCommand({
 export const sourceRemoveCommand = defineCommand({
   meta: { name: 'remove', description: "Remove a task source by id ('feishu' or 'github:<owner>/<repo>')" },
   args: {
-    id: { type: 'positional', required: true, description: "feishu | github:<owner>/<repo>" },
+    id: { type: 'positional', required: true, description: 'feishu | github:<owner>/<repo>' },
     config: { type: 'string' },
   },
   run({ args }) {

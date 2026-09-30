@@ -35,10 +35,13 @@ pulling the ACP and MCP SDKs into their bundles.
 ```ts
 const lease = new LeaseManager({
   store: new FileLeaseStore(baseDir), // or MemoryLeaseStore
-  clock, identity, holderId, liveness,
+  clock,
+  identity,
+  holderId,
+  liveness,
 });
-lease.acquire(key);      // `room:<roomId>:member:<agentId>` for a Room turn
-lease.heartbeat(key);    // compare-and-swap renewal
+lease.acquire(key); // `room:<roomId>:member:<agentId>` for a Room turn
+lease.heartbeat(key); // compare-and-swap renewal
 await lease.fence(key, op); // linearize one external write
 lease.release(key);
 ```
@@ -52,7 +55,7 @@ run state stays in its own store.
 ```ts
 const runtime = new AgentRuntime({ connector, registry, lease });
 runtime.onActivate(async (key) => buildHarness(key));
-runtime.wake(key);  // coalesces; never blocks the caller
+runtime.wake(key); // coalesces; never blocks the caller
 await runtime.cancel(key);
 ```
 

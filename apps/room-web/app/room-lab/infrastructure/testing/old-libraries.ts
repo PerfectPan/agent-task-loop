@@ -6,10 +6,7 @@ import { MIGRATIONS, runMigrations } from '../migrations';
  * A library at version 1: the first migration applied and recorded, nothing
  * else. Built by running that migration, which is the version-1 DDL itself.
  */
-export function createVersionOneLibrary(
-  root: string,
-  fill: (db: DatabaseSync) => void = () => {},
-): string {
+export function createVersionOneLibrary(root: string, fill: (db: DatabaseSync) => void = () => {}): string {
   const file = join(root, 'rooms.sqlite');
   const db = new DatabaseSync(file);
   db.exec(`
@@ -19,8 +16,7 @@ export function createVersionOneLibrary(
     );
   `);
   MIGRATIONS[0]!.up(db);
-  db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)')
-    .run('2026-09-14T19:27:31.456Z');
+  db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)').run('2026-09-14T19:27:31.456Z');
   fill(db);
   db.close();
   return file;
@@ -30,13 +26,10 @@ export function createVersionOneLibrary(
  * A library at version 2: members are rows but their instructions still live
  * in a separate table. The same runner, stopped after version 2.
  */
-export function createVersionTwoLibrary(
-  root: string,
-  fill: (db: DatabaseSync) => void = () => {},
-): string {
+export function createVersionTwoLibrary(root: string, fill: (db: DatabaseSync) => void = () => {}): string {
   const file = join(root, 'rooms.sqlite');
   const db = new DatabaseSync(file);
-  runMigrations(db, { migrations: MIGRATIONS.filter(migration => migration.version <= 2) });
+  runMigrations(db, { migrations: MIGRATIONS.filter((migration) => migration.version <= 2) });
   fill(db);
   db.close();
   return file;
@@ -48,13 +41,10 @@ export function createVersionTwoLibrary(
  * plane — the state the migration tests stand in for the real
  * `rooms.sqlite` on a machine that has one.
  */
-export function createVersionThreeLibrary(
-  root: string,
-  fill: (db: DatabaseSync) => void = () => {},
-): string {
+export function createVersionThreeLibrary(root: string, fill: (db: DatabaseSync) => void = () => {}): string {
   const file = join(root, 'rooms.sqlite');
   const db = new DatabaseSync(file);
-  runMigrations(db, { migrations: MIGRATIONS.filter(migration => migration.version <= 3) });
+  runMigrations(db, { migrations: MIGRATIONS.filter((migration) => migration.version <= 3) });
   fill(db);
   db.close();
   return file;
@@ -65,13 +55,10 @@ export function createVersionThreeLibrary(
  * still is, and agent sessions still carry the held watermark. The state the
  * 0007 fixture test stands in for a machine that ran the last release.
  */
-export function createVersionSixLibrary(
-  root: string,
-  fill: (db: DatabaseSync) => void = () => {},
-): string {
+export function createVersionSixLibrary(root: string, fill: (db: DatabaseSync) => void = () => {}): string {
   const file = join(root, 'rooms.sqlite');
   const db = new DatabaseSync(file);
-  runMigrations(db, { migrations: MIGRATIONS.filter(migration => migration.version <= 6) });
+  runMigrations(db, { migrations: MIGRATIONS.filter((migration) => migration.version <= 6) });
   fill(db);
   db.close();
   return file;

@@ -108,13 +108,9 @@ describe('Room aggregate', () => {
     );
     const event = source.eventsAfter(0)[0]!;
     expect(() => new Room(roomId, [{ ...event, seq: 2 }])).toThrow(/sequence is not contiguous/);
-    expect(() =>
-      new Room(roomId, [event, { ...event, seq: 2 }]),
-    ).toThrow(/duplicate transport messageId/);
-    expect(() =>
-      new Room(roomId, [
-        { ...event, roomId: { tenantId: 'tenant', conversationId: 'other' } },
-      ]),
-    ).toThrow(/different room/);
+    expect(() => new Room(roomId, [event, { ...event, seq: 2 }])).toThrow(/duplicate transport messageId/);
+    expect(() => new Room(roomId, [{ ...event, roomId: { tenantId: 'tenant', conversationId: 'other' } }])).toThrow(
+      /different room/,
+    );
   });
 });

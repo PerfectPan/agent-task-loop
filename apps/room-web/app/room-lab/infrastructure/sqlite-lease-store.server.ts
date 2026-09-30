@@ -19,55 +19,93 @@ export class SqliteLeaseStore implements LeaseStore {
   constructor(private readonly db: DatabaseSync) {}
 
   tryCreate(key: string, record: LeaseRecord): boolean {
-    return this.write(`
+    return (
+      this.write(
+        `
       INSERT INTO member_leases (key, holder_pid, holder_id, heartbeat_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(key) DO NOTHING
-    `, key, record.holderPid, record.holderId, record.heartbeatAt) === 1;
+    `,
+        key,
+        record.holderPid,
+        record.holderId,
+        record.heartbeatAt,
+      ) === 1
+    );
   }
 
   tryReplace(key: string, expected: LeaseRecord, next: LeaseRecord): boolean {
-    if (expected.key !== key || next.key !== key) return false;
-    return this.write(`
+    if (expected.key !== key || next.key !== key) {
+      return false;
+    }
+    return (
+      this.write(
+        `
       UPDATE member_leases SET holder_pid = ?, holder_id = ?, heartbeat_at = ?
       WHERE key = ? AND holder_pid = ? AND holder_id = ? AND heartbeat_at = ?
-    `, next.holderPid, next.holderId, next.heartbeatAt,
-      key, expected.holderPid, expected.holderId, expected.heartbeatAt) === 1;
+    `,
+        next.holderPid,
+        next.holderId,
+        next.heartbeatAt,
+        key,
+        expected.holderPid,
+        expected.holderId,
+        expected.heartbeatAt,
+      ) === 1
+    );
   }
 
   tryTouch(expected: LeaseRecord, next: LeaseRecord): boolean {
-    if (next.key !== expected.key) return false;
-    return this.write(`
+    if (next.key !== expected.key) {
+      return false;
+    }
+    return (
+      this.write(
+        `
       UPDATE member_leases SET holder_pid = ?, holder_id = ?, heartbeat_at = ?
       WHERE key = ? AND holder_pid = ? AND holder_id = ? AND heartbeat_at = ?
-    `, next.holderPid, next.holderId, next.heartbeatAt,
-      expected.key, expected.holderPid, expected.holderId, expected.heartbeatAt) === 1;
+    `,
+        next.holderPid,
+        next.holderId,
+        next.heartbeatAt,
+        expected.key,
+        expected.holderPid,
+        expected.holderId,
+        expected.heartbeatAt,
+      ) === 1
+    );
   }
 
   tryRelease(expected: LeaseRecord): boolean {
-    return this.write(`
+    return (
+      this.write(
+        `
       DELETE FROM member_leases
       WHERE key = ? AND holder_pid = ? AND holder_id = ? AND heartbeat_at = ?
-    `, expected.key, expected.holderPid, expected.holderId, expected.heartbeatAt) === 1;
+    `,
+        expected.key,
+        expected.holderPid,
+        expected.holderId,
+        expected.heartbeatAt,
+      ) === 1
+    );
   }
 
   read(key: string): LeaseRecord | undefined {
-    const row = this.db.prepare(`
+    const row = this.db
+      .prepare(`
       SELECT key, holder_pid, holder_id, heartbeat_at
       FROM member_leases WHERE key = ?
-    `).get(key) as unknown as LeaseRow | undefined;
+    `)
+      .get(key) as unknown as LeaseRow | undefined;
     return row ? toRecord(row) : undefined;
   }
 
-  async runFenced<T>(
-    token: FencingToken,
-    operation: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<FencedResult<T>> {
+  async runFenced<T>(token: FencingToken, operation: () => Promise<T>, signal?: AbortSignal): Promise<FencedResult<T>> {
     // One fenced write at a time per key, in the order they arrived.
     const previous = this.fenceTails.get(token.key) ?? Promise.resolve();
     let unlock: () => void = () => undefined;
-    const slot = new Promise<void>(resolve => {
+    const slot = new Promise<void>((resolve) => {
       unlock = resolve;
     });
     const tail = previous.then(() => slot);
@@ -78,11 +116,7 @@ export class SqliteLeaseStore implements LeaseStore {
       // The re-read that makes it fenced: whatever the record said when the
       // token was minted, only the row still naming this holder enters.
       const current = this.read(token.key);
-      if (
-        !current ||
-        current.holderPid !== token.holderPid ||
-        current.holderId !== token.holderId
-      ) {
+      if (!current || current.holderPid !== token.holderPid || current.holderId !== token.holderId) {
         return { executed: false };
       }
       return { executed: true, value: await operation() };

@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { describe, expect, it } from 'vitest';
 import { ToolServer, type TurnTools } from '../src/application/tool-server';
 
-function echoTool(handler: (input: Record<string, unknown>) => Promise<unknown> = input => Promise.resolve({ echo: input.text })) {
+function echoTool(
+  handler: (input: Record<string, unknown>) => Promise<unknown> = (input) => Promise.resolve({ echo: input.text }),
+) {
   return {
     name: 'room_echo',
     description: 'Echoes the text back, as the Room tools will.',

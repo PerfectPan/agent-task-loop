@@ -1,3 +1,3 @@
 export function trimTrailingSeparators(value: string): string {
-  return value.replace(/[\\/]+$/u, "");
+  return value.replace(/[\\/]+$/u, '');
 }

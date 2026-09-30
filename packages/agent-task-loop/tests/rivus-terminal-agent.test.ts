@@ -46,37 +46,39 @@ describe('local Rivus terminal Task Manager Agent', () => {
       toolVersion: tool.version,
     });
     const toolInput = { taskId: 'TASK-TERMINAL-1' };
-    const runtime = createDefaultAgentRuntimeFromCallback(async input => {
-      expect(input.text).toBe('Query task TASK-TERMINAL-1 and return its public task data.');
-      const result = await executor.execute(toolInput, {
-        agentId: 'task-manager',
-        callId: 'terminal-call-1',
-        instanceId: 'task-manager:terminal',
-        policyEpoch: 1,
-        runId: input.runId,
-        sessionKey: input.sessionKey,
-        toolId: TASK_GET_TOOL_ID,
-        toolVersion: tool.version,
-      });
-      return [
-        createAgentLoopToolExecutionStart({
-          input: toolInput,
-          toolCallId: 'terminal-call-1',
-          toolName: TASK_GET_TOOL_ID,
-        }),
-        createAgentLoopToolExecutionEnd({
-          isError: false,
-          result,
-          toolCallId: 'terminal-call-1',
-          toolName: TASK_GET_TOOL_ID,
-        }),
-        JSON.stringify(result),
-      ];
-    }, {}, { mainSessionKey: 'local:task-manager:terminal-smoke' });
-
-    const finalText = await runtime.promptText(
-      'Query task TASK-TERMINAL-1 and return its public task data.',
+    const runtime = createDefaultAgentRuntimeFromCallback(
+      async (input) => {
+        expect(input.text).toBe('Query task TASK-TERMINAL-1 and return its public task data.');
+        const result = await executor.execute(toolInput, {
+          agentId: 'task-manager',
+          callId: 'terminal-call-1',
+          instanceId: 'task-manager:terminal',
+          policyEpoch: 1,
+          runId: input.runId,
+          sessionKey: input.sessionKey,
+          toolId: TASK_GET_TOOL_ID,
+          toolVersion: tool.version,
+        });
+        return [
+          createAgentLoopToolExecutionStart({
+            input: toolInput,
+            toolCallId: 'terminal-call-1',
+            toolName: TASK_GET_TOOL_ID,
+          }),
+          createAgentLoopToolExecutionEnd({
+            isError: false,
+            result,
+            toolCallId: 'terminal-call-1',
+            toolName: TASK_GET_TOOL_ID,
+          }),
+          JSON.stringify(result),
+        ];
+      },
+      {},
+      { mainSessionKey: 'local:task-manager:terminal-smoke' },
     );
+
+    const finalText = await runtime.promptText('Query task TASK-TERMINAL-1 and return its public task data.');
     const result = JSON.parse(finalText) as { task: Record<string, unknown> };
 
     expect(provider.getTaskById).toHaveBeenCalledWith('TASK-TERMINAL-1');
@@ -100,19 +102,18 @@ describe('local Rivus terminal Task Manager Agent', () => {
   });
 });
 
-function getTool(
-  plugin: { register(registry: RivusPluginRegistry): void },
-  toolId: string,
-): RivusToolDescriptor {
+function getTool(plugin: { register(registry: RivusPluginRegistry): void }, toolId: string): RivusToolDescriptor {
   const tools = new Map<string, RivusToolDescriptor>();
   plugin.register({
     registerAgentProfile: () => undefined,
     registerAutomation: () => undefined,
     registerSkill: () => undefined,
-    registerTool: tool => tools.set(tool.id, tool),
+    registerTool: (tool) => tools.set(tool.id, tool),
   });
   const tool = tools.get(toolId);
-  if (!tool) throw new Error(`Tool ${toolId} was not registered`);
+  if (!tool) {
+    throw new Error(`Tool ${toolId} was not registered`);
+  }
   return tool;
 }
 

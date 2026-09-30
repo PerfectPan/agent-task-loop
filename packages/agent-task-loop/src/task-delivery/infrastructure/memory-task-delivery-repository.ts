@@ -10,7 +10,9 @@ export class MemoryTaskDeliveryRepository implements TaskDeliveryRepository {
   }
 
   create(snapshot: TaskDeliverySnapshot): boolean {
-    if (this.tasks.has(snapshot.taskId)) return false;
+    if (this.tasks.has(snapshot.taskId)) {
+      return false;
+    }
     this.tasks.set(snapshot.taskId, { ...snapshot });
     return true;
   }

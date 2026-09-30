@@ -7,17 +7,17 @@ package is a bounded context or a public delivery surface.
 
 ## Packages
 
-| Package | Question it answers | Published |
-| --- | --- | --- |
-| `@rivus/agent-task-loop` (`packages/agent-task-loop`) | Where is this task in its delivery pipeline | npm |
-| `@rivus/agent-finder-core` (`packages/agent-finder`) | Which coding agents are installed on this host | npm, plus the MoonBit module `PerfectPan/agent-finder` |
-| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`) | Discovery and session browsing from a terminal | npm |
-| `@rivus/agent-sessions` (`packages/agent-sessions`) | Which agent sessions exist on disk and what they said | internal, bundled |
-| `@rivus/agent-room` (`packages/agent-room`) | What was said in a room, who has read up to where, who should look next | internal |
-| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal |
-| `@rivus/rslib-config` (`packages/rslib-config`) | Shared build configuration | internal |
-| `@rivus/room-web` (`apps/room-web`) | The local collaboration endpoint: everything with a product name | internal app |
-| `@rivus/web` (`apps/web`) | The landing site | internal app |
+| Package                                                       | Question it answers                                                                       | Published                                              |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm                                                    |
+| `@rivus/agent-finder-core` (`packages/agent-finder`)          | Which coding agents are installed on this host                                            | npm, plus the MoonBit module `PerfectPan/agent-finder` |
+| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm                                                    |
+| `@rivus/agent-sessions` (`packages/agent-sessions`)           | Which agent sessions exist on disk and what they said                                     | internal, bundled                                      |
+| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal                                               |
+| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal                                               |
+| `@rivus/rslib-config` (`packages/rslib-config`)               | Shared build configuration                                                                | internal                                               |
+| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app                                           |
+| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app                                           |
 
 Detailed pages:
 
@@ -78,13 +78,13 @@ done. `src/task-delivery/` is the first capability moved this way.
 
 ## Two mechanisms that must not be mixed
 
-| Mechanism | Owns | Must not be used for |
-| --- | --- | --- |
-| Lease on `task:<taskId>` (task run baton) | Exclusive task run: one `start` wins, lifecycle writes run fenced under the holder token | Room order, chat turns |
-| Lease on `room:<roomId>:member:<agentId>` | One activation per room member at a time | Task start exclusion |
-| Room record `seq` | Events already posted in a room | Task status, worker pid |
-| Room HELD | A stale `speak` at the write point | Task start exclusion |
-| Rivus Plugin tools | The Task Backend through the Task Manager | Room membership or seq |
+| Mechanism                                 | Owns                                                                                     | Must not be used for    |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------- |
+| Lease on `task:<taskId>` (task run baton) | Exclusive task run: one `start` wins, lifecycle writes run fenced under the holder token | Room order, chat turns  |
+| Lease on `room:<roomId>:member:<agentId>` | One activation per room member at a time                                                 | Task start exclusion    |
+| Room record `seq`                         | Events already posted in a room                                                          | Task status, worker pid |
+| Room HELD                                 | A stale `speak` at the write point                                                       | Task start exclusion    |
+| Rivus Plugin tools                        | The Task Backend through the Task Manager                                                | Room membership or seq  |
 
 If two callers race a task start, the task lease decides. If two members race
 a post, HELD decides. Neither is implemented with the other.

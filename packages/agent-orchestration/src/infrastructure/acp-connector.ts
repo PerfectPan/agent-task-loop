@@ -163,7 +163,9 @@ export class AcpConnector implements AgentConnector {
           options: params.options,
         };
         const handler = runtime.permissionHandler;
-        if (!handler) return { outcome: { outcome: 'cancelled' } as const };
+        if (!handler) {
+          return { outcome: { outcome: 'cancelled' } as const };
+        }
         return { outcome: await handler(request) };
       },
       // The advertised fs is the session's cwd and nothing else: the handler
@@ -221,15 +223,14 @@ async function scopedPath(
   label: string,
 ): Promise<string> {
   const root = runtime.sessionRoots.get(sessionId);
-  if (!root) throw new Error(`${label}: no session root for ${sessionId}`);
+  if (!root) {
+    throw new Error(`${label}: no session root for ${sessionId}`);
+  }
   const resolved = await resolveReal(target, label);
   const within = relative(root, resolved);
   // `..` and `..`-prefixed components only: a name that merely starts with
   // two dots (`..foo`) is an ordinary in-root name.
-  if (
-    within === ''
-    || (within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within))
-  ) {
+  if (within === '' || (within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within))) {
     return resolved;
   }
   throw new Error(`${label}: ${target} is outside the session cwd`);
@@ -238,7 +239,9 @@ async function scopedPath(
 async function resolveReal(target: string, label: string): Promise<string> {
   // ACP paths are absolute; a relative one resolves against this process's
   // cwd, which is not a place the session named, so it is refused outright.
-  if (!isAbsolute(target)) throw new Error(`${label}: ${target} is not an absolute path`);
+  if (!isAbsolute(target)) {
+    throw new Error(`${label}: ${target} is not an absolute path`);
+  }
   let current = resolve(target);
   for (let hops = 0; hops < 40; hops += 1) {
     const parts = current.split(sep);
@@ -246,7 +249,9 @@ async function resolveReal(target: string, label: string): Promise<string> {
     let followed = false;
     for (let index = 1; index < parts.length; index += 1) {
       const part = parts[index]!;
-      if (!part) continue;
+      if (!part) {
+        continue;
+      }
       const next = join(walked, part);
       let stat: { isSymbolicLink(): boolean };
       try {
@@ -267,14 +272,13 @@ async function resolveReal(target: string, label: string): Promise<string> {
       // The link's own target may hold links of its own: walk it next pass,
       // with the rest of the original path hanging off it.
       const rest = parts.slice(index + 1).filter(Boolean);
-      current = join(
-        isAbsolute(linkTarget) ? linkTarget : resolve(walked, linkTarget),
-        ...rest,
-      );
+      current = join(isAbsolute(linkTarget) ? linkTarget : resolve(walked, linkTarget), ...rest);
       followed = true;
       break;
     }
-    if (!followed) return walked;
+    if (!followed) {
+      return walked;
+    }
   }
   // A chain this long is a loop or a fight. Returning the last link would
   // hand the OS a path it would happily follow the rest of the way out of
@@ -323,11 +327,7 @@ class AcpConnection implements AgentConnection {
     return response.sessionId;
   }
 
-  async prompt(
-    session: string,
-    blocks: ContentBlock[],
-    signal?: AbortSignal,
-  ): Promise<{ stopReason: StopReason }> {
+  async prompt(session: string, blocks: ContentBlock[], signal?: AbortSignal): Promise<{ stopReason: StopReason }> {
     // A turn already cancelled never prompts: the runtime is discarding this
     // connection, and nobody would wait for the answer.
     signal?.throwIfAborted();
@@ -360,7 +360,9 @@ class AcpConnection implements AgentConnection {
       return { stopReason: result.stopReason };
     } finally {
       signal.removeEventListener('abort', onAbort!);
-      if (grace) clearTimeout(grace);
+      if (grace) {
+        clearTimeout(grace);
+      }
     }
   }
 
@@ -381,7 +383,9 @@ class AcpConnection implements AgentConnection {
     // One turn answers permissions at a time; the newest handler wins.
     runtime.permissionHandler = handler;
     return () => {
-      if (runtime.permissionHandler === handler) runtime.permissionHandler = previous;
+      if (runtime.permissionHandler === handler) {
+        runtime.permissionHandler = previous;
+      }
     };
   }
 
@@ -392,12 +396,14 @@ class AcpConnection implements AgentConnection {
         () => true,
         () => true,
       ),
-      new Promise<boolean>(resolve => {
+      new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), this.closeKillMs);
         timer.unref?.();
       }),
     ]);
-    if (exited) return;
+    if (exited) {
+      return;
+    }
     // A process that sat through SIGTERM — the lease stays held and the
     // heartbeat keeps it fresh until the process is really gone.
     this.handle.kill('SIGKILL');
@@ -428,12 +434,16 @@ export function loginShellProcess(binding: AgentBinding, shell = '/bin/zsh'): Ac
 }
 
 export function isAuthRequiredError(error: unknown): boolean {
-  if (error instanceof RequestError && error.code === AUTH_REQUIRED_ERROR_CODE) return true;
+  if (error instanceof RequestError && error.code === AUTH_REQUIRED_ERROR_CODE) {
+    return true;
+  }
   return /auth[\s_-]?required/i.test(error instanceof Error ? error.message : String(error));
 }
 
 function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    return error.message;
+  }
   return String(error);
 }
 
@@ -442,7 +452,9 @@ function abortReason(signal: AbortSignal, fallback: string): Error {
 }
 
 function tailStream(stream: Readable | undefined, maxBytes = STDERR_TAIL_BYTES): () => string {
-  if (!stream) return () => '';
+  if (!stream) {
+    return () => '';
+  }
   let text = '';
   stream.on('data', (chunk: Buffer) => {
     text = `${text}${chunk.toString('utf8')}`.slice(-maxBytes);
@@ -450,12 +462,7 @@ function tailStream(stream: Readable | undefined, maxBytes = STDERR_TAIL_BYTES):
   return () => text.trim();
 }
 
-async function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  label: string,
-  signal?: AbortSignal,
-): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string, signal?: AbortSignal): Promise<T> {
   signal?.throwIfAborted();
   const timeout = new Promise<never>((_, reject) => {
     const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);

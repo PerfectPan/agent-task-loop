@@ -20,10 +20,7 @@ export interface BuildTaskProviderOptions {
  * owning backend. The default write target is Feishu when configured, otherwise
  * the first GitHub repository.
  */
-export function buildTaskProvider(
-  config: AppConfig,
-  options: BuildTaskProviderOptions = {},
-): TaskProvider {
+export function buildTaskProvider(config: AppConfig, options: BuildTaskProviderOptions = {}): TaskProvider {
   const providers: SourceProvider[] = [];
   if (config.feishu) {
     providers.push(new FeishuTaskProvider(config));

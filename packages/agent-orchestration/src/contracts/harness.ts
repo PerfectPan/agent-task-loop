@@ -33,9 +33,7 @@ export interface Harness {
 }
 
 /** The endpoint's answer to a permission request, consulted by the connector. */
-export type PermissionPolicy = (
-  request: PermissionRequest,
-) => PermissionOutcome | Promise<PermissionOutcome>;
+export type PermissionPolicy = (request: PermissionRequest) => PermissionOutcome | Promise<PermissionOutcome>;
 
 /** The tool call shape a veto sees, before the permission answer. */
 export type ToolCall = ToolCallUpdate;

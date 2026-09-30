@@ -20,10 +20,7 @@ export type SpeakResult =
   | { outcome: 'posted'; seq: RoomSeq; event: RoomEvent }
   | { outcome: 'held'; newer: RoomEvent[] };
 
-export type SpeakInput = Pick<
-  SpeakCommand,
-  'body' | 'addressedTo' | 'readUpToSeq' | 'triggerSeq'
->;
+export type SpeakInput = Pick<SpeakCommand, 'body' | 'addressedTo' | 'readUpToSeq' | 'triggerSeq'>;
 
 /**
  * Domain service for the speak write point. HELD when any event by another
@@ -32,12 +29,7 @@ export type SpeakInput = Pick<
  * changes no state: the member reads the newer events and calls again inside
  * the same turn.
  */
-export function speak(
-  room: Room,
-  session: AgentSessionAggregate,
-  input: SpeakInput,
-  at: string,
-): SpeakResult {
+export function speak(room: Room, session: AgentSessionAggregate, input: SpeakInput, at: string): SpeakResult {
   const sessionId = session.id;
   if (!sameRoomId(room.id, sessionId.roomId)) {
     throw new RoomValidationError('agent session belongs to a different room');

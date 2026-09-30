@@ -172,11 +172,7 @@ describe('AutoPublishService', () => {
     );
 
     expect(load).toHaveBeenCalledWith('/tmp/worktree', controller.signal);
-    expect(pushBranch).toHaveBeenCalledWith(
-      expect.objectContaining({ signal: controller.signal }),
-    );
-    expect(getRemoteBranchHead).toHaveBeenCalledWith(
-      expect.objectContaining({ signal: controller.signal }),
-    );
+    expect(pushBranch).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
+    expect(getRemoteBranchHead).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
   });
 });

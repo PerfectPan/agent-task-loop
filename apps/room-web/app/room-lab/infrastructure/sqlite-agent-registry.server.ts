@@ -19,18 +19,22 @@ export class SqliteAgentRegistry implements AgentRegistry {
   constructor(private readonly db: DatabaseSync) {}
 
   async list(): Promise<Agent[]> {
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(`
       SELECT id, label, role, command, color, position, system_prompt, timeout_ms
       FROM agents ORDER BY position ASC, id ASC
-    `).all() as unknown as AgentRow[];
+    `)
+      .all() as unknown as AgentRow[];
     return rows.map(toAgent);
   }
 
   async get(id: AgentId): Promise<Agent | undefined> {
-    const row = this.db.prepare(`
+    const row = this.db
+      .prepare(`
       SELECT id, label, role, command, color, position, system_prompt, timeout_ms
       FROM agents WHERE id = ?
-    `).get(id) as unknown as AgentRow | undefined;
+    `)
+      .get(id) as unknown as AgentRow | undefined;
     return row ? toAgent(row) : undefined;
   }
 
@@ -39,32 +43,37 @@ export class SqliteAgentRegistry implements AgentRegistry {
     if (this.readRow(agent.id)) {
       // The endpoint's columns keep their values: the port cannot see them, so
       // a save through the port cannot change them.
-      this.db.prepare(`
+      this.db
+        .prepare(`
         UPDATE agents
         SET label = ?, command = ?, system_prompt = ?, timeout_ms = ?
         WHERE id = ?
-      `).run(agent.label, agent.binding.command, agent.systemPrompt, timeoutMs, agent.id);
+      `)
+        .run(agent.label, agent.binding.command, agent.systemPrompt, timeoutMs, agent.id);
       return;
     }
-    const last = this.db.prepare('SELECT MAX(position) AS position FROM agents')
-      .get() as unknown as { position: number | null };
-    this.db.prepare(`
+    const last = this.db.prepare('SELECT MAX(position) AS position FROM agents').get() as unknown as {
+      position: number | null;
+    };
+    this.db
+      .prepare(`
       INSERT INTO agents (
         id, label, role, command, color, position, created_at, system_prompt, timeout_ms
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      agent.id,
-      agent.label,
-      // The role an inherited row starts on, until the desk assigns a real one.
-      INHERITED_AGENT_ROLE,
-      agent.binding.command,
-      // The hue is drawn when the row is created, as the seed rows' are.
-      randomAgentColor(),
-      (last.position === null ? -1 : Number(last.position)) + 1,
-      nowIso(),
-      agent.systemPrompt,
-      timeoutMs,
-    );
+    `)
+      .run(
+        agent.id,
+        agent.label,
+        // The role an inherited row starts on, until the desk assigns a real one.
+        INHERITED_AGENT_ROLE,
+        agent.binding.command,
+        // The hue is drawn when the row is created, as the seed rows' are.
+        randomAgentColor(),
+        (last.position === null ? -1 : Number(last.position)) + 1,
+        nowIso(),
+        agent.systemPrompt,
+        timeoutMs,
+      );
   }
 
   async remove(id: AgentId): Promise<void> {
@@ -74,9 +83,7 @@ export class SqliteAgentRegistry implements AgentRegistry {
   }
 
   private readRow(id: AgentId): AgentRow | undefined {
-    return this.db.prepare('SELECT id FROM agents WHERE id = ?').get(id) as unknown as
-      | AgentRow
-      | undefined;
+    return this.db.prepare('SELECT id FROM agents WHERE id = ?').get(id) as unknown as AgentRow | undefined;
   }
 }
 
@@ -97,8 +104,6 @@ function toAgent(row: AgentRow): Agent {
     label: row.label,
     binding: { command: row.command },
     systemPrompt: row.system_prompt,
-    ...(row.timeout_ms === null || row.timeout_ms === undefined
-      ? {}
-      : { timeoutMs: Number(row.timeout_ms) }),
+    ...(row.timeout_ms === null || row.timeout_ms === undefined ? {} : { timeoutMs: Number(row.timeout_ms) }),
   };
 }

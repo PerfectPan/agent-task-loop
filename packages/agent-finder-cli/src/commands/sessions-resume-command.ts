@@ -1,13 +1,13 @@
-import { defineCommand } from "citty";
-import { defaultRegistry } from "@rivus/agent-sessions";
+import { defineCommand } from 'citty';
+import { defaultRegistry } from '@rivus/agent-sessions';
 
 export const sessionsResumeCommand = defineCommand({
   meta: {
-    name: "resume",
-    description: "Print the command to resume a session in its agent (does not execute it)"
+    name: 'resume',
+    description: 'Print the command to resume a session in its agent (does not execute it)',
   },
   args: {
-    id: { type: "positional", required: true, description: "Session id" }
+    id: { type: 'positional', required: true, description: 'Session id' },
   },
   async run({ args }) {
     const id = String(args.id);
@@ -19,5 +19,5 @@ export const sessionsResumeCommand = defineCommand({
     }
     // Print only — the user copies/runs it. v1 never spawns the agent itself.
     console.log(command);
-  }
+  },
 });

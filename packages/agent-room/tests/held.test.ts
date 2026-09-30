@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  MemoryRoomStreamStore,
-  sessionKey,
-  type SpeakCommand,
-} from '../src/index';
+import { MemoryRoomStreamStore, sessionKey, type SpeakCommand } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
 const botA = {
@@ -45,7 +41,7 @@ describe('speak HELD', () => {
     expect(first).toMatchObject({ outcome: 'posted', seq: 2, event: { wakeDepth: 1 } });
     expect(second.outcome).toBe('held');
     if (second.outcome === 'held') {
-      expect(second.newer.map(event => event.seq)).toEqual([2]);
+      expect(second.newer.map((event) => event.seq)).toEqual([2]);
       expect(second.newer[0]).toMatchObject({ author: { id: 'bot-a' }, body: 'alpha' });
     }
     expect(await store.head(room)).toBe(2);
@@ -82,13 +78,11 @@ describe('speak HELD', () => {
   it('posts control-plane origin without creating or advancing a session', async () => {
     const store = new MemoryRoomStreamStore();
     await admitHuman(store, 'h1', 'hello');
-    const result = await store.speak(
-      speakCommand({ body: 'member-joined', origin: 'control-plane' }),
-    );
+    const result = await store.speak(speakCommand({ body: 'member-joined', origin: 'control-plane' }));
 
     expect(result).toMatchObject({ outcome: 'posted', seq: 2 });
     const slice = await store.readSlice(room, 0, { maxEvents: 10 });
-    expect(slice.events.map(event => event.kind)).toEqual(['human', 'control-plane']);
+    expect(slice.events.map((event) => event.kind)).toEqual(['human', 'control-plane']);
     expect(slice.head).toBe(2);
     expect(store.inspectSession(botA)).toBeUndefined();
   });
@@ -117,7 +111,9 @@ describe('speak HELD', () => {
     await admitHuman(store, 'h1', 'please look');
     const posted = await store.speak(speakCommand({ body: 'internal' }));
     expect(posted.outcome).toBe('posted');
-    if (posted.outcome !== 'posted') return;
+    if (posted.outcome !== 'posted') {
+      return;
+    }
 
     const admitted = await store.admit({
       roomId: room,
@@ -142,7 +138,9 @@ describe('speak HELD', () => {
     let failCommit = false;
     const store = new MemoryRoomStreamStore({
       beforeCommit: () => {
-        if (failCommit) throw new Error('commit failed');
+        if (failCommit) {
+          throw new Error('commit failed');
+        }
       },
     });
     await admitHuman(store, 'h1', 'please look');
@@ -199,8 +197,10 @@ describe('the write points behind the old shims', () => {
     const held = await store.speak(speakCommand({ session: botB, body: 'beta' }));
     // botB read the human message but not botA's post; only the post comes back.
     expect(held).toMatchObject({ outcome: 'held' });
-    if (held.outcome !== 'held') return;
-    expect(held.newer.map(event => event.seq)).toEqual([2]);
+    if (held.outcome !== 'held') {
+      return;
+    }
+    expect(held.newer.map((event) => event.seq)).toEqual([2]);
     expect(store.inspectSession(botB)).toEqual({ id: botB, seenSeq: 0 });
 
     const afterCatchUp = await store.speak(
@@ -249,7 +249,7 @@ describe('the write points behind the old shims', () => {
     await store.speak(speakCommand({ session: botB, body: 'beta', readUpToSeq: 2, triggerSeq: 2 }));
 
     const slice = await store.readSlice(room, 1, { maxEvents: 10 });
-    expect(slice.events.map(event => event.messageId)).toEqual([
+    expect(slice.events.map((event) => event.messageId)).toEqual([
       `posted:${sessionKey(botA)}:2`,
       `posted:${sessionKey(botB)}:3`,
     ]);
@@ -299,7 +299,7 @@ describe('readSlice', () => {
 
     const sliced = await store.readSlice(room, 1, { maxEvents: 2, maxChars: 5 });
     expect(sliced.head).toBe(3);
-    expect(sliced.events.map(event => event.body)).toEqual(['bbbb']);
+    expect(sliced.events.map((event) => event.body)).toEqual(['bbbb']);
   });
 
   it('does not exceed maxChars for an oversized first event', async () => {

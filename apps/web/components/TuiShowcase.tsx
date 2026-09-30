@@ -50,12 +50,17 @@ export function TuiShowcase() {
               {/* list */}
               <div className="rounded border border-cyan-500/50 p-2">
                 <div className="font-bold text-cyan-300">tasks (6)</div>
-                {ROWS.map(r => (
-                  <div key={r.id} className={r.sel ? 'flex items-center gap-1 bg-cyan-500/10' : 'flex items-center gap-1'}>
+                {ROWS.map((r) => (
+                  <div
+                    key={r.id}
+                    className={r.sel ? 'flex items-center gap-1 bg-cyan-500/10' : 'flex items-center gap-1'}
+                  >
                     <span className="w-3 text-accent">{r.sel ? '❯' : ' '}</span>
                     <span className={r.color}>{r.glyph}</span>
                     <span className="text-cyan-400">{r.id}</span>
-                    <span className={r.sel ? 'flex-1 truncate font-semibold' : 'flex-1 truncate text-fg/80'}>{r.title}</span>
+                    <span className={r.sel ? 'flex-1 truncate font-semibold' : 'flex-1 truncate text-fg/80'}>
+                      {r.title}
+                    </span>
                     <span className="text-muted">{r.pri}</span>
                   </div>
                 ))}
@@ -65,10 +70,14 @@ export function TuiShowcase() {
                 <div className="font-bold text-fg/80">detail</div>
                 <div className="mt-1 font-semibold text-fg">TASK-101 Wire task provider…</div>
                 <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3">
-                  <span>状态</span><span className="text-emerald-400">执行中</span>
-                  <span>Agent</span><span className="text-fg/80">claude</span>
-                  <span>项目</span><span className="text-fg/80">agent-task-loop</span>
-                  <span>更新</span><span className="text-fg/80">8s ago</span>
+                  <span>状态</span>
+                  <span className="text-emerald-400">执行中</span>
+                  <span>Agent</span>
+                  <span className="text-fg/80">claude</span>
+                  <span>项目</span>
+                  <span className="text-fg/80">agent-task-loop</span>
+                  <span>更新</span>
+                  <span className="text-fg/80">8s ago</span>
                 </div>
               </div>
               {/* preview */}
@@ -77,10 +86,14 @@ export function TuiShowcase() {
                   <span className="font-semibold text-cyan-300">▸output</span> ·history ·logs
                 </div>
                 <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2">
-                  <span>name</span><span className="text-fg/80">execution-claude-r2</span>
-                  <span>runner</span><span className="text-fg/80">execute · claude</span>
+                  <span>name</span>
+                  <span className="text-fg/80">execution-claude-r2</span>
+                  <span>runner</span>
+                  <span className="text-fg/80">execute · claude</span>
                   <span>heartbeat</span>
-                  <span className="text-emerald-400">● 4s ago (fresh) <span className="cursor-blink">⠙</span> live</span>
+                  <span className="text-emerald-400">
+                    ● 4s ago (fresh) <span className="cursor-blink">⠙</span> live
+                  </span>
                 </div>
                 <div className="mt-2 text-fg/70">
                   <div>12:00:03 sort.test.ts ✓</div>
@@ -90,7 +103,7 @@ export function TuiShowcase() {
             </div>
             {/* footer */}
             <div className="mt-1 px-1 text-xs text-muted">
-              [↑↓/jk] nav  [Tab] focus  [Enter] attach  [/] filter  [?] help  [q] quit
+              [↑↓/jk] nav [Tab] focus [Enter] attach [/] filter [?] help [q] quit
             </div>
           </div>
         </div>

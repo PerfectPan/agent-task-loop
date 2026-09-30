@@ -7,13 +7,13 @@ import type { AgentId, RoomEvent } from '../../room/domain/model';
  * and waking for it are separate decisions; filtering by `addressedTo` stays
  * with the endpoint's room setting, not here.
  */
-export function shouldWake(input: {
-  event: RoomEvent;
-  memberId: AgentId;
-  ceiling: number;
-}): boolean {
+export function shouldWake(input: { event: RoomEvent; memberId: AgentId; ceiling: number }): boolean {
   const { event, memberId, ceiling } = input;
-  if (event.kind === 'control-plane') return false;
-  if (event.author.id === memberId) return false;
+  if (event.kind === 'control-plane') {
+    return false;
+  }
+  if (event.author.id === memberId) {
+    return false;
+  }
   return event.wakeDepth < ceiling;
 }

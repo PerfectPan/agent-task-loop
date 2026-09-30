@@ -59,7 +59,7 @@ describe('TaskTableSchemaService', () => {
       .mockResolvedValueOnce(
         JSON.stringify({
           data: {
-            fields: existingFields.map(name => ({ name })),
+            fields: existingFields.map((name) => ({ name })),
           },
         }),
       )
@@ -109,49 +109,44 @@ describe('TaskTableSchemaService', () => {
       .mockResolvedValueOnce(
         JSON.stringify({
           data: {
-            fields: allFields.map(name =>
-              name === 'Status' ?
-                {
-                  id: 'fld-status',
-                  name: 'Status',
-                  type: 'select',
-                  options: [
-                    { name: '待处理' },
-                    { name: '执行中' },
-                    { name: '待复核' },
-                    { name: '修复中' },
-                    { name: '待验收' },
-                    { name: '已完成' },
-                    { name: '已失败' },
-                  ],
-                }
-              : name === 'TargetAgent' ?
-                {
-                  id: 'fld-target-agent',
-                  name: 'TargetAgent',
-                  type: 'select',
-                  options: [
-                    { name: 'claude' },
-                    { name: 'codex' },
-                    { name: 'coco' },
-                    { name: 'glm' },
-                  ],
-                }
-              : name === 'ReviewVerdict' ?
-                {
-                  id: 'fld-review-verdict',
-                  name: 'ReviewVerdict',
-                  type: 'select',
-                  options: [{ name: '通过' }, { name: '驳回' }],
-                }
-              : name === 'AcceptanceVerdict' ?
-                {
-                  id: 'fld-acceptance-verdict',
-                  name: 'AcceptanceVerdict',
-                  type: 'select',
-                  options: [{ name: '通过' }],
-                }
-              : { name },
+            fields: allFields.map((name) =>
+              name === 'Status'
+                ? {
+                    id: 'fld-status',
+                    name: 'Status',
+                    type: 'select',
+                    options: [
+                      { name: '待处理' },
+                      { name: '执行中' },
+                      { name: '待复核' },
+                      { name: '修复中' },
+                      { name: '待验收' },
+                      { name: '已完成' },
+                      { name: '已失败' },
+                    ],
+                  }
+                : name === 'TargetAgent'
+                  ? {
+                      id: 'fld-target-agent',
+                      name: 'TargetAgent',
+                      type: 'select',
+                      options: [{ name: 'claude' }, { name: 'codex' }, { name: 'coco' }, { name: 'glm' }],
+                    }
+                  : name === 'ReviewVerdict'
+                    ? {
+                        id: 'fld-review-verdict',
+                        name: 'ReviewVerdict',
+                        type: 'select',
+                        options: [{ name: '通过' }, { name: '驳回' }],
+                      }
+                    : name === 'AcceptanceVerdict'
+                      ? {
+                          id: 'fld-acceptance-verdict',
+                          name: 'AcceptanceVerdict',
+                          type: 'select',
+                          options: [{ name: '通过' }],
+                        }
+                      : { name },
             ),
           },
         }),
@@ -168,7 +163,7 @@ describe('TaskTableSchemaService', () => {
 
   it('includes review loop and acceptance fields in required schema', () => {
     const service = new TaskTableSchemaService(config);
-    const names = service.getRequiredFields().map(field => field.name);
+    const names = service.getRequiredFields().map((field) => field.name);
 
     expect(names).toContain('CurrentOwner');
     expect(names).toContain('ReviewRound');

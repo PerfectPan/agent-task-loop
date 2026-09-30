@@ -28,14 +28,10 @@ describe('AgentSession aggregate', () => {
     expect(session.id).toEqual(id);
   });
 
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, 1.5, -1])(
-    'rejects invalid sequence transitions: %s',
-    invalidSeq => {
-      const session = new AgentSessionAggregate(id);
-      expect(() => session.advanceSeen(invalidSeq)).toThrow(/non-negative integer/);
-      expect(() => session.recordPost(invalidSeq)).toThrow(/non-negative integer/);
-      expect(session.snapshot()).toEqual({ id, seenSeq: 0 });
-    },
-  );
-
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, 1.5, -1])('rejects invalid sequence transitions: %s', (invalidSeq) => {
+    const session = new AgentSessionAggregate(id);
+    expect(() => session.advanceSeen(invalidSeq)).toThrow(/non-negative integer/);
+    expect(() => session.recordPost(invalidSeq)).toThrow(/non-negative integer/);
+    expect(session.snapshot()).toEqual({ id, seenSeq: 0 });
+  });
 });

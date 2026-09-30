@@ -72,7 +72,7 @@ describe('schemaCommand', () => {
     await schemaCommand.run?.({ args: { config: 'cfg.json', json: false } } as never);
 
     expect(schemaServiceCtor).not.toHaveBeenCalled();
-    const printed = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+    const printed = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
     expect(printed).toContain('No Feishu source configured');
     logSpy.mockRestore();
   });

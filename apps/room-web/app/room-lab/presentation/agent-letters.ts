@@ -6,8 +6,6 @@
  */
 export function agentLetters(id: string): string {
   const parts = id.split(/[^A-Za-z0-9]+/).filter(Boolean);
-  const letters = parts.length >= 2
-    ? `${parts[0]!.slice(0, 1)}${parts[1]!.slice(0, 1)}`
-    : (parts[0] ?? id).slice(0, 2);
+  const letters = parts.length >= 2 ? `${parts[0]!.slice(0, 1)}${parts[1]!.slice(0, 1)}` : (parts[0] ?? id).slice(0, 2);
   return letters.toUpperCase();
 }

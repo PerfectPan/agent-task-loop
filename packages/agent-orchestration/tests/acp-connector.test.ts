@@ -69,7 +69,9 @@ describe('AcpConnector', () => {
     const connection = await connector.connect(binding);
     let rawOutput: unknown;
     connection.onUpdate((update) => {
-      if (update.sessionUpdate === 'tool_call_update') rawOutput = update.rawOutput;
+      if (update.sessionUpdate === 'tool_call_update') {
+        rawOutput = update.rawOutput;
+      }
     });
     const session = await connection.newSession({ cwd: '/tmp/fake-room' });
     await connection.prompt(session, [{ type: 'text', text: 'speak' }]);
@@ -104,9 +106,9 @@ describe('AcpConnector', () => {
     const session = await connection.newSession({ cwd: '/tmp/fake-room' });
     const controller = new AbortController();
     controller.abort();
-    await expect(
-      connection.prompt(session, [{ type: 'text', text: 'too late' }], controller.signal),
-    ).rejects.toThrow(Error);
+    await expect(connection.prompt(session, [{ type: 'text', text: 'too late' }], controller.signal)).rejects.toThrow(
+      Error,
+    );
     expect(agent()?.prompts).toHaveLength(0);
     await connection.close();
   });
@@ -133,8 +135,7 @@ describe('AcpConnector', () => {
       sessionTimeoutMs: 30,
     });
     const connection = await connector.connect(binding);
-    await expect(connection.newSession({ cwd: '/tmp/fake-room' }))
-      .rejects.toThrow(/session\/new timed out after 30ms/);
+    await expect(connection.newSession({ cwd: '/tmp/fake-room' })).rejects.toThrow(/session\/new timed out after 30ms/);
     await connection.close();
   });
 
@@ -187,7 +188,6 @@ describe('probe', () => {
     expect(probe).toEqual({ status: 'missing', error: 'spawn ENOENT' });
   });
 });
-
 
 describe('client-side fs', () => {
   it('serves the session cwd only: outside paths and symlinks out are refused', async () => {

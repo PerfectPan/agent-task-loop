@@ -4,7 +4,7 @@ import { SourceFilter } from '../../../src/tui/components/SourceFilter';
 import { stripAnsi } from '../helpers';
 
 async function tick() {
-  await new Promise(r => setTimeout(r, 10));
+  await new Promise((r) => setTimeout(r, 10));
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -52,9 +52,7 @@ describe('SourceFilter', () => {
 
   it('starts from the given selection and can clear it (empty apply = all)', async () => {
     const onApply = vi.fn();
-    const app = render(
-      <SourceFilter options={options} selected={['feishu']} onApply={onApply} onCancel={vi.fn()} />,
-    );
+    const app = render(<SourceFilter options={options} selected={['feishu']} onApply={onApply} onCancel={vi.fn()} />);
     await tick();
     app.stdin.write(' '); // un-toggle feishu (first row)
     await tick();

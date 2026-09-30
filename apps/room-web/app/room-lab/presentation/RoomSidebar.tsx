@@ -23,8 +23,7 @@ const SYSTEM_DARK = '(prefers-color-scheme: dark)';
 
 /** shadcn switches on a `dark` class, so 跟随系统 has to resolve the query itself. */
 function applyTheme(choice: ThemeChoice) {
-  const dark = choice === 'dark'
-    || (choice === undefined && window.matchMedia(SYSTEM_DARK).matches);
+  const dark = choice === 'dark' || (choice === undefined && window.matchMedia(SYSTEM_DARK).matches);
   document.documentElement.classList.toggle('dark', dark);
 }
 
@@ -39,12 +38,16 @@ function ThemeAction() {
   // client render has to match the markup the server sent.
   useEffect(() => {
     const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored === 'light' || stored === 'dark') setChoice(stored);
+    if (stored === 'light' || stored === 'dark') {
+      setChoice(stored);
+    }
   }, []);
   // While following the system there is no media query doing the work for us:
   // the class has to be restamped whenever the system flips.
   useEffect(() => {
-    if (choice !== undefined) return;
+    if (choice !== undefined) {
+      return;
+    }
     const query = window.matchMedia(SYSTEM_DARK);
     const sync = () => applyTheme(undefined);
     query.addEventListener('change', sync);
@@ -53,8 +56,11 @@ function ThemeAction() {
   const cycle = () => {
     const next: ThemeChoice = choice === undefined ? 'light' : choice === 'light' ? 'dark' : undefined;
     setChoice(next);
-    if (next) window.localStorage.setItem(THEME_KEY, next);
-    else window.localStorage.removeItem(THEME_KEY);
+    if (next) {
+      window.localStorage.setItem(THEME_KEY, next);
+    } else {
+      window.localStorage.removeItem(THEME_KEY);
+    }
     applyTheme(next);
   };
   return (
@@ -64,7 +70,12 @@ function ThemeAction() {
   );
 }
 
-export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
+export function RoomSidebar({
+  rooms,
+  currentRoomId,
+  disabled,
+  onCreate,
+}: {
   rooms: RoomCatalogItemView[];
   currentRoomId: string;
   disabled: boolean;
@@ -75,7 +86,11 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (creating) inputRef.current?.focus(); }, [creating]);
+  useEffect(() => {
+    if (creating) {
+      inputRef.current?.focus();
+    }
+  }, [creating]);
   const roomCount = rooms.reduce((count, room) => count + 1 + (room.children?.length ?? 0), 0);
   return (
     <nav
@@ -120,33 +135,54 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
         {creating && (
           <form
             className="shadow-card mb-2 flex flex-col gap-2 rounded-lg border border-input bg-card p-2 max-[640px]:mb-0 max-[640px]:w-[260px] max-[640px]:shrink-0"
-            onSubmit={event => {
+            onSubmit={(event) => {
               event.preventDefault();
               const next = title.trim();
-              if (!next) return;
+              if (!next) {
+                return;
+              }
               onCreate(next);
               setTitle('');
               setCreating(false);
             }}
           >
-            <label className="sr-only" htmlFor="new-room-title">{copy.label.roomName}</label>
+            <label className="sr-only" htmlFor="new-room-title">
+              {copy.label.roomName}
+            </label>
             <Input
               ref={inputRef}
               id="new-room-title"
               value={title}
               maxLength={80}
               placeholder={copy.label.roomNamePlaceholder}
-              onChange={event => setTitle(event.currentTarget.value)}
-              onKeyDown={event => { if (event.key === 'Escape') { setCreating(false); setTitle(''); } }}
+              onChange={(event) => setTitle(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setCreating(false);
+                  setTitle('');
+                }
+              }}
             />
             <div className="flex items-center justify-between gap-2">
-              <Button type="button" variant="ghost" size="xs" onClick={() => { setCreating(false); setTitle(''); }}>{copy.action.cancel}</Button>
-              <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>{copy.action.create}</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => {
+                  setCreating(false);
+                  setTitle('');
+                }}
+              >
+                {copy.action.cancel}
+              </Button>
+              <Button type="submit" size="xs" className="px-2.5" disabled={!title.trim() || disabled}>
+                {copy.action.create}
+              </Button>
             </div>
           </form>
         )}
         <ul className="m-0 flex list-none flex-col gap-0.5 p-0 max-[640px]:flex-row max-[640px]:gap-1">
-          {rooms.map(room => (
+          {rooms.map((room) => (
             <li key={room.id} className="max-[640px]:shrink-0">
               <RoomSidebarLink room={room} currentRoomId={currentRoomId} />
               {room.children && room.children.length > 0 && (
@@ -154,7 +190,7 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
                 // by its two members; the person can open and read it like any
                 // other room.
                 <ul className="m-0 mt-0.5 list-none border-l border-sidebar-border pl-2 max-[640px]:pl-0">
-                  {room.children.map(child => (
+                  {room.children.map((child) => (
                     <li key={child.id} className="max-[640px]:shrink-0">
                       <RoomSidebarLink room={child} currentRoomId={currentRoomId} privateRoom />
                     </li>
@@ -175,7 +211,11 @@ export function RoomSidebar({ rooms, currentRoomId, disabled, onCreate }: {
 }
 
 /** One room row: its title, how many sit in it, and when it last moved. */
-function RoomSidebarLink({ room, currentRoomId, privateRoom }: {
+function RoomSidebarLink({
+  room,
+  currentRoomId,
+  privateRoom,
+}: {
   room: RoomCatalogItemView;
   currentRoomId: string;
   /** A room nested under its parent reads a touch quieter than the room itself. */
@@ -189,12 +229,17 @@ function RoomSidebarLink({ room, currentRoomId, privateRoom }: {
       aria-current={room.id === currentRoomId ? 'page' : undefined}
       className="block rounded-md px-2 py-1.5 text-sidebar-foreground/75 no-underline transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:text-sidebar-foreground max-[640px]:whitespace-nowrap"
     >
-      <span className={`${privateRoom ? 'text-[13px]' : 'text-sm'} block leading-snug [overflow-wrap:anywhere] max-[640px]:inline`}>
+      <span
+        className={`${privateRoom ? 'text-[13px]' : 'text-sm'} block leading-snug [overflow-wrap:anywhere] max-[640px]:inline`}
+      >
         {room.title}
       </span>
       {/* Relative time is read off the clock at render; the server and the
           browser render seconds apart, so the two strings may differ. */}
-      <span className="mt-0.5 block text-xs leading-tight text-muted-foreground max-[640px]:hidden" suppressHydrationWarning>
+      <span
+        className="mt-0.5 block text-xs leading-tight text-muted-foreground max-[640px]:hidden"
+        suppressHydrationWarning
+      >
         {copy.label.memberCount(room.memberCount)} · {formatAgo(room.updatedAt)}
       </span>
     </Link>

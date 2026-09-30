@@ -60,9 +60,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
       throw new LocalRequestError(404, 'Unknown Room');
     }
     const host = getRoomLabHost();
-    const input = parseRoomAction(await request.json().catch(() => {
-      throw new RoomInputError('Room action must be valid JSON');
-    }), host.agents);
+    const input = parseRoomAction(
+      await request.json().catch(() => {
+        throw new RoomInputError('Room action must be valid JSON');
+      }),
+      host.agents,
+    );
     if (input.action === 'create') {
       const created = await host.create({
         title: input.title,
@@ -93,10 +96,18 @@ export function ErrorBoundary() {
   const message = routeErrorMessage(useRouteError(), copy.say.serviceUnavailable);
   return (
     <RoomErrorPage>
-      <section className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6" role="alert" aria-labelledby="room-unavailable-title">
-        <h1 id="room-unavailable-title" className="m-0 text-2xl font-bold tracking-[-0.02em]">{copy.say.roomUnavailable}</h1>
+      <section
+        className="shadow-card w-[min(480px,100%)] rounded-lg border border-input bg-card p-6"
+        role="alert"
+        aria-labelledby="room-unavailable-title"
+      >
+        <h1 id="room-unavailable-title" className="m-0 text-2xl font-bold tracking-[-0.02em]">
+          {copy.say.roomUnavailable}
+        </h1>
         <p className="leading-relaxed text-foreground/75 [overflow-wrap:anywhere]">{message}</p>
-        <a className="text-primary" href="/room">{copy.action.backToRooms}</a>
+        <a className="text-primary" href="/room">
+          {copy.action.backToRooms}
+        </a>
       </section>
     </RoomErrorPage>
   );

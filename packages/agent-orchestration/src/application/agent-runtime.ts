@@ -1,3 +1,4 @@
+import { inspect } from 'node:util';
 import type {
   Agent,
   AgentId,
@@ -17,7 +18,6 @@ import type { FencingToken, LeaseRecord } from '../contracts/lease';
 import type { Clock, IntervalHandle, IntervalScheduler } from '../contracts/ports';
 import type { ContentBlock } from '../contracts/connection';
 import type { Harness, TurnResult } from '../contracts/harness';
-import { nodeClock } from '../infrastructure/node-clock';
 import { nodeScheduler } from '../infrastructure/node-scheduler';
 import { profileForAgent, type AgentProfile } from '../infrastructure/profiles';
 import type { LeaseManager } from './lease-manager';
@@ -78,7 +78,6 @@ export class AgentRuntime {
   private readonly registry: AgentRegistry;
   private readonly lease: LeaseManager;
   private readonly profileFor: (agent: Agent) => AgentProfile;
-  private readonly clock: Clock;
   private readonly scheduler: IntervalScheduler;
   private readonly heartbeatIntervalMs: number;
   private readonly defaultTimeoutMs: number;
@@ -94,7 +93,6 @@ export class AgentRuntime {
     this.registry = options.registry;
     this.lease = options.lease;
     this.profileFor = options.profileFor ?? profileForAgent;
-    this.clock = options.clock ?? nodeClock;
     this.scheduler = options.scheduler ?? nodeScheduler;
     this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TURN_TIMEOUT_MS;
@@ -383,8 +381,8 @@ export class AgentRuntime {
       inbox.pending = false;
       inbox.controller?.abort();
     }
-    await Promise.all(inboxes.map(inbox => inbox.activation?.catch(() => undefined)));
-    await Promise.all(inboxes.map(inbox => inbox.connection?.close().catch(() => undefined)));
+    await Promise.all(inboxes.map(inbox => inbox.activation?.catch(() => undefined) ?? Promise.resolve()));
+    await Promise.all(inboxes.map(inbox => inbox.connection?.close().catch(() => undefined) ?? Promise.resolve()));
   }
 }
 
@@ -425,7 +423,8 @@ function abortError(signal: AbortSignal, label: string): Error {
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
-  return error === undefined ? '' : String(error);
+  if (error === undefined) return '';
+  return typeof error === 'string' ? error : inspect(error);
 }
 
 /**

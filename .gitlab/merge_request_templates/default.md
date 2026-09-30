@@ -20,10 +20,12 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 - [ ] MR title: `gh repo-checks pr-title "<title>"`
 - [ ] MR description: `gh repo-checks pr-body <body-file>`
 - [ ] Install: `pnpm install --frozen-lockfile`
+- [ ] Format: `pnpm format:check`
 - [ ] MoonBit version: `pnpm check:moonbit-version`
 - [ ] Test: `pnpm test`
 - [ ] Build: `pnpm build`
 - [ ] Typecheck: `pnpm typecheck`
+- [ ] Lint: `pnpm lint` (after build and typecheck)
 - [ ] Changeset: `pnpm changeset status` (package-facing changes add a changeset)
 - [ ] Package dry-run: `npm pack --dry-run --registry=https://registry.npmjs.org` in each changed published package
 

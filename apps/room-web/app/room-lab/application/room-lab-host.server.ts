@@ -73,7 +73,7 @@ export class RoomLabHost {
 
   constructor(
     store: SqliteRoomStore = SqliteRoomStore.open(),
-    private readonly bindings: RoomLabHostBindings = {},
+    bindings: RoomLabHostBindings = {},
   ) {
     this.store = store;
     this.agents = store.agents;

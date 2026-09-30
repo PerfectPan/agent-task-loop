@@ -106,7 +106,7 @@ describe('SqliteTurnLog', () => {
     const store = SqliteRoomStore.memory();
     const log = new SqliteTurnLog(store.db);
 
-    expect(() => log.append(turn({ id: 'turn:orphan' }))).toThrow();
+    expect(() => log.append(turn({ id: 'turn:orphan' }))).toThrow(Error);
     expect(log.listByRoom(ROOM)).toEqual([]);
   });
 });

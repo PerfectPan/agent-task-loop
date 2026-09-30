@@ -56,7 +56,7 @@ describe('sqlite Room persistence', () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const created = await host.create({ title: '串行房', memberIds: ['codex'] });
-    host.act(created.roomId, { action: 'settings', wake: 'addressed', serial: true, cwd: '/tmp/room-work' });
+    void host.act(created.roomId, { action: 'settings', wake: 'addressed', serial: true, cwd: '/tmp/room-work' });
 
     const reopened = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const snapshot = await reopened.snapshot(created.roomId);

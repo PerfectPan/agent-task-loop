@@ -81,7 +81,6 @@ export function useSessionPreview(
       clearInterval(timer);
     };
     // `task` is intentionally keyed on `taskId`: a new id means a new session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, enabled, intervalMs]);
 
   return { preview, isLoading };

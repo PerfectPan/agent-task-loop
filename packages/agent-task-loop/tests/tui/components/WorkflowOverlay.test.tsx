@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render } from 'ink-testing-library';
 import { WorkflowOverlay } from '../../../src/tui/components/WorkflowOverlay';

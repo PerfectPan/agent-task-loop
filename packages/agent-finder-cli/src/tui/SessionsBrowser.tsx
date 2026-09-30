@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import type { Session, TranscriptEntry } from "@rivus/agent-sessions";
 import { relativeAge } from "../sessions/view.js";

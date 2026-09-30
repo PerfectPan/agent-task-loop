@@ -277,9 +277,9 @@ describe('Inbox and runtime', () => {
 
     // The first turn settles; the pending flag produces exactly one more
     // activation, which we then settle the same way.
-    connector.connections[0]?.cancel('session-1');
+    void connector.connections[0]?.cancel('session-1');
     await vi.waitFor(() => expect(connector.connections[0]?.promptCalls).toBe(2));
-    connector.connections[0]?.cancel('session-1');
+    void connector.connections[0]?.cancel('session-1');
     await settled(runtime, key);
     expect(connector.connections[0]?.promptCalls).toBe(2);
     expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false });
@@ -641,7 +641,7 @@ describe('tools live with the session', () => {
       expect(first[0]).toEqual({ type: 'text', text: JSON.stringify({ turn: 1 }) });
 
       // The turn ends; the endpoint keeps listening for the session.
-      connection.cancel('session-1');
+      void connection.cancel('session-1');
       await settled(wired.runtime, key);
       const client = new Client({ name: 'agent-runtime-test', version: '0.0.0' });
       await client.connect(new StreamableHTTPClientTransport(new URL(url)));
@@ -659,7 +659,7 @@ describe('tools live with the session', () => {
       const second = await callEcho(url, 'turn two');
       expect(second[0]).toEqual({ type: 'text', text: JSON.stringify({ turn: 2 }) });
 
-      connection.cancel('session-1');
+      void connection.cancel('session-1');
       await settled(wired.runtime, key);
     } finally {
       await wired.closeHosted();
@@ -673,7 +673,7 @@ describe('tools live with the session', () => {
       const connection = await prompted(wired, 1);
       const url = hostedUrl(connection.newSessionRequests[0]!);
 
-      connection.cancel('session-1');
+      void connection.cancel('session-1');
       await settled(wired.runtime, key);
 
       const content = await callEcho(url, 'after the turn');
@@ -688,7 +688,7 @@ describe('tools live with the session', () => {
     wired.runtime.wake(key);
     const connection = await prompted(wired, 1);
     const firstUrl = hostedUrl(connection.newSessionRequests[0]!);
-    connection.cancel('session-1');
+    void connection.cancel('session-1');
     await settled(wired.runtime, key);
 
     // The next turn's prompt fails as a lost session does: the runtime
@@ -711,11 +711,11 @@ describe('tools live with the session', () => {
     expect(wired.runtime.inbox(key)).toMatchObject({ session: rebuiltSessionId(rebuilt) });
 
     // The released port refuses connections; the fresh session's answers.
-    await expect(fetch(firstUrl)).rejects.toThrow();
+    await expect(fetch(firstUrl)).rejects.toThrow(Error);
     await fetch(secondUrl).then((response) => expect(response.status).toBeLessThan(500));
 
     await vi.waitFor(() => expect(rebuilt.promptCalls).toBe(1));
-    rebuilt.cancel(rebuiltSessionId(rebuilt));
+    void rebuilt.cancel(rebuiltSessionId(rebuilt));
     await settled(wired.runtime, key);
     await wired.closeHosted();
   });

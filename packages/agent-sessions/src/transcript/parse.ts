@@ -48,7 +48,12 @@ function flattenContent(content: unknown): Flattened {
     const c = content as Record<string, unknown>;
     return { text: typeof c.text === "string" ? c.text : "" };
   }
-  return { text: String(content) };
+  // JSON leaves only numbers and booleans here.
+  return { text: typeof content === "number" || typeof content === "boolean" ? String(content) : "" };
+}
+
+function firstString(...values: unknown[]): string | undefined {
+  return values.find((value): value is string => typeof value === "string");
 }
 
 function entry(role: string, content: unknown, timestamp?: string): TranscriptEntry | null {
@@ -83,9 +88,9 @@ export function parseTranscriptLine(raw: string): TranscriptEntry | null {
       case "reasoning":
         return entry("reasoning", payload.summary ?? payload.content, timestamp);
       case "message":
-        return entry(String(payload.role ?? obj.role ?? "assistant"), payload.content, timestamp);
+        return entry(firstString(payload.role, obj.role) ?? "assistant", payload.content, timestamp);
       case "function_call": {
-        const name = String(payload.name ?? "tool");
+        const name = firstString(payload.name) ?? "tool";
         const result: TranscriptEntry = { role: "tool", text: name, toolName: name };
         if (timestamp) result.timestamp = timestamp;
         return result;
@@ -98,10 +103,11 @@ export function parseTranscriptLine(raw: string): TranscriptEntry | null {
   // Claude / Anthropic session shape.
   const message = obj.message as Record<string, unknown> | undefined;
   if (message && typeof message === "object") {
-    return entry(String(message.role ?? obj.type ?? "assistant"), message.content, timestamp);
+    return entry(firstString(message.role, obj.type) ?? "assistant", message.content, timestamp);
   }
-  if (obj.role && "content" in obj) {
-    return entry(String(obj.role), obj.content, timestamp);
+  const role = firstString(obj.role);
+  if (role && "content" in obj) {
+    return entry(role, obj.content, timestamp);
   }
   return null;
 }

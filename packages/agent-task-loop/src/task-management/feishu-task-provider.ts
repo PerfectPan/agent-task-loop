@@ -523,52 +523,64 @@ export class FeishuTaskProvider implements SourceProvider {
     return {
       source: this.source,
       recordId,
-      taskId: String(fields.TaskID ?? ''),
-      title: String(fields.Title ?? ''),
-      description: String(fields.Description ?? ''),
-      project: String(fields.Project ?? ''),
-      repository: fields.Repository ? String(fields.Repository) : undefined,
-      targetAgent: String(fields.TargetAgent ?? 'codex') as TargetAgent,
+      taskId: cellText(fields.TaskID ?? ''),
+      title: cellText(fields.Title ?? ''),
+      description: cellText(fields.Description ?? ''),
+      project: cellText(fields.Project ?? ''),
+      repository: optionalCellText(fields.Repository),
+      targetAgent: cellText(fields.TargetAgent ?? 'codex') as TargetAgent,
       priority: Number(fields.Priority ?? 0),
-      status: String(fields.Status ?? '待处理') as TaskStatus,
-      workspacePath: fields.WorkspacePath ? String(fields.WorkspacePath) : undefined,
-      logPath: fields.LogPath ? String(fields.LogPath) : undefined,
-      progressSummary: fields.ProgressSummary ? String(fields.ProgressSummary) : undefined,
-      sessionId: fields.SessionId ? String(fields.SessionId) : undefined,
-      sessionName: fields.SessionName ? String(fields.SessionName) : undefined,
-      resultSummary: fields.ResultSummary ? String(fields.ResultSummary) : undefined,
-      prLink: fields.PRLink ? String(fields.PRLink) : undefined,
-      lastError: fields.LastError ? String(fields.LastError) : undefined,
-      claimedBy: fields.ClaimedBy ? String(fields.ClaimedBy) : undefined,
-      claimedAt: fields.ClaimedAt ? String(fields.ClaimedAt) : undefined,
-      createdAt: fields.CreatedAt ? String(fields.CreatedAt) : undefined,
-      runId: fields.RunId ? String(fields.RunId) : undefined,
-      updatedAt: fields.UpdatedAt ? String(fields.UpdatedAt) : undefined,
-      currentOwner: fields.CurrentOwner ? String(fields.CurrentOwner) : undefined,
+      status: cellText(fields.Status ?? '待处理') as TaskStatus,
+      workspacePath: optionalCellText(fields.WorkspacePath),
+      logPath: optionalCellText(fields.LogPath),
+      progressSummary: optionalCellText(fields.ProgressSummary),
+      sessionId: optionalCellText(fields.SessionId),
+      sessionName: optionalCellText(fields.SessionName),
+      resultSummary: optionalCellText(fields.ResultSummary),
+      prLink: optionalCellText(fields.PRLink),
+      lastError: optionalCellText(fields.LastError),
+      claimedBy: optionalCellText(fields.ClaimedBy),
+      claimedAt: optionalCellText(fields.ClaimedAt),
+      createdAt: optionalCellText(fields.CreatedAt),
+      runId: optionalCellText(fields.RunId),
+      updatedAt: optionalCellText(fields.UpdatedAt),
+      currentOwner: optionalCellText(fields.CurrentOwner),
       reviewRound: fields.ReviewRound !== undefined && fields.ReviewRound !== null ? Number(fields.ReviewRound) : undefined,
-      reviewVerdict: fields.ReviewVerdict ? (String(fields.ReviewVerdict) as ReviewVerdict) : undefined,
-      reviewFindings: fields.ReviewFindings ? String(fields.ReviewFindings) : undefined,
+      reviewVerdict: (optionalCellText(fields.ReviewVerdict) as ReviewVerdict | undefined),
+      reviewFindings: optionalCellText(fields.ReviewFindings),
       acceptanceRound:
         fields.AcceptanceRound !== undefined && fields.AcceptanceRound !== null ? Number(fields.AcceptanceRound) : undefined,
-      acceptanceVerdict: fields.AcceptanceVerdict ? (String(fields.AcceptanceVerdict) as AcceptanceVerdict) : undefined,
-      acceptanceFeedback: fields.AcceptanceFeedback ? String(fields.AcceptanceFeedback) : undefined,
-      executionSessionId: fields.ExecutionSessionId ? String(fields.ExecutionSessionId) : undefined,
-      executionSessionName: fields.ExecutionSessionName ? String(fields.ExecutionSessionName) : undefined,
-      reviewSessionId: fields.ReviewSessionId ? String(fields.ReviewSessionId) : undefined,
-      reviewSessionName: fields.ReviewSessionName ? String(fields.ReviewSessionName) : undefined,
-      reviewLogPath: fields.ReviewLogPath ? String(fields.ReviewLogPath) : undefined,
-      sessionHistory: fields.SessionHistory ? String(fields.SessionHistory) : undefined,
+      acceptanceVerdict: (optionalCellText(fields.AcceptanceVerdict) as AcceptanceVerdict | undefined),
+      acceptanceFeedback: optionalCellText(fields.AcceptanceFeedback),
+      executionSessionId: optionalCellText(fields.ExecutionSessionId),
+      executionSessionName: optionalCellText(fields.ExecutionSessionName),
+      reviewSessionId: optionalCellText(fields.ReviewSessionId),
+      reviewSessionName: optionalCellText(fields.ReviewSessionName),
+      reviewLogPath: optionalCellText(fields.ReviewLogPath),
+      sessionHistory: optionalCellText(fields.SessionHistory),
       runnerPid: fields.RunnerPid !== undefined && fields.RunnerPid !== null ? Number(fields.RunnerPid) : undefined,
       runnerKind:
-        fields.RunnerKind && String(fields.RunnerKind).trim() ?
-          (String(fields.RunnerKind) as 'execute' | 'review')
+        optionalCellText(fields.RunnerKind)?.trim() ?
+          (cellText(fields.RunnerKind) as 'execute' | 'review')
         : undefined,
-      runnerAgent: fields.RunnerAgent ? String(fields.RunnerAgent) : undefined,
+      runnerAgent: optionalCellText(fields.RunnerAgent),
       runnerRound: fields.RunnerRound !== undefined && fields.RunnerRound !== null ? Number(fields.RunnerRound) : undefined,
-      lastHeartbeatAt: fields.LastHeartbeatAt ? String(fields.LastHeartbeatAt) : undefined,
-      publishBranch: fields.PublishBranch ? String(fields.PublishBranch) : undefined,
-      publishCommit: fields.PublishCommit ? String(fields.PublishCommit) : undefined,
-      publishedAt: fields.PublishedAt ? String(fields.PublishedAt) : undefined,
+      lastHeartbeatAt: optionalCellText(fields.LastHeartbeatAt),
+      publishBranch: optionalCellText(fields.PublishBranch),
+      publishCommit: optionalCellText(fields.PublishCommit),
+      publishedAt: optionalCellText(fields.PublishedAt),
     };
   }
+}
+
+// Feishu returns these cells as text or numbers. Any other shape is kept as
+// JSON so it stays readable instead of becoming "[object Object]".
+function cellText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value) ?? '';
+}
+
+function optionalCellText(value: unknown): string | undefined {
+  return value ? cellText(value) : undefined;
 }

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFile
 import path from 'node:path';
 import type { RunStateStore } from './ports';
 import type { RunSnapshot } from './types';
-import { runDir, statePath } from './node-paths';
+import { statePath } from './node-paths';
 
 /**
  * The run-state half of the old orchestration file store. The lock half left

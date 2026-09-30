@@ -6,7 +6,7 @@ export function isRoomIdentity(value: unknown): value is string {
 
 export function assertRoomIdentity(value: string): string {
   if (!isRoomIdentity(value)) {
-    throw new RoomCatalogInvariantError(`Unknown Room: ${value}`);
+    throw new RoomCatalogInvariantError(`Unknown Room: ${String(value)}`);
   }
   return value;
 }

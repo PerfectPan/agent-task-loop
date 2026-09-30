@@ -38,11 +38,11 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       return;
     }
     if (submittedAction.current?.action === 'create') {
-      navigate(`/room/${data.state.roomId}`);
+      void navigate(`/room/${data.state.roomId}`);
       submittedAction.current = undefined;
       return;
     }
-    if (data.state.epoch !== state.epoch) revalidator.revalidate();
+    if (data.state.epoch !== state.epoch) void revalidator.revalidate();
     setState(current => stateSelector.current.takeAction(current, data.state));
     if (submittedAction.current?.action === 'message') {
       const acceptedId = submittedAction.current.clientMessageId;
@@ -59,7 +59,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   useEffect(() => {
     if (!live) return;
     const poll = window.setInterval(() => {
-      if (revalidator.state === 'idle') revalidator.revalidate();
+      if (revalidator.state === 'idle') void revalidator.revalidate();
     }, 900);
     return () => window.clearInterval(poll);
   }, [live, revalidator]);
@@ -81,7 +81,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       setOptimistic(events => [...events.filter(event => event.messageId !== clientMessageId), pendingEvent]);
       submittedAction.current = { ...action, clientMessageId };
       setError(undefined);
-      fetcher.submit({ ...action, clientMessageId }, {
+      void fetcher.submit({ ...action, clientMessageId }, {
         method: 'POST',
         action: `/room/${state.roomId}`,
         encType: 'application/json',
@@ -92,7 +92,7 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
     if (pending) return;
     submittedAction.current = action;
     setError(undefined);
-    fetcher.submit(action, { method: 'POST', action: `/room/${state.roomId}`, encType: 'application/json' });
+    void fetcher.submit(action, { method: 'POST', action: `/room/${state.roomId}`, encType: 'application/json' });
   };
 
   const visible = {

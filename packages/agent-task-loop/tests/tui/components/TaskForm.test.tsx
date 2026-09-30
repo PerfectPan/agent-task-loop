@@ -1,4 +1,3 @@
-import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'ink-testing-library';
 import { TaskForm } from '../../../src/tui/components/TaskForm';

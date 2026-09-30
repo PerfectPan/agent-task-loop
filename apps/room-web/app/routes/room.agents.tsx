@@ -7,6 +7,7 @@ import {
   type HeadersFunction,
   type LoaderFunctionArgs,
 } from 'react-router';
+import { formText } from '../lib/form';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { AgentDesk } from '../room-lab/presentation/AgentDesk';
 import { RoomInputError } from '../room-lab/application/room-service.server';
@@ -42,19 +43,19 @@ export async function action({ request }: ActionFunctionArgs) {
     assertSameOriginForm(request);
     const host = getRoomLabHost();
     const form = await request.formData();
-    const intent = String(form.get('intent') ?? 'scan');
+    const intent = formText(form, 'intent', 'scan');
     if (intent === 'save-prompt') {
-      const agentId = String(form.get('agentId') ?? '');
+      const agentId = formText(form, 'agentId');
       if (!host.agents.has(agentId)) throw new RoomInputError('Unknown agent');
-      host.saveSystemPrompt(agentId, String(form.get('systemPrompt') ?? ''));
+      host.saveSystemPrompt(agentId, formText(form, 'systemPrompt'));
       return data<AgentDeskView>(await host.agentDesk(), { headers: noStoreHeaders });
     }
     if (intent === 'add-agent') {
       await host.addAgent({
-        id: String(form.get('id') ?? ''),
-        label: String(form.get('label') ?? ''),
-        ...(String(form.get('role') ?? '').trim() ? { role: String(form.get('role')) } : {}),
-        command: String(form.get('command') ?? ''),
+        id: formText(form, 'id'),
+        label: formText(form, 'label'),
+        ...(formText(form, 'role').trim() ? { role: formText(form, 'role') } : {}),
+        command: formText(form, 'command'),
       });
       return data<AgentDeskView>(await host.agentDesk(), { headers: noStoreHeaders });
     }

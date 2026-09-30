@@ -16,8 +16,8 @@ import type { RoomLabAgentId } from '../read-model';
 
 export const MENTION_NODE = 'mention';
 
-/** Ids a rebuild is allowed to turn back into chips: the room's own plus `all`. */
-export type MentionId = RoomLabAgentId | 'all';
+/** Ids a rebuild is allowed to turn back into chips: the room's own agent ids plus `'all'`. */
+export type MentionId = RoomLabAgentId;
 
 /**
  * Document → string. Paragraphs join with a newline, a hard break is a newline,

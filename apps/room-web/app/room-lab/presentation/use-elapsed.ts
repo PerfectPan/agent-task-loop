@@ -18,14 +18,13 @@ export function useElapsed(runningAgentIds: readonly RoomLabAgentId[]): (agentId
     for (const id of runningAgentIds) {
       if (!startedAt.current.has(id)) startedAt.current.set(id, now);
     }
-    for (const id of [...startedAt.current.keys()]) {
+    for (const id of Array.from(startedAt.current.keys())) {
       if (!running.has(id)) startedAt.current.delete(id);
     }
     setTick(tick => tick + 1);
     if (runningAgentIds.length === 0) return;
     const timer = window.setInterval(() => setTick(tick => tick + 1), 1000);
     return () => window.clearInterval(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return agentId => {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';

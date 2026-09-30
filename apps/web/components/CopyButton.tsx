@@ -9,7 +9,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     <button
       type="button"
       onClick={() => {
-        navigator.clipboard?.writeText(text).then(() => {
+        void navigator.clipboard?.writeText(text).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         });

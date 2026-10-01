@@ -12,6 +12,7 @@ export default defineConfig({
   ],
   source: { entry: { cli: 'src/cli.ts' } },
   tools: {
+    ...cliConfig.tools,
     rspack: {
       externals: ['react-devtools-core'],
     },

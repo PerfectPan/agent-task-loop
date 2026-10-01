@@ -4,7 +4,7 @@ The marketing / landing site for [Agent Task Loop](https://github.com/PerfectPan
 
 ## Stack
 
-- **Next.js 15** (App Router, React Server Components) + **React 19**
+- **Next.js 16** (App Router, React Server Components) + **React 19**
 - **Tailwind CSS v4** (CSS-first `@theme` tokens)
 - **TypeScript** (strict)
 

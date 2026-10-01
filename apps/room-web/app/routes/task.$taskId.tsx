@@ -5,8 +5,8 @@ import type { LaneId } from '~/board/domain/lanes';
 import { laneOfUnknown } from '~/board/domain/lanes';
 import { loadTaskDetail } from '~/board/application/task-detail.server';
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  const task = data?.task;
+export const meta: MetaFunction<typeof loader> = ({ loaderData }) => {
+  const task = loaderData?.task;
   if (task) {
     return [
       { title: `${task.title} · 任务详情 · Rivus` },

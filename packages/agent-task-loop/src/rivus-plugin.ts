@@ -5,6 +5,7 @@ import {
   type RivusPluginRegistry,
   type RivusToolDescriptor,
 } from '@rivus/agent';
+import type { z } from 'zod';
 import type { TaskManagerApplication } from './task-manager/task-manager-application';
 import { TaskManagerInputError, TaskManagerOperationError } from './task-manager/task-manager-application';
 import {
@@ -70,7 +71,7 @@ function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplicatio
       id: TASK_LIST_TOOL_ID,
       idempotency: 'supported',
       inputSchema: listTasksInputJsonSchema,
-      parseInput: (input) => parseInput('task-list', listTasksInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-list', listTasksInputSchema, input),
       risk: 'observe',
       run: (application, input) => application.listTasks(input),
     }),
@@ -81,7 +82,7 @@ function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplicatio
       id: TASK_GET_TOOL_ID,
       idempotency: 'supported',
       inputSchema: getTaskInputJsonSchema,
-      parseInput: (input) => parseInput('task-get', getTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-get', getTaskInputSchema, input),
       risk: 'observe',
       run: (application, input) => application.getTask(input),
     }),
@@ -92,7 +93,7 @@ function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplicatio
       id: TASK_CREATE_TOOL_ID,
       idempotency: 'none',
       inputSchema: createTaskInputJsonSchema,
-      parseInput: (input) => parseInput('task-create', createTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-create', createTaskInputSchema, input),
       risk: 'mutate',
       run: (application, input) => application.createTask(input),
     }),
@@ -103,7 +104,7 @@ function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplicatio
       id: TASK_START_TOOL_ID,
       idempotency: 'none',
       inputSchema: startTaskInputJsonSchema,
-      parseInput: (input) => parseInput('task-start', startTaskInputSchema.safeParse(input)),
+      parseInput: (input) => parseInput('task-start', startTaskInputSchema, input),
       risk: 'mutate',
       run: (application, input) => application.startTask(input),
     }),
@@ -149,28 +150,26 @@ function descriptor<TInput>(input: {
   };
 }
 
-function parseInput<T>(
-  toolName: string,
-  result:
-    | { success: true; data: T }
-    | {
-        success: false;
-        error: { issues: Array<{ code: string; path: PropertyKey[] }> };
-      },
-): T {
+function parseInput<T>(toolName: string, schema: z.ZodType<T>, input: unknown): T {
+  // `reportInput` copies each rejected value onto its issue so a missing field
+  // can be told apart; the error message never includes the value.
+  const result = schema.safeParse(input, { reportInput: true });
   if (result.success) {
     return result.data;
   }
   const issue = result.error.issues[0];
   const field = issue?.path.length ? issue.path.slice(0, 3).join('.').slice(0, 64) : 'input';
-  throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue?.code)}`);
+  throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue)}`);
 }
 
-function inputRejectionReason(code: string | undefined): string {
-  switch (code) {
+function inputRejectionReason(issue: z.core.$ZodIssue | undefined): string {
+  if (issue && issue.path.length > 0 && issue.input === undefined) {
+    return 'is required';
+  }
+  switch (issue?.code) {
     case 'invalid_type':
       return 'has an invalid type';
-    case 'invalid_enum_value':
+    case 'invalid_value':
       return 'has an unsupported value';
     case 'too_small':
       return 'is below its minimum length or value';
@@ -178,7 +177,7 @@ function inputRejectionReason(code: string | undefined): string {
       return 'exceeds its maximum length';
     case 'unrecognized_keys':
       return 'contains unknown properties';
-    case 'invalid_string':
+    case 'invalid_format':
       return 'has an invalid format';
     default:
       return 'was rejected';

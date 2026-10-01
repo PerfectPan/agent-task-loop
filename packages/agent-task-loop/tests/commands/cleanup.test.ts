@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { runCommand } from 'citty';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cleanupSpy = vi.fn();
 
@@ -16,17 +17,23 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: vi.fn().mockImplementation(() => ({})),
+  TaskService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/publish-context-service', () => ({
-  PublishContextService: vi.fn().mockImplementation(() => ({})),
+  PublishContextService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/cleanup-service', () => ({
-  CleanupService: vi.fn().mockImplementation(() => ({
-    cleanup: cleanupSpy,
-  })),
+  CleanupService: vi.fn().mockImplementation(function () {
+    return {
+      cleanup: cleanupSpy,
+    };
+  }),
 }));
 
 describe('cleanupCommand', () => {
@@ -36,6 +43,10 @@ describe('cleanupCommand', () => {
       branch: 'task/task-102-claude',
       workspacePath: '/tmp/worktree',
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('prints cleanup result', async () => {
@@ -89,5 +100,32 @@ describe('cleanupCommand', () => {
       status: '已强制清理工作区',
     });
     logSpy.mockRestore();
+  });
+
+  it('rejects a value after --force instead of forcing the cleanup', async () => {
+    const { cleanupCommand } = await import('../../src/commands/cleanup');
+    const { withCommandGuards } = await import('../../src/commands/command-guards');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as never);
+
+    await expect(
+      runCommand(withCommandGuards(cleanupCommand), { rawArgs: ['--task', 'TASK-102', '--force', 'false'] }),
+    ).rejects.toThrow('exit');
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Unexpected argument: false.'));
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(cleanupSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([['--force=false'], ['--no-force']])('turns force off with %s', async (flag) => {
+    const { cleanupCommand } = await import('../../src/commands/cleanup');
+    const { withCommandGuards } = await import('../../src/commands/command-guards');
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await runCommand(withCommandGuards(cleanupCommand), { rawArgs: ['--task', 'TASK-102', flag] });
+
+    expect(cleanupSpy).toHaveBeenCalledWith({ taskId: 'TASK-102', force: false });
   });
 });

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from 'citty';
 import { cleanupCommand } from './commands/cleanup';
+import { withCommandGuards } from './commands/command-guards';
 import { createCommand } from './commands/create';
 import { initCommand } from './commands/init';
 import { completeCommand } from './commands/complete';
@@ -38,4 +39,4 @@ const main = defineCommand({
   },
 });
 
-void runMain(main);
+void runMain(withCommandGuards(main));

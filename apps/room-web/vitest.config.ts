@@ -5,12 +5,12 @@ import { defineConfig } from 'vitest/config';
 // Keep the runtime Vite/React Router configuration out of the jsdom test pipeline.
 export default defineConfig({
   resolve: {
-    alias: { '~': path.resolve(__dirname, 'app') },
+    alias: { '~': path.resolve(import.meta.dirname, 'app') },
   },
-  esbuild: { jsx: 'automatic' },
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'node',
     // Only the jsdom files need it; in a node environment the shims no-op.
-    setupFiles: [path.resolve(__dirname, 'vitest.setup.ts')],
+    setupFiles: [path.resolve(import.meta.dirname, 'vitest.setup.ts')],
   },
 });

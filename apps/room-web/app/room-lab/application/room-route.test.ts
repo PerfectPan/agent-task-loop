@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
+import { RouterContextProvider } from 'react-router';
 import { afterEach, describe, expect, it } from 'vitest';
 import { action, loader } from '../../routes/room.$roomId';
 import { action as agentsAction } from '../../routes/room.agents';
@@ -170,7 +171,13 @@ function asResponse(result: Awaited<ReturnType<typeof action>>): Response {
 const ROOM_PATTERN = '/room/:roomId';
 
 function args(request: Request, roomId = 'r_aaaaaaaaaa'): ActionFunctionArgs {
-  return { request, url: new URL(request.url), pattern: ROOM_PATTERN, params: { roomId }, context: {} };
+  return {
+    request,
+    url: new URL(request.url),
+    pattern: ROOM_PATTERN,
+    params: { roomId },
+    context: new RouterContextProvider(),
+  };
 }
 
 function loaderArgs(request: Request): LoaderFunctionArgs {
@@ -179,6 +186,6 @@ function loaderArgs(request: Request): LoaderFunctionArgs {
     url: new URL(request.url),
     pattern: ROOM_PATTERN,
     params: { roomId: 'r_aaaaaaaaaa' },
-    context: {},
+    context: new RouterContextProvider(),
   };
 }

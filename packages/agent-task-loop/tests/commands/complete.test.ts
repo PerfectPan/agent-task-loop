@@ -19,25 +19,35 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: vi.fn().mockImplementation(() => ({})),
+  TaskService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/publish-context-service', () => ({
-  PublishContextService: vi.fn().mockImplementation(() => ({})),
+  PublishContextService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/git-publish-service', () => ({
-  GitPublishService: vi.fn().mockImplementation(() => ({})),
+  GitPublishService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/github-pull-request-service', () => ({
-  GitHubPullRequestService: vi.fn().mockImplementation(() => ({})),
+  GitHubPullRequestService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/complete-service', () => ({
-  CompleteService: vi.fn().mockImplementation(() => ({
-    complete: completeSpy,
-  })),
+  CompleteService: vi.fn().mockImplementation(function () {
+    return {
+      complete: completeSpy,
+    };
+  }),
 }));
 
 describe('completeCommand', () => {

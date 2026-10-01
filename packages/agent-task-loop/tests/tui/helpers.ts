@@ -21,3 +21,15 @@ export const fixedNow = () => FIXED_NOW;
 export function isoSecondsAgo(seconds: number): string {
   return new Date(FIXED_NOW - seconds * 1000).toISOString();
 }
+
+/**
+ * Waits until ink has processed the last render or stdin write. ink subscribes
+ * `useInput` handlers in a passive effect, which React flushes from a
+ * `setImmediate` callback. On a loaded machine a timer alone can fire first, and
+ * the next write then reaches the previous render's handler; the trailing
+ * `setImmediate` runs after the callbacks already queued.
+ */
+export async function tick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => setImmediate(resolve));
+}

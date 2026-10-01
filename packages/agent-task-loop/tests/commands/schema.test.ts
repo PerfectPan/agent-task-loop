@@ -15,10 +15,12 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/schema-service', () => ({
-  TaskTableSchemaService: schemaServiceCtor.mockImplementation(() => ({
-    checkSchema: checkSchemaSpy,
-    applyMissingFields: applyMissingFieldsSpy,
-  })),
+  TaskTableSchemaService: schemaServiceCtor.mockImplementation(function () {
+    return {
+      checkSchema: checkSchemaSpy,
+      applyMissingFields: applyMissingFieldsSpy,
+    };
+  }),
 }));
 
 const feishuConfig = {

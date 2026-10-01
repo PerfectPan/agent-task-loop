@@ -10,9 +10,11 @@ vi.mock('../../src/config/load-config', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: taskServiceCtor.mockImplementation(() => ({
-    createTask: createTaskSpy,
-  })),
+  TaskService: taskServiceCtor.mockImplementation(function () {
+    return {
+      createTask: createTaskSpy,
+    };
+  }),
 }));
 
 const config = {
@@ -57,9 +59,11 @@ describe('createCommand', () => {
     loadConfigMock.mockReset();
     loadConfigMock.mockResolvedValue(config);
     taskServiceCtor.mockReset();
-    taskServiceCtor.mockImplementation(() => ({
-      createTask: createTaskSpy,
-    }));
+    taskServiceCtor.mockImplementation(function () {
+      return {
+        createTask: createTaskSpy,
+      };
+    });
   });
 
   afterEach(() => {
@@ -104,7 +108,7 @@ describe('createCommand', () => {
       } as never),
     ).rejects.toThrow('exit');
 
-    expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain('Invalid --agent: Invalid enum value');
+    expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain('Invalid --agent: Invalid option');
     expect(createTaskSpy).not.toHaveBeenCalled();
   });
 
@@ -126,7 +130,7 @@ describe('createCommand', () => {
     ).rejects.toThrow('exit');
 
     expect(err.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
-      'Invalid --priority: Number must be less than or equal to 9',
+      'Invalid --priority: Too big: expected number to be <=9',
     );
     expect(createTaskSpy).not.toHaveBeenCalled();
   });

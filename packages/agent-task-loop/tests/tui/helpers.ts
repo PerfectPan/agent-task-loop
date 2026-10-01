@@ -23,11 +23,15 @@ export function isoSecondsAgo(seconds: number): string {
 }
 
 /**
- * Waits until ink has processed the last render or stdin write. ink subscribes
- * `useInput` handlers in a passive effect, which React flushes from a
- * `setImmediate` callback. On a loaded machine a timer alone can fire first, and
- * the next write then reaches the previous render's handler; the trailing
- * `setImmediate` runs after the callbacks already queued.
+ * Waits until ink is ready for the next stdin write. ink subscribes `useInput`
+ * handlers in a passive effect, which React flushes from a `setImmediate`
+ * callback. On a loaded machine a timer alone can fire first, and the write then
+ * reaches no handler; the trailing `setImmediate` runs after the callbacks
+ * already queued.
+ *
+ * A lone ESC is different: ink reports it only after a short delay in case the
+ * rest of an escape sequence follows, so tests poll for its effect with
+ * `vi.waitFor` instead.
  */
 export async function tick(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));

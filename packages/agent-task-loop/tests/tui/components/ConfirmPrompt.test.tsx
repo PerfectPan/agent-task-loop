@@ -52,9 +52,7 @@ describe('ConfirmPrompt', () => {
     const { stdin } = render(<ConfirmPrompt message="ok?" onConfirm={onConfirm} onCancel={onCancel} />);
     await tick();
     stdin.write('\x1B');
-    // ink emits a lone ESC from a `setImmediate` callback in case an escape sequence follows.
-    await tick();
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
     expect(onConfirm).not.toHaveBeenCalled();
   });
 });

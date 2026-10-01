@@ -75,7 +75,7 @@ The flow is:
 
 ## Local Requirements
 
-- Node.js 20+
+- Node.js 22+
 - pnpm
 - GitHub CLI (`gh`) authenticated for Pull Request creation (and as the GitHub-Issues token source)
 - lark-cli — only when using a Feishu task source

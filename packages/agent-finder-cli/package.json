@@ -52,7 +52,7 @@
   "dependencies": {
     "@rivus/agent-finder-core": "workspace:*",
     "citty": "^0.2.2",
-    "ink": "^6.8.0",
+    "ink": "^7.1.1",
     "react": "^19.3.0"
   },
   "devDependencies": {
@@ -68,6 +68,6 @@
     "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

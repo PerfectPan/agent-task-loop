@@ -61,4 +61,4 @@ MoonBit.
   rendering, and no in-trace search.
 
 Remaining work is tracked in
-[`specs/0016-opencode-sessions-and-trace-fidelity.md`](../../specs/0016-opencode-sessions-and-trace-fidelity.md).
+[`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../specs/0016-opencode-sessions-and-trace-fidelity.md).

@@ -2,13 +2,13 @@
 
 Carries the unimplemented part of the retired RFC 0002 (Code Agent Discovery).
 Discovery itself is delivered and documented in
-[`docs/architecture/agent-finder.md`](../docs/architecture/agent-finder.md).
+[`docs/architecture/agent-finder.md`](../architecture/agent-finder.md).
 
 ## Status
 
 Draft
 
-Paired Plan: [`docs/plans/0002-discovery-before-assignment.md`](../docs/plans/0002-discovery-before-assignment.md)
+Paired Plan: [`docs/plans/0002-discovery-before-assignment.md`](../plans/0002-discovery-before-assignment.md)
 
 ## Problem And Scope
 

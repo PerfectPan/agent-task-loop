@@ -29,7 +29,7 @@ Add `development/`, `reference/`, `operations/`, or `tutorials/` sections when t
 
 ## Spec And Plan Boundary
 
-- [`../specs/`](../specs/) declares active product behavior and acceptance contracts.
+- [`specs/`](specs/) declares active product behavior and acceptance contracts.
 - [`plans/`](plans/) contains active technical decisions and detailed execution plans.
 
 The Change Design Gate in [`CONTRIBUTING.md`](../CONTRIBUTING.md) decides which artifacts a change needs. After delivery, lasting constraints belong in current-state `docs/`. Git history keeps the retired Spec or Plan, including the RFCs this repository used before adopting Specs and Plans.

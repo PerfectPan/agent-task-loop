@@ -4,13 +4,13 @@ Carries the open scope of the retired RFC 0014 (Task Board and the Operate
 Surface, slices 6–10) and the unimplemented parts of RFC 0013 (Local Room
 Workspace: promotion into a Task and human accept or rework). The delivered
 read-only board, task detail page, and lane grouping are documented in
-[`docs/architecture/agent-collaboration.md`](../docs/architecture/agent-collaboration.md#task-board).
+[`docs/architecture/agent-collaboration.md`](../architecture/agent-collaboration.md#task-board).
 
 ## Status
 
 Draft
 
-Paired Plan: [`docs/plans/0014-task-board-actions.md`](../docs/plans/0014-task-board-actions.md)
+Paired Plan: [`docs/plans/0014-task-board-actions.md`](../plans/0014-task-board-actions.md)
 
 ## Problem And Scope
 

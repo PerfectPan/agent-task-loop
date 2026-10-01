@@ -49,7 +49,7 @@ argument arrays and short timeouts.
 - `apps/room-web` does not use this package; it asks each agent binding
   directly through an ACP probe (see [agent-collaboration.md](agent-collaboration.md)).
 - Task assignment does not consult discovery yet; see
-  [`specs/0002-discovery-before-assignment.md`](../../specs/0002-discovery-before-assignment.md).
+  [`docs/specs/0002-discovery-before-assignment.md`](../specs/0002-discovery-before-assignment.md).
 
 ## Build pipeline
 

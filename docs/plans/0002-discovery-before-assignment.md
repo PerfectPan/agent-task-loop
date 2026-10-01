@@ -4,7 +4,7 @@
 - Owner: unconfirmed
 - Reviewer: unconfirmed
 - Last updated: 2026-10-01
-- Paired Spec: [`specs/0002-discovery-before-assignment.md`](../../specs/0002-discovery-before-assignment.md)
+- Paired Spec: [`docs/specs/0002-discovery-before-assignment.md`](../specs/0002-discovery-before-assignment.md)
 
 ## Contents
 

@@ -4,7 +4,7 @@
 - Owner: unconfirmed
 - Reviewer: unconfirmed
 - Last updated: 2026-10-01
-- Paired Spec: [`specs/0014-task-board-actions.md`](../../specs/0014-task-board-actions.md)
+- Paired Spec: [`docs/specs/0014-task-board-actions.md`](../specs/0014-task-board-actions.md)
 
 ## Contents
 

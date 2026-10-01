@@ -21,7 +21,7 @@ Respect the package boundaries in [`docs/architecture/overview.md`](docs/archite
 ## Documentation
 
 - Use `CONTRIBUTING.md` for contribution workflow.
-- Use `specs/` for active product behavior and `docs/plans/` for active technical decisions and detailed execution plans. Current-state documentation owns implemented behavior.
+- Use `docs/specs/` for active product behavior and `docs/plans/` for active technical decisions and detailed execution plans. Current-state documentation owns implemented behavior.
 - Use `docs/` for durable current-state knowledge: architecture (`docs/architecture/`), guides, and operational runbooks. See `docs/README.md`.
 - Keep README focused on orientation and quick start.
 

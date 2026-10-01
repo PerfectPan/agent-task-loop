@@ -41,4 +41,4 @@ Implemented:
   commands (Codex `codex resume <id>`, Claude `claude --resume <id>`).
 
 Not yet: OpenCode (SQLite store) and higher-fidelity traces, tracked in
-[`specs/0016-opencode-sessions-and-trace-fidelity.md`](../../specs/0016-opencode-sessions-and-trace-fidelity.md).
+[`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../../docs/specs/0016-opencode-sessions-and-trace-fidelity.md).

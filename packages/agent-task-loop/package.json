@@ -58,7 +58,7 @@
     "prepack": "rslib build",
     "prepublishOnly": "pnpm test",
     "package:check": "node scripts/check-package.mjs",
-    "test": "vitest run",
+    "test": "rslib build && vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

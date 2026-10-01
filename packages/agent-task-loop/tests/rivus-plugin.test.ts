@@ -144,6 +144,37 @@ describe('agent-task-loop Rivus Plugin', () => {
     expect(createTaskManager).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [TASK_LIST_TOOL_ID, { status: 'nope' }, 'Invalid task-list status: has an unsupported value'],
+    [
+      TASK_CREATE_TOOL_ID,
+      { taskId: 'TASK-32', title: 'Title', project: 'project', targetAgent: 'gpt', priority: 1 },
+      'Invalid task-create targetAgent: has an unsupported value',
+    ],
+    [TASK_GET_TOOL_ID, { taskId: '   ' }, 'Invalid task-get taskId: has an invalid format'],
+    [
+      TASK_CREATE_TOOL_ID,
+      { taskId: 'TASK-33', title: 'Title', project: 'project', priority: 1 },
+      'Invalid task-create targetAgent: is required',
+    ],
+    [
+      TASK_CREATE_TOOL_ID,
+      { taskId: 'TASK-34', project: 'project', targetAgent: 'codex', priority: 1 },
+      'Invalid task-create title: is required',
+    ],
+  ])('names the rejected field and reason for %s input %j', async (toolId, toolInput, message) => {
+    const createTaskManager = vi.fn();
+    const executor = register(createRivusTaskManagerPlugin({ createTaskManager }))
+      .tools.get(toolId)!
+      .createExecutor({ toolId, toolVersion: '1.0.0' });
+
+    await expect(executor.execute(toolInput, executionContext(toolId))).rejects.toMatchObject({
+      message,
+      name: 'RivusToolInputRejected',
+    });
+    expect(createTaskManager).not.toHaveBeenCalled();
+  });
+
   it('routes task-get through the injected Task Manager capability', async () => {
     const expected = { task: { taskId: 'TASK-30' } };
     const getTask = vi.fn().mockResolvedValue(expected);

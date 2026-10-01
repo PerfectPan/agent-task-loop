@@ -69,12 +69,12 @@ When an AI agent completes implementation work:
 4. Commit pending changes with a concise conventional commit message.
 5. Push the branch and verify the remote head.
 6. Create or reuse a GitHub Pull Request when the task is not landing directly on `main`.
-7. Include a delivery summary with motivation, implementation notes, validation, and follow-up risks.
+7. Include a delivery summary with what changed and why, validation, and remaining risks.
 
 ## Review Evidence
 
 - PR titles must be English and follow `type(scope): summary`, including bot-generated release and dependency PRs such as `chore(release): version packages`; use `gh repo-checks pr-title` to verify them.
-- PR descriptions must keep every template section and include motivation, implementation notes, exact validation commands, skipped gates with reasons, and follow-up risks. Do not add agent attribution lines such as "Generated with <tool>". Verify the body with `gh repo-checks pr-body` before opening or updating the PR. Bot-opened PRs are exempt from the description check, not the title check.
+- PR descriptions must have a Summary (what changed and why) and a Validation section (exact commands and results, skipped gates with reasons); add Risks when there are any. Do not add agent attribution lines such as "Generated with <tool>". Verify the body with `gh repo-checks pr-body` before opening or updating the PR. Bot-opened PRs are exempt from the description check, not the title check.
 - If a claim depends on logs, screenshots, package output, deployed behavior, or generated artifacts, attach or link the evidence in the PR.
 - Update the PR description after substantial code changes, review-driven revisions, rebases that change behavior, or validation reruns.
 - Keep the GitHub PR template and the GitLab MR template in sync; `gh repo-checks repository` checks both.

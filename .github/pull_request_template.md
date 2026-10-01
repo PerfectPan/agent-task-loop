@@ -4,21 +4,16 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 
 ## Summary
 
--
-
-## Motivation
-
--
-
-## Implementation Notes
+<!-- What changed and why. Link the issue, Spec, or Plan when there is one. -->
 
 -
 
 ## Validation
 
+<!-- Commands you ran and their results; logs or screenshots for behavior claims. Name skipped checks and why. -->
+
 - [ ] Repository checks: `gh repo-checks repository`
-- [ ] PR title: `gh repo-checks pr-title "<title>"`
-- [ ] PR description: `gh repo-checks pr-body <body-file>`
+- [ ] PR title and description: `gh repo-checks pr-title "<title>"`, `gh repo-checks pr-body <body-file>`
 - [ ] Install: `pnpm install --frozen-lockfile`
 - [ ] Format: `pnpm format:check`
 - [ ] MoonBit version: `pnpm check:moonbit-version`
@@ -29,24 +24,8 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 - [ ] Changeset: `pnpm changeset status` (package-facing changes add a changeset)
 - [ ] Package dry-run: `npm pack --dry-run --registry=https://registry.npmjs.org` in each changed published package
 
-Skipped gates and reasons:
+## Risks
 
--
-
-## Evidence
-
-- Requirement and paired Spec/Plan:
-- Logs, screenshots, package output, or deployed artifact:
-- Reviewer notes that changed the final scope:
-
-## Safety Checklist
-
-- [ ] No credentials, tokens, private hostnames, personal filesystem paths, or generated logs are included.
-- [ ] Local config, generated output, build artifacts, and temporary workspaces are not staged.
-- [ ] User-facing behavior, docs, release change files, migrations, or rollback notes are updated when relevant.
-- [ ] Completed Spec/Plan constraints are migrated to tests or current-state docs before retirement; unfinished scope remains active.
-- [ ] The branch is current enough for review, and the remote head matches the intended commit.
-
-## Follow-up Risks
+<!-- Optional: compatibility, rollout, rollback, or follow-up risks. Delete this section when there are none. -->
 
 -

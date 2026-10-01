@@ -139,7 +139,7 @@ void [defaultPlugin, configuredPlugin];
   );
 
   const installedPackageJson = JSON.parse(readFileSync(path.join(installedPackageDirectory, 'package.json'), 'utf8'));
-  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.1.1 <0.4.0') {
+  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.1.1 <0.17.0') {
     throw new Error('Unexpected @rivus/agent peer range');
   }
   if (!installedPackageJson.peerDependenciesMeta?.['@rivus/agent']?.optional) {

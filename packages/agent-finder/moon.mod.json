@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "readme": "README.md",
   "repository": "https://github.com/PerfectPan/agent-task-loop",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "keywords": ["code-agent", "discovery", "inventory"],
   "description": "Read-only local code agent discovery for agent-task-loop."
 }

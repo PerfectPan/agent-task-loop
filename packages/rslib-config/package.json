@@ -2,7 +2,7 @@
   "name": "@rivus/rslib-config",
   "version": "0.1.0",
   "private": true,
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "main": "./src/lib.config.ts",
   "exports": {

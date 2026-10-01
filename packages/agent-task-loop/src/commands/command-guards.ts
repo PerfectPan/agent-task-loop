@@ -1,3 +1,4 @@
+import { inspect } from 'node:util';
 import type { ArgsDef, CommandDef } from 'citty';
 
 type Resolvable<T> = T | Promise<T> | (() => T) | (() => Promise<T>);
@@ -16,8 +17,9 @@ async function resolve<T>(value: Resolvable<T>): Promise<T> {
  * it does not declare, so a value after a boolean flag fails instead of
  * silently turning the flag on.
  *
- * A failing command prints only its error message and exits with status 1;
- * citty's runMain would print the whole error object.
+ * A failing command prints its error message, followed by the message of each
+ * error in its `cause` chain, and exits with status 1; citty's runMain would
+ * print the whole error object.
  */
 export function withCommandGuards<T extends ArgsDef>(cmd: CommandDef<T>): CommandDef<T> {
   const { subCommands, run } = cmd;
@@ -43,15 +45,40 @@ export function withCommandGuards<T extends ArgsDef>(cmd: CommandDef<T>): Comman
         const declared = Object.values(argsDef).filter((arg) => arg.type === 'positional').length;
         const unexpected = context.args._.slice(declared);
         if (unexpected.length > 0) {
-          throw new Error(
-            `Unexpected argument: ${unexpected.join(' ')}. Boolean flags take no value; turn one off with --no-<flag> or --<flag>=false.`,
-          );
+          throw new Error(unexpectedArgumentsMessage(unexpected));
         }
         return await run(context);
       } catch (error) {
-        console.error(error instanceof Error ? error.message : String(error));
+        console.error(errorMessages(error));
         process.exit(1);
       }
     },
   };
+}
+
+function unexpectedArgumentsMessage(unexpected: string[]): string {
+  const message = `Unexpected argument${unexpected.length > 1 ? 's' : ''}: ${unexpected.join(' ')}`;
+  if (unexpected.some((value) => value === 'true' || value === 'false')) {
+    return `${message}. Boolean flags take no value; turn one off with --no-<flag> or --<flag>=false.`;
+  }
+  return message;
+}
+
+function errorMessages(error: unknown): string {
+  const messages: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    messages.push(describe(current));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return messages.join('\n  caused by: ');
+}
+
+function describe(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message;
+  }
+  return typeof value === 'string' ? value : inspect(value);
 }

@@ -184,7 +184,7 @@ Tools and libraries use MIT; applications use GPL-3.0-only. The repository is li
 
 Everything else, including `@rivus/agent-task-loop`, `@rivus/agent-room`, `@rivus/agent-orchestration` and `apps/`, is GPL-3.0-only. Distributing a GPL-3.0-only package or a modified version requires releasing its source under the same license.
 
-Package metadata (`package.json`, and `moon.mod.json` for the MoonBit module) uses the SPDX identifier of the package's license, and an MIT package lists `LICENSE` in its published files. An MIT package must not import or bundle code from a GPL-3.0-only workspace package: `@rivus/agent-finder-cli` bundles `@rivus/agent-sessions` into its `dist/`, so both stay MIT together. GPL-3.0-only packages may use the MIT ones. Change a license only as a deliberate project decision, and keep third-party notices for code or data copied from other projects.
+Package metadata (`package.json`, and `moon.mod.json` for the MoonBit module) uses the SPDX identifier of the package's license, and an MIT package lists `LICENSE` in its published files. An MIT package must not import or bundle code from a GPL-3.0-only workspace package: `@rivus/agent-finder-cli` bundles `@rivus/agent-sessions` into its `dist/`, so both stay MIT together. GPL-3.0-only packages may use the MIT ones. `pnpm test` enforces the rule from the metadata: [`tests/license/license-boundary.test.mjs`](tests/license/license-boundary.test.mjs) fails when a workspace package has no `license` field or an MIT package lists a GPL-3.0-only workspace package in any dependency field. Change a license only as a deliberate project decision, and keep third-party notices for code or data copied from other projects.
 
 ## Repository Checks
 

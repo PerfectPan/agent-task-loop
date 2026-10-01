@@ -37,6 +37,14 @@ describe('@rivus/agent-finder-cli', () => {
     expect(output(runCli(['provider', '-h']))).toContain(`(agent-finder provider v${version})`);
   });
 
+  test('prints the package version from the built CLI', () => {
+    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+
+    const result = spawnSync(process.execPath, [join(process.cwd(), 'dist', 'cli.js'), '-v'], { encoding: 'utf8' });
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe(version);
+  });
+
   test('lists supported providers', () => {
     const result = runCli(['provider', 'list']);
 

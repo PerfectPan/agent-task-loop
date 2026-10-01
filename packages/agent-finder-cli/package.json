@@ -46,7 +46,7 @@
     "dev": "tsx --conditions=development src/cli.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
-    "test": "vitest run",
+    "test": "rslib build && vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

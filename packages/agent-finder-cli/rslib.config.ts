@@ -6,7 +6,7 @@ export default defineConfig({
   lib: [
     {
       format: 'esm',
-      dts: { abortOnError: false },
+      dts: { abortOnError: false, bundle: true },
       bundle: true,
     },
   ],

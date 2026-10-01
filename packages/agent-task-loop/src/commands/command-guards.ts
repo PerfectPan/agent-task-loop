@@ -18,8 +18,8 @@ async function resolve<T>(value: Resolvable<T>): Promise<T> {
  * silently turning the flag on.
  *
  * A failing command prints its error message, followed by the message of each
- * error in its `cause` chain, and exits with status 1; citty's runMain would
- * print the whole error object.
+ * error in its `cause` chain that adds something, and exits with status 1;
+ * citty's runMain would print the whole error object.
  */
 export function withCommandGuards<T extends ArgsDef>(cmd: CommandDef<T>): CommandDef<T> {
   const { subCommands, run } = cmd;
@@ -70,7 +70,12 @@ function errorMessages(error: unknown): string {
   let current: unknown = error;
   while (current !== undefined && !seen.has(current)) {
     seen.add(current);
-    messages.push(describe(current));
+    const message = describe(current);
+    // Some errors already end with their cause's message (execa's does), so a
+    // cause the previous line contains adds nothing.
+    if (!messages.at(-1)?.includes(message)) {
+      messages.push(message);
+    }
     current = current instanceof Error ? current.cause : undefined;
   }
   return messages.join('\n  caused by: ');

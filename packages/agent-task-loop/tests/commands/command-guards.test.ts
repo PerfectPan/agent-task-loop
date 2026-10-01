@@ -53,4 +53,15 @@ describe('withCommandGuards', () => {
     expect(errorSpy).toHaveBeenCalledWith('fetch failed\n  caused by: getaddrinfo ENOTFOUND api.github.com');
     expect(process.exit).toHaveBeenCalledWith(1);
   });
+
+  it('skips a cause whose message the previous error already contains', async () => {
+    const spawnError = new Error('spawn lark-cli ENOENT');
+    runSpy.mockRejectedValue(
+      new Error('Command failed with ENOENT: lark-cli base\nspawn lark-cli ENOENT', { cause: spawnError }),
+    );
+
+    await expect(runCommand(command, { rawArgs: ['--task', 'TASK-1'] })).rejects.toThrow('exit');
+
+    expect(errorSpy).toHaveBeenCalledWith('Command failed with ENOENT: lark-cli base\nspawn lark-cli ENOENT');
+  });
 });

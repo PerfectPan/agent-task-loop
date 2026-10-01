@@ -25,30 +25,36 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: vi.fn().mockImplementation(() => ({
-    withMutationFence: vi.fn().mockReturnValue({}),
-  })),
+  TaskService: vi.fn().mockImplementation(function () {
+    return {
+      withMutationFence: vi.fn().mockReturnValue({}),
+    };
+  }),
 }));
 
 vi.mock('../../src/task-manager/task-occupancy-service', () => ({
-  TaskOccupancyService: vi.fn().mockImplementation(() => ({
-    run: vi.fn((_input, workflow) =>
-      workflow({
-        signal: occupancySignal,
-        mutationFence,
-      }),
-    ),
-  })),
+  TaskOccupancyService: vi.fn().mockImplementation(function () {
+    return {
+      run: vi.fn((_input, workflow) =>
+        workflow({
+          signal: occupancySignal,
+          mutationFence,
+        }),
+      ),
+    };
+  }),
 }));
 
 vi.mock('../../src/services/review-loop-runner', () => ({
-  ReviewLoopRunner: vi.fn().mockImplementation(() => ({
-    run: runnerRunSpy,
-  })),
+  ReviewLoopRunner: vi.fn().mockImplementation(function () {
+    return {
+      run: runnerRunSpy,
+    };
+  }),
 }));
 
 vi.mock('../../src/services/reject-service', () => ({
-  RejectService: vi.fn().mockImplementation(({ runLoop }) => {
+  RejectService: vi.fn().mockImplementation(function ({ runLoop }) {
     capturedRunLoop = runLoop;
     return {
       reject: rejectSpy,

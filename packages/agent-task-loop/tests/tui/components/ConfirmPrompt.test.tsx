@@ -2,10 +2,7 @@ import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConfirmPrompt } from '../../../src/tui/components/ConfirmPrompt';
-import { stripAnsi } from '../helpers';
-
-/** Let ink's useInput effect subscribe to stdin before writing. */
-const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+import { stripAnsi, tick } from '../helpers';
 
 describe('ConfirmPrompt', () => {
   it('renders the message followed by the (y/n) hint', () => {
@@ -55,6 +52,8 @@ describe('ConfirmPrompt', () => {
     const { stdin } = render(<ConfirmPrompt message="ok?" onConfirm={onConfirm} onCancel={onCancel} />);
     await tick();
     stdin.write('\x1B');
+    // ink emits a lone ESC from a `setImmediate` callback in case an escape sequence follows.
+    await tick();
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
   });

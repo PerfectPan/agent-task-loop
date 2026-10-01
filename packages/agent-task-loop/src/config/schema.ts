@@ -4,7 +4,7 @@ export const agentConfigSchema = z.object({
   name: z.enum(['claude', 'codex', 'coco', 'glm']),
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
-  env: z.record(z.string()).default({}),
+  env: z.record(z.string(), z.string()).default({}),
 });
 
 export const repositoryConfigSchema = z.object({
@@ -51,7 +51,7 @@ export const githubIssuesConfigSchema = z
     const hasMulti = Boolean(cfg.repositories && cfg.repositories.length > 0);
     if (!hasSingle && !hasMulti) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'githubIssues needs either owner+repo or a non-empty repositories[]',
       });
     }
@@ -71,14 +71,14 @@ export const appConfigSchema = z
     feishu: feishuConfigSchema.optional(),
     /** Optional task source. When present alongside feishu, tasks are read from both. */
     githubIssues: githubIssuesConfigSchema.optional(),
-    projects: z.record(projectConfigSchema),
-    repositories: z.record(repositoryConfigSchema),
-    agents: z.record(agentConfigSchema),
+    projects: z.record(z.string(), projectConfigSchema),
+    repositories: z.record(z.string(), repositoryConfigSchema),
+    agents: z.record(z.string(), agentConfigSchema),
   })
   .superRefine((cfg, ctx) => {
     if (!cfg.feishu && !cfg.githubIssues) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'configure at least one task source: feishu or githubIssues',
       });
     }

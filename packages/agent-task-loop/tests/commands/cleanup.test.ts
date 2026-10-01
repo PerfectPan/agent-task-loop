@@ -16,17 +16,23 @@ vi.mock('../../src/config/runtime-guard', () => ({
 }));
 
 vi.mock('../../src/services/task-service', () => ({
-  TaskService: vi.fn().mockImplementation(() => ({})),
+  TaskService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/publish-context-service', () => ({
-  PublishContextService: vi.fn().mockImplementation(() => ({})),
+  PublishContextService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('../../src/services/cleanup-service', () => ({
-  CleanupService: vi.fn().mockImplementation(() => ({
-    cleanup: cleanupSpy,
-  })),
+  CleanupService: vi.fn().mockImplementation(function () {
+    return {
+      cleanup: cleanupSpy,
+    };
+  }),
 }));
 
 describe('cleanupCommand', () => {

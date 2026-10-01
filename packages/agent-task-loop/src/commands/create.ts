@@ -11,7 +11,7 @@ import { printCommandOutput } from './command-output';
 const agentSchema = z.enum(TARGET_AGENTS);
 // `z.coerce.number()` alone turns "" into 0 (`Number("")` is 0) rather than
 // failing; requiring a non-empty string first closes that gap.
-const prioritySchema = z.string().min(1).pipe(z.coerce.number().int().min(0).max(9));
+const prioritySchema = z.string().min(1).pipe(z.coerce.number<string>().int().min(0).max(9));
 
 // Normalizes one raw CLI/prompt value into a trimmed, non-empty string (or
 // undefined) — the shape every field starts from before shape validation.
@@ -127,17 +127,19 @@ const createInputsSchema = z.object({
 
 type ValidatedInputs = z.infer<typeof createInputsSchema>;
 
-function formatIssue(issue: z.ZodIssue): string {
+function formatIssue(issue: z.core.$ZodIssue): string {
   const key = issue.path[0];
   const flag = typeof key === 'string' && key in FLAG_BY_KEY ? FLAG_BY_KEY[key as RequiredKey] : `--${String(key)}`;
-  if (issue.code === 'invalid_type' && issue.received === 'undefined') {
+  if (issue.input === undefined) {
     return `Missing required flag: ${flag}`;
   }
   return `Invalid ${flag}: ${issue.message}`;
 }
 
 function validateInputs(inputs: CreateInputs): ValidatedInputs {
-  const result = createInputsSchema.safeParse(inputs);
+  // `reportInput` copies each failing value onto its issue, which formatIssue
+  // needs to tell a missing flag from an invalid one.
+  const result = createInputsSchema.safeParse(inputs, { reportInput: true });
   if (!result.success) {
     fail(result.error.issues.map(formatIssue).join('; '));
   }

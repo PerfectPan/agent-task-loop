@@ -1,6 +1,6 @@
 # @rivus/room-web — composable local agent workspace
 
-A local-only React Router 7 (framework mode) application for composing authenticated coding agents into
+A local-only React Router 8 (framework mode) application for composing authenticated coding agents into
 one shared Room. A Room may use any non-empty subset of the registered agents,
 in any order.
 

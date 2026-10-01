@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AppConfig } from '../../src/config/schema';
 import { CompleteService } from '../../src/services/complete-service';
 
+type CompleteServiceDeps = ConstructorParameters<typeof CompleteService>[0];
+
 const config = {
   feishu: { baseToken: 'base', tableId: 'table' },
   projects: {
@@ -49,8 +51,8 @@ function createService(input: {
   publishContextService?: Record<string, unknown>;
   gitPublishService?: Record<string, unknown>;
   pullRequestService?: Record<string, unknown>;
-  generateCommitMessage?: ReturnType<typeof vi.fn>;
-  generatePullRequestContent?: ReturnType<typeof vi.fn>;
+  generateCommitMessage?: CompleteServiceDeps['generateCommitMessage'];
+  generatePullRequestContent?: CompleteServiceDeps['generatePullRequestContent'];
 }) {
   const taskService = {
     getTaskById: vi.fn().mockResolvedValue(createTask(input.task)),
@@ -96,14 +98,14 @@ function createService(input: {
     } as never,
     generateCommitMessage:
       input.generateCommitMessage ??
-      vi.fn().mockResolvedValue({
+      vi.fn<CompleteServiceDeps['generateCommitMessage']>().mockResolvedValue({
         message: 'fix: publish flow',
         sessionId: 'publish-commit-1',
         sessionName: 'task-301-publish-commit-codex',
       }),
     generatePullRequestContent:
       input.generatePullRequestContent ??
-      vi.fn().mockResolvedValue({
+      vi.fn<CompleteServiceDeps['generatePullRequestContent']>().mockResolvedValue({
         title: 'fix: publish flow',
         body: 'body',
         sessionId: 'publish-pr-1',
@@ -246,7 +248,7 @@ describe('CompleteService', () => {
         }),
         updatePullRequest,
       },
-      generatePullRequestContent: vi.fn().mockResolvedValue({
+      generatePullRequestContent: vi.fn<CompleteServiceDeps['generatePullRequestContent']>().mockResolvedValue({
         title: 'fix: publish flow',
         body: 'new process summary',
         sessionId: 'publish-pr-1',
@@ -283,7 +285,7 @@ describe('CompleteService', () => {
         }),
         updatePullRequest: vi.fn().mockRejectedValue(new Error('pull request update failed')),
       },
-      generatePullRequestContent: vi.fn().mockResolvedValue({
+      generatePullRequestContent: vi.fn<CompleteServiceDeps['generatePullRequestContent']>().mockResolvedValue({
         title: 'fix: publish flow',
         body: 'new process summary',
         sessionId: 'publish-pr-1',
@@ -336,7 +338,7 @@ describe('CompleteService', () => {
           description: 'something the server normalized',
         }),
       },
-      generatePullRequestContent: vi.fn().mockResolvedValue({
+      generatePullRequestContent: vi.fn<CompleteServiceDeps['generatePullRequestContent']>().mockResolvedValue({
         title: 'fix: x',
         body: 'unique-summary-xyz',
         sessionId: 'p',

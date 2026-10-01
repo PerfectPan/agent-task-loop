@@ -4,7 +4,7 @@ import { reactRouter } from '@react-router/dev/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 
-const MIGRATIONS_DIR = path.resolve(__dirname, 'app/room-lab/infrastructure/migrations');
+const MIGRATIONS_DIR = path.resolve(import.meta.dirname, 'app/room-lab/infrastructure/migrations');
 
 /**
  * The migration runner reads its SQL with `readFileSync(new URL('./0001_rooms.sql',
@@ -37,7 +37,7 @@ function serverMigrations(): Plugin {
 export default defineConfig({
   plugins: [reactRouter(), tailwindcss(), serverMigrations()],
   resolve: {
-    alias: { '~': path.resolve(__dirname, 'app') },
+    alias: { '~': path.resolve(import.meta.dirname, 'app') },
   },
   server: {
     host: '127.0.0.1',

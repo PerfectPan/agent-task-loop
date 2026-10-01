@@ -13,3 +13,8 @@ allowBuilds:
   esbuild: true
   # Prebuilt @img/sharp-* binaries cover every CI and dev platform; the script only matters for a source build.
   sharp: false
+
+overrides:
+  # rolldown 1.2.12 was published without its @rolldown/binding-* platform
+  # packages, so Vite cannot load it. Remove once a newer release ships them.
+  rolldown: 1.2.11

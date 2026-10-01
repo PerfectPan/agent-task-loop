@@ -17,8 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.0.3",
-    "@rslib/core": "^0.21.3",
-    "typescript": "^5.8.3"
+    "@rsbuild/core": "^2.2.11",
+    "@rslib/core": "^1.0.3",
+    "typescript": "^7.0.2"
   }
 }

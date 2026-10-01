@@ -188,7 +188,7 @@ five lanes (`app/board/domain/lanes.ts`):
 A model review PASS stays in 待你决定 until a person acts; the task detail
 page says so. Board and rooms are not linked to each other, and the board
 cannot write. The remaining board and room-to-task work is in
-[`specs/0014-task-board-actions.md`](../../specs/0014-task-board-actions.md).
+[`docs/specs/0014-task-board-actions.md`](../specs/0014-task-board-actions.md).
 
 ## Measured behavior
 

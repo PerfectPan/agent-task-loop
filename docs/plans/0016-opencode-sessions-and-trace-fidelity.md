@@ -4,7 +4,7 @@
 - Owner: unconfirmed
 - Reviewer: unconfirmed
 - Last updated: 2026-10-01
-- Paired Spec: [`specs/0016-opencode-sessions-and-trace-fidelity.md`](../../specs/0016-opencode-sessions-and-trace-fidelity.md)
+- Paired Spec: [`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../specs/0016-opencode-sessions-and-trace-fidelity.md)
 
 ## Contents
 

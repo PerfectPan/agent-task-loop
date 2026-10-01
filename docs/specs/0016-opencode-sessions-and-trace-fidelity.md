@@ -4,7 +4,7 @@ Carries the unfinished scope of the retired plan for the session browser
 (issue #25) and CLI output redesign (issue #23): SPIKE-OC, P6, and the part of
 P5 that did not ship. P1–P4 and P5's print-only resume command for Codex and
 Claude are delivered and documented in
-[`docs/architecture/agent-sessions.md`](../docs/architecture/agent-sessions.md).
+[`docs/architecture/agent-sessions.md`](../architecture/agent-sessions.md).
 P5 also planned a `Session.resumable` capability flag; it does not exist, and
 callers can only learn resumability by calling `resumeCommand(id)` and getting
 `null`.
@@ -13,7 +13,7 @@ callers can only learn resumability by calling `resumeCommand(id)` and getting
 
 Draft
 
-Paired Plan: [`docs/plans/0016-opencode-sessions-and-trace-fidelity.md`](../docs/plans/0016-opencode-sessions-and-trace-fidelity.md)
+Paired Plan: [`docs/plans/0016-opencode-sessions-and-trace-fidelity.md`](../plans/0016-opencode-sessions-and-trace-fidelity.md)
 
 ## Problem And Scope
 
@@ -28,7 +28,7 @@ an explicit opt-in to execute the resume command.
 
 Known discovery gaps outside this Spec: the Claude root ignores
 `CLAUDE_CONFIG_DIR`, and Codex `archived_sessions` is not scanned.
-[Plan 0008](../docs/plans/0008-shared-agent-infrastructure.md) Task 2 owns both.
+[Plan 0008](../plans/0008-shared-agent-infrastructure.md) Task 2 owns both.
 
 Out of scope: publishing `@rivus/agent-sessions`, moving session discovery into
 the MoonBit core, and token-usage accounting.

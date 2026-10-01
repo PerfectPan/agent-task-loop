@@ -62,7 +62,7 @@ Every change needs a requirement record. Use the smallest set of artifacts that 
 
 In this repository, changes to public CLI behavior, package publishing or the release process, task lifecycle semantics, configuration shape, security boundaries, repository or package structure, and long-term integration strategy count as product behavior or technical refactors, not narrow maintenance.
 
-A Spec defines observable interactions, scope, failure behavior, and acceptance examples. Use stable scenario IDs and Given/When/Then where useful. Link scenarios to tests. A Spec does not prescribe components, interfaces, or execution order. Keep active Specs under [`specs/`](specs/). A small change may keep both sections in the PR description. Split only when each slice has an independently demonstrable outcome.
+A Spec defines observable interactions, scope, failure behavior, and acceptance examples. Use stable scenario IDs and Given/When/Then where useful. Link scenarios to tests. A Spec does not prescribe components, interfaces, or execution order. Keep active Specs under [`docs/specs/`](docs/specs/). A small change may keep both sections in the PR description. Split only when each slice has an independently demonstrable outcome.
 
 A Plan records technical decisions and the detailed execution plan that implements them. Shared architecture, compatibility, security, and recovery decisions belong in a reviewed Plan. After implementation, move lasting constraints into current-state architecture or operations docs. This repository does not keep an RFC directory; the RFCs it used earlier are retired into current-state docs, Specs, and Plans, and remain in Git history. Removing a proposal does not mark unimplemented ideas as delivered.
 
@@ -81,7 +81,7 @@ Keep unknown owners, dates, and interfaces marked "unconfirmed". A plan may make
 - Use `README.md` for orientation, quick start, and current user-facing behavior.
 - Use `CONTRIBUTING.md` for contribution workflow, review expectations, and repository policy.
 - Use `AGENTS.md` for AI-agent instructions.
-- Use `specs/` for active product behavior and acceptance contracts.
+- Use `docs/specs/` for active product behavior and acceptance contracts.
 - Use `docs/plans/` for active technical decisions and detailed execution plans.
 - Use `docs/` for durable current-state knowledge; `docs/architecture/` describes the current system shape.
 

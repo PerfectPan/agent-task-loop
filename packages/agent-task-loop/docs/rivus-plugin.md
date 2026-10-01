@@ -168,8 +168,8 @@ errors are not passed to the Agent.
 From the monorepo root, build and run the clean-consumer check:
 
 ```bash
-corepack pnpm@9.15.9 --filter @rivus/agent-task-loop build
-corepack pnpm@9.15.9 --filter @rivus/agent-task-loop package:check
+pnpm --filter @rivus/agent-task-loop build
+pnpm --filter @rivus/agent-task-loop package:check
 ```
 
 The check packs the package into temporary clean consumers. It first installs

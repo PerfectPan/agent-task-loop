@@ -23,22 +23,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v7
+      # Installs the pnpm from `packageManager` and Node.js 24 and runs
+      # `pnpm install --frozen-lockfile`. The release job skips the store cache.
+      - uses: pnpm/setup@v3
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - run: corepack enable
-
-      - run: corepack prepare pnpm@9.15.9 --activate
+          runtime: node@24
+          require-lockfile: true
 
       - name: Install MoonBit
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
           "$HOME/.moon/bin/moon" version --all
-
-      - run: pnpm install --frozen-lockfile
 
       - run: pnpm check:moonbit-version
 
@@ -68,14 +64,16 @@ jobs:
           # changelog-github reads PR titles and authors through the API
           GITHUB_TOKEN: ${{ github.token }}
 
+      # `changeset publish` runs `pnpm publish`, which sends each package to its
+      # publishConfig.registry with an npm trusted-publishing (OIDC) token from
+      # `id-token: write`, and attaches provenance itself because this
+      # repository and the packages are public. No .npmrc or token is needed.
       - name: Publish to npm
         id: npm-publish
         if: steps.changesets.outputs.has-changesets == 'false'
         run: |
           pnpm release
           echo "published=true" >> "$GITHUB_OUTPUT"
-        env:
-          NPM_CONFIG_PROVENANCE: 'true'
 
   publish-moonbit:
     needs: publish

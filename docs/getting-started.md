@@ -5,7 +5,7 @@ Agent Task Loop runs local coding agents through a task lifecycle: pick a task, 
 ## Prerequisites
 
 - Node.js 20 or newer
-- pnpm
+- pnpm 12, the version pinned in `packageManager` (Corepack or `pnpm self-update` installs it)
 - GitHub CLI authenticated with access to the target repository
 - `lark-cli` configured for Feishu Base access, when using a Feishu source
 - At least one local coding agent command, such as `codex` or `claude`

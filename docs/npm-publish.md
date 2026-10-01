@@ -88,7 +88,7 @@ gh pr close <n> && gh pr reopen <n>
 
 That is a normal `pull_request` event, so `CI` and `Review` run. `gh workflow run ci.yml` does not help: a dispatched run is not attached to the pull request and does not satisfy required checks.
 
-Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets, with `NPM_CONFIG_PROVENANCE=true` so npm attaches provenance. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
+Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
 
 Preview a release locally without committing the result:
 

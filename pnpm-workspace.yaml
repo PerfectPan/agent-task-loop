@@ -1,3 +1,15 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+
+# pnpm's default, stated so the policy stays deliberate: versions published less
+# than a day ago (1440 minutes) are not resolved. Resolve to an older version
+# instead of lowering it.
+minimumReleaseAge: 1440
+
+# pnpm runs no dependency build scripts unless listed here.
+allowBuilds:
+  # Its postinstall verifies the platform binary that tsx and Vite run.
+  esbuild: true
+  # Prebuilt @img/sharp-* binaries cover every CI and dev platform; the script only matters for a source build.
+  sharp: false

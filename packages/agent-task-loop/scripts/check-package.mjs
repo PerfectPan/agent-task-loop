@@ -15,7 +15,7 @@ try {
   mkdirSync(archiveDirectory);
   mkdirSync(cliConsumerDirectory);
   mkdirSync(pluginConsumerDirectory);
-  execFileSync('corepack', ['pnpm@9.15.9', 'pack', '--pack-destination', archiveDirectory], {
+  execFileSync('pnpm', ['pack', '--pack-destination', archiveDirectory], {
     cwd: packageRoot,
     stdio: 'ignore',
   });

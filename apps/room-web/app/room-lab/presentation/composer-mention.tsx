@@ -3,7 +3,7 @@ import { ReactRenderer } from '@tiptap/react';
 import type { SuggestionOptions } from '@tiptap/suggestion';
 import type { RoomLabAgentId } from '../read-model';
 import { mentionChip } from './mention-chip';
-import { MentionMenu, MENTION_LIST_ID, mentionOptionId, type MentionMenuHandle } from './MentionMenu';
+import { MentionMenu, MENTION_LIST_ID, mentionOptionId, type MentionMenuHandle } from './mention-menu';
 import { buildMentionOptions, mentionCompletion, type MentionAgent, type MentionOption } from './mention-completion';
 
 /** What the composer needs to know to wire aria state to the popup. */

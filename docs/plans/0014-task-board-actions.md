@@ -29,7 +29,7 @@
 - The shared draft (工作稿) that RFC 0013 wanted to promote into a Task was
   rejected by the collaboration design: rooms are the only shared context and
   there is no shared draft. What a Room promotes is therefore undecided.
-- `RoomLab.tsx` polls with `useRevalidator` while members run.
+- `room-lab.tsx` polls with `useRevalidator` while members run.
 - `StatefulTaskProvider` writes run-time state without a cross-process lock;
   the `task:<taskId>` lease serializes runs on one machine only.
 
@@ -103,7 +103,7 @@ PR, in this order (from RFC 0014's slice table):
 
 #### Task 5: SSE instead of loader revalidation
 
-- Files: new resource routes; `RoomLab.tsx`.
+- Files: new resource routes; `room-lab.tsx`.
 - Tests: S5.
 - Exit condition: no polling interval while a turn runs.
 

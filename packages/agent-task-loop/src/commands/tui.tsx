@@ -7,7 +7,7 @@ import { githubSource } from '../task-management/github-issues-task-provider';
 import type { TargetAgent } from '../types/task';
 import { TaskService } from '../services/task-service';
 import { refineDescription } from '../services/refine-description-service';
-import { App } from '../tui/components/App';
+import { App } from '../tui/components/app';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
 
 const ENTER_ALT_SCREEN = '[?1049h';

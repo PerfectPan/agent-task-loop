@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { defaultRegistry } from '@rivus/agent-sessions';
-import { SessionsBrowser } from '../tui/SessionsBrowser.js';
+import { SessionsBrowser } from '../tui/sessions-browser.js';
 
 const ENTER_ALT_SCREEN = '[?1049h';
 const LEAVE_ALT_SCREEN = '[?1049l';

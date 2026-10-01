@@ -6,7 +6,7 @@ import {
   type HeadersFunction,
   type LoaderFunctionArgs,
 } from 'react-router';
-import { RoomLab } from '../room-lab/presentation/RoomLab';
+import { RoomLab } from '../room-lab/presentation/room-lab';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { RoomInputError } from '../room-lab/application/room-service.server';
 import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
@@ -17,7 +17,7 @@ import { parseRoomAction } from '../room-lab/application/parse-room-action';
 import { RoomCatalogInvariantError } from '../room-lab/domain/room-catalog';
 import { isRoomIdentity } from '../room-lab/domain/room-identity';
 import { copy } from '../room-lab/copy';
-import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/RoomErrorPage';
+import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/room-error-page';
 import {
   LocalRequestError,
   assertLocalRuntime,

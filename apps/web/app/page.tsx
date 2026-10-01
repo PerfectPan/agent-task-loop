@@ -1,12 +1,12 @@
 import { getProjectStats } from '../lib/data';
-import { Nav } from '../components/Nav';
-import { Hero } from '../components/Hero';
-import { Stats } from '../components/Stats';
-import { LoopDiagram } from '../components/LoopDiagram';
-import { Features } from '../components/Features';
-import { TuiShowcase } from '../components/TuiShowcase';
-import { Commands } from '../components/Commands';
-import { Footer } from '../components/Footer';
+import { Nav } from '../components/nav';
+import { Hero } from '../components/hero';
+import { Stats } from '../components/stats';
+import { LoopDiagram } from '../components/loop-diagram';
+import { Features } from '../components/features';
+import { TuiShowcase } from '../components/tui-showcase';
+import { Commands } from '../components/commands';
+import { Footer } from '../components/footer';
 
 export default async function Home() {
   const stats = await getProjectStats();

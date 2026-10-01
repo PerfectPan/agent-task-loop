@@ -9,7 +9,7 @@ import {
 } from 'react-router';
 import { formText } from '../lib/form';
 import { getRoomLabHost } from '../room-lab/composition.server';
-import { AgentDesk } from '../room-lab/presentation/AgentDesk';
+import { AgentDesk } from '../room-lab/presentation/agent-desk';
 import { RoomInputError } from '../room-lab/application/room-service.server';
 import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import {
@@ -18,7 +18,7 @@ import {
   assertSameOriginForm,
   noStoreHeaders,
 } from '../room-lab/infrastructure/local-guard.server';
-import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/RoomErrorPage';
+import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/room-error-page';
 import type { AgentDeskView } from '../room-lab/read-model';
 import { copy } from '../room-lab/copy';
 

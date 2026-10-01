@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { DatabaseSync } from 'node:sqlite';
-import { seedAgents } from './0002_agents.seed';
-import { adoptSystemPrompts } from './0003_agent_system_prompt.seed';
+import { seedAgents } from './0002-agents.seed';
+import { adoptSystemPrompts } from './0003-agent-system-prompt.seed';
 
 /**
  * The schema as an ordered list of versions, each applied at most once and

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { RoomId } from '@rivus/agent-room';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 import { RoomLabHost } from '../application/room-lab-host.server';
-import { DEFAULT_AGENT_SYSTEM_PROMPT } from './migrations/0003_agent_system_prompt.seed';
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from './migrations/0003-agent-system-prompt.seed';
 
 const TENANT = 'local';
 

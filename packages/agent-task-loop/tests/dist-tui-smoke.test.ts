@@ -1,9 +1,10 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { stripVTControlCharacters } from 'node:util';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 // ink renders only to a TTY and switches stdin to raw mode; a test runner has
 // neither, so the child process reports both before the bundled CLI starts.
@@ -18,9 +19,12 @@ process.stdout.rows = 40;
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
-/** Runs the built CLI, presses `q` once `expected` is on screen, and resolves when it exits. */
+/** Runs the built CLI, presses `q` once `expected` is on screen, and resolves when it has exited. */
 function runTui(args: string[], expected: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
   const home = mkdtempSync(join(tmpdir(), 'agent-task-loop-smoke-'));
+  onTestFinished(() => rmSync(home, { recursive: true, force: true }));
+  const emptyBin = join(home, 'bin');
+  mkdirSync(emptyBin);
   const config = join(home, 'config.json');
   writeFileSync(
     config,
@@ -32,10 +36,11 @@ function runTui(args: string[], expected: string): Promise<{ code: number | null
     }),
   );
   return new Promise((resolve) => {
-    // PATH holds only node, so the Feishu fetch fails fast on the missing lark-cli
-    // instead of reaching the network; the dashboard shows that error and keeps running.
+    // PATH is an empty directory, so the Feishu fetch fails at once on the missing
+    // lark-cli instead of reaching the network; the dashboard shows that error and
+    // keeps running.
     const child = spawn(process.execPath, ['--import', FAKE_TTY, CLI, ...args, '--config', config], {
-      env: { HOME: home, PATH: dirname(process.execPath) },
+      env: { HOME: home, PATH: emptyBin },
       stdio: 'pipe',
     });
     let stdout = '';
@@ -55,7 +60,8 @@ function runTui(args: string[], expected: string): Promise<{ code: number | null
     child.stderr.on('data', (chunk: Buffer) => {
       stderr += chunk.toString();
     });
-    child.on('exit', (code) => {
+    // `close` fires after the output streams end, so stdout and stderr are complete.
+    child.on('close', (code) => {
       clearTimeout(timer);
       clearInterval(quitting);
       resolve({ code, stdout, stderr });
@@ -67,7 +73,8 @@ describe('built CLI', () => {
   it('renders the tui dashboard and quits on q', async () => {
     const result = await runTui(['tui'], 'Agent Task Loop');
 
-    expect(result.stderr).not.toContain('Error');
+    // ink restores the cursor with an escape sequence on stderr; anything else is a failure.
+    expect(stripVTControlCharacters(result.stderr).trim()).toBe('');
     expect(result.stdout).toContain('Agent Task Loop');
     expect(result.code).toBe(0);
   }, 15_000);

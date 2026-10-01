@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import type { PreviewMode, SessionPreview as SessionPreviewData } from '../types';
-import { PREVIEW_MODES } from '../types';
-import { heartbeatColor, runnerLabel } from '../logic/heartbeat';
-import { Spinner } from './spinner';
+import { runnerLabel } from '../logic/heartbeat';
+import { HeartbeatLine } from './heartbeat-line';
+import { MetaRow } from './meta-row';
+import { ModeTabs } from './mode-tabs';
+import { TranscriptEntry } from './transcript-entry';
 
 export interface SessionPreviewProps {
   preview: SessionPreviewData | null;
@@ -21,97 +23,6 @@ export interface SessionPreviewProps {
   transcriptLoading?: boolean;
   /** Session ids that have a transcript on disk (rounds are marked accordingly). */
   availableIds?: ReadonlySet<string>;
-}
-
-const MODE_LABELS: Record<PreviewMode, string> = {
-  output: 'output',
-  history: 'history',
-  logs: 'transcript',
-};
-
-function ModeTabs({ mode }: { mode: PreviewMode }): React.JSX.Element {
-  return (
-    <Box>
-      {PREVIEW_MODES.map((m, i) => (
-        <Text key={m}>
-          {i > 0 ? ' ' : ''}
-          <Text color={m === mode ? 'cyan' : undefined} dimColor={m !== mode} bold={m === mode}>
-            {m === mode ? '▸' : '·'}
-            {MODE_LABELS[m]}
-          </Text>
-        </Text>
-      ))}
-    </Box>
-  );
-}
-
-function HeartbeatLine({ preview }: { preview: SessionPreviewData }): React.JSX.Element {
-  const { state, ageMs } = preview.heartbeat;
-  const age = ageMs == null ? '' : ` ${Math.round(ageMs / 1000)}s ago`;
-  return (
-    <Box>
-      <Box width={10} flexShrink={0}>
-        <Text dimColor>heartbeat</Text>
-      </Box>
-      <Text color={heartbeatColor(state)}>
-        ●{age} ({state})
-      </Text>
-      {preview.live ? (
-        <Text>
-          {' '}
-          <Spinner color="green" /> live
-        </Text>
-      ) : null}
-    </Box>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }): React.JSX.Element {
-  return (
-    <Box>
-      <Box width={10} flexShrink={0}>
-        <Text dimColor>{label}</Text>
-      </Box>
-      <Text wrap="truncate-end">{value}</Text>
-    </Box>
-  );
-}
-
-const ROLE_STYLE: Record<string, { color: string; icon: string }> = {
-  user: { color: 'cyan', icon: '▌' },
-  assistant: { color: 'green', icon: '▌' },
-  reasoning: { color: 'magenta', icon: '·' },
-};
-
-/** Render one parsed transcript line as a chat-style block (role header + body). */
-function TranscriptEntry({ line }: { line: string }) {
-  if (line.startsWith('⚙')) {
-    return (
-      <Box marginBottom={1}>
-        <Text color="yellow" wrap="truncate-end">
-          {line}
-        </Text>
-      </Box>
-    );
-  }
-  const sep = line.indexOf(': ');
-  const role = sep > 0 ? line.slice(0, sep) : '';
-  const style = ROLE_STYLE[role];
-  if (!style) {
-    return (
-      <Box marginBottom={1}>
-        <Text wrap="wrap">{line}</Text>
-      </Box>
-    );
-  }
-  return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text color={style.color} bold>
-        {style.icon} {role}
-      </Text>
-      <Text wrap="wrap">{line.slice(sep + 2)}</Text>
-    </Box>
-  );
 }
 
 /** Right pane: a multi-mode view (output / history / logs) of the selected task's session. */

@@ -1,74 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { RoomCatalogItemView } from '../read-model';
-import { Wordmark } from './agent-mark';
-import { formatAgo } from './format-time';
+import { Wordmark } from './wordmark';
 import { sectionLabel } from './ui';
 import { copy } from '../copy';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
+import { RoomSidebarLink } from './room-sidebar-link';
+import { ThemeAction } from './theme-action';
 
 const navLink =
   'flex h-7 items-center justify-between gap-2 rounded-md px-2 text-sm text-sidebar-foreground/75 no-underline transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-foreground';
-
-type ThemeChoice = 'light' | 'dark' | undefined;
-const THEME_KEY = 'rivus-theme';
-const themeLabels = {
-  system: copy.label.themeSystem,
-  light: copy.label.themeLight,
-  dark: copy.label.themeDark,
-} as const;
-
-const SYSTEM_DARK = '(prefers-color-scheme: dark)';
-
-/** shadcn switches on a `dark` class, so 跟随系统 has to resolve the query itself. */
-function applyTheme(choice: ThemeChoice) {
-  const dark = choice === 'dark' || (choice === undefined && window.matchMedia(SYSTEM_DARK).matches);
-  document.documentElement.classList.toggle('dark', dark);
-}
-
-/**
- * Three states, one text action: follow the system, force light, force dark.
- * The choice is written to the same key the inline script in root.tsx reads
- * before first paint, so a reload does not flash the other theme.
- */
-function ThemeAction() {
-  const [choice, setChoice] = useState<ThemeChoice>(undefined);
-  // Read after mount: the server has no localStorage, and the button's first
-  // client render has to match the markup the server sent.
-  useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored === 'light' || stored === 'dark') {
-      setChoice(stored);
-    }
-  }, []);
-  // While following the system there is no media query doing the work for us:
-  // the class has to be restamped whenever the system flips.
-  useEffect(() => {
-    if (choice !== undefined) {
-      return;
-    }
-    const query = window.matchMedia(SYSTEM_DARK);
-    const sync = () => applyTheme(undefined);
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
-  }, [choice]);
-  const cycle = () => {
-    const next: ThemeChoice = choice === undefined ? 'light' : choice === 'light' ? 'dark' : undefined;
-    setChoice(next);
-    if (next) {
-      window.localStorage.setItem(THEME_KEY, next);
-    } else {
-      window.localStorage.removeItem(THEME_KEY);
-    }
-    applyTheme(next);
-  };
-  return (
-    <Button variant="ghost" size="xs" onClick={cycle}>
-      {copy.label.theme(themeLabels[choice ?? 'system'])}
-    </Button>
-  );
-}
 
 export function RoomSidebar({
   rooms,
@@ -207,41 +149,5 @@ export function RoomSidebar({
         <span className="px-1.5">{copy.say.savedLocally}</span>
       </footer>
     </nav>
-  );
-}
-
-/** One room row: its title, how many sit in it, and when it last moved. */
-function RoomSidebarLink({
-  room,
-  currentRoomId,
-  privateRoom,
-}: {
-  room: RoomCatalogItemView;
-  currentRoomId: string;
-  /** A room nested under its parent reads a touch quieter than the room itself. */
-  privateRoom?: boolean;
-}) {
-  return (
-    <Link
-      to={`/room/${room.id}`}
-      prefetch="intent"
-      preventScrollReset
-      aria-current={room.id === currentRoomId ? 'page' : undefined}
-      className="block rounded-md px-2 py-1.5 text-sidebar-foreground/75 no-underline transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:text-sidebar-foreground max-[640px]:whitespace-nowrap"
-    >
-      <span
-        className={`${privateRoom ? 'text-[13px]' : 'text-sm'} block leading-snug [overflow-wrap:anywhere] max-[640px]:inline`}
-      >
-        {room.title}
-      </span>
-      {/* Relative time is read off the clock at render; the server and the
-          browser render seconds apart, so the two strings may differ. */}
-      <span
-        className="mt-0.5 block text-xs leading-tight text-muted-foreground max-[640px]:hidden"
-        suppressHydrationWarning
-      >
-        {copy.label.memberCount(room.memberCount)} · {formatAgo(room.updatedAt)}
-      </span>
-    </Link>
   );
 }

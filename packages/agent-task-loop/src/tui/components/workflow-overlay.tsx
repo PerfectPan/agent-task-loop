@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { TASK_STATUSES, type TaskStatus } from '../../types/task';
-import { statusConfig } from '../logic/status';
+import type { TaskStatus } from '../../types/task';
 import { displayWidth } from '../logic/truncate';
+import { DiagramLine } from './diagram-line';
 
 export interface WorkflowOverlayProps {
   visible: boolean;
@@ -49,32 +49,6 @@ function buildDiagram(): string[] {
 }
 
 const DIAGRAM = buildDiagram();
-const STATUS_RE = new RegExp(`(${TASK_STATUSES.join('|')})`, 'g');
-
-/** Render one diagram line, colouring status tokens (inverse for the current one). */
-function DiagramLine({ line, current }: { line: string; current?: TaskStatus }) {
-  const parts = line.split(STATUS_RE);
-  return (
-    <Text wrap="truncate-end">
-      {parts.map((part, i) => {
-        if ((TASK_STATUSES as readonly string[]).includes(part)) {
-          const status = part as TaskStatus;
-          const active = status === current;
-          return (
-            <Text key={i} color={statusConfig(status).color} bold={active} inverse={active}>
-              {part}
-            </Text>
-          );
-        }
-        return (
-          <Text key={i} dimColor>
-            {part}
-          </Text>
-        );
-      })}
-    </Text>
-  );
-}
 
 /** Full-screen overlay drawing the task workflow as one connected diagram. */
 export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps): React.ReactElement | null {

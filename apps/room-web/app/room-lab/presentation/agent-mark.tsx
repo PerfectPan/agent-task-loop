@@ -1,7 +1,7 @@
 import type { RoomLabAgentId } from '../read-model';
 import { agentLetters } from './agent-letters';
-import { copy } from '../copy';
 import { agentTile } from './agent-color';
+import { markLetterSize } from './mark-letter-size';
 import { Avatar, AvatarFallback } from '~/components/ui/avatar';
 
 /**
@@ -13,9 +13,6 @@ import { Avatar, AvatarFallback } from '~/components/ui/avatar';
  * wherever it lands. Identity is never read as state; state lives in the dot
  * beside the name.
  */
-
-/** 11px letters at 30px and above, 10px on the 22px mark in the lists. */
-const letterSize = (size: number) => (size <= 22 ? 'text-[10px]' : 'text-[11px]');
 
 export function AgentMark({
   agentId,
@@ -32,55 +29,9 @@ export function AgentMark({
   const tile = agentTile(color);
   return (
     <Avatar aria-hidden="true" className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <AvatarFallback className={`${tile} ${letterSize(size)} font-semibold tracking-[0.02em]`}>
+      <AvatarFallback className={`${tile} ${markLetterSize(size)} font-semibold tracking-[0.02em]`}>
         {letters}
       </AvatarFallback>
     </Avatar>
-  );
-}
-
-/** The person in the room: solid ink, the sheet's own colour written on it. */
-export function HumanMark({ size = 30, className = '' }: { size?: number; className?: string }) {
-  return (
-    <Avatar aria-hidden="true" className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <AvatarFallback className={`bg-foreground text-background ${letterSize(size)} font-semibold`}>
-        {copy.label.humanMark}
-      </AvatarFallback>
-    </Avatar>
-  );
-}
-
-/**
- * The product mark: two offset sine strokes, a stream seen from above. Sits
- * before the wordmark on the rail, the create page and the agent desk.
- */
-export function RiverMark({ size = 22, className = '' }: { size?: number; className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={`shrink-0 text-primary ${className}`}
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 9c3-3 6-3 9 0s6 3 9 0" />
-      <path d="M3 15c3-3 6-3 9 0s6 3 9 0" />
-    </svg>
-  );
-}
-
-/** The mark plus the product's name, at the size every header uses. */
-export function Wordmark({ taglineClassName = '' }: { taglineClassName?: string }) {
-  return (
-    <>
-      <RiverMark size={18} />
-      <strong className="text-sm font-semibold tracking-[-0.01em] leading-none">{copy.label.product}</strong>
-      <span className={`text-xs leading-none text-muted-foreground ${taglineClassName}`}>{copy.label.tagline}</span>
-    </>
   );
 }

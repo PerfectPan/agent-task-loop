@@ -1,4 +1,5 @@
-import { GitHubIcon, NpmIcon } from './icons';
+import { GitHubIcon } from './github-icon';
+import { NpmIcon } from './npm-icon';
 
 export function Footer({ repoUrl, npmUrl }: { repoUrl: string; npmUrl: string }) {
   return (

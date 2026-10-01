@@ -1,4 +1,5 @@
-import { GitHubIcon, NpmIcon } from './icons';
+import { GitHubIcon } from './github-icon';
+import { NpmIcon } from './npm-icon';
 
 export function Nav({ version, repoUrl, npmUrl }: { version: string; repoUrl: string; npmUrl: string }) {
   return (

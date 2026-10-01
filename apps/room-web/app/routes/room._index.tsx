@@ -21,7 +21,7 @@ import {
 import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/room-error-page';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { Wordmark } from '../room-lab/presentation/agent-mark';
+import { Wordmark } from '../room-lab/presentation/wordmark';
 import { copy } from '../room-lab/copy';
 import { Button } from '../components/ui/button';
 

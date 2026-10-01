@@ -1,6 +1,7 @@
 import { ROOM_MENTION_SOURCE } from '../domain/room-message';
 import type { RoomLabEventView } from '../read-model';
-import { AgentMark, HumanMark } from './agent-mark';
+import { AgentMark } from './agent-mark';
+import { HumanMark } from './human-mark';
 import { agentInk } from './agent-color';
 import { formatClock } from './format-time';
 import { mentionChip } from './mention-chip';

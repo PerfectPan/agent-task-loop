@@ -1,3 +1,5 @@
+import { WindowDot } from './window-dot';
+
 const ROWS: { glyph: string; color: string; id: string; title: string; pri: string; sel?: boolean }[] = [
   { glyph: '●', color: 'text-emerald-400', id: 'TASK-101', title: 'Wire task provider boundary', pri: 'P3', sel: true },
   { glyph: '●', color: 'text-amber-400', id: 'TASK-102', title: '修复并发认领的竞态条件', pri: 'P2' },
@@ -6,10 +8,6 @@ const ROWS: { glyph: string; color: string; id: string; title: string; pri: stri
   { glyph: '◉', color: 'text-amber-400', id: 'TASK-103', title: 'Add session preview pane', pri: 'P1' },
   { glyph: '◌', color: 'text-gray-500', id: 'TASK-106', title: 'Set up E2E pipeline', pri: 'P3' },
 ];
-
-function Dot({ c }: { c: string }) {
-  return <span className={`inline-block h-3 w-3 rounded-full ${c}`} />;
-}
 
 export function TuiShowcase() {
   return (
@@ -24,9 +22,9 @@ export function TuiShowcase() {
 
       <div className="mt-10 overflow-hidden rounded-xl border border-border bg-[#07090d] shadow-2xl shadow-black/40">
         <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5">
-          <Dot c="bg-red-500/80" />
-          <Dot c="bg-amber-500/80" />
-          <Dot c="bg-emerald-500/80" />
+          <WindowDot c="bg-red-500/80" />
+          <WindowDot c="bg-amber-500/80" />
+          <WindowDot c="bg-emerald-500/80" />
           <span className="ml-2 font-mono text-xs text-muted">agent-task-loop tui</span>
         </div>
 

@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
@@ -25,6 +26,15 @@ describe('@rivus/agent-finder-cli', () => {
     expect(result.status).toBe(0);
     expect(output(result)).toContain('USAGE agent-finder provider list|inspect');
     expect(output(result)).toContain('Use agent-finder provider <command> --help');
+  });
+
+  test('prints the package version', () => {
+    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+
+    const result = runCli(['-v']);
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe(version);
+    expect(output(runCli(['provider', '-h']))).toContain(`(agent-finder provider v${version})`);
   });
 
   test('lists supported providers', () => {

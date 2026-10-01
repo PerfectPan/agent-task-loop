@@ -10,7 +10,7 @@ import {
   createVersionThreeLibrary,
   createVersionTwoLibrary,
 } from '../testing/old-libraries';
-import { DEFAULT_AGENT_SYSTEM_PROMPT } from './0003_agent_system_prompt.seed';
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from './0003-agent-system-prompt.seed';
 
 function root(): string {
   return mkdtempSync(join(tmpdir(), 'rivus-room-migrations-'));

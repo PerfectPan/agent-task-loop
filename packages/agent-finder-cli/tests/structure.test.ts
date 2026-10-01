@@ -30,7 +30,7 @@ describe('@rivus/agent-finder-cli structure', () => {
       'formatters/render.ts',
       'formatters/agent-table.ts',
       'sessions/view.ts',
-      'tui/SessionsBrowser.tsx',
+      'tui/sessions-browser.tsx',
       'summary/summarize-agents.ts',
     ]) {
       expect(existsSync(join(sourceRoot, path)), path).toBe(true);

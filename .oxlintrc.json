@@ -27,6 +27,18 @@
       // node:test registers tests through the returned promise; the runner awaits them.
       "files": ["tests/**/*.test.mjs"],
       "rules": { "typescript/no-floating-promises": "off" }
+    },
+    {
+      // React Router route modules export ErrorBoundary, Layout or meta helpers next to the
+      // route component, and shadcn/ui files export a family of components. oxlint ignores a
+      // react/* rule in an override that does not list the react plugin.
+      "files": [
+        "apps/room-web/app/routes/**/*.tsx",
+        "apps/room-web/app/root.tsx",
+        "apps/room-web/app/components/ui/**/*.tsx"
+      ],
+      "plugins": ["react"],
+      "rules": { "react/no-multi-comp": "off" }
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vitest';
 import type { Session } from '@rivus/agent-sessions';
-import { SessionsBrowser } from '../src/tui/SessionsBrowser.js';
+import { SessionsBrowser } from '../src/tui/sessions-browser.js';
 
 const NOW = Date.parse('2026-06-15T12:00:00Z');
 const SESSIONS: Session[] = [

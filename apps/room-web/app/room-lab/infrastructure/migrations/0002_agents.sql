@@ -1,6 +1,6 @@
 -- Members become rows. The id is also the word after `@`; the colour is drawn
 -- when the row is created and stays with it. Seeding this table is the second
--- half of this migration and lives in 0002_agents.seed.ts.
+-- half of this migration and lives in 0002-agents.seed.ts.
 
 CREATE TABLE agents (
   id TEXT PRIMARY KEY,

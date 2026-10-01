@@ -65,9 +65,9 @@ pnpm lint
 
 Shared rules come from [`@perfectpan/lint-config`](https://github.com/PerfectPan/lint-config), installed as a git dependency pinned to a tag. This repository keeps only its own settings:
 
-- `.oxlintrc.json` extends the shared oxlint config and adds ignore paths, `vitest/valid-expect` with a message argument, and test-only overrides. `vitest/require-mock-type-parameters` is off until the existing untyped mocks are migrated.
+- `.oxlintrc.json` extends the shared oxlint config and adds ignore paths, `vitest/valid-expect` with a message argument, and test-only overrides. `vitest/require-mock-type-parameters` is off until the existing untyped mocks are migrated. room-web's route modules, `app/root.tsx` and the shadcn/ui components in `app/components/ui` are exempt from `react/no-multi-comp`, because the framework and the generator put several components in those files.
 - `oxfmt.config.ts` spreads the shared oxfmt options and keeps single quotes and trailing commas, the style most existing code used.
-- `tsconfig.base.json` extends the shared `bundler` tsconfig; every package and `apps/room-web` extend it and add only their own `jsx`, `types`, `outDir`, and `include`. `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` stay off until the existing code is migrated. `apps/web` keeps the Next.js tsconfig.
+- `tsconfig.base.json` extends the shared `bundler` tsconfig; every package and `apps/room-web` extend it and add only their own `jsx`, `types`, `outDir`, and `include`. `noUncheckedIndexedAccess` stays off until the existing code is migrated. Neither the shared tsconfig nor this one sets `exactOptionalPropertyTypes`, so it stays at TypeScript's default, off. `apps/web` keeps the Next.js tsconfig.
 
 Upgrade the shared rules by bumping the tag in `package.json`, then fix or explicitly override what the new release reports.
 

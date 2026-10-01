@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "private": false,
   "description": "Read-only local code agent discovery core for JavaScript consumers.",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
@@ -34,6 +34,8 @@
     "src/moonbit/agent_discovery_core.d.ts",
     "src/moonbit/moonbit.d.ts",
     "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "moon.mod.json",
     "agent_discovery_core/"
   ],

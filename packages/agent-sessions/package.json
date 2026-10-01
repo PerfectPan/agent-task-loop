@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Tool-agnostic coding-agent session discovery and transcript parsing, shared by agent-finder-cli and agent-task-loop.",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -15,7 +15,8 @@
   "files": [
     "dist/",
     "src/**/*.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "rslib build",

@@ -12,3 +12,7 @@ agent-finder doctor
 ```
 
 The CLI uses `@rivus/agent-finder-core` for provider metadata and read-only host probing.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Other packages in this repository have their own licenses; see the [root README](../../README.md#license).

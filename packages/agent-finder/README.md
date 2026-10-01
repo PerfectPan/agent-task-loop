@@ -50,3 +50,7 @@ moon publish
 ```
 
 Published updates should use SemVer version bumps.
+
+## License
+
+MIT. See [LICENSE](LICENSE). The npm package also contains compiled MoonBit standard library code (`moonbitlang/core`, Apache-2.0); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Other packages in this repository have their own licenses; see the [root README](../../README.md#license).

@@ -46,3 +46,7 @@ Implemented:
 
 Not yet: OpenCode (SQLite store) and higher-fidelity traces, tracked in
 [`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../../docs/specs/0016-opencode-sessions-and-trace-fidelity.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE). Other packages in this repository have their own licenses; see the [root README](../../README.md#license).

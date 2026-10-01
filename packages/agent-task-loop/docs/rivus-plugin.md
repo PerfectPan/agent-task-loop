@@ -18,7 +18,7 @@ import plugin from '@rivus/agent-task-loop/rivus-plugin';
 ## Requirements
 
 - Node.js 24 or a later version supported by the installed Rivus Core
-- `@rivus/agent` in the supported peer range `>=0.1.1 <0.4.0`
+- `@rivus/agent` in the supported peer range `>=0.1.1 <0.17.0`
 - Agent Task Loop configured as described in the package README
 
 Install and lock both Core and Plugin in the Deployment project:

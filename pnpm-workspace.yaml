@@ -13,3 +13,7 @@ allowBuilds:
   esbuild: true
   # Prebuilt @img/sharp-* binaries cover every CI and dev platform; the script only matters for a source build.
   sharp: false
+  # @rivus/agent's dependencies. @google/genai's preinstall is an echo, and
+  # protobufjs's postinstall only warns about outdated dependents.
+  '@google/genai': false
+  protobufjs: false

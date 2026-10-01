@@ -64,8 +64,8 @@
   "dependencies": {
     "@rivus/agent-finder-core": "workspace:*",
     "citty": "^0.2.2",
-    "execa": "^9.6.1",
-    "ink": "^6.8.0",
+    "execa": "^10.0.1",
+    "ink": "^7.1.1",
     "react": "^19.3.0",
     "zod": "^4.6.5"
   },
@@ -93,6 +93,6 @@
     }
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

@@ -40,8 +40,7 @@ describe('SourceFilter', () => {
     const app = render(<SourceFilter options={options} selected={[]} onApply={onApply} onCancel={onCancel} />);
     await tick();
     app.stdin.write(''); // Esc
-    await tick();
-    expect(onCancel).toHaveBeenCalled();
+    await vi.waitFor(() => expect(onCancel).toHaveBeenCalled());
     expect(onApply).not.toHaveBeenCalled();
     app.unmount();
   });

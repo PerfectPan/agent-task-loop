@@ -28,7 +28,7 @@ npm install @rivus/agent@0.1.1 @rivus/agent-task-loop
 ```
 
 `@rivus/agent` is an optional package peer so a CLI-only installation keeps the
-CLI's Node.js 20 compatibility and does not install Rivus Core. A project that
+CLI's Node.js 22 compatibility and does not install Rivus Core. A project that
 imports the Plugin entrypoint must install a supported Core version explicitly.
 
 ## Deployment configuration

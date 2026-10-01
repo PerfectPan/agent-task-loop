@@ -106,8 +106,7 @@ describe('TaskForm', () => {
     const app = render(<TaskForm onSubmit={vi.fn()} onCancel={onCancel} />);
     await tick();
     app.stdin.write(''); // Esc
-    await tick();
-    expect(onCancel).toHaveBeenCalled();
+    await vi.waitFor(() => expect(onCancel).toHaveBeenCalled());
     app.unmount();
   });
 });

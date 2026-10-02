@@ -1,9 +1,11 @@
+import { getPackageVersion } from './package-info.js';
+
 export function printProviderHelpAndExitIfRequested(argv: string[]): void {
   if (argv[2] !== 'provider' || (argv[3] !== '-h' && argv[3] !== '--help')) {
     return;
   }
 
-  console.log(`Inspect supported providers (agent-finder provider v0.1.0)
+  console.log(`Inspect supported providers (agent-finder provider v${getPackageVersion()})
 
 USAGE agent-finder provider list|inspect
 

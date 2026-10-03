@@ -1,9 +1,13 @@
 {
   "name": "PerfectPan/agent-finder",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "readme": "README.md",
   "repository": "https://github.com/PerfectPan/agent-task-loop",
   "license": "MIT",
-  "keywords": ["code-agent", "discovery", "inventory"],
+  "keywords": [
+    "code-agent",
+    "discovery",
+    "inventory"
+  ],
   "description": "Read-only local code agent discovery for agent-task-loop."
 }

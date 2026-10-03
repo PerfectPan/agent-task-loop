@@ -2,10 +2,11 @@ packages:
   - 'packages/*'
   - 'apps/*'
 
-# pnpm's default, stated so the policy stays deliberate: versions published less
-# than a day ago (1440 minutes) are not resolved. Resolve to an older version
-# instead of lowering it.
+# Keep pnpm's one-day delay for third-party dependencies. Owned Rivus packages
+# need immediate validation across repositories after publication.
 minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - '@rivus/*'
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:

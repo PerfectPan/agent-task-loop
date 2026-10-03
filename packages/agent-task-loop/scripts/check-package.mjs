@@ -3,9 +3,26 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertSupportedRivusCoreVersion,
+  readRivusCoreArchives,
+  verifyRivusCoreArchives,
+} from './rivus-core-archives.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const rivusCoreSource = process.env.RIVUS_CORE_PACKAGE?.trim() || '@rivus/agent@0.1.1';
+const registry = 'https://registry.npmjs.org/';
+const archiveInput = process.env.RIVUS_CORE_ARCHIVES_JSON;
+if (archiveInput !== undefined && process.env.RIVUS_CORE_PACKAGE?.trim()) {
+  throw new Error('Use either RIVUS_CORE_ARCHIVES_JSON or RIVUS_CORE_PACKAGE, not both');
+}
+const rivusCoreArchives = archiveInput !== undefined ? readRivusCoreArchives(archiveInput) : undefined;
+const rivusCoreSource = process.env.RIVUS_CORE_PACKAGE?.trim() || '@rivus/agent@0.17.0';
+if (!rivusCoreArchives) {
+  if (!rivusCoreSource.startsWith('@rivus/agent@')) {
+    throw new Error('RIVUS_CORE_PACKAGE must name an exact supported @rivus/agent version');
+  }
+  assertSupportedRivusCoreVersion(rivusCoreSource.slice('@rivus/agent@'.length));
+}
 const temporaryRoot = mkdtempSync(path.join(tmpdir(), 'agent-task-loop-package-check-'));
 const archiveDirectory = path.join(temporaryRoot, 'archive');
 const cliConsumerDirectory = path.join(temporaryRoot, 'cli-consumer');
@@ -15,7 +32,7 @@ try {
   mkdirSync(archiveDirectory);
   mkdirSync(cliConsumerDirectory);
   mkdirSync(pluginConsumerDirectory);
-  execFileSync('pnpm', ['pack', '--pack-destination', archiveDirectory], {
+  execFileSync('pnpm', ['--registry', registry, 'pack', '--pack-destination', archiveDirectory], {
     cwd: packageRoot,
     stdio: 'ignore',
   });
@@ -29,10 +46,20 @@ try {
     path.join(cliConsumerDirectory, 'package.json'),
     JSON.stringify({ name: 'agent-task-loop-cli-smoke', private: true, type: 'module' }),
   );
-  execFileSync('npm', ['install', archivePath, '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], {
-    cwd: cliConsumerDirectory,
-    stdio: 'inherit',
-  });
+  execFileSync(
+    'npm',
+    [
+      'install',
+      archivePath,
+      '--registry',
+      registry,
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      '--package-lock=false',
+    ],
+    { cwd: cliConsumerDirectory, stdio: 'inherit' },
+  );
   if (existsSync(path.join(cliConsumerDirectory, 'node_modules', '@rivus', 'agent'))) {
     throw new Error('CLI-only install unexpectedly installed the optional @rivus/agent peer');
   }
@@ -53,15 +80,33 @@ try {
     [
       'install',
       archivePath,
-      rivusCoreSource,
+      ...(rivusCoreArchives ? rivusCoreArchives.map((archive) => archive.path) : [rivusCoreSource]),
       'typescript@5.8.3',
+      '--registry',
+      registry,
       '--ignore-scripts',
       '--no-audit',
       '--no-fund',
-      '--package-lock=false',
+      '--package-lock=true',
+      '--save-exact',
+      '--install-strategy=hoisted',
     ],
     { cwd: pluginConsumerDirectory, stdio: 'inherit' },
   );
+  if (rivusCoreArchives) {
+    const receipt = verifyRivusCoreArchives(pluginConsumerDirectory, rivusCoreArchives);
+    console.log('Verified Rivus Core archives:', JSON.stringify(receipt, null, 2));
+  } else {
+    const coreManifest = JSON.parse(
+      readFileSync(path.join(pluginConsumerDirectory, 'node_modules', '@rivus', 'agent', 'package.json'), 'utf8'),
+    );
+    if (
+      coreManifest.name !== '@rivus/agent' ||
+      coreManifest.version !== rivusCoreSource.slice('@rivus/agent@'.length)
+    ) {
+      throw new Error('Installed Rivus Core does not match the requested version');
+    }
+  }
   const installedPackageDirectory = path.join(pluginConsumerDirectory, 'node_modules', '@rivus', 'agent-task-loop');
   for (const requiredPath of [
     'dist/cli.js',
@@ -139,7 +184,7 @@ void [defaultPlugin, configuredPlugin];
   );
 
   const installedPackageJson = JSON.parse(readFileSync(path.join(installedPackageDirectory, 'package.json'), 'utf8'));
-  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.1.1 <0.17.0') {
+  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.17.0 <0.18.0') {
     throw new Error('Unexpected @rivus/agent peer range');
   }
   if (!installedPackageJson.peerDependenciesMeta?.['@rivus/agent']?.optional) {

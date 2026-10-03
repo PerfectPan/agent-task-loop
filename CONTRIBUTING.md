@@ -12,7 +12,7 @@ pnpm test
 pnpm build
 ```
 
-Use the pnpm version pinned in `packageManager` (pnpm 12). pnpm runs dependency build scripts only for packages listed in `allowBuilds` in `pnpm-workspace.yaml`; when an install fails with `ERR_PNPM_IGNORED_BUILDS`, add the package there with `true` or `false` and a comment saying why. pnpm also keeps its default `minimumReleaseAge` of one day, stated in the same file: an install that needs a version published in the last 24 hours fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, so pick an older version instead of lowering the setting.
+Use the pnpm version pinned in `packageManager` (pnpm 12). pnpm runs dependency build scripts only for packages listed in `allowBuilds` in `pnpm-workspace.yaml`; when an install fails with `ERR_PNPM_IGNORED_BUILDS`, add the package there with `true` or `false` and a comment saying why. The same file keeps `minimumReleaseAge: 1440` and exempts only `@rivus/*` through `minimumReleaseAgeExclude`, so owned packages can be validated immediately after publication. Other dependencies, including transitive packages outside that scope, retain the one-day delay; if an install fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, pick an older version instead of lowering the setting.
 
 `pnpm test` also runs `moon -C packages/agent-finder test`, so the MoonBit toolchain must be on `PATH`; CI installs it with the official `cli.moonbitlang.com` installer.
 

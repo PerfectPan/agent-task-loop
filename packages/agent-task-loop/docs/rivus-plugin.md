@@ -18,13 +18,13 @@ import plugin from '@rivus/agent-task-loop/rivus-plugin';
 ## Requirements
 
 - Node.js 24 or a later version supported by the installed Rivus Core
-- `@rivus/agent` in the supported peer range `>=0.1.1 <0.17.0`
+- `@rivus/agent` in the supported peer range `>=0.17.0 <0.18.0`
 - Agent Task Loop configured as described in the package README
 
 Install and lock both Core and Plugin in the Deployment project:
 
 ```bash
-npm install @rivus/agent@0.1.1 @rivus/agent-task-loop
+npm install @rivus/agent@0.17.0 @rivus/agent-task-loop --registry=https://registry.npmjs.org
 ```
 
 `@rivus/agent` is an optional package peer so a CLI-only installation keeps the
@@ -168,11 +168,36 @@ errors are not passed to the Agent.
 From the monorepo root, build and run the clean-consumer check:
 
 ```bash
-pnpm --filter @rivus/agent-task-loop build
-pnpm --filter @rivus/agent-task-loop package:check
+pnpm --registry https://registry.npmjs.org/ --filter @rivus/agent-task-loop build
+pnpm --registry https://registry.npmjs.org/ --filter @rivus/agent-task-loop package:check
 ```
 
 The check packs the package into temporary clean consumers. It first installs
-and runs the CLI without Rivus Core, then installs the supported Rivus peer,
+and runs the CLI without Rivus Core, then installs Core 0.17.0 by default,
 imports and validates the Plugin, and compiles a downstream TypeScript
 consumer.
+
+To test another supported Core patch, set `RIVUS_CORE_PACKAGE` to its exact
+`@rivus/agent` package version. Versions outside the supported minor fail the
+check.
+
+Before a Core release is available, pass all four actual package archives from
+the versioned release tree:
+
+```bash
+RIVUS_CORE_ARCHIVES_JSON='["<platform-archive>","<runtime-archive>","<gateway-archive>","<agent-archive>"]' pnpm --registry https://registry.npmjs.org/ --filter @rivus/agent-task-loop package:check
+```
+
+The archive paths are local inputs and must not enter committed manifests or
+lockfiles. Do not combine `RIVUS_CORE_ARCHIVES_JSON` with `RIVUS_CORE_PACKAGE`.
+The check requires one archive per Core package at the same supported version,
+installs all four together, and verifies manifests, lockfile sources and
+integrity, module resolution, and tarball SHA-256. Its receipt reports the
+package names, versions, and hashes.
+
+Archive verification is evidence for those exact artifacts. Normal repository
+validation and registry smoke still require published Core 0.17.0 packages.
+The repository exempts `@rivus/*` from pnpm's one-day release delay so owned
+packages can be validated immediately; other dependencies retain the delay
+described in the contribution guide. Keep the consumer change pending until
+its dev dependency and registry lockfile are updated and those gates pass.

@@ -1,5 +1,13 @@
 # @rivus/agent-finder-core
 
+## 0.1.3
+
+### Patch Changes
+
+- [#125](https://github.com/PerfectPan/agent-task-loop/pull/125) [`c006fce`](https://github.com/PerfectPan/agent-task-loop/commit/c006fce5411fab9ed5e4d57bff87eacede40195d) Thanks [@PerfectPan](https://github.com/PerfectPan)! - License `@rivus/agent-finder-core` and the MoonBit module `PerfectPan/agent-finder` under MIT instead of GPL-3.0-only. The package now ships its own `LICENSE` file with the MIT text, and `THIRD_PARTY_NOTICES.md` with the Apache-2.0 license and NOTICE of the MoonBit standard library (`moonbitlang/core`) that its compiled JavaScript includes.
+
+- [#130](https://github.com/PerfectPan/agent-task-loop/pull/130) [`68a1d1c`](https://github.com/PerfectPan/agent-task-loop/commit/68a1d1ce35b688a6b9a16fb16a77d2399925b69a) Thanks [@PerfectPan](https://github.com/PerfectPan)! - Build the published JavaScript with Rslib 1.0. The bundle changes form, not behavior.
+
 ## 0.1.2
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # @rivus/agent-task-loop
 
+## 0.12.0
+
+### Minor Changes
+
+- [#130](https://github.com/PerfectPan/agent-task-loop/pull/130) [`68a1d1c`](https://github.com/PerfectPan/agent-task-loop/commit/68a1d1ce35b688a6b9a16fb16a77d2399925b69a) Thanks [@PerfectPan](https://github.com/PerfectPan)! - Upgrade the runtime dependencies to Zod 4, Ink 6 with React 19, and citty 0.2. User-visible changes:
+
+  - A value after a boolean flag is rejected: `cleanup --force false` used to turn `--force` off, but citty 0.2 never reads a value for a boolean flag and would turn it on. Turn a flag off with `--no-force` or `--force=false`. Every command also rejects other positional arguments it does not take.
+  - `--max-rounds` on `start` and `reject` now takes effect; it used to be ignored in favour of the default of 5 unless written `--maxRounds`.
+  - `-v` prints the version, and `--help` output uses citty 0.2's layout.
+  - A failing command prints only its error message instead of the whole error object.
+  - Validation errors from `create`, `source add` and config loading use Zod 4's wording, for example `Invalid --priority: Too big: expected number to be <=9`.
+
+- [#134](https://github.com/PerfectPan/agent-task-loop/pull/134) [`778fe6f`](https://github.com/PerfectPan/agent-task-loop/commit/778fe6facbf4d7ddee26536c6f846f99d7b5b10c) Thanks [@PerfectPan](https://github.com/PerfectPan)! - Require Node.js 22 or newer; Node.js 20 is no longer supported. The CLIs move to Ink 7, and `@rivus/agent-task-loop` also to execa 10; both need Node.js 22.
+
+- [#142](https://github.com/PerfectPan/agent-task-loop/pull/142) [`f5a6a3e`](https://github.com/PerfectPan/agent-task-loop/commit/f5a6a3e861568a4bdf4a72688f59d65e846a2bef) Thanks [@PerfectPan](https://github.com/PerfectPan)! - Support the Rivus 0.17 plugin SDK with the optional `@rivus/agent` peer range `>=0.17.0 <0.18.0`. Plugin projects must upgrade Core to the supported minor; CLI-only installations still do not require Rivus Core.
+
+### Patch Changes
+
+- [#134](https://github.com/PerfectPan/agent-task-loop/pull/134) [`778fe6f`](https://github.com/PerfectPan/agent-task-loop/commit/778fe6facbf4d7ddee26536c6f846f99d7b5b10c) Thanks [@PerfectPan](https://github.com/PerfectPan)! - A failing command also prints the message of each error that caused it, the unexpected-argument error mentions boolean flags only when the stray value is `true` or `false`, and the `./rivus-plugin` tools report a field missing from their input as `is required`, for example `Invalid task-create title: is required`, instead of `has an invalid type`.
+
+- [#138](https://github.com/PerfectPan/agent-task-loop/pull/138) [`f34f632`](https://github.com/PerfectPan/agent-task-loop/commit/f34f63230f8dacad29d6b18365137c9eddea26c0) Thanks [@PerfectPan](https://github.com/PerfectPan)! - Fix the published TUIs (`agent-task-loop tui` and `agent-finder sessions browse`) crashing on start with `ReferenceError: React is not defined`: the build now compiles JSX with the automatic runtime.
+- Updated dependencies [[`c006fce`](https://github.com/PerfectPan/agent-task-loop/commit/c006fce5411fab9ed5e4d57bff87eacede40195d), [`68a1d1c`](https://github.com/PerfectPan/agent-task-loop/commit/68a1d1ce35b688a6b9a16fb16a77d2399925b69a)]:
+  - @rivus/agent-finder-core@0.1.3
+
 ## 0.11.1
 
 ### Patch Changes

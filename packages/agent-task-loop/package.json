@@ -70,7 +70,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@rivus/agent": "0.16.6",
+    "@rivus/agent": "0.17.0",
     "@rivus/agent-orchestration": "workspace:*",
     "@rivus/agent-sessions": "workspace:*",
     "@rivus/rslib-config": "workspace:*",
@@ -85,7 +85,7 @@
     "vitest": "^5.0.3"
   },
   "peerDependencies": {
-    "@rivus/agent": ">=0.1.1 <0.17.0"
+    "@rivus/agent": ">=0.17.0 <0.18.0"
   },
   "peerDependenciesMeta": {
     "@rivus/agent": {

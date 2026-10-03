@@ -1,21 +1,16 @@
-import {
-  createAgentLoopToolExecutionEnd,
-  createAgentLoopToolExecutionStart,
-  createDefaultAgentRuntimeFromCallback,
-  type RivusPluginRegistry,
-  type RivusToolDescriptor,
-} from '@rivus/agent';
+import type { RivusPluginRegistry, RivusToolDescriptor, RivusToolExecutionContext } from '@rivus/agent';
+import { assertRivusPluginConforms } from '@rivus/agent/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { createRivusTaskManagerPlugin, TASK_GET_TOOL_ID } from '../src/rivus-plugin';
+import { createRivusTaskManagerPlugin, TASK_GET_TOOL_ID, TASK_MANAGER_PROFILE_ID } from '../src/rivus-plugin';
 import { createTaskManagerApplication } from '../src/task-manager/task-manager-application';
 import type { TaskProvider } from '../src/task-management/task-provider';
 import type { TaskRecord } from '../src/types/task';
 
-describe('local Rivus terminal Task Manager Agent', () => {
+describe('Rivus Task Manager tool execution', () => {
   it('queries a fake task through the Tool and returns only the redacted DTO', async () => {
     const provider = fakeTaskProvider({
-      taskId: 'TASK-TERMINAL-1',
-      title: 'Terminal smoke task',
+      taskId: 'TASK-TOOL-1',
+      title: 'Tool smoke task',
       description: 'Verify the external Plugin boundary.',
       project: 'agent-task-loop',
       repository: 'example/project',
@@ -23,9 +18,9 @@ describe('local Rivus terminal Task Manager Agent', () => {
       targetAgent: 'codex',
       priority: 1,
       status: '执行中',
-      progressSummary: 'Running the terminal scenario.',
-      workspacePath: '/machine/workspace/task',
-      logPath: '/machine/log/task.log',
+      progressSummary: 'Running the tool scenario.',
+      workspacePath: '/work/task',
+      logPath: '/work/task.log',
       runId: 'private-run-id',
       sessionId: 'private-session-id',
       runnerPid: 44001,
@@ -37,55 +32,44 @@ describe('local Rivus terminal Task Manager Agent', () => {
       taskProvider: provider,
       startTask: vi.fn(),
     });
-    const tool = getTool(
-      createRivusTaskManagerPlugin({ createTaskManager: async () => application }),
-      TASK_GET_TOOL_ID,
-    );
+    const plugin = createRivusTaskManagerPlugin({ createTaskManager: async () => application });
+    const deployment = {
+      agentId: 'task-reader',
+      endpointIds: [],
+      pluginId: 'agent-task-loop',
+      profileId: TASK_MANAGER_PROFILE_ID,
+      skills: { allow: [] },
+      tools: { allow: [TASK_GET_TOOL_ID] },
+    };
+    await expect(assertRivusPluginConforms({ deployment, plugin })).resolves.toMatchObject({
+      toolIds: [TASK_GET_TOOL_ID],
+    });
+    expect(provider.getTaskById).not.toHaveBeenCalled();
+
+    const tool = getTool(plugin, TASK_GET_TOOL_ID);
     const executor = tool.createExecutor({
       toolId: TASK_GET_TOOL_ID,
       toolVersion: tool.version,
     });
-    const toolInput = { taskId: 'TASK-TERMINAL-1' };
-    const runtime = createDefaultAgentRuntimeFromCallback(
-      async (input) => {
-        expect(input.text).toBe('Query task TASK-TERMINAL-1 and return its public task data.');
-        const result = await executor.execute(toolInput, {
-          agentId: 'task-manager',
-          callId: 'terminal-call-1',
-          instanceId: 'task-manager:terminal',
-          policyEpoch: 1,
-          runId: input.runId,
-          sessionKey: input.sessionKey,
-          toolId: TASK_GET_TOOL_ID,
-          toolVersion: tool.version,
-        });
-        return [
-          createAgentLoopToolExecutionStart({
-            input: toolInput,
-            toolCallId: 'terminal-call-1',
-            toolName: TASK_GET_TOOL_ID,
-          }),
-          createAgentLoopToolExecutionEnd({
-            isError: false,
-            result,
-            toolCallId: 'terminal-call-1',
-            toolName: TASK_GET_TOOL_ID,
-          }),
-          JSON.stringify(result),
-        ];
-      },
-      {},
-      { mainSessionKey: 'local:task-manager:terminal-smoke' },
-    );
+    const toolInput = { taskId: 'TASK-TOOL-1' };
+    const context: RivusToolExecutionContext = {
+      agentId: deployment.agentId,
+      callId: 'tool-call-1',
+      instanceId: 'task-reader:tool-smoke',
+      policyEpoch: 1,
+      runId: 'tool-run-1',
+      sessionKey: 'local:task-reader:tool-smoke',
+      toolId: TASK_GET_TOOL_ID,
+      toolVersion: tool.version,
+    };
+    const result = await executor.execute(toolInput, context);
 
-    const finalText = await runtime.promptText('Query task TASK-TERMINAL-1 and return its public task data.');
-    const result = JSON.parse(finalText) as { task: Record<string, unknown> };
-
-    expect(provider.getTaskById).toHaveBeenCalledWith('TASK-TERMINAL-1');
+    expect(provider.getTaskById).toHaveBeenCalledTimes(1);
+    expect(provider.getTaskById).toHaveBeenCalledWith('TASK-TOOL-1');
     expect(result).toEqual({
       task: {
-        taskId: 'TASK-TERMINAL-1',
-        title: 'Terminal smoke task',
+        taskId: 'TASK-TOOL-1',
+        title: 'Tool smoke task',
         description: 'Verify the external Plugin boundary.',
         project: 'agent-task-loop',
         repository: 'example/project',
@@ -93,12 +77,32 @@ describe('local Rivus terminal Task Manager Agent', () => {
         targetAgent: 'codex',
         priority: 1,
         status: '执行中',
-        progressSummary: 'Running the terminal scenario.',
+        progressSummary: 'Running the tool scenario.',
       },
     });
     expect(JSON.stringify(result)).not.toMatch(
       /workspacePath|logPath|runId|sessionId|runnerPid|lastError|publishBranch|publishCommit/,
     );
+  });
+
+  it('rejects an undeclared deployment tool grant before activating the application', async () => {
+    const createTaskManager = vi.fn();
+    const plugin = createRivusTaskManagerPlugin({ createTaskManager });
+
+    await expect(
+      assertRivusPluginConforms({
+        deployment: {
+          agentId: 'task-reader',
+          endpointIds: [],
+          pluginId: 'agent-task-loop',
+          profileId: TASK_MANAGER_PROFILE_ID,
+          skills: { allow: [] },
+          tools: { allow: ['agent-task-loop/task-delete'] },
+        },
+        plugin,
+      }),
+    ).rejects.toThrow(/unknown deployment tool: agent-task-loop\/task-delete/);
+    expect(createTaskManager).not.toHaveBeenCalled();
   });
 });
 

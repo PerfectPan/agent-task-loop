@@ -149,13 +149,22 @@ directory), with a forward-only migration chain in
   held, before and after a tool call update), then the last outcome. HELD is
   not shown to the person.
 - Room mutations (`routes/room.$roomId.tsx`) require `Content-Type:
-application/json` and an `Origin` of `http://127.0.0.1` or
-  `http://localhost` (`assertSameOriginJson`). The form actions for creating a
+application/json` and an HTTP loopback `Origin` (`127.0.0.1` or `localhost`,
+  with any port) by default (`assertSameOriginJson`). An optional
+  `ROOM_PUBLIC_ORIGIN` also admits exactly one canonical HTTPS origin: scheme,
+  host, and port must match, with no credentials, path, query, or fragment.
+  Invalid configuration admits no remote origin. The form actions for creating a
   room (`routes/room._index.tsx`) and managing agents (`routes/room.agents.tsx`)
   use `assertSameOriginForm`: no content-type check, and a request without an
-  `Origin` header is allowed because browsers omit it on some same-origin form
-  posts; a present `Origin` must be local. Every route also refuses to run
-  outside a local runtime (`assertLocalRuntime`).
+  `Origin` header is allowed only when remote mode is unset. With remote mode
+  configured, both JSON and form mutations require an allowed Origin. Every
+  Room route also refuses to run outside a local runtime (`assertLocalRuntime`).
+- Remote access keeps the loopback listener and requires authentication at the
+  reverse proxy for the whole application. Origin checks prevent cross-site
+  mutations; they do not establish a visitor's identity. Supply the same
+  `ROOM_PUBLIC_ORIGIN` at build time and runtime: React Router compiles its host
+  into `allowedActionOrigins`, while the route guard checks the complete origin.
+  Malformed URLs can fail the build. See the [Room setup instructions](../../apps/room-web/README.md#authenticated-remote-access).
 - Every person-facing string goes through `app/room-lab/copy.ts` and its
   grammar test.
 - `passed`, `timeout`, and `failed` must stay distinct in the UI: silence and

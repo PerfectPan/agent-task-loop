@@ -1,6 +1,6 @@
 # @rivus/room-web — composable local agent workspace
 
-A local-only React Router 8 (framework mode) application for composing authenticated coding agents into
+A local React Router 8 (framework mode) application for composing authenticated coding agents into
 one shared Room. A Room may use any non-empty subset of the registered agents,
 in any order.
 
@@ -60,11 +60,30 @@ Open <http://127.0.0.1:3210/room>.
 
 Both development and production scripts bind to `127.0.0.1`; the production
 route is disabled unless it was started by the package's local-only script.
-Room mutations also require a JSON request from a local origin; the room
-creation and agent forms check only a present `Origin` (see
-[agent collaboration](../../docs/architecture/agent-collaboration.md)). This process starts locally
-authenticated CLI tools and must not be exposed through a proxy or public
-deployment.
+Local access is the default. See [agent collaboration](../../docs/architecture/agent-collaboration.md)
+for runtime and request-origin checks.
+
+### Authenticated remote access
+
+To use the Room through an authenticated reverse proxy, set `ROOM_PUBLIC_ORIGIN`
+to its exact HTTPS origin, with no path or trailing slash, during both build and
+startup:
+
+```bash
+ROOM_PUBLIC_ORIGIN=https://room.example.com pnpm --filter @rivus/room-web build
+ROOM_PUBLIC_ORIGIN=https://room.example.com pnpm --filter @rivus/room-web start
+```
+
+Forward the proxy to `http://127.0.0.1:3210`. Changing the public origin requires
+rebuilding and restarting. To return to local-only access, stop the proxy and
+rebuild/restart without `ROOM_PUBLIC_ORIGIN`.
+
+The setting allows that origin alongside local access; it does not authenticate
+visitors. This process can run locally authenticated agent tools. Protect the
+entire hostname, including pages, assets, loaders, and actions, before routing
+public traffic to it. For Cloudflare Tunnel, create the Access application and
+enable the connector's Access JWT validation. Keep Tunnel credentials outside
+the repository. Use a production build; the server stays bound to loopback.
 
 ## Interface
 

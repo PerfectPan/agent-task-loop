@@ -27,19 +27,33 @@ export function assertSameOriginJson(request: Request): void {
 /**
  * A form post carries no `Content-Type` this app chose, so only the origin can
  * be checked. Browsers omit `Origin` on some same-origin form posts, which is
- * why a missing header is allowed here and refused for JSON.
+ * why a missing header is allowed for local-only forms. An authenticated
+ * remote entry still needs Origin validation to prevent cross-site mutations.
  */
 export function assertSameOriginForm(request: Request): void {
   const origin = request.headers.get('Origin');
-  if (origin) {
+  if (origin || process.env.ROOM_PUBLIC_ORIGIN) {
     assertSameOrigin(request);
   }
 }
 
 function assertSameOrigin(request: Request): void {
   const origin = request.headers.get('Origin');
-  if (!origin || !isLocalOrigin(origin)) {
+  if (!origin || (!isLocalOrigin(origin) && !isConfiguredPublicOrigin(origin))) {
     throw new LocalRequestError(403, 'Room actions require a same-origin browser request');
+  }
+}
+
+function isConfiguredPublicOrigin(origin: string): boolean {
+  const configured = process.env.ROOM_PUBLIC_ORIGIN;
+  if (!configured || origin !== configured) {
+    return false;
+  }
+  try {
+    const url = new URL(configured);
+    return url.protocol === 'https:' && url.origin === configured;
+  } catch {
+    return false;
   }
 }
 

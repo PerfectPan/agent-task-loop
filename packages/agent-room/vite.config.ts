@@ -12,4 +12,7 @@ export default defineConfig({
     platform: 'node',
     fixedExtension: false,
   },
+  test: {
+    include: ['tests/**/*.test.ts'],
+  },
 });

@@ -20,4 +20,12 @@ export default defineConfig({
       neverBundle: ['react-devtools-core'],
     },
   },
+  oxc: {
+    jsx: { runtime: 'automatic', importSource: 'react' },
+  },
+  test: {
+    include: ['tests/**/*.test.{ts,tsx}'],
+    setupFiles: ['tests/setup.ts'],
+    testTimeout: 10000,
+  },
 });

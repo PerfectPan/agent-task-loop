@@ -35,9 +35,16 @@ function serverMigrations(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [reactRouter(), tailwindcss(), serverMigrations()],
+  // Component tests need JSX, not React Router's browser-only Fast Refresh
+  // preamble, so the plugin stays out of the jsdom test pipeline.
+  plugins: [!process.env.VITEST && reactRouter(), tailwindcss(), serverMigrations()],
   resolve: {
     alias: { '~': path.resolve(import.meta.dirname, 'app') },
+  },
+  test: {
+    environment: 'node',
+    // Only the jsdom files need it; in a node environment the shims no-op.
+    setupFiles: [path.resolve(import.meta.dirname, 'vitest.setup.ts')],
   },
   server: {
     host: '127.0.0.1',

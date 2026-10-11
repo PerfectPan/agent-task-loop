@@ -1,6 +1,6 @@
-import type { AgentRecord } from '@rivus/agent-finder-core';
+import type { Installation } from '@rivus/agent-kit/discovery';
 
-export function summarizeAgents(agents: AgentRecord[]) {
+export function summarizeAgents(agents: Installation[]) {
   const summary = {
     total: agents.length,
     runnable: 0,
@@ -13,7 +13,7 @@ export function summarizeAgents(agents: AgentRecord[]) {
   for (const agent of agents) {
     summary[agent.status] += 1;
     for (const warning of agent.warnings) {
-      summary.warnings.push(`${agent.id}: ${warning}`);
+      summary.warnings.push(`${agent.agent}: ${warning}`);
     }
   }
 

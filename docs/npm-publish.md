@@ -78,7 +78,7 @@ pnpm test
 pnpm build
 ```
 
-After the pull request lands on `main`, GitHub Actions opens or updates the release pull request `chore(release): version packages` on the branch `changeset-release/main`. It runs `pnpm version-packages`: Changesets bumps published packages and writes changelog entries through `@changesets/changelog-github`, then `pnpm sync:moonbit-version` copies the `@rivus/agent-finder-core` version into `packages/agent-finder/moon.mod.json`. Private workspace packages are not versioned.
+After the pull request lands on `main`, GitHub Actions opens or updates the release pull request `chore(release): version packages` on the branch `changeset-release/main`. It runs `pnpm version-packages`: Changesets bumps published packages and writes changelog entries through `@changesets/changelog-github`. Private workspace packages are not versioned.
 
 The release pull request is opened with the workflow's `GITHUB_TOKEN`. GitHub does not start workflows for events caused by that token, so CI does not run on the release pull request by itself. Before merging, close and reopen it as a person, or push an empty commit to its branch:
 
@@ -88,7 +88,7 @@ gh pr close <n> && gh pr reopen <n>
 
 That is a normal `pull_request` event, so `CI` and `Review` run. `gh workflow run ci.yml` does not help: a dispatched run is not attached to the pull request and does not satisfy required checks.
 
-Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public. If npm publish succeeds, the workflow then calls the reusable MoonBit publish workflow so `PerfectPan/agent-finder` is published to mooncakes.io from the same release flow.
+Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public.
 
 Preview a release locally without committing the result:
 
@@ -101,7 +101,6 @@ pnpm exec changeset publish-plan
 
 - If CI fails before npm upload, fix the workflow or code and re-run the publish workflow.
 - If npm accepted the version, do not publish the same version again. Bump the patch version.
-- If npm publish succeeds but MoonBit publish fails, re-run the `Publish MoonBit Package` workflow manually after fixing the MoonBit workflow, credentials, or package metadata issue.
 - If a bad version is published, prefer `npm deprecate` and publish a fixed version.
 
 ## Safety Checks

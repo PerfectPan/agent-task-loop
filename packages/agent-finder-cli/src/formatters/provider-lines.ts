@@ -1,4 +1,4 @@
-import type { ProviderSpec } from '@rivus/agent-finder-core';
+import type { ProviderSpec } from '../discovery/agents.js';
 import { renderKeyValues, style, type KeyValue } from './render.js';
 
 export function formatProviderLines(provider: ProviderSpec): string[] {

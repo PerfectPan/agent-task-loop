@@ -16,7 +16,7 @@ Architecture ([`architecture/`](architecture/)), the current system shape:
 
 - [`overview.md`](architecture/overview.md): packages, bounded contexts, dependency rules, review gate.
 - [`task-sources.md`](architecture/task-sources.md): provider composition, run-time state store, task run lease.
-- [`agent-finder.md`](architecture/agent-finder.md): agent discovery and the MoonBit build pipeline.
+- [`agent-finder.md`](architecture/agent-finder.md): agent discovery through `@rivus/agent-kit`.
 - [`agent-sessions.md`](architecture/agent-sessions.md): session discovery, transcripts, the session browser.
 - [`agent-collaboration.md`](architecture/agent-collaboration.md): Room protocol, control plane, room-web, task board.
 

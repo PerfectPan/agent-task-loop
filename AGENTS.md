@@ -31,7 +31,6 @@ gh repo-checks pr-body pr-body.md
 # Install, then the CI gates:
 pnpm install --frozen-lockfile
 pnpm format:check   # `pnpm format` rewrites files
-pnpm check:moonbit-version
 pnpm test
 pnpm build
 pnpm typecheck

@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { collectHostProbe, discover } from '@rivus/agent-finder-core';
+import { detectLocalAgents } from '../discovery/agents.js';
 import { summarizeAgents } from '../summary/summarize-agents.js';
 import { STATUS_THEME } from '../formatters/agent-table.js';
 import { style } from '../formatters/render.js';
@@ -9,9 +9,9 @@ export const doctorCommand = defineCommand({
     name: 'doctor',
     description: 'Print aggregate discovery diagnostics',
   },
-  run() {
-    const report = discover(collectHostProbe());
-    const summary = summarizeAgents(report.agents);
+  async run() {
+    const installations = await detectLocalAgents();
+    const summary = summarizeAgents(installations);
 
     console.log(style.bold(`Total providers: ${summary.total}`));
     for (const status of ['runnable', 'found', 'missing', 'unknown'] as const) {

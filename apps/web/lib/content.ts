@@ -28,7 +28,7 @@ export const FEATURES = [
   },
   {
     title: 'Built for CI',
-    body: 'A MoonBit → JS build pipeline, OIDC trusted npm publishing, and changesets-driven releases keep the toolchain modern.',
+    body: 'A Vite+ TypeScript build, OIDC trusted npm publishing, and changesets-driven releases keep the toolchain modern.',
     icon: 'ci',
   },
 ] as const;

@@ -50,7 +50,7 @@
     "test:watch": "vp test watch"
   },
   "dependencies": {
-    "@rivus/agent-finder-core": "workspace:*",
+    "@rivus/agent-kit": "0.11.0",
     "citty": "^0.2.2",
     "ink": "^7.1.1",
     "react": "^19.3.0"
@@ -65,6 +65,6 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   }
 }

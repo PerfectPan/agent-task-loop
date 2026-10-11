@@ -1,21 +1,21 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-vi.mock('@rivus/agent-finder-core', () => ({
-  collectHostProbe: vi.fn().mockResolvedValue({}),
-  discover: vi.fn().mockReturnValue({
-    agents: [
-      { id: 'claude-code', status: 'runnable' },
-      { id: 'codex', status: 'missing' },
-    ],
-  }),
-  resolveCommand: vi.fn(),
+vi.mock('@rivus/agent-kit/discovery', () => ({
+  detectAgents: vi.fn().mockResolvedValue([
+    { agent: 'claude-code', displayName: 'Claude Code', status: 'found', command: '/usr/local/bin/claude' },
+    { agent: 'codex', displayName: 'Codex', status: 'missing' },
+  ]),
 }));
 
-import { resolveCommand } from '@rivus/agent-finder-core';
+vi.mock('@rivus/agent-kit/node', () => ({
+  createNodePlatform: vi.fn().mockReturnValue({}),
+}));
+
+import { detectAgents } from '@rivus/agent-kit/discovery';
 import {
   createGlobalConfig,
   discoverRunnableAgents,
@@ -24,6 +24,7 @@ import {
 } from '../../src/commands/init';
 
 const originalHome = os.homedir;
+const originalPath = process.env.PATH;
 let fakeHome: string;
 
 beforeEach(async () => {
@@ -33,25 +34,33 @@ beforeEach(async () => {
 
 afterEach(async () => {
   (os as unknown as { homedir: () => string }).homedir = originalHome;
+  process.env.PATH = originalPath;
   await rm(fakeHome, { recursive: true, force: true });
   vi.clearAllMocks();
 });
 
 describe('isLarkCliAvailable', () => {
-  it('returns true when resolveCommand finds lark-cli', async () => {
-    vi.mocked(resolveCommand).mockReturnValue('/usr/local/bin/lark-cli');
+  it('returns true when lark-cli is on PATH', async () => {
+    const binDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-path-'));
+    await writeFile(path.join(binDir, 'lark-cli'), '', { mode: 0o755 });
+    process.env.PATH = binDir;
     expect(await isLarkCliAvailable()).toBe(true);
   });
 
-  it('returns false when resolveCommand returns null', async () => {
-    vi.mocked(resolveCommand).mockReturnValue(null);
+  it('returns false when lark-cli is not on PATH', async () => {
+    const emptyDir = await mkdtemp(path.join(os.tmpdir(), 'agent-task-loop-path-'));
+    process.env.PATH = emptyDir;
     expect(await isLarkCliAvailable()).toBe(false);
   });
 });
 
 describe('discoverRunnableAgents', () => {
-  it('maps runnable claude-code to claude entry, skips missing codex', async () => {
+  it('detects claude-code and codex without running any agent command', async () => {
     const agents = await discoverRunnableAgents();
+    expect(detectAgents).toHaveBeenCalledWith(expect.anything(), {
+      agents: ['claude-code', 'codex'],
+      versionProbe: false,
+    });
     expect(Object.keys(agents)).toEqual(['claude']);
     expect(agents.claude).toEqual({ name: 'claude', command: 'claude', args: [], env: {} });
     expect(agents.codex).toBeUndefined();

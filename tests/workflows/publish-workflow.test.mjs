@@ -5,12 +5,12 @@ import { test } from 'node:test';
 const publishWorkflowPath = new URL('../../.github/workflows/publish.yml', import.meta.url);
 const moonBitPublishWorkflowPath = new URL('../../.github/workflows/moonbit-publish.yml', import.meta.url);
 
-test('npm publish workflow invokes MoonBit publish after Changesets publishes packages', async () => {
+test('npm publish workflow no longer builds or publishes the MoonBit module', async () => {
   const workflow = await readFile(publishWorkflowPath, 'utf8');
 
-  assert.match(workflow, /uses:\s+\.\/\.github\/workflows\/moonbit-publish\.yml/);
-  assert.match(workflow, /needs:\s+publish/);
-  assert.match(workflow, /if:\s+\$\{\{\s*needs\.publish\.outputs\.published\s*==\s*'true'\s*\}\}/);
+  assert.doesNotMatch(workflow, /moonbit-publish\.yml/);
+  assert.doesNotMatch(workflow, /moon -C packages\/agent-finder/);
+  assert.doesNotMatch(workflow, /Install MoonBit/);
 });
 
 test('release PR passes the conventional PR title check and npm publish uses trusted publishing', async () => {
@@ -24,7 +24,9 @@ test('release PR passes the conventional PR title check and npm publish uses tru
   assert.match(workflow, /id-token:\s+write/);
 });
 
-test('MoonBit publish workflow can be called by another workflow with credentials inherited', async () => {
+// The MoonBit module is deleted; the workflow stays until the wrap-up step
+// deprecates @rivus/agent-finder-core on npm and removes the mooncakes token.
+test('retained MoonBit publish workflow can still be called with credentials inherited', async () => {
   const workflow = await readFile(moonBitPublishWorkflowPath, 'utf8');
 
   assert.match(workflow, /workflow_call:/);

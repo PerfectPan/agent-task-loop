@@ -11,7 +11,7 @@ agent-finder provider inspect codex
 agent-finder doctor
 ```
 
-The CLI uses `@rivus/agent-finder-core` for provider metadata and read-only host probing.
+Detection and provider metadata come from `@rivus/agent-kit`'s `/catalog` and `/discovery` entries: seven built-in probe recipes, plus 20 probe recipes the CLI ships for the other catalog agents.
 
 ## License
 

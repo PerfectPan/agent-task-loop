@@ -1,6 +1,9 @@
 {
   "name": "agent-task-loop-monorepo",
   "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@12.8.1",
   "dependencies": {
@@ -11,15 +14,13 @@
     "agent-finder": "pnpm --filter @rivus/agent-finder-cli dev",
     "build": "pnpm -r build",
     "changeset": "changeset",
-    "check:moonbit-version": "node scripts/sync-moonbit-version.mjs --check",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "lint": "vp lint",
     "release": "pnpm build && changeset publish",
-    "sync:moonbit-version": "node scripts/sync-moonbit-version.mjs",
-    "test": "node --test tests/**/*.test.mjs && pnpm -r test && moon -C packages/agent-finder test",
+    "test": "node --test tests/**/*.test.mjs && pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "version-packages": "changeset version && pnpm sync:moonbit-version"
+    "version-packages": "changeset version"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",

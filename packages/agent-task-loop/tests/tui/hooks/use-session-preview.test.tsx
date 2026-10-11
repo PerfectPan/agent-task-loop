@@ -43,7 +43,7 @@ function lastFrame(frame: string | undefined): string {
   return stripAnsi(frame ?? '');
 }
 
-// ---- real probe components used by the tests above ----
+// ---- real probe components used by the tests below ----
 
 function ProbeReal({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
   const { preview, isLoading } = useSessionPreview(provider, task, {

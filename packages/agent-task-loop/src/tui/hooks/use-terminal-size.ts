@@ -20,8 +20,8 @@ export function useTerminalSize(): TerminalSize {
   const { stdout } = useStdout();
 
   const read = (): TerminalSize => {
-    // stdout 由 Ink 上下文保证存在（默认即 process.stdout）；
-    // columns/rows 在非 TTY（管道）流上运行时可能缺失，按可缺失读取。
+    // stdout is guaranteed by the Ink context (it defaults to process.stdout);
+    // columns/rows can be missing at runtime on a non-TTY (piped) stream.
     const { columns, rows } = stdout as { columns?: number; rows?: number };
     return { columns: columns ?? DEFAULT_COLUMNS, rows: rows ?? DEFAULT_ROWS };
   };

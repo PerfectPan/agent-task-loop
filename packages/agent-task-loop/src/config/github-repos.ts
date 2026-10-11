@@ -16,7 +16,7 @@ export interface ResolvedGitHubRepo {
  * from the per-repo override to the source-level default.
  */
 export function normalizeGitHubRepos(config: GitHubIssuesConfigInput): ResolvedGitHubRepo[] {
-  // 入参可能是未经 zod 解析的配置文件内容，defaultAgent 此时确实可缺失。
+  // The input can be config-file content that has not gone through zod yet, so defaultAgent is genuinely optional here.
   const fallbackAgent = (config.defaultAgent ?? 'codex') as TargetAgent;
 
   if (config.repositories && config.repositories.length > 0) {

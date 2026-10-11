@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 
-// role 取自逐行解析的转录文本，可能不在表内，读取按可缺失处理。
+// role comes from line-by-line parsed transcript text and may not be in the table.
 const ROLE_STYLE: Record<string, { color: string; icon: string } | undefined> = {
   user: { color: 'cyan', icon: '▌' },
   assistant: { color: 'green', icon: '▌' },

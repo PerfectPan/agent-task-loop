@@ -102,7 +102,7 @@ export async function runStructuredAi<T>(input: StructuredAiInput): Promise<Stru
   }
 
   return {
-    // all: true 时 execa 恒回填 result.all（可能为空串）。
+    // With all: true execa always fills result.all (possibly an empty string).
     ...extractClaudeStructured<T>(result.all),
     sessionName: input.sessionName,
   };

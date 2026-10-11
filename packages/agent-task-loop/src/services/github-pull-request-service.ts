@@ -48,7 +48,7 @@ export class GitHubPullRequestService {
     ]);
 
     const pullRequests = JSON.parse(stdout) as GhPullRequestListItem[];
-    // `gh pr list` 输出可能为空数组，索引读取按可缺失处理。
+    // `gh pr list` can return an empty array.
     const hit =
       pullRequests.find((item) => item.headRefName === input.branch) ??
       (pullRequests[0] as GhPullRequestListItem | undefined);

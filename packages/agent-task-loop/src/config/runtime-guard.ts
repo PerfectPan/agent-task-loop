@@ -29,7 +29,7 @@ export function assertRuntimeConfig(config: AppConfig): void {
   }
 
   if (config.githubIssues) {
-    // Record 的键来自用户配置文件，索引可能实际缺失，这里按可缺失读取。
+    // The Record's keys come from the user's config file, so an index lookup can genuinely miss.
     const projects = config.projects as Record<string, AppConfig['projects'][string] | undefined>;
     const repositories = config.repositories as Record<string, AppConfig['repositories'][string] | undefined>;
     for (const repo of normalizeGitHubRepos(config.githubIssues)) {

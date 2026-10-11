@@ -6,7 +6,7 @@ function formatClaudeEvent(line: string): string {
     const event = JSON.parse(line) as Record<string, any>;
 
     if (event.type === 'stream_event') {
-      // event.event 是外部 JSON 流的字段，运行时可能缺失。
+      // event.event comes from an external JSON stream and may be missing at runtime.
       const payload: Record<string, any> | undefined = event.event;
 
       if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {
@@ -39,7 +39,7 @@ function extractClaudeProgress(line: string): string | undefined {
     const event = JSON.parse(line) as Record<string, any>;
 
     if (event.type === 'stream_event') {
-      // 同上：外部 JSON 流字段，运行时可能缺失。
+      // Same as above: a field of the external JSON stream, possibly missing at runtime.
       const payload: Record<string, any> | undefined = event.event;
 
       if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {

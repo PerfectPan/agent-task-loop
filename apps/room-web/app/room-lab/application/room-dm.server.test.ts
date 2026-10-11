@@ -198,9 +198,10 @@ function buildLinked(options: BuildOptions = {}): Built {
     if (existing) {
       return existing;
     }
-    // dm↔serviceOf↔serviceOptions 声明环：dm.dispatch 与 serviceOptions.ledgerOf 回调都走 serviceOf，
-    // serviceOf 又经 serviceOptions 组装 service；函数声明的提升保证调用时（dm 初始化之后）已可用。
-    // oxlint-disable-next-line no-use-before-define -- 上一行说明
+    // dm <-> serviceOf <-> serviceOptions declaration cycle: dm.dispatch and the serviceOptions.ledgerOf callback
+    // both go through serviceOf, which assembles the service via serviceOptions; function hoisting keeps every
+    // call valid after dm is initialized.
+    // oxlint-disable-next-line no-use-before-define -- reason above
     const service = new RoomService(serviceOptions(roomId));
     services.set(roomId, service);
     return service;

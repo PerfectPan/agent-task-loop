@@ -13,6 +13,59 @@ import {
 
 const corePackageNames = ['@rivus/platform', '@rivus/runtime', '@rivus/gateway', '@rivus/agent'];
 
+function writeJson(filePath, value) {
+  writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function readLock(fixture) {
+  return JSON.parse(readFileSync(path.join(fixture.consumerDirectory, 'package-lock.json'), 'utf8'));
+}
+
+function writeLock(fixture, lock) {
+  writeJson(path.join(fixture.consumerDirectory, 'package-lock.json'), lock);
+}
+
+function createFixture(t, versions = corePackageNames.map(() => '0.17.0')) {
+  const directory = mkdtempSync(path.join(tmpdir(), 'rivus-core-archives-test space-'));
+  t.after(() => rmSync(directory, { force: true, recursive: true }));
+  const archivePaths = corePackageNames.map((name, index) => {
+    const packageName = name.slice('@rivus/'.length);
+    const sourceDirectory = path.join(directory, packageName);
+    mkdirSync(path.join(sourceDirectory, 'package'), { recursive: true });
+    writeJson(path.join(sourceDirectory, 'package', 'package.json'), {
+      name,
+      version: versions[index],
+      type: 'module',
+      exports: { './package.json': './package.json' },
+    });
+    const archivePath = path.join(directory, `${packageName}.tgz`);
+    execFileSync('tar', ['-czf', archivePath, '-C', sourceDirectory, 'package']);
+    return archivePath;
+  });
+  const consumerDirectory = path.join(directory, 'consumer');
+  mkdirSync(consumerDirectory);
+  // A mixed-version fixture is only used to exercise input rejection.
+  if (new Set(versions).size !== 1) {
+    return { archivePaths, consumerDirectory };
+  }
+  const archives = readRivusCoreArchives(JSON.stringify(archivePaths));
+  const dependencies = Object.fromEntries(archives.map((archive) => [archive.name, `file:${archive.path}`]));
+  writeJson(path.join(consumerDirectory, 'package.json'), { name: 'archive-consumer', private: true, dependencies });
+  const packages = { '': { dependencies } };
+  for (const archive of archives) {
+    const installedDirectory = path.join(consumerDirectory, 'node_modules', archive.name);
+    mkdirSync(installedDirectory, { recursive: true });
+    writeJson(path.join(installedDirectory, 'package.json'), archive.manifest);
+    packages[`node_modules/${archive.name}`] = {
+      version: archive.version,
+      resolved: `file:${archive.path}`,
+      integrity: archive.integrity,
+    };
+  }
+  writeJson(path.join(consumerDirectory, 'package-lock.json'), { lockfileVersion: 3, packages });
+  return { archives, archivePaths, consumerDirectory };
+}
+
 test('rejects conflicting, empty, and unsupported package-check inputs before packing', () => {
   const scriptPath = new URL('../../packages/agent-task-loop/scripts/check-package.mjs', import.meta.url);
   const env = { ...process.env };
@@ -174,56 +227,3 @@ test('rejects an archive changed after input inspection', (t) => {
     /archive changed during installation: @rivus\/platform/,
   );
 });
-
-function createFixture(t, versions = corePackageNames.map(() => '0.17.0')) {
-  const directory = mkdtempSync(path.join(tmpdir(), 'rivus-core-archives-test space-'));
-  t.after(() => rmSync(directory, { force: true, recursive: true }));
-  const archivePaths = corePackageNames.map((name, index) => {
-    const packageName = name.slice('@rivus/'.length);
-    const sourceDirectory = path.join(directory, packageName);
-    mkdirSync(path.join(sourceDirectory, 'package'), { recursive: true });
-    writeJson(path.join(sourceDirectory, 'package', 'package.json'), {
-      name,
-      version: versions[index],
-      type: 'module',
-      exports: { './package.json': './package.json' },
-    });
-    const archivePath = path.join(directory, `${packageName}.tgz`);
-    execFileSync('tar', ['-czf', archivePath, '-C', sourceDirectory, 'package']);
-    return archivePath;
-  });
-  const consumerDirectory = path.join(directory, 'consumer');
-  mkdirSync(consumerDirectory);
-  // A mixed-version fixture is only used to exercise input rejection.
-  if (new Set(versions).size !== 1) {
-    return { archivePaths, consumerDirectory };
-  }
-  const archives = readRivusCoreArchives(JSON.stringify(archivePaths));
-  const dependencies = Object.fromEntries(archives.map((archive) => [archive.name, `file:${archive.path}`]));
-  writeJson(path.join(consumerDirectory, 'package.json'), { name: 'archive-consumer', private: true, dependencies });
-  const packages = { '': { dependencies } };
-  for (const archive of archives) {
-    const installedDirectory = path.join(consumerDirectory, 'node_modules', archive.name);
-    mkdirSync(installedDirectory, { recursive: true });
-    writeJson(path.join(installedDirectory, 'package.json'), archive.manifest);
-    packages[`node_modules/${archive.name}`] = {
-      version: archive.version,
-      resolved: `file:${archive.path}`,
-      integrity: archive.integrity,
-    };
-  }
-  writeJson(path.join(consumerDirectory, 'package-lock.json'), { lockfileVersion: 3, packages });
-  return { archives, archivePaths, consumerDirectory };
-}
-
-function readLock(fixture) {
-  return JSON.parse(readFileSync(path.join(fixture.consumerDirectory, 'package-lock.json'), 'utf8'));
-}
-
-function writeLock(fixture, lock) {
-  writeJson(path.join(fixture.consumerDirectory, 'package-lock.json'), lock);
-}
-
-function writeJson(filePath, value) {
-  writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
-}

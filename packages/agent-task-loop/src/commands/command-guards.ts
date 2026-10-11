@@ -7,6 +7,38 @@ async function resolve<T>(value: Resolvable<T>): Promise<T> {
   return typeof value === 'function' ? (value as () => T | Promise<T>)() : value;
 }
 
+function unexpectedArgumentsMessage(unexpected: string[]): string {
+  const message = `Unexpected argument${unexpected.length > 1 ? 's' : ''}: ${unexpected.join(' ')}`;
+  if (unexpected.some((value) => value === 'true' || value === 'false')) {
+    return `${message}. Boolean flags take no value; turn one off with --no-<flag> or --<flag>=false.`;
+  }
+  return message;
+}
+
+function describe(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message;
+  }
+  return typeof value === 'string' ? value : inspect(value);
+}
+
+function errorMessages(error: unknown): string {
+  const messages: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    const message = describe(current);
+    // Some errors already end with their cause's message (execa's does), so a
+    // cause the previous line contains adds nothing.
+    if (!messages.at(-1)?.includes(message)) {
+      messages.push(message);
+    }
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return messages.join('\n  caused by: ');
+}
+
 /**
  * Applies the CLI's argument and error rules to every leaf command of a citty
  * command tree.
@@ -54,36 +86,4 @@ export function withCommandGuards<T extends ArgsDef>(cmd: CommandDef<T>): Comman
       }
     },
   };
-}
-
-function unexpectedArgumentsMessage(unexpected: string[]): string {
-  const message = `Unexpected argument${unexpected.length > 1 ? 's' : ''}: ${unexpected.join(' ')}`;
-  if (unexpected.some((value) => value === 'true' || value === 'false')) {
-    return `${message}. Boolean flags take no value; turn one off with --no-<flag> or --<flag>=false.`;
-  }
-  return message;
-}
-
-function errorMessages(error: unknown): string {
-  const messages: string[] = [];
-  const seen = new Set<unknown>();
-  let current: unknown = error;
-  while (current !== undefined && !seen.has(current)) {
-    seen.add(current);
-    const message = describe(current);
-    // Some errors already end with their cause's message (execa's does), so a
-    // cause the previous line contains adds nothing.
-    if (!messages.at(-1)?.includes(message)) {
-      messages.push(message);
-    }
-    current = current instanceof Error ? current.cause : undefined;
-  }
-  return messages.join('\n  caused by: ');
-}
-
-function describe(value: unknown): string {
-  if (value instanceof Error) {
-    return value.message;
-  }
-  return typeof value === 'string' ? value : inspect(value);
 }

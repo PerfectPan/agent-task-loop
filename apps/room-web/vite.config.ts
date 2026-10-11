@@ -18,7 +18,7 @@ function serverMigrations(): Plugin {
     name: 'rivus-server-migrations',
     apply: 'build',
     generateBundle() {
-      if (this.environment?.name !== 'ssr') {
+      if (this.environment.name !== 'ssr') {
         return;
       }
       for (const file of readdirSync(MIGRATIONS_DIR)

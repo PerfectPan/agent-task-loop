@@ -97,12 +97,13 @@ export async function runStructuredAi<T>(input: StructuredAiInput): Promise<Stru
     },
   );
 
-  if ((result.exitCode ?? 1) !== 0) {
+  if (result.exitCode !== 0) {
     throw new Error(result.stderr || result.stdout || 'claude structured generation failed');
   }
 
   return {
-    ...extractClaudeStructured<T>(result.all ?? result.stdout),
+    // all: true 时 execa 恒回填 result.all（可能为空串）。
+    ...extractClaudeStructured<T>(result.all),
     sessionName: input.sessionName,
   };
 }

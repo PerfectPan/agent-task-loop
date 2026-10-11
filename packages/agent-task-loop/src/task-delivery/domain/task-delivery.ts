@@ -3,6 +3,25 @@ import type { TaskDeliverySnapshot, TaskReviewVerdict } from './model';
 
 const MAX_TEXT_LENGTH = 2_000;
 
+function requireOutput(value: string, label: string): string {
+  const output = value.trim();
+  if (!output) {
+    throw new TaskDeliveryValidationError(`${label} is required`);
+  }
+  return output;
+}
+
+function requireReviewVerdict(value: unknown): TaskReviewVerdict {
+  if (value !== 'PASS' && value !== 'CHANGES_REQUESTED') {
+    throw new TaskDeliveryValidationError('review verdict must be PASS or CHANGES_REQUESTED');
+  }
+  return value;
+}
+
+function cloneSnapshot(snapshot: TaskDeliverySnapshot): TaskDeliverySnapshot {
+  return { ...snapshot };
+}
+
 /** Aggregate root for one implementation/review delivery lifecycle. */
 export class TaskDelivery {
   private constructor(private state: TaskDeliverySnapshot) {}
@@ -93,23 +112,4 @@ export class TaskDelivery {
   snapshot(): TaskDeliverySnapshot {
     return cloneSnapshot(this.state);
   }
-}
-
-function requireOutput(value: string, label: string): string {
-  const output = value.trim();
-  if (!output) {
-    throw new TaskDeliveryValidationError(`${label} is required`);
-  }
-  return output;
-}
-
-function requireReviewVerdict(value: unknown): TaskReviewVerdict {
-  if (value !== 'PASS' && value !== 'CHANGES_REQUESTED') {
-    throw new TaskDeliveryValidationError('review verdict must be PASS or CHANGES_REQUESTED');
-  }
-  return value;
-}
-
-function cloneSnapshot(snapshot: TaskDeliverySnapshot): TaskDeliverySnapshot {
-  return { ...snapshot };
 }

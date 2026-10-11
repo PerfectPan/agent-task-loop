@@ -13,50 +13,28 @@ export interface MemoryRoomStreamStoreOptions {
   beforeCommit?: () => void;
 }
 
-export class MemoryRoomStreamStore implements RoomStreamStore {
-  private readonly unitOfWork: MemoryRoomUnitOfWork;
-  private readonly service: RoomStreamService;
-
-  constructor(options: MemoryRoomStreamStoreOptions = {}) {
-    this.unitOfWork = new MemoryRoomUnitOfWork(options.beforeCommit);
-    this.service = new RoomStreamService(this.unitOfWork, options.now ?? Date.now);
-  }
-
-  ensureSession(id: AgentSessionId): AgentSession {
-    return this.unitOfWork.ensureSession(id);
-  }
-
-  inspectSession(id: AgentSessionId): AgentSession | undefined {
-    return this.unitOfWork.inspectSession(id);
-  }
-
-  advanceSeen(id: AgentSessionId, seq: RoomSeq): AgentSession {
-    return this.unitOfWork.advanceSeen(id, seq);
-  }
-
-  async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
-    return this.service.admit(input);
-  }
-
-  async head(roomId: RoomId): Promise<RoomSeq> {
-    return this.service.head(roomId);
-  }
-
-  async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
-    return this.service.readSlice(roomId, afterSeq, budget);
-  }
-
-  async speak(input: SpeakCommand): Promise<SpeakResult> {
-    return this.service.speak(input);
-  }
-
-  async pass(input: PassCommand): Promise<PassResult> {
-    return this.service.pass(input);
-  }
+function roomStorageKey(id: RoomId): string {
+  return JSON.stringify([id.tenantId, id.conversationId]);
 }
 
-export function createMemoryRoomStreamStore(options: MemoryRoomStreamStoreOptions = {}): RoomStreamStore {
-  return new MemoryRoomStreamStore(options);
+function sessionStorageKey(id: AgentSessionId): string {
+  return JSON.stringify([
+    id.tenantId,
+    id.agentId,
+    id.roomId.tenantId,
+    id.roomId.conversationId,
+    id.runtimeGenerationId,
+  ]);
+}
+
+function cloneSession(session: AgentSession): AgentSession {
+  return {
+    id: {
+      ...session.id,
+      roomId: { ...session.id.roomId },
+    },
+    seenSeq: session.seenSeq,
+  };
 }
 
 export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
@@ -123,26 +101,48 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
   }
 }
 
-function roomStorageKey(id: RoomId): string {
-  return JSON.stringify([id.tenantId, id.conversationId]);
+export class MemoryRoomStreamStore implements RoomStreamStore {
+  private readonly unitOfWork: MemoryRoomUnitOfWork;
+  private readonly service: RoomStreamService;
+
+  constructor(options: MemoryRoomStreamStoreOptions = {}) {
+    this.unitOfWork = new MemoryRoomUnitOfWork(options.beforeCommit);
+    this.service = new RoomStreamService(this.unitOfWork, options.now ?? Date.now);
+  }
+
+  ensureSession(id: AgentSessionId): AgentSession {
+    return this.unitOfWork.ensureSession(id);
+  }
+
+  inspectSession(id: AgentSessionId): AgentSession | undefined {
+    return this.unitOfWork.inspectSession(id);
+  }
+
+  advanceSeen(id: AgentSessionId, seq: RoomSeq): AgentSession {
+    return this.unitOfWork.advanceSeen(id, seq);
+  }
+
+  async admit(input: AdmitRoomEvent): Promise<AdmitResult> {
+    return this.service.admit(input);
+  }
+
+  async head(roomId: RoomId): Promise<RoomSeq> {
+    return this.service.head(roomId);
+  }
+
+  async readSlice(roomId: RoomId, afterSeq: RoomSeq, budget: SliceBudget): Promise<RoomSlice> {
+    return this.service.readSlice(roomId, afterSeq, budget);
+  }
+
+  async speak(input: SpeakCommand): Promise<SpeakResult> {
+    return this.service.speak(input);
+  }
+
+  async pass(input: PassCommand): Promise<PassResult> {
+    return this.service.pass(input);
+  }
 }
 
-function sessionStorageKey(id: AgentSessionId): string {
-  return JSON.stringify([
-    id.tenantId,
-    id.agentId,
-    id.roomId.tenantId,
-    id.roomId.conversationId,
-    id.runtimeGenerationId,
-  ]);
-}
-
-function cloneSession(session: AgentSession): AgentSession {
-  return {
-    id: {
-      ...session.id,
-      roomId: { ...session.id.roomId },
-    },
-    seenSeq: session.seenSeq,
-  };
+export function createMemoryRoomStreamStore(options: MemoryRoomStreamStoreOptions = {}): RoomStreamStore {
+  return new MemoryRoomStreamStore(options);
 }

@@ -26,7 +26,7 @@ function endpointColumns(
 ): { role: string; color: number; position: number; created_at: string } {
   const row = store.db
     .prepare('SELECT role, color, position, created_at FROM agents WHERE id = ?')
-    .get(id) as unknown as { role: string; color: number; position: number; created_at: string };
+    .get(id) as unknown as { role: string; color: number; position: number; created_at: string } | undefined;
   if (!row) {
     throw new Error(`no row for ${id}`);
   }

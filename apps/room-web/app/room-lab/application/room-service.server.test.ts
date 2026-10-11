@@ -72,107 +72,8 @@ interface Built {
   toolOf(agentId: string, name: string): ToolDefinition;
 }
 
-/**
- * The room service over an in-memory record, a roster of three and a fake
- * scheduler. Without `manual` every wake runs to a silent end at once, which
- * is what the dispatcher tests need; the turn tests run manual and end each
- * activation by hand.
- */
-function build(options: BuildOptions = {}): Built {
-  const members = options.members ?? SEATED;
-  const settings: RoomSettings = { wake: 'broadcast', serial: false, ...options.settings };
-  const store = new MemoryRoomStreamStore();
-  const turnLog = new FakeTurnLog();
-  const tools: ToolDefinition[][] = [];
-  const toolsByAgent = new Map<string, ToolDefinition[]>();
-  const runtime = new FakeRuntime(options.manual ?? false);
-  const memberRuntime = options.runtime ?? runtime;
-  const toolHost: RoomToolHost = async ({ agentId, tools: definitions }) => {
-    tools.push(definitions);
-    toolsByAgent.set(agentId, definitions);
-    // The real endpoint outlives the turn; these tests call the tool
-    // definitions directly, so re-serving is a no-op here.
-    return {
-      endpoint: {} as unknown as McpServer,
-      url: 'http://127.0.0.1:0/mcp',
-      serveTurn: () => undefined,
-      close: async () => {},
-    };
-  };
-  const prompts = options.prompts ?? {};
-  const registry: AgentRegistry = {
-    get: async (id) => (members.includes(id) ? agentOf(id, prompts[id] ?? '') : undefined),
-    list: async () => members.map((id) => agentOf(id, prompts[id] ?? '')),
-    save: async () => {},
-    remove: async () => {},
-  };
-  const descriptors: AgentDescriptor[] = members.map((id) => ({
-    id,
-    label: LABELS[id] ?? id,
-    role: '成员',
-    color: 1,
-  }));
-  const lease = options.lease ?? { fence: (_key, op) => op(), read: () => undefined };
-  const service = new RoomService({
-    roomId: ROOM,
-    // The memory store has no clear — reset is the sqlite store's business and
-    // is not what these tests exercise.
-    store: store as unknown as RoomRecordStore,
-    registry,
-    runtime: memberRuntime,
-    lease,
-    turnLog,
-    members: () => members,
-    agents: () => descriptors,
-    settings: () => ({ ...settings }),
-    roomTitle: () => '测试房间',
-    workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-service-')),
-    toolHost,
-    ...(options.dm ? { dm: options.dm } : {}),
-    ...(options.parentTitle ? { parentTitle: options.parentTitle } : {}),
-  });
-  runtime.bind(service, turnLog, tools);
-  return {
-    service,
-    runtime,
-    memberRuntime,
-    lease,
-    turnLog,
-    store,
-    tools,
-    toolOf: (agentId, name) => {
-      const found = toolsByAgent.get(agentId)?.find((definition) => definition.name === name);
-      if (!found) {
-        throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
-      }
-      return found;
-    },
-  };
-}
-
 function agentOf(id: string, systemPrompt: string): Agent {
   return { id, label: LABELS[id] ?? id, binding: { command: `${id}-acp` }, systemPrompt };
-}
-
-function keyOf(memberId: string): string {
-  return runtimeKey(ROOM.conversationId, memberId);
-}
-
-function sessionId(agentId: string): AgentSessionId {
-  return { tenantId: ROOM.tenantId, agentId, roomId: ROOM, runtimeGenerationId: 'web-v1' };
-}
-
-async function eventsOf(store: MemoryRoomStreamStore): Promise<RoomEvent[]> {
-  const slice = await store.readSlice(ROOM, 0, { maxEvents: 100 });
-  return slice.events;
-}
-
-/** One started activation: the harness, its end, and its room_speak tool. */
-interface Activation {
-  harness: Harness;
-  /** Ends the turn; resolves once the log row has landed. */
-  end(result?: { stopReason?: string | null; error?: string; timedOut?: boolean }): Promise<void>;
-  speakTool(): ToolDefinition;
 }
 
 /** Records wakes; in auto mode runs each one to a silent end immediately. */
@@ -212,7 +113,7 @@ class FakeRuntime implements RoomMemberRuntime {
           stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
           // `null` with no error defaults to the watchdog — the only way a
           // turn ends as timeout; a test can say otherwise explicitly.
-          timedOut: result?.timedOut ?? (result?.stopReason === null && !result?.error),
+          timedOut: result?.timedOut ?? (result?.stopReason === null && !result.error),
           token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
@@ -299,6 +200,105 @@ class FakeTurnLog implements TurnLog {
   }
 }
 
+/**
+ * The room service over an in-memory record, a roster of three and a fake
+ * scheduler. Without `manual` every wake runs to a silent end at once, which
+ * is what the dispatcher tests need; the turn tests run manual and end each
+ * activation by hand.
+ */
+function build(options: BuildOptions = {}): Built {
+  const members = options.members ?? SEATED;
+  const settings: RoomSettings = { wake: 'broadcast', serial: false, ...options.settings };
+  const store = new MemoryRoomStreamStore();
+  const turnLog = new FakeTurnLog();
+  const tools: ToolDefinition[][] = [];
+  const toolsByAgent = new Map<string, ToolDefinition[]>();
+  const runtime = new FakeRuntime(options.manual ?? false);
+  const memberRuntime = options.runtime ?? runtime;
+  const toolHost: RoomToolHost = async ({ agentId, tools: definitions }) => {
+    tools.push(definitions);
+    toolsByAgent.set(agentId, definitions);
+    // The real endpoint outlives the turn; these tests call the tool
+    // definitions directly, so re-serving is a no-op here.
+    return {
+      endpoint: {} as unknown as McpServer,
+      url: 'http://127.0.0.1:0/mcp',
+      serveTurn: () => undefined,
+      close: async () => {},
+    };
+  };
+  const prompts = options.prompts ?? {};
+  const registry: AgentRegistry = {
+    get: async (id) => (members.includes(id) ? agentOf(id, prompts[id] ?? '') : undefined),
+    list: async () => members.map((id) => agentOf(id, prompts[id] ?? '')),
+    save: async () => {},
+    remove: async () => {},
+  };
+  const descriptors: AgentDescriptor[] = members.map((id) => ({
+    id,
+    label: LABELS[id] ?? id,
+    role: '成员',
+    color: 1,
+  }));
+  const lease = options.lease ?? { fence: (_key, op) => op(), read: () => undefined };
+  const service = new RoomService({
+    roomId: ROOM,
+    // The memory store has no clear — reset is the sqlite store's business and
+    // is not what these tests exercise.
+    store: store as unknown as RoomRecordStore,
+    registry,
+    runtime: memberRuntime,
+    lease,
+    turnLog,
+    members: () => members,
+    agents: () => descriptors,
+    settings: () => ({ ...settings }),
+    roomTitle: () => '测试房间',
+    workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-service-')),
+    toolHost,
+    ...(options.dm ? { dm: options.dm } : {}),
+    ...(options.parentTitle ? { parentTitle: options.parentTitle } : {}),
+  });
+  runtime.bind(service, turnLog, tools);
+  return {
+    service,
+    runtime,
+    memberRuntime,
+    lease,
+    turnLog,
+    store,
+    tools,
+    toolOf: (agentId, name) => {
+      const found = toolsByAgent.get(agentId)?.find((definition) => definition.name === name);
+      if (!found) {
+        throw new Error(`no ${name} tool on ${agentId}'s latest turn`);
+      }
+      return found;
+    },
+  };
+}
+
+function keyOf(memberId: string): string {
+  return runtimeKey(ROOM.conversationId, memberId);
+}
+
+function sessionId(agentId: string): AgentSessionId {
+  return { tenantId: ROOM.tenantId, agentId, roomId: ROOM, runtimeGenerationId: 'web-v1' };
+}
+
+async function eventsOf(store: MemoryRoomStreamStore): Promise<RoomEvent[]> {
+  const slice = await store.readSlice(ROOM, 0, { maxEvents: 100 });
+  return slice.events;
+}
+
+/** One started activation: the harness, its end, and its room_speak tool. */
+interface Activation {
+  harness: Harness;
+  /** Ends the turn; resolves once the log row has landed. */
+  end(result?: { stopReason?: string | null; error?: string; timedOut?: boolean }): Promise<void>;
+  speakTool(): ToolDefinition;
+}
+
 /** An event as the Room tools hand it to the member: no author object. */
 interface ToolEvent {
   seq: number;
@@ -338,6 +338,11 @@ function seatOf(harness: Harness): number {
 function transcriptBodies(harness: Harness): string[] {
   const text = harness.blocks.map((block) => ('text' in block ? block.text : '')).join('\n');
   return [...text.matchAll(/\[seq \d+\] @[^:]*: (.*)$/gm)].map((match) => match[1]!);
+}
+
+function agentIdOf(key: string): RoomLabAgentId {
+  const marker = ':member:';
+  return key.slice(key.lastIndexOf(marker) + marker.length) as RoomLabAgentId;
 }
 
 /**
@@ -428,11 +433,6 @@ class ChainRuntime implements RoomMemberRuntime {
       await this.runTurn(agentId);
     }
   }
-}
-
-function agentIdOf(key: string): RoomLabAgentId {
-  const marker = ':member:';
-  return key.slice(key.lastIndexOf(marker) + marker.length) as RoomLabAgentId;
 }
 
 describe('RoomService dispatch', () => {
@@ -962,7 +962,7 @@ describe('RoomService pass cursor', () => {
     const harness = await h.service.activate(agentId as RoomLabAgentId);
     await harness.hooks?.afterTurn?.({
       stopReason: (result?.stopReason ?? 'end_turn') as 'end_turn',
-      timedOut: result?.stopReason === null && !result?.error,
+      timedOut: result?.stopReason === null && !result.error,
       token: TOKEN,
       ...(result?.error ? { error: result.error } : {}),
     });

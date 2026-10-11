@@ -134,7 +134,7 @@ function isRateLimitFailure(response: Response, detail: string): boolean {
   return (
     lowerDetail.includes('api rate limit exceeded') ||
     lowerDetail.includes('rate limit exceeded') ||
-    response.headers?.get?.('x-ratelimit-remaining') === '0'
+    response.headers.get('x-ratelimit-remaining') === '0'
   );
 }
 

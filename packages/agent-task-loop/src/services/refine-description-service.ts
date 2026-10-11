@@ -26,7 +26,8 @@ export async function refineDescription(
   input: { title: string; description: string },
   deps: RefineDescriptionDeps = {},
 ): Promise<string> {
-  const agent = config.agents.claude;
+  // agents 配置由用户手写，claude 条目运行时可能未配置，按可缺失读取。
+  const agent = (config.agents as Record<string, AppConfig['agents'][string] | undefined>).claude;
   if (!agent) {
     throw new Error('AI refine needs a configured `claude` agent');
   }

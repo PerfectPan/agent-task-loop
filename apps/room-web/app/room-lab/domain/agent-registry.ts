@@ -37,6 +37,10 @@ export function isAgentId(value: unknown): value is string {
   return typeof value === 'string' && AGENT_ID_PATTERN.test(value);
 }
 
+function clone(definition: AgentDefinition): AgentDefinition {
+  return { ...definition };
+}
+
 export class AgentRegistry implements KnownAgentIds {
   private definitions: AgentDefinition[] = [];
 
@@ -76,8 +80,4 @@ export class AgentRegistry implements KnownAgentIds {
   get size(): number {
     return this.definitions.length;
   }
-}
-
-function clone(definition: AgentDefinition): AgentDefinition {
-  return { ...definition };
 }

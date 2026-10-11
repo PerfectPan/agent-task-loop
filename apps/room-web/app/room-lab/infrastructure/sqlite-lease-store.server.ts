@@ -13,6 +13,15 @@ import type { FencedResult, FencingToken, LeaseRecord, LeaseStore } from '@rivus
  * holder that lost its lease while awaiting its prompt gets
  * `{ executed: false }` and its write never lands.
  */
+function toRecord(row: LeaseRow): LeaseRecord {
+  return {
+    key: row.key,
+    holderPid: Number(row.holder_pid),
+    holderId: row.holder_id,
+    heartbeatAt: row.heartbeat_at,
+  };
+}
+
 export class SqliteLeaseStore implements LeaseStore {
   private readonly fenceTails = new Map<string, Promise<void>>();
 
@@ -141,13 +150,4 @@ interface LeaseRow {
   holder_pid: number;
   holder_id: string;
   heartbeat_at: string;
-}
-
-function toRecord(row: LeaseRow): LeaseRecord {
-  return {
-    key: row.key,
-    holderPid: Number(row.holder_pid),
-    holderId: row.holder_id,
-    heartbeatAt: row.heartbeat_at,
-  };
 }

@@ -1,5 +1,5 @@
 import type { TargetAgent } from '../types/task';
-import type { GitHubIssuesConfig } from './schema';
+import type { GitHubIssuesConfigInput } from './schema';
 
 /** A single GitHub repository resolved from the (single- or multi-repo) config. */
 export interface ResolvedGitHubRepo {
@@ -15,7 +15,8 @@ export interface ResolvedGitHubRepo {
  * form. The shared `token` applies to every repo; `defaultAgent` falls back
  * from the per-repo override to the source-level default.
  */
-export function normalizeGitHubRepos(config: GitHubIssuesConfig): ResolvedGitHubRepo[] {
+export function normalizeGitHubRepos(config: GitHubIssuesConfigInput): ResolvedGitHubRepo[] {
+  // 入参可能是未经 zod 解析的配置文件内容，defaultAgent 此时确实可缺失。
   const fallbackAgent = (config.defaultAgent ?? 'codex') as TargetAgent;
 
   if (config.repositories && config.repositories.length > 0) {

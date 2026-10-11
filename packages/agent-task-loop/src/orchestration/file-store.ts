@@ -5,6 +5,21 @@ import type { RunStateStore } from './ports';
 import type { RunSnapshot } from './types';
 import { statePath } from './node-paths';
 
+function writeJsonAtomically(file: string, value: unknown): void {
+  mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
+  writeFileSync(tmp, JSON.stringify(value), 'utf8');
+  renameSync(tmp, file);
+}
+
+function readJson<T>(file: string): T | undefined {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as T;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * The run-state half of the old orchestration file store. The lock half left
  * for the control plane's `FileLeaseStore`; a run state file and its lease
@@ -33,20 +48,5 @@ export class FileOrchestrationStore implements RunStateStore {
       }
     }
     return keys;
-  }
-}
-
-function writeJsonAtomically(file: string, value: unknown): void {
-  mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
-  writeFileSync(tmp, JSON.stringify(value), 'utf8');
-  renameSync(tmp, file);
-}
-
-function readJson<T>(file: string): T | undefined {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8')) as T;
-  } catch {
-    return undefined;
   }
 }

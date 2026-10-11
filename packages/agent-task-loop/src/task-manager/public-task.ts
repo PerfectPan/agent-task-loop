@@ -22,6 +22,10 @@ export interface PublicTaskDto {
   updatedAt?: string;
 }
 
+function bound(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
+}
+
 export function toPublicTask(task: TaskRecord): PublicTaskDto {
   return {
     taskId: bound(task.taskId, 128),
@@ -44,8 +48,4 @@ export function toPublicTask(task: TaskRecord): PublicTaskDto {
     ...(task.createdAt ? { createdAt: bound(task.createdAt, 64) } : {}),
     ...(task.updatedAt ? { updatedAt: bound(task.updatedAt, 64) } : {}),
   };
-}
-
-function bound(value: string, maxLength: number): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 }

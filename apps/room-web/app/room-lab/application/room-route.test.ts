@@ -16,6 +16,37 @@ const probeReadyBinding = {
   probe: () => Promise.resolve({ status: 'ready' as const, capabilities: {} }),
 };
 
+/**
+ * Single fetch has the action return its value plus a response init rather than
+ * a Response. Rebuild the response the router would send, so the assertions
+ * stay about status codes and bodies.
+ */
+function asResponse(result: Awaited<ReturnType<typeof action>>): Response {
+  return Response.json(result.data, result.init ?? undefined);
+}
+
+const ROOM_PATTERN = '/room/:roomId';
+
+function args(request: Request, roomId = 'r_aaaaaaaaaa'): ActionFunctionArgs {
+  return {
+    request,
+    url: new URL(request.url),
+    pattern: ROOM_PATTERN,
+    params: { roomId },
+    context: new RouterContextProvider(),
+  };
+}
+
+function loaderArgs(request: Request): LoaderFunctionArgs {
+  return {
+    request,
+    url: new URL(request.url),
+    pattern: ROOM_PATTERN,
+    params: { roomId: 'r_aaaaaaaaaa' },
+    context: new RouterContextProvider(),
+  };
+}
+
 describe('Room action boundary', () => {
   afterEach(() => {
     globalThis.__rivusRoomLabHost = undefined;
@@ -158,34 +189,3 @@ describe('Room action boundary', () => {
     }
   });
 });
-
-/**
- * Single fetch has the action return its value plus a response init rather than
- * a Response. Rebuild the response the router would send, so the assertions
- * stay about status codes and bodies.
- */
-function asResponse(result: Awaited<ReturnType<typeof action>>): Response {
-  return Response.json(result.data, result.init ?? undefined);
-}
-
-const ROOM_PATTERN = '/room/:roomId';
-
-function args(request: Request, roomId = 'r_aaaaaaaaaa'): ActionFunctionArgs {
-  return {
-    request,
-    url: new URL(request.url),
-    pattern: ROOM_PATTERN,
-    params: { roomId },
-    context: new RouterContextProvider(),
-  };
-}
-
-function loaderArgs(request: Request): LoaderFunctionArgs {
-  return {
-    request,
-    url: new URL(request.url),
-    pattern: ROOM_PATTERN,
-    params: { roomId: 'r_aaaaaaaaaa' },
-    context: new RouterContextProvider(),
-  };
-}

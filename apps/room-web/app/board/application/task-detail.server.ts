@@ -9,7 +9,7 @@ export interface TaskDetailView {
 }
 
 export async function loadTaskDetail(taskId: string, provider?: TaskProvider): Promise<TaskDetailView> {
-  const trimmedId = (taskId ?? '').trim();
+  const trimmedId = taskId.trim();
   if (!trimmedId) {
     return {
       error: '任务 ID 不能为空。',

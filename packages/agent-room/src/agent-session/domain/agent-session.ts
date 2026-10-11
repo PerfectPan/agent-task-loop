@@ -2,6 +2,37 @@ import type { RoomSeq } from '../../room/domain/model';
 import type { AgentSession as AgentSessionState, AgentSessionId } from './model';
 import { AgentSessionValidationError } from './errors';
 
+function assertSessionSeq(seq: RoomSeq, label: string): void {
+  if (!Number.isSafeInteger(seq) || seq < 0) {
+    throw new AgentSessionValidationError(`${label} must be a non-negative integer`);
+  }
+}
+
+function validateSession(id: AgentSessionId, state?: Omit<AgentSessionState, 'id'>): void {
+  if (
+    !id.tenantId.trim() ||
+    !id.agentId.trim() ||
+    !id.roomId.tenantId.trim() ||
+    !id.roomId.conversationId.trim() ||
+    !id.runtimeGenerationId.trim()
+  ) {
+    throw new AgentSessionValidationError('agent session identity is incomplete');
+  }
+  if (id.tenantId !== id.roomId.tenantId) {
+    throw new AgentSessionValidationError('agent session tenant does not match its room tenant');
+  }
+  assertSessionSeq(state?.seenSeq ?? 0, 'agent session seenSeq');
+}
+
+function cloneSessionId(id: AgentSessionId): AgentSessionId {
+  return {
+    tenantId: id.tenantId,
+    agentId: id.agentId,
+    roomId: { ...id.roomId },
+    runtimeGenerationId: id.runtimeGenerationId,
+  };
+}
+
 /** Aggregate root for one agent runtime generation's read cursor. */
 export class AgentSessionAggregate {
   private seen: RoomSeq;
@@ -37,35 +68,4 @@ export class AgentSessionAggregate {
       seenSeq: this.seen,
     };
   }
-}
-
-function assertSessionSeq(seq: RoomSeq, label: string): void {
-  if (!Number.isSafeInteger(seq) || seq < 0) {
-    throw new AgentSessionValidationError(`${label} must be a non-negative integer`);
-  }
-}
-
-function validateSession(id: AgentSessionId, state?: Omit<AgentSessionState, 'id'>): void {
-  if (
-    !id.tenantId.trim() ||
-    !id.agentId.trim() ||
-    !id.roomId.tenantId.trim() ||
-    !id.roomId.conversationId.trim() ||
-    !id.runtimeGenerationId.trim()
-  ) {
-    throw new AgentSessionValidationError('agent session identity is incomplete');
-  }
-  if (id.tenantId !== id.roomId.tenantId) {
-    throw new AgentSessionValidationError('agent session tenant does not match its room tenant');
-  }
-  assertSessionSeq(state?.seenSeq ?? 0, 'agent session seenSeq');
-}
-
-function cloneSessionId(id: AgentSessionId): AgentSessionId {
-  return {
-    tenantId: id.tenantId,
-    agentId: id.agentId,
-    roomId: { ...id.roomId },
-    runtimeGenerationId: id.runtimeGenerationId,
-  };
 }

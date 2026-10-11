@@ -19,6 +19,10 @@ export interface MemoryOrchestratedTaskRuntimeOptions {
   now?: () => number;
 }
 
+function taskKey(taskId: string): string {
+  return `task:${taskId}`;
+}
+
 /** Memory-backed local adapter for Task occupancy and process execution. */
 export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
   private orchestration: Orchestration;
@@ -125,8 +129,4 @@ export class MemoryOrchestratedTaskRuntime implements TaskDeliveryRuntime {
     orchestration.templates.register(TASK_DELIVERY_TEMPLATE);
     return orchestration;
   }
-}
-
-function taskKey(taskId: string): string {
-  return `task:${taskId}`;
 }

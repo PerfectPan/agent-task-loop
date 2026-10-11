@@ -35,31 +35,83 @@ export interface RivusTaskManagerPluginDependencies {
   createTaskManager?: () => Promise<TaskManagerApplication>;
 }
 
-export function createRivusTaskManagerPlugin(dependencies: RivusTaskManagerPluginDependencies = {}): RivusPlugin {
-  const createTaskManager = dependencies.createTaskManager ?? createDefaultTaskManager;
+function inputRejectionReason(issue: z.core.$ZodIssue | undefined): string {
+  if (issue && issue.path.length > 0 && issue.input === undefined) {
+    return 'is required';
+  }
+  switch (issue?.code) {
+    case 'invalid_type':
+      return 'has an invalid type';
+    case 'invalid_value':
+      return 'has an unsupported value';
+    case 'too_small':
+      return 'is below its minimum length or value';
+    case 'too_big':
+      return 'exceeds its maximum length';
+    case 'unrecognized_keys':
+      return 'contains unknown properties';
+    case 'invalid_format':
+      return 'has an invalid format';
+    default:
+      return 'was rejected';
+  }
+}
 
+async function createDefaultTaskManager(): Promise<TaskManagerApplication> {
+  const { createConfiguredTaskManagerApplication } = await import('./task-manager/configured-task-manager');
+  return createConfiguredTaskManagerApplication();
+}
+
+function descriptor<TInput>(input: {
+  createTaskManager: () => Promise<TaskManagerApplication>;
+  description: string;
+  digest: string;
+  id: string;
+  idempotency: RivusToolDescriptor['idempotency'];
+  inputSchema: unknown;
+  parseInput: (input: unknown) => TInput;
+  risk: RivusToolDescriptor['risk'];
+  run: (application: TaskManagerApplication, input: TInput) => Promise<unknown>;
+}): RivusToolDescriptor {
   return {
-    manifest: {
-      apiVersion: RIVUS_PLUGIN_API_VERSION,
-      id: 'agent-task-loop',
-      version: '1.0.0',
-    },
-    register(registry: RivusPluginRegistry): void {
-      for (const tool of taskManagerTools(createTaskManager)) {
-        registry.registerTool(tool);
-      }
-      registry.registerAgentProfile({
-        displayName: 'Task Manager',
-        id: TASK_MANAGER_PROFILE_ID,
-        memory: { scopes: [] },
-        model: {},
-        skills: { allow: [] },
-        systemPrompt:
-          'Manage tasks only through the declared agent-task-loop Tools. Treat Task Backend data as authoritative and never request Shell, filesystem, Endpoint, or credential access.',
-        tools: { allow: TASK_MANAGER_TOOL_IDS },
-      });
-    },
+    createExecutor: () => ({
+      execute: async (toolInput) => {
+        const parsedInput = input.parseInput(toolInput);
+        try {
+          const application = await input.createTaskManager();
+          return await input.run(application, parsedInput);
+        } catch (error) {
+          if (error instanceof TaskManagerInputError) {
+            throw new RivusToolInputRejected(error.message);
+          }
+          if (error instanceof TaskManagerOperationError) {
+            throw error;
+          }
+          throw new TaskManagerOperationError('task-backend-failed', 'Task Manager operation failed');
+        }
+      },
+    }),
+    description: input.description,
+    digest: input.digest,
+    id: input.id,
+    idempotency: input.idempotency,
+    inputSchema: input.inputSchema,
+    risk: input.risk,
+    version: '1.0.0',
   };
+}
+
+function parseInput<T>(toolName: string, schema: z.ZodType<T>, input: unknown): T {
+  // `reportInput` copies each rejected value onto its issue so a missing field
+  // can be told apart; the error message never includes the value.
+  const result = schema.safeParse(input, { reportInput: true });
+  if (result.success) {
+    return result.data;
+  }
+  // zod 校验失败也可能不带任何 issue，索引读取按可缺失处理。
+  const issue = result.error.issues[0] as z.core.$ZodIssue | undefined;
+  const field = issue?.path.length ? issue.path.slice(0, 3).join('.').slice(0, 64) : 'input';
+  throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue)}`);
 }
 
 function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplication>): RivusToolDescriptor[] {
@@ -111,82 +163,31 @@ function taskManagerTools(createTaskManager: () => Promise<TaskManagerApplicatio
   ];
 }
 
-function descriptor<TInput>(input: {
-  createTaskManager: () => Promise<TaskManagerApplication>;
-  description: string;
-  digest: string;
-  id: string;
-  idempotency: RivusToolDescriptor['idempotency'];
-  inputSchema: unknown;
-  parseInput: (input: unknown) => TInput;
-  risk: RivusToolDescriptor['risk'];
-  run: (application: TaskManagerApplication, input: TInput) => Promise<unknown>;
-}): RivusToolDescriptor {
+export function createRivusTaskManagerPlugin(dependencies: RivusTaskManagerPluginDependencies = {}): RivusPlugin {
+  const createTaskManager = dependencies.createTaskManager ?? createDefaultTaskManager;
+
   return {
-    createExecutor: () => ({
-      execute: async (toolInput) => {
-        const parsedInput = input.parseInput(toolInput);
-        try {
-          const application = await input.createTaskManager();
-          return await input.run(application, parsedInput);
-        } catch (error) {
-          if (error instanceof TaskManagerInputError) {
-            throw new RivusToolInputRejected(error.message);
-          }
-          if (error instanceof TaskManagerOperationError) {
-            throw error;
-          }
-          throw new TaskManagerOperationError('task-backend-failed', 'Task Manager operation failed');
-        }
-      },
-    }),
-    description: input.description,
-    digest: input.digest,
-    id: input.id,
-    idempotency: input.idempotency,
-    inputSchema: input.inputSchema,
-    risk: input.risk,
-    version: '1.0.0',
+    manifest: {
+      apiVersion: RIVUS_PLUGIN_API_VERSION,
+      id: 'agent-task-loop',
+      version: '1.0.0',
+    },
+    register(registry: RivusPluginRegistry): void {
+      for (const tool of taskManagerTools(createTaskManager)) {
+        registry.registerTool(tool);
+      }
+      registry.registerAgentProfile({
+        displayName: 'Task Manager',
+        id: TASK_MANAGER_PROFILE_ID,
+        memory: { scopes: [] },
+        model: {},
+        skills: { allow: [] },
+        systemPrompt:
+          'Manage tasks only through the declared agent-task-loop Tools. Treat Task Backend data as authoritative and never request Shell, filesystem, Endpoint, or credential access.',
+        tools: { allow: TASK_MANAGER_TOOL_IDS },
+      });
+    },
   };
-}
-
-function parseInput<T>(toolName: string, schema: z.ZodType<T>, input: unknown): T {
-  // `reportInput` copies each rejected value onto its issue so a missing field
-  // can be told apart; the error message never includes the value.
-  const result = schema.safeParse(input, { reportInput: true });
-  if (result.success) {
-    return result.data;
-  }
-  const issue = result.error.issues[0];
-  const field = issue?.path.length ? issue.path.slice(0, 3).join('.').slice(0, 64) : 'input';
-  throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue)}`);
-}
-
-function inputRejectionReason(issue: z.core.$ZodIssue | undefined): string {
-  if (issue && issue.path.length > 0 && issue.input === undefined) {
-    return 'is required';
-  }
-  switch (issue?.code) {
-    case 'invalid_type':
-      return 'has an invalid type';
-    case 'invalid_value':
-      return 'has an unsupported value';
-    case 'too_small':
-      return 'is below its minimum length or value';
-    case 'too_big':
-      return 'exceeds its maximum length';
-    case 'unrecognized_keys':
-      return 'contains unknown properties';
-    case 'invalid_format':
-      return 'has an invalid format';
-    default:
-      return 'was rejected';
-  }
-}
-
-async function createDefaultTaskManager(): Promise<TaskManagerApplication> {
-  const { createConfiguredTaskManagerApplication } = await import('./task-manager/configured-task-manager');
-  return createConfiguredTaskManagerApplication();
 }
 
 export default createRivusTaskManagerPlugin();

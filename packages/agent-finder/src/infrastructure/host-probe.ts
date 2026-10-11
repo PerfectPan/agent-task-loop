@@ -9,6 +9,27 @@ import type { HostProbe, HostProbeCollector } from '../contracts/types.js';
 import { expandPath } from '../support/expand-path.js';
 import { resolveCommand } from './resolve-command.js';
 
+function defaultIsExecutable(path: string): boolean {
+  try {
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
+    return process.platform === 'win32' && /\.(?:com|exe|bat|cmd)$/iu.test(path);
+  }
+}
+
+function defaultReadVersion(path: string, args: string[]): string | null {
+  try {
+    return execFileSync(path, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 1500,
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
   const hostOs = options.os ?? platform();
   const hostArch = options.arch ?? arch();
@@ -71,25 +92,4 @@ export function collectHostProbe(options: HostProbeCollector = {}): HostProbe {
     existingPaths,
     versions,
   };
-}
-
-function defaultIsExecutable(path: string): boolean {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return process.platform === 'win32' && /\.(?:com|exe|bat|cmd)$/iu.test(path);
-  }
-}
-
-function defaultReadVersion(path: string, args: string[]): string | null {
-  try {
-    return execFileSync(path, args, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 1500,
-    }).trim();
-  } catch {
-    return null;
-  }
 }

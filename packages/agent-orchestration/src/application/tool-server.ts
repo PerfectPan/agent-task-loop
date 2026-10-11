@@ -65,6 +65,20 @@ interface ClientEntry {
 /** The answer a refused call reads: the same error the Room tools return. */
 const TURN_CLOSED = { content: [{ type: 'text' as const, text: JSON.stringify({ error: 'turn-closed' }) }] };
 
+async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = chunk as Buffer;
+    size += buffer.length;
+    if (size > MAX_BODY_BYTES) {
+      throw new Error('body too large');
+    }
+    chunks.push(buffer);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
 /**
  * Hosts the endpoint's tool definitions as one streamable-HTTP MCP endpoint
  * per (room, agent) session, on the loopback address, behind the session's
@@ -107,7 +121,7 @@ export class ToolServer {
           if (!current) {
             return TURN_CLOSED;
           }
-          const result = await current.handler((args ?? {}) as Record<string, unknown>, { sessionId: extra.sessionId });
+          const result = await current.handler(args as Record<string, unknown>, { sessionId: extra.sessionId });
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(result ?? null) }],
           };
@@ -260,18 +274,4 @@ export class ToolServer {
     const relative = here.endsWith('.ts') ? '../../bin/acp-tool-shim.js' : '../bin/acp-tool-shim.js';
     return fileURLToPath(new URL(relative, here));
   }
-}
-
-async function readJsonBody(request: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request) {
-    const buffer = chunk as Buffer;
-    size += buffer.length;
-    if (size > MAX_BODY_BYTES) {
-      throw new Error('body too large');
-    }
-    chunks.push(buffer);
-  }
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }

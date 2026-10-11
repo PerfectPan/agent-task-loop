@@ -25,6 +25,10 @@ export interface TaskStartServiceDependencies {
   onRecovery?: (inspection: TaskRunnerInspection) => void;
 }
 
+function maxRoundsForStartRound(configuredMaxRounds: number, startRound?: number): number {
+  return startRound ? Math.max(configuredMaxRounds, startRound + configuredMaxRounds - 1) : configuredMaxRounds;
+}
+
 export class TaskStartService {
   private readonly occupancy: TaskOccupancyService;
 
@@ -106,8 +110,4 @@ export class TaskStartService {
     });
     return task;
   }
-}
-
-function maxRoundsForStartRound(configuredMaxRounds: number, startRound?: number): number {
-  return startRound ? Math.max(configuredMaxRounds, startRound + configuredMaxRounds - 1) : configuredMaxRounds;
 }

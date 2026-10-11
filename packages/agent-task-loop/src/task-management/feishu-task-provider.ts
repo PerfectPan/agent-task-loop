@@ -135,6 +135,23 @@ function buildRecordPayload(
   };
 }
 
+// Feishu returns these cells as text or numbers. Any other shape is kept as
+// JSON so it stays readable instead of becoming "[object Object]".
+function cellText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  // JSON.stringify 对 undefined/symbol/function 入参返回 undefined（TS 内置类型未体现），按可缺失处理。
+  return (JSON.stringify(value) as string | undefined) ?? '';
+}
+
+function optionalCellText(value: unknown): string | undefined {
+  return value ? cellText(value) : undefined;
+}
+
 export const FEISHU_SOURCE = 'feishu';
 
 export class FeishuTaskProvider implements SourceProvider {
@@ -563,20 +580,4 @@ export class FeishuTaskProvider implements SourceProvider {
       publishedAt: optionalCellText(fields.PublishedAt),
     };
   }
-}
-
-// Feishu returns these cells as text or numbers. Any other shape is kept as
-// JSON so it stays readable instead of becoming "[object Object]".
-function cellText(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  return JSON.stringify(value) ?? '';
-}
-
-function optionalCellText(value: unknown): string | undefined {
-  return value ? cellText(value) : undefined;
 }

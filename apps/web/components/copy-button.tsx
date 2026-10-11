@@ -9,7 +9,9 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     <button
       type="button"
       onClick={() => {
-        void navigator.clipboard?.writeText(text).then(() => {
+        // Non-secure contexts expose `navigator.clipboard` as undefined even
+        // though lib.dom types it as always-present.
+        void (navigator.clipboard as Clipboard | undefined)?.writeText(text).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         });

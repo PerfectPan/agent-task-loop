@@ -71,7 +71,8 @@ const DEFAULT_TERM_WIDTH = 80;
 export function renderTable<T>(columns: Column<T>[], rows: T[]): string[] {
   const plain = rows.map((row) => columns.map((col) => clean(col.get(row))));
 
-  const termWidth = process.stdout.columns ?? DEFAULT_TERM_WIDTH;
+  // Not a TTY: `columns` is undefined at runtime even though @types/node types it as `number`.
+  const termWidth = (process.stdout.columns as number | undefined) ?? DEFAULT_TERM_WIDTH;
   const widths = columns.map((col, i) => {
     const longest = Math.max(col.header.length, ...plain.map((r) => r[i].length), 0);
     return col.max ? Math.min(longest, col.max) : longest;

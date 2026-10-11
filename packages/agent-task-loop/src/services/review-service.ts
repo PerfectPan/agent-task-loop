@@ -9,12 +9,15 @@ export interface ReviewResult {
   logPath?: string;
 }
 
+// verdict 来自外部 JSON 输出，运行时可能是任意字符串，经校验后才收窄为 ReviewVerdict。
 interface ParsedReviewPayload {
-  verdict: ReviewVerdict;
+  verdict: string;
   findings: string[];
 }
 
-function tryParseReviewPayload(raw: string): ParsedReviewPayload | undefined {
+type ValidReviewPayload = ParsedReviewPayload & { verdict: ReviewVerdict };
+
+function tryParseReviewPayload(raw: string): ValidReviewPayload | undefined {
   const trimmed = raw.trim();
   if (!trimmed) {
     return undefined;
@@ -23,7 +26,7 @@ function tryParseReviewPayload(raw: string): ParsedReviewPayload | undefined {
   try {
     const parsed = JSON.parse(trimmed) as ParsedReviewPayload;
     if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
-      return parsed;
+      return parsed as ValidReviewPayload;
     }
   } catch {
     // Fall through and try line-by-line extraction.
@@ -38,7 +41,7 @@ function tryParseReviewPayload(raw: string): ParsedReviewPayload | undefined {
     try {
       const parsed = JSON.parse(lines[index]!) as ParsedReviewPayload;
       if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
-        return parsed;
+        return parsed as ValidReviewPayload;
       }
     } catch {
       continue;

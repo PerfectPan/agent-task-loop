@@ -29,6 +29,22 @@ export interface TurnRecord {
   error?: string;
 }
 
+function toRecord(row: TurnRow): RoomTurnView {
+  return {
+    id: row.id,
+    agentId: row.agent_id,
+    roundSeq: Number(row.round_seq),
+    triggerSeq: Number(row.trigger_seq),
+    startedAt: row.started_at,
+    ...(row.ended_at === null ? {} : { endedAt: row.ended_at }),
+    ...(row.outcome === null ? {} : { outcome: row.outcome as TurnOutcome }),
+    ...(row.posted_seq === null ? {} : { postedSeq: Number(row.posted_seq) }),
+    ...(row.stop_reason === null ? {} : { stopReason: row.stop_reason }),
+    heldCount: Number(row.held_count),
+    ...(row.error === null ? {} : { error: row.error }),
+  };
+}
+
 export class SqliteTurnLog {
   constructor(private readonly db: DatabaseSync) {}
 
@@ -90,20 +106,4 @@ interface TurnRow {
   stop_reason: string | null;
   held_count: number;
   error: string | null;
-}
-
-function toRecord(row: TurnRow): RoomTurnView {
-  return {
-    id: row.id,
-    agentId: row.agent_id,
-    roundSeq: Number(row.round_seq),
-    triggerSeq: Number(row.trigger_seq),
-    startedAt: row.started_at,
-    ...(row.ended_at === null ? {} : { endedAt: row.ended_at }),
-    ...(row.outcome === null ? {} : { outcome: row.outcome as TurnOutcome }),
-    ...(row.posted_seq === null ? {} : { postedSeq: Number(row.posted_seq) }),
-    ...(row.stop_reason === null ? {} : { stopReason: row.stop_reason }),
-    heldCount: Number(row.held_count),
-    ...(row.error === null ? {} : { error: row.error }),
-  };
 }

@@ -1,7 +1,9 @@
 import type { AgentKind, Session, TranscriptEntry } from '@rivus/agent-sessions';
 import { renderKeyValues, renderTable, style, type Column } from '../formatters/render.js';
 
-const AGENT_COLOR: Record<AgentKind, (text: string) => string> = {
+// `Partial` keeps the lookup optional: sessions parsed from external sources may
+// carry an agent kind outside this table, so the `style.gray` fallback stays live.
+const AGENT_COLOR: Partial<Record<AgentKind, (text: string) => string>> = {
   codex: style.green,
   claude: style.cyan,
   opencode: style.yellow,

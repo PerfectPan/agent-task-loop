@@ -7,6 +7,37 @@ import {
 import type { TaskProvider } from '../../src/task-management/task-provider';
 import type { TaskRecord } from '../../src/types/task';
 
+function fakeTaskProvider(tasks: TaskRecord[]): TaskProvider {
+  return {
+    listTasks: vi.fn().mockResolvedValue(tasks),
+    listPendingTasks: vi.fn().mockResolvedValue([]),
+    getTaskById: vi.fn(),
+    createTask: vi.fn(),
+    claimTask: vi.fn(),
+    updateTaskProgress: vi.fn(),
+    updateRunnerState: vi.fn(),
+    updateTaskAssignment: vi.fn(),
+    markTaskSucceeded: vi.fn(),
+    markTaskFailed: vi.fn(),
+    updateReviewState: vi.fn(),
+    updatePublishResult: vi.fn(),
+    updateCleanupState: vi.fn(),
+  };
+}
+
+function task(overrides: Partial<TaskRecord>): TaskRecord {
+  return {
+    taskId: 'TASK-DEFAULT',
+    title: 'Task',
+    description: 'Description',
+    project: 'project',
+    targetAgent: 'codex',
+    priority: 1,
+    status: '待处理',
+    ...overrides,
+  };
+}
+
 describe('Task Manager application', () => {
   it('returns a bounded public DTO without machine or runner fields', async () => {
     const provider = fakeTaskProvider([
@@ -245,34 +276,3 @@ describe('Task Manager application', () => {
     });
   });
 });
-
-function fakeTaskProvider(tasks: TaskRecord[]): TaskProvider {
-  return {
-    listTasks: vi.fn().mockResolvedValue(tasks),
-    listPendingTasks: vi.fn().mockResolvedValue([]),
-    getTaskById: vi.fn(),
-    createTask: vi.fn(),
-    claimTask: vi.fn(),
-    updateTaskProgress: vi.fn(),
-    updateRunnerState: vi.fn(),
-    updateTaskAssignment: vi.fn(),
-    markTaskSucceeded: vi.fn(),
-    markTaskFailed: vi.fn(),
-    updateReviewState: vi.fn(),
-    updatePublishResult: vi.fn(),
-    updateCleanupState: vi.fn(),
-  };
-}
-
-function task(overrides: Partial<TaskRecord>): TaskRecord {
-  return {
-    taskId: 'TASK-DEFAULT',
-    title: 'Task',
-    description: 'Description',
-    project: 'project',
-    targetAgent: 'codex',
-    priority: 1,
-    status: '待处理',
-    ...overrides,
-  };
-}

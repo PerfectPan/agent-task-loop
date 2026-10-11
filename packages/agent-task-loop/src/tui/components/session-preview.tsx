@@ -95,7 +95,8 @@ export function SessionPreview({
           ) : (
             <Box flexDirection="column">
               {(() => {
-                const round = preview.history[roundIndex];
+                // roundIndex 是光标位置，可能越过 history 末尾，索引读取按可缺失处理。
+                const round = preview.history[roundIndex] as SessionPreviewData['history'][number] | undefined;
                 return (
                   <>
                     <Text wrap="truncate-end">

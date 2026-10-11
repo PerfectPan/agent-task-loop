@@ -6,7 +6,8 @@ function formatClaudeEvent(line: string): string {
     const event = JSON.parse(line) as Record<string, any>;
 
     if (event.type === 'stream_event') {
-      const payload = event.event as Record<string, any>;
+      // event.event 是外部 JSON 流的字段，运行时可能缺失。
+      const payload: Record<string, any> | undefined = event.event;
 
       if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {
         return `\n[claude] tool=${String(payload.content_block.name)}\n`;
@@ -38,7 +39,8 @@ function extractClaudeProgress(line: string): string | undefined {
     const event = JSON.parse(line) as Record<string, any>;
 
     if (event.type === 'stream_event') {
-      const payload = event.event as Record<string, any>;
+      // 同上：外部 JSON 流字段，运行时可能缺失。
+      const payload: Record<string, any> | undefined = event.event;
 
       if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {
         const toolName = String(payload.content_block.name);

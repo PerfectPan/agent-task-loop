@@ -50,6 +50,15 @@ export function writeWorkspaceFiles(harness: Harness): void {
   }
 }
 
+export function fallbackProfile(id: string): AgentProfile {
+  return {
+    id,
+    newSession: (harness) => ({ cwd: harness.cwd, mcpServers: harness.tools }),
+    promptBlocks: withSystemPromptBlock,
+    prepareWorkspace: writeWorkspaceFiles,
+  };
+}
+
 /** Picks a profile by the agent id the candidate catalog seeds; unknown agents fall back. */
 export function profileForAgent(agent: Agent): AgentProfile {
   switch (agent.id) {
@@ -62,13 +71,4 @@ export function profileForAgent(agent: Agent): AgentProfile {
     default:
       return fallbackProfile(agent.id);
   }
-}
-
-export function fallbackProfile(id: string): AgentProfile {
-  return {
-    id,
-    newSession: (harness) => ({ cwd: harness.cwd, mcpServers: harness.tools }),
-    promptBlocks: withSystemPromptBlock,
-    prepareWorkspace: writeWorkspaceFiles,
-  };
 }

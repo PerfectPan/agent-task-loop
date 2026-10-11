@@ -6,6 +6,39 @@ import { createTaskManagerApplication } from '../src/task-manager/task-manager-a
 import type { TaskProvider } from '../src/task-management/task-provider';
 import type { TaskRecord } from '../src/types/task';
 
+function getTool(plugin: { register(registry: RivusPluginRegistry): void }, toolId: string): RivusToolDescriptor {
+  const tools = new Map<string, RivusToolDescriptor>();
+  plugin.register({
+    registerAgentProfile: () => undefined,
+    registerAutomation: () => undefined,
+    registerSkill: () => undefined,
+    registerTool: (tool) => tools.set(tool.id, tool),
+  });
+  const tool = tools.get(toolId);
+  if (!tool) {
+    throw new Error(`Tool ${toolId} was not registered`);
+  }
+  return tool;
+}
+
+function fakeTaskProvider(task: TaskRecord): TaskProvider {
+  return {
+    listTasks: vi.fn().mockResolvedValue([task]),
+    listPendingTasks: vi.fn().mockResolvedValue([]),
+    getTaskById: vi.fn().mockResolvedValue(task),
+    createTask: vi.fn(),
+    claimTask: vi.fn(),
+    updateTaskProgress: vi.fn(),
+    updateRunnerState: vi.fn(),
+    updateTaskAssignment: vi.fn(),
+    markTaskSucceeded: vi.fn(),
+    markTaskFailed: vi.fn(),
+    updateReviewState: vi.fn(),
+    updatePublishResult: vi.fn(),
+    updateCleanupState: vi.fn(),
+  };
+}
+
 describe('Rivus Task Manager tool execution', () => {
   it('queries a fake task through the Tool and returns only the redacted DTO', async () => {
     const provider = fakeTaskProvider({
@@ -105,36 +138,3 @@ describe('Rivus Task Manager tool execution', () => {
     expect(createTaskManager).not.toHaveBeenCalled();
   });
 });
-
-function getTool(plugin: { register(registry: RivusPluginRegistry): void }, toolId: string): RivusToolDescriptor {
-  const tools = new Map<string, RivusToolDescriptor>();
-  plugin.register({
-    registerAgentProfile: () => undefined,
-    registerAutomation: () => undefined,
-    registerSkill: () => undefined,
-    registerTool: (tool) => tools.set(tool.id, tool),
-  });
-  const tool = tools.get(toolId);
-  if (!tool) {
-    throw new Error(`Tool ${toolId} was not registered`);
-  }
-  return tool;
-}
-
-function fakeTaskProvider(task: TaskRecord): TaskProvider {
-  return {
-    listTasks: vi.fn().mockResolvedValue([task]),
-    listPendingTasks: vi.fn().mockResolvedValue([]),
-    getTaskById: vi.fn().mockResolvedValue(task),
-    createTask: vi.fn(),
-    claimTask: vi.fn(),
-    updateTaskProgress: vi.fn(),
-    updateRunnerState: vi.fn(),
-    updateTaskAssignment: vi.fn(),
-    markTaskSucceeded: vi.fn(),
-    markTaskFailed: vi.fn(),
-    updateReviewState: vi.fn(),
-    updatePublishResult: vi.fn(),
-    updateCleanupState: vi.fn(),
-  };
-}

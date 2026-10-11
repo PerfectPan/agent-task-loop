@@ -3,6 +3,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
 
+function isTransientLarkCliError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /TLS handshake timeout|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|network|timeout/i.test(message);
+}
+
 export async function runLarkCli(args: string[]): Promise<string> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
@@ -21,9 +26,4 @@ export async function runLarkCli(args: string[]): Promise<string> {
   }
 
   throw lastError;
-}
-
-function isTransientLarkCliError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /TLS handshake timeout|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|network|timeout/i.test(message);
 }

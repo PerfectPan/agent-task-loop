@@ -58,7 +58,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(funct
           return true;
         }
         if ((event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey) {
-          const option = options[activeIndex] ?? options[0];
+          const option = options.at(activeIndex) ?? options.at(0);
           if (option) {
             onSelect(option);
           }

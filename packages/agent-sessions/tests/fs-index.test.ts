@@ -7,7 +7,9 @@ const UUID_B = '22222222-2222-4222-8222-222222222222';
 /** Build an injectable fake fs from a flat `path -> entries | file` tree. */
 function fakeFs(tree: Record<string, Array<{ name: string; dir?: boolean }>>, mtimes: Record<string, number> = {}) {
   const readdir = async (path: string) => {
-    const entries = tree[path];
+    // `Record` index access is untyped-optional at runtime (noUncheckedIndexedAccess is off),
+    // so the lookup is locally widened to express the possible miss.
+    const entries = tree[path] as Array<{ name: string; dir?: boolean }> | undefined;
     if (!entries) {
       throw new Error(`ENOENT: ${path}`);
     }

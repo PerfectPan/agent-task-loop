@@ -12,6 +12,76 @@ interface GuardOwner {
   id: string;
 }
 
+function sameHolder(current: LeaseRecord, token: FencingToken): boolean {
+  return current.key === token.key && current.holderPid === token.holderPid && current.holderId === token.holderId;
+}
+
+function writeJsonAtomically(file: string, value: unknown): void {
+  mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
+  writeFileSync(tmp, JSON.stringify(value), 'utf8');
+  renameSync(tmp, file);
+}
+
+function readJson<T>(file: string): T | undefined {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+function reclaimAbandonedGuard(guard: string): boolean {
+  const owner = readJson<GuardOwner>(path.join(guard, 'owner.json'));
+  if (owner && Number.isSafeInteger(owner.pid) && owner.pid > 0 && nodeLiveness.isAlive(owner.pid)) {
+    return false;
+  }
+  const abandoned = `${guard}.${process.pid}.${randomBytes(16).toString('hex')}.abandoned`;
+  try {
+    renameSync(guard, abandoned);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return true;
+    }
+    throw error;
+  }
+  rmSync(abandoned, { recursive: true, force: true });
+  return true;
+}
+
+function tryAcquireGuard(guard: string, owner: GuardOwner): boolean {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const candidate = `${guard}.${owner.pid}.${owner.id}.tmp`;
+    mkdirSync(candidate);
+    try {
+      writeJsonAtomically(path.join(candidate, 'owner.json'), owner);
+      try {
+        renameSync(candidate, guard);
+        return true;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== 'EEXIST' && code !== 'ENOTEMPTY') {
+          throw error;
+        }
+      }
+    } finally {
+      rmSync(candidate, { recursive: true, force: true });
+    }
+    if (!reclaimAbandonedGuard(guard)) {
+      return false;
+    }
+  }
+  return false;
+}
+
+function releaseGuard(guard: string, owner: GuardOwner): void {
+  const current = readJson<GuardOwner>(path.join(guard, 'owner.json'));
+  if (current?.pid !== owner.pid || current.id !== owner.id) {
+    return;
+  }
+  rmSync(guard, { recursive: true, force: true });
+}
+
 /** The lock half of the old file store: durable leases with compare-and-swap semantics. */
 export class FileLeaseStore implements LeaseStore {
   constructor(private readonly baseDir: string) {}
@@ -105,74 +175,4 @@ export class FileLeaseStore implements LeaseStore {
       releaseGuard(guard, owner);
     }
   }
-}
-
-function sameHolder(current: LeaseRecord, token: FencingToken): boolean {
-  return current.key === token.key && current.holderPid === token.holderPid && current.holderId === token.holderId;
-}
-
-function writeJsonAtomically(file: string, value: unknown): void {
-  mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${randomBytes(8).toString('hex')}.tmp`;
-  writeFileSync(tmp, JSON.stringify(value), 'utf8');
-  renameSync(tmp, file);
-}
-
-function readJson<T>(file: string): T | undefined {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8')) as T;
-  } catch {
-    return undefined;
-  }
-}
-
-function tryAcquireGuard(guard: string, owner: GuardOwner): boolean {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const candidate = `${guard}.${owner.pid}.${owner.id}.tmp`;
-    mkdirSync(candidate);
-    try {
-      writeJsonAtomically(path.join(candidate, 'owner.json'), owner);
-      try {
-        renameSync(candidate, guard);
-        return true;
-      } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' && code !== 'ENOTEMPTY') {
-          throw error;
-        }
-      }
-    } finally {
-      rmSync(candidate, { recursive: true, force: true });
-    }
-    if (!reclaimAbandonedGuard(guard)) {
-      return false;
-    }
-  }
-  return false;
-}
-
-function reclaimAbandonedGuard(guard: string): boolean {
-  const owner = readJson<GuardOwner>(path.join(guard, 'owner.json'));
-  if (owner && Number.isSafeInteger(owner.pid) && owner.pid > 0 && nodeLiveness.isAlive(owner.pid)) {
-    return false;
-  }
-  const abandoned = `${guard}.${process.pid}.${randomBytes(16).toString('hex')}.abandoned`;
-  try {
-    renameSync(guard, abandoned);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return true;
-    }
-    throw error;
-  }
-  rmSync(abandoned, { recursive: true, force: true });
-  return true;
-}
-
-function releaseGuard(guard: string, owner: GuardOwner): void {
-  const current = readJson<GuardOwner>(path.join(guard, 'owner.json'));
-  if (current?.pid !== owner.pid || current.id !== owner.id) {
-    return;
-  }
-  rmSync(guard, { recursive: true, force: true });
 }

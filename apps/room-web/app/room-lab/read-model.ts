@@ -198,6 +198,16 @@ export type RoomLabAction =
 
 export type RoomLabActionResponse = { ok: true; state: RoomLabState } | { ok: false; error: string };
 
+export function takeNewestRoomState(current: RoomLabState, incoming: RoomLabState): RoomLabState {
+  if (incoming.roomId !== current.roomId) {
+    return current;
+  }
+  if (incoming.epoch !== current.epoch) {
+    return current;
+  }
+  return incoming.revision > current.revision ? incoming : current;
+}
+
 export class RoomLabStateSelector {
   private readonly retiredEpochs = new Set<string>();
 
@@ -218,14 +228,4 @@ export class RoomLabStateSelector {
   takeAction(current: RoomLabState, incoming: RoomLabState): RoomLabState {
     return takeNewestRoomState(current, incoming);
   }
-}
-
-export function takeNewestRoomState(current: RoomLabState, incoming: RoomLabState): RoomLabState {
-  if (incoming.roomId !== current.roomId) {
-    return current;
-  }
-  if (incoming.epoch !== current.epoch) {
-    return current;
-  }
-  return incoming.revision > current.revision ? incoming : current;
 }

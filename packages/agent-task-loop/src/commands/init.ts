@@ -8,7 +8,8 @@ import { ensureGitHubExecutionEntries, type EditableConfig } from '../config/sou
 
 export { globalConfigPath };
 
-const AGENT_MAP: Record<string, { name: string; command: string }> = {
+// 键只覆盖已知 agent id，外部探测报告里的 id 可能不在表内，读取按可缺失处理。
+const AGENT_MAP: Record<string, { name: string; command: string } | undefined> = {
   'claude-code': { name: 'claude', command: 'claude' },
   codex: { name: 'codex', command: 'codex' },
 };
@@ -33,8 +34,8 @@ export async function discoverRunnableAgents(): Promise<Record<string, AgentEntr
   const report = discover(probe);
   const agents: Record<string, AgentEntry> = {};
   for (const agent of report.agents) {
-    if (agent.status === 'runnable' && AGENT_MAP[agent.id]) {
-      const mapped = AGENT_MAP[agent.id];
+    const mapped = AGENT_MAP[agent.id];
+    if (agent.status === 'runnable' && mapped) {
       agents[mapped.name] = { name: mapped.name, command: mapped.command, args: [], env: {} };
     }
   }

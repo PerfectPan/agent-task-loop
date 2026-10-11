@@ -108,6 +108,238 @@ export interface RoomServiceOptions {
   resetChild?: (roomId: string) => { reset(): Promise<unknown> } | undefined;
 }
 
+export class RoomInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RoomInputError';
+  }
+}
+
+/**
+ * The newest unread events that fit one turn's budget, oldest first. The first
+ * unread event is always taken even when it alone exceeds the character
+ * budget — a member that cannot read the event ahead of its cursor could
+ * never advance it; anything over budget comes back through `room_read`.
+ */
+function boundedInbox(unread: RoomEvent[]): RoomEvent[] {
+  const events: RoomEvent[] = [];
+  let chars = 0;
+  for (const event of unread) {
+    if (events.length >= TURN_BUDGET.maxEvents) {
+      break;
+    }
+    if (events.length > 0 && TURN_BUDGET.maxChars !== undefined && chars + event.body.length > TURN_BUDGET.maxChars) {
+      break;
+    }
+    events.push(event);
+    chars += event.body.length;
+  }
+  return events;
+}
+
+/**
+ * The transcript, one line per event, with the reader's own lines marked. The
+ * mark sits on each line rather than in a sentence above them, so it survives
+ * the transcript being cut at either end.
+ */
+function inboxLine(event: RoomEvent, selfId: RoomLabAgentId): string {
+  const author = event.author.id === selfId ? `@${event.author.id} (you)` : `@${event.author.id}`;
+  const addressed = event.addressedTo.length > 0 ? ` → ${event.addressedTo.map((id) => `@${id}`).join(', ')}` : '';
+  return `[seq ${event.seq}] ${author}${addressed}: ${event.body}`;
+}
+
+/**
+ * The turn prompt (docs/architecture/agent-collaboration.md): the room facts as one block, the inbox one line
+ * per event, the instruction as the last. The member's own system prompt
+ * travels in the Harness's native channel, so it is not a block here.
+ */
+function turnBlocks(input: {
+  agentId: RoomLabAgentId;
+  label: string;
+  seatIndex: number;
+  seatCount: number;
+  roomTitle: string;
+  members: readonly RoomLabAgentId[];
+  inbox: RoomEvent[];
+  /** Unread events the budget left out of the inbox, when it cut any. */
+  inboxTruncated?: number;
+  trigger: RoomEvent;
+  /** Set in a private room: the title of the room it was opened from. */
+  parent?: string;
+}): ContentBlock[] {
+  const facts =
+    `You are @${input.agentId} (${input.label}), member ${input.seatIndex} of ${input.seatCount}` +
+    ` in room "${input.roomTitle}".` +
+    (input.parent ? ` This is a private room under "${input.parent}".` : '') +
+    ` Members in seat order: ${input.members.map((member) => `@${member}`).join(', ')}.` +
+    ` You were woken by seq ${input.trigger.seq} from @${input.trigger.author.id}.`;
+  const lastShown = input.inbox.at(-1)?.seq;
+  const transcript =
+    input.inbox.length === 0
+      ? '(nothing new since your last turn)'
+      : input.inbox.map((event) => inboxLine(event, input.agentId)).join('\n') +
+        (input.inboxTruncated && lastShown !== undefined
+          ? `\n(${input.inboxTruncated} more unread events follow seq ${lastShown}; call room_read to read them before you speak.)`
+          : '');
+  const instruction =
+    'Read first. If you have something to add, call room_speak once.' +
+    ' To settle something with one member alone, call room_dm instead.' +
+    ' If not, end your turn without calling either.' +
+    ' Text you print without a Room tool is not sent.';
+  return [
+    { type: 'text', text: facts },
+    { type: 'text', text: transcript },
+    { type: 'text', text: instruction },
+  ];
+}
+
+function isInside(root: string, target: string): boolean {
+  const within = path.relative(root, target);
+  // `..` and `..`-prefixed components only: a name that merely starts with
+  // two dots (`..foo`) is an ordinary in-root name.
+  return within === '' || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
+}
+
+function realPathOf(target: string): string | undefined {
+  try {
+    return realpathSync(target);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Where a call's path really points, symlinks included: every component is
+ * walked and each link followed, so a link that lives inside the root but
+ * points out is judged by where it points. Past the first component that
+ * does not exist nothing below can exist either — there is no link left to
+ * hide in — so the rest hangs off the last real directory as written.
+ * Returns undefined when the walk gives up: an unreadable link, or a chain
+ * long enough to be a loop — the caller denies, because handing such a path
+ * to the OS is exactly how it would follow the rest of the way out.
+ */
+function resolvedTarget(target: string): string | undefined {
+  let current = path.resolve(target);
+  for (let hops = 0; hops < 40; hops += 1) {
+    const parts = current.split(path.sep);
+    let walked: string = path.sep;
+    let followed = false;
+    for (let index = 1; index < parts.length; index += 1) {
+      const part = parts[index]!;
+      if (!part) {
+        continue;
+      }
+      const next = path.join(walked, part);
+      let stat: { isSymbolicLink(): boolean };
+      try {
+        stat = lstatSync(next);
+      } catch {
+        return path.join(walked, ...parts.slice(index).filter(Boolean));
+      }
+      if (!stat.isSymbolicLink()) {
+        walked = next;
+        continue;
+      }
+      let linkTarget: string;
+      try {
+        linkTarget = readlinkSync(next);
+      } catch {
+        return undefined;
+      }
+      // The link's own target may hold links of its own: walk it next pass,
+      // with the rest of the original path hanging off it.
+      const rest = parts.slice(index + 1).filter(Boolean);
+      current = path.join(path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget), ...rest);
+      followed = true;
+      break;
+    }
+    if (!followed) {
+      return walked;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The default policy for a Room turn: writes inside `cwd` are allowed, writes
+ * outside it are denied. Paths are resolved before the comparison — a symlink
+ * pointing out of `cwd` is out of `cwd` — and a write-kind call that names no
+ * location is denied rather than assumed harmless.
+ */
+function cwdPermissionPolicy(cwd: string): PermissionPolicy {
+  const root = realPathOf(cwd) ?? cwd;
+  return (request) => {
+    const call = request.toolCall;
+    const paths = (call.locations ?? [])
+      .map((location) => location.path)
+      .filter((value): value is string => typeof value === 'string');
+    const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
+    // A relative path would resolve against this server's cwd — a place the
+    // room never named — and a chain the walker gives up on is exactly where
+    // the OS would follow it out of the root; both are denied.
+    const outside = paths.some((candidate) => {
+      if (!path.isAbsolute(candidate)) {
+        return true;
+      }
+      const resolved = resolvedTarget(candidate);
+      return resolved === undefined || !isInside(root, resolved);
+    });
+    const wanted =
+      outside || (writeKind && paths.length === 0) ? ['reject_once', 'reject_always'] : ['allow_once', 'allow_always'];
+    for (const kind of wanted) {
+      const option = request.options.find((candidate) => candidate.kind === kind);
+      if (option) {
+        return { outcome: 'selected', optionId: option.optionId };
+      }
+    }
+    return { outcome: 'cancelled' };
+  };
+}
+
+function defaultWorkRoot(): string {
+  return join(defaultRoomHome(), 'work');
+}
+
+function validateText(value: string, label: string): string {
+  const text = value.trim();
+  if (!text) {
+    throw new RoomInputError(`${label} is required`);
+  }
+  if (text.length > ROOM_MESSAGE_LIMIT) {
+    throw new RoomInputError(`${label} must be at most ${ROOM_MESSAGE_LIMIT} characters`);
+  }
+  return text;
+}
+
+function validateMessageId(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!/^[A-Za-z0-9:_-]{8,80}$/.test(value)) {
+    throw new RoomInputError('Message id is invalid');
+  }
+  return value;
+}
+
+function lastTurnFor(turns: RoomTurnView[], agentId: RoomLabAgentId): RoomTurnView | undefined {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    if (turn.agentId === agentId && turn.outcome) {
+      return turn;
+    }
+  }
+  return undefined;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** Two rounds of the same seq in two rooms are two rounds; the key says whose. */
+function roundKey(round: RoomRound): string {
+  return `${round.roomId}#${round.seq}`;
+}
+
 /**
  * The endpoint's dispatcher and turn assembly (docs/architecture/agent-collaboration.md): `admit` computes the
  * wake set and calls `runtime.wake`, the runtime answers with `activate` —
@@ -751,236 +983,4 @@ export class RoomService {
   private touch(): void {
     this.revision += 1;
   }
-}
-
-export class RoomInputError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RoomInputError';
-  }
-}
-
-/**
- * The newest unread events that fit one turn's budget, oldest first. The first
- * unread event is always taken even when it alone exceeds the character
- * budget — a member that cannot read the event ahead of its cursor could
- * never advance it; anything over budget comes back through `room_read`.
- */
-function boundedInbox(unread: RoomEvent[]): RoomEvent[] {
-  const events: RoomEvent[] = [];
-  let chars = 0;
-  for (const event of unread) {
-    if (events.length >= TURN_BUDGET.maxEvents) {
-      break;
-    }
-    if (events.length > 0 && TURN_BUDGET.maxChars !== undefined && chars + event.body.length > TURN_BUDGET.maxChars) {
-      break;
-    }
-    events.push(event);
-    chars += event.body.length;
-  }
-  return events;
-}
-
-/**
- * The turn prompt (docs/architecture/agent-collaboration.md): the room facts as one block, the inbox one line
- * per event, the instruction as the last. The member's own system prompt
- * travels in the Harness's native channel, so it is not a block here.
- */
-function turnBlocks(input: {
-  agentId: RoomLabAgentId;
-  label: string;
-  seatIndex: number;
-  seatCount: number;
-  roomTitle: string;
-  members: readonly RoomLabAgentId[];
-  inbox: RoomEvent[];
-  /** Unread events the budget left out of the inbox, when it cut any. */
-  inboxTruncated?: number;
-  trigger: RoomEvent;
-  /** Set in a private room: the title of the room it was opened from. */
-  parent?: string;
-}): ContentBlock[] {
-  const facts =
-    `You are @${input.agentId} (${input.label}), member ${input.seatIndex} of ${input.seatCount}` +
-    ` in room "${input.roomTitle}".` +
-    (input.parent ? ` This is a private room under "${input.parent}".` : '') +
-    ` Members in seat order: ${input.members.map((member) => `@${member}`).join(', ')}.` +
-    ` You were woken by seq ${input.trigger.seq} from @${input.trigger.author.id}.`;
-  const lastShown = input.inbox.at(-1)?.seq;
-  const transcript =
-    input.inbox.length === 0
-      ? '(nothing new since your last turn)'
-      : input.inbox.map((event) => inboxLine(event, input.agentId)).join('\n') +
-        (input.inboxTruncated && lastShown !== undefined
-          ? `\n(${input.inboxTruncated} more unread events follow seq ${lastShown}; call room_read to read them before you speak.)`
-          : '');
-  const instruction =
-    'Read first. If you have something to add, call room_speak once.' +
-    ' To settle something with one member alone, call room_dm instead.' +
-    ' If not, end your turn without calling either.' +
-    ' Text you print without a Room tool is not sent.';
-  return [
-    { type: 'text', text: facts },
-    { type: 'text', text: transcript },
-    { type: 'text', text: instruction },
-  ];
-}
-
-/**
- * The transcript, one line per event, with the reader's own lines marked. The
- * mark sits on each line rather than in a sentence above them, so it survives
- * the transcript being cut at either end.
- */
-function inboxLine(event: RoomEvent, selfId: RoomLabAgentId): string {
-  const author = event.author.id === selfId ? `@${event.author.id} (you)` : `@${event.author.id}`;
-  const addressed = event.addressedTo.length > 0 ? ` → ${event.addressedTo.map((id) => `@${id}`).join(', ')}` : '';
-  return `[seq ${event.seq}] ${author}${addressed}: ${event.body}`;
-}
-
-/**
- * The default policy for a Room turn: writes inside `cwd` are allowed, writes
- * outside it are denied. Paths are resolved before the comparison — a symlink
- * pointing out of `cwd` is out of `cwd` — and a write-kind call that names no
- * location is denied rather than assumed harmless.
- */
-function cwdPermissionPolicy(cwd: string): PermissionPolicy {
-  const root = realPathOf(cwd) ?? cwd;
-  return (request) => {
-    const call = request.toolCall;
-    const paths = (call.locations ?? [])
-      .map((location) => location.path)
-      .filter((value): value is string => typeof value === 'string');
-    const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
-    // A relative path would resolve against this server's cwd — a place the
-    // room never named — and a chain the walker gives up on is exactly where
-    // the OS would follow it out of the root; both are denied.
-    const outside = paths.some((candidate) => {
-      if (!path.isAbsolute(candidate)) {
-        return true;
-      }
-      const resolved = resolvedTarget(candidate);
-      return resolved === undefined || !isInside(root, resolved);
-    });
-    const wanted =
-      outside || (writeKind && paths.length === 0) ? ['reject_once', 'reject_always'] : ['allow_once', 'allow_always'];
-    for (const kind of wanted) {
-      const option = request.options.find((candidate) => candidate.kind === kind);
-      if (option) {
-        return { outcome: 'selected', optionId: option.optionId };
-      }
-    }
-    return { outcome: 'cancelled' };
-  };
-}
-
-function isInside(root: string, target: string): boolean {
-  const within = path.relative(root, target);
-  // `..` and `..`-prefixed components only: a name that merely starts with
-  // two dots (`..foo`) is an ordinary in-root name.
-  return within === '' || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
-}
-
-function realPathOf(target: string): string | undefined {
-  try {
-    return realpathSync(target);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Where a call's path really points, symlinks included: every component is
- * walked and each link followed, so a link that lives inside the root but
- * points out is judged by where it points. Past the first component that
- * does not exist nothing below can exist either — there is no link left to
- * hide in — so the rest hangs off the last real directory as written.
- * Returns undefined when the walk gives up: an unreadable link, or a chain
- * long enough to be a loop — the caller denies, because handing such a path
- * to the OS is exactly how it would follow the rest of the way out.
- */
-function resolvedTarget(target: string): string | undefined {
-  let current = path.resolve(target);
-  for (let hops = 0; hops < 40; hops += 1) {
-    const parts = current.split(path.sep);
-    let walked: string = path.sep;
-    let followed = false;
-    for (let index = 1; index < parts.length; index += 1) {
-      const part = parts[index]!;
-      if (!part) {
-        continue;
-      }
-      const next = path.join(walked, part);
-      let stat: { isSymbolicLink(): boolean };
-      try {
-        stat = lstatSync(next);
-      } catch {
-        return path.join(walked, ...parts.slice(index).filter(Boolean));
-      }
-      if (!stat.isSymbolicLink()) {
-        walked = next;
-        continue;
-      }
-      let linkTarget: string;
-      try {
-        linkTarget = readlinkSync(next);
-      } catch {
-        return undefined;
-      }
-      // The link's own target may hold links of its own: walk it next pass,
-      // with the rest of the original path hanging off it.
-      const rest = parts.slice(index + 1).filter(Boolean);
-      current = path.join(path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget), ...rest);
-      followed = true;
-      break;
-    }
-    if (!followed) {
-      return walked;
-    }
-  }
-  return undefined;
-}
-
-function defaultWorkRoot(): string {
-  return join(defaultRoomHome(), 'work');
-}
-
-function validateText(value: string, label: string): string {
-  const text = value.trim();
-  if (!text) {
-    throw new RoomInputError(`${label} is required`);
-  }
-  if (text.length > ROOM_MESSAGE_LIMIT) {
-    throw new RoomInputError(`${label} must be at most ${ROOM_MESSAGE_LIMIT} characters`);
-  }
-  return text;
-}
-
-function validateMessageId(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!/^[A-Za-z0-9:_-]{8,80}$/.test(value)) {
-    throw new RoomInputError('Message id is invalid');
-  }
-  return value;
-}
-
-function lastTurnFor(turns: RoomTurnView[], agentId: RoomLabAgentId): RoomTurnView | undefined {
-  for (let index = turns.length - 1; index >= 0; index -= 1) {
-    const turn = turns[index]!;
-    if (turn.agentId === agentId && turn.outcome) {
-      return turn;
-    }
-  }
-  return undefined;
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/** Two rounds of the same seq in two rooms are two rounds; the key says whose. */
-function roundKey(round: RoomRound): string {
-  return `${round.roomId}#${round.seq}`;
 }

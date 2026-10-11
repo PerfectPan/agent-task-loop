@@ -66,6 +66,18 @@ export function readRivusCoreArchives(input, directory = process.cwd()) {
   return orderedArchives;
 }
 
+function assertArchiveSource(source, archive, consumerDirectory) {
+  if (typeof source !== 'string' || !source.startsWith('file:')) {
+    throw new Error(`Rivus Core source is not the supplied archive: ${archive.name}`);
+  }
+  const sourcePath = source.startsWith('file://')
+    ? fileURLToPath(source)
+    : path.resolve(consumerDirectory, source.slice('file:'.length));
+  if (realpathSync(sourcePath) !== archive.path) {
+    throw new Error(`Rivus Core source is not the supplied archive: ${archive.name}`);
+  }
+}
+
 export function verifyRivusCoreArchives(consumerDirectory, archives) {
   const consumerManifestPath = path.join(consumerDirectory, 'package.json');
   const consumerManifest = JSON.parse(readFileSync(consumerManifestPath, 'utf8'));
@@ -116,16 +128,4 @@ export function verifyRivusCoreArchives(consumerDirectory, archives) {
   }
 
   return archives.map(({ name, version, sha256 }) => ({ name, version, sha256 }));
-}
-
-function assertArchiveSource(source, archive, consumerDirectory) {
-  if (typeof source !== 'string' || !source.startsWith('file:')) {
-    throw new Error(`Rivus Core source is not the supplied archive: ${archive.name}`);
-  }
-  const sourcePath = source.startsWith('file://')
-    ? fileURLToPath(source)
-    : path.resolve(consumerDirectory, source.slice('file:'.length));
-  if (realpathSync(sourcePath) !== archive.path) {
-    throw new Error(`Rivus Core source is not the supplied archive: ${archive.name}`);
-  }
 }

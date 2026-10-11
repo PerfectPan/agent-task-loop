@@ -132,7 +132,8 @@ export class ExecutionService {
       if (!nextSessionId && !nextSessionName) {
         return;
       }
-      const sessionKey = `${nextSessionName ?? ''}:${nextSessionId ?? ''}`;
+      // nextSessionName 由 buildSessionName 兜底，必为 string；nextSessionId 才可能缺失。
+      const sessionKey = `${nextSessionName}:${nextSessionId ?? ''}`;
       if (sessionKey !== ':' && sessionKey !== lastRecordedSessionKey) {
         latestSessionHistory = appendSessionHistory(
           latestSessionHistory,

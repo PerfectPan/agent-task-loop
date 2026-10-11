@@ -1,10 +1,11 @@
 import { normalizeGitHubRepos } from './github-repos';
-import type { AppConfig } from './schema';
+import type { AppConfig, GitHubIssuesConfigInput } from './schema';
 
 /** The pre-validation config object shape the `source` ops read/write. */
 export type EditableConfig = {
   feishu?: AppConfig['feishu'];
-  githubIssues?: AppConfig['githubIssues'];
+  // source 命令直接读盘（JSON.parse 后未经 schema 解析），githubIssues 按解析前形态看待。
+  githubIssues?: GitHubIssuesConfigInput;
   projects?: Record<string, unknown>;
   repositories?: Record<string, unknown>;
   agents?: Record<string, unknown>;

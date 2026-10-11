@@ -22,6 +22,22 @@ export type SpeakResult =
 
 export type SpeakInput = Pick<SpeakCommand, 'body' | 'addressedTo' | 'readUpToSeq' | 'triggerSeq'>;
 
+function assertSeq(seq: RoomSeq, label: string): void {
+  if (!Number.isSafeInteger(seq) || seq < 0) {
+    throw new RoomValidationError(`${label} must be a non-negative integer`);
+  }
+}
+
+function eventAt(room: Room, seq: RoomSeq): RoomEvent {
+  assertSeq(seq, 'trigger sequence');
+  // Restored streams are contiguous from 1, so the event at seq exists exactly
+  // when seq is inside the record.
+  if (seq < 1 || seq > room.head) {
+    throw new RoomValidationError('speak trigger does not exist in the room');
+  }
+  return room.eventsAfter(seq - 1)[0]!;
+}
+
 /**
  * Domain service for the speak write point. HELD when any event by another
  * author sits past what the turn read; otherwise the post is appended at the
@@ -59,20 +75,4 @@ export function speak(room: Room, session: AgentSessionAggregate, input: SpeakIn
   );
   session.recordPost(event.seq);
   return { outcome: 'posted', seq: event.seq, event };
-}
-
-function eventAt(room: Room, seq: RoomSeq): RoomEvent {
-  assertSeq(seq, 'trigger sequence');
-  // Restored streams are contiguous from 1, so the event at seq exists exactly
-  // when seq is inside the record.
-  if (seq < 1 || seq > room.head) {
-    throw new RoomValidationError('speak trigger does not exist in the room');
-  }
-  return room.eventsAfter(seq - 1)[0]!;
-}
-
-function assertSeq(seq: RoomSeq, label: string): void {
-  if (!Number.isSafeInteger(seq) || seq < 0) {
-    throw new RoomValidationError(`${label} must be a non-negative integer`);
-  }
 }

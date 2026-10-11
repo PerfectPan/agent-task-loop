@@ -11,6 +11,22 @@ import { SqliteRoomStreamStore } from './sqlite-room-unit-of-work.server';
 
 const TENANT = 'local';
 
+/**
+ * Per-connection settings, not schema: they are lost with the connection, so
+ * they are applied every time one is opened rather than recorded as a version.
+ */
+function configureConnection(db: DatabaseSync): void {
+  db.exec('PRAGMA foreign_keys = ON');
+  db.exec('PRAGMA busy_timeout = 5000');
+}
+
+function readJson<T>(filePath: string, fallback: T): T {
+  if (!existsSync(filePath)) {
+    return fallback;
+  }
+  return JSON.parse(readFileSync(filePath, 'utf8')) as T;
+}
+
 export class SqliteRoomStore {
   /**
    * Empty until `migrate()` has created and seeded the table; from then on it
@@ -80,9 +96,7 @@ export class SqliteRoomStore {
       ...(row.goal ? { goal: row.goal } : {}),
       ...(row.parent_room_id ? { parentRoomId: row.parent_room_id } : {}),
       ...(row.opened_by ? { openedBy: row.opened_by } : {}),
-      ...(row.opened_at_seq === null || row.opened_at_seq === undefined
-        ? {}
-        : { openedAtSeq: Number(row.opened_at_seq) }),
+      ...(row.opened_at_seq === null ? {} : { openedAtSeq: Number(row.opened_at_seq) }),
     }));
     const lastOpenedId = this.meta('last_opened_id');
     return new RoomCatalog(records, lastOpenedId, this.agents);
@@ -270,7 +284,7 @@ export class SqliteRoomStore {
       command: row.command,
       color: Number(row.color),
       position: Number(row.position),
-      systemPrompt: row.system_prompt ?? '',
+      systemPrompt: row.system_prompt,
     }));
   }
 
@@ -322,7 +336,7 @@ export class SqliteRoomStore {
    * elsewhere or went with the count-off (docs/architecture/agent-collaboration.md).
    */
   private importLegacyRoom(roomId: string, directory: string): void {
-    const events = readJson<RoomEvent[]>(join(directory, 'events.json'), []);
+    const events = readJson<LegacyRoomEvent[]>(join(directory, 'events.json'), []);
     const sessions = readJson<AgentSession[]>(join(directory, 'sessions.json'), []);
     if (events.length === 0 && sessions.length === 0) {
       return;
@@ -369,15 +383,6 @@ export class SqliteRoomStore {
   }
 }
 
-/**
- * Per-connection settings, not schema: they are lost with the connection, so
- * they are applied every time one is opened rather than recorded as a version.
- */
-function configureConnection(db: DatabaseSync): void {
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-}
-
 interface RoomRow {
   id: string;
   title: string;
@@ -392,14 +397,6 @@ interface RoomRow {
   opened_by: string | null;
   opened_at_seq: number | null;
 }
-
-function readJson<T>(filePath: string, fallback: T): T {
-  if (!existsSync(filePath)) {
-    return fallback;
-  }
-  return JSON.parse(readFileSync(filePath, 'utf8')) as T;
-}
-
 interface MemberRow {
   room_id: string;
   agent_id: string;
@@ -415,3 +412,14 @@ interface AgentRow {
   position: number;
   system_prompt: string;
 }
+
+/**
+ * A legacy event file's rows, read raw from disk: files written before
+ * `addressedTo`, `origin` or `wakeDepth` existed may leave those fields out,
+ * and the import writes the empty/default value in their place.
+ */
+type LegacyRoomEvent = Omit<RoomEvent, 'addressedTo' | 'origin' | 'wakeDepth'> & {
+  addressedTo?: RoomEvent['addressedTo'];
+  origin?: RoomEvent['origin'];
+  wakeDepth?: number;
+};

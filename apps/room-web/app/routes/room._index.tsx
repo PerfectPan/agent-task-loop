@@ -110,12 +110,8 @@ export default function RoomHome() {
             </span>
             <Input name="cwd" maxLength={400} placeholder={copy.label.roomCwdPlaceholder} />
           </label>
-          <p
-            data-error
-            className="m-0 min-h-4 text-xs text-destructive"
-            role={actionData && !actionData.ok ? 'alert' : undefined}
-          >
-            {actionData && !actionData.ok ? actionData.error : ''}
+          <p data-error className="m-0 min-h-4 text-xs text-destructive" role={actionData ? 'alert' : undefined}>
+            {actionData ? actionData.error : ''}
           </p>
           <Button type="submit" className="self-start">
             {copy.action.createRoom}

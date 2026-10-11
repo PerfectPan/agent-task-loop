@@ -53,14 +53,16 @@ argument arrays and short timeouts.
 
 ## Build pipeline
 
-All TypeScript packages build with rslib, ESM only, sharing configuration from
-the private workspace package `@rivus/rslib-config`:
+All TypeScript packages build with `vp pack` (Vite+), ESM only. Each package
+owns its `vite.config.ts`; there is no shared build-config package. The
+configs pin plain `.js`/`.d.ts` output names (`fixedExtension: false` or
+`outExtensions`) so the `exports` and `bin` paths in `package.json` keep
+resolving.
 
-- `lib.config.ts` for libraries and `cli.config.ts` for CLIs.
-- `moonbit-plugin.ts` for `@rivus/agent-finder-core`: before each build it
-  syncs the MoonBit JavaScript backend output into `src/moonbit/` (gitignored),
-  so TypeScript imports stay stable and no separate sync script exists.
+`@rivus/agent-finder-core` adds a `build:prepare` hook: before each build it
+runs `moon build --target js` and syncs the MoonBit JavaScript backend output
+into `src/moonbit/` (gitignored), so TypeScript imports stay stable and no
+separate sync script exists.
 
-Each package's `rslib.config.ts` is a thin extension of the shared base.
 `pnpm test` runs the MoonBit tests (`moon -C packages/agent-finder test`)
 alongside the JavaScript suites.

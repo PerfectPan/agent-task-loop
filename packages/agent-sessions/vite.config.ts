@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite-plus';
 
-// Equivalent of the former rslib setup (`libConfig` from @rivus/rslib-config):
-// one ESM entry bundled into `dist/index.js`, with declarations bundled into a
+// One ESM entry bundled into `dist/index.js`, with declarations bundled into a
 // single `dist/index.d.ts` so the `types` path in package.json resolves.
 export default defineConfig({
   pack: {

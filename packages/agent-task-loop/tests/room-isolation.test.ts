@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 // TypeScript 7 has no JavaScript compiler API; @typescript/typescript6 re-exports TypeScript 6's.
 import ts from '@typescript/typescript6';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 const packageRoot = path.resolve(import.meta.dirname, '..');
 const srcRoot = path.join(packageRoot, 'src');

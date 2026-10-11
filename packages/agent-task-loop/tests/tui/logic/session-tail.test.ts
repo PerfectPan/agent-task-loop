@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { tailLines } from '../../../src/tui/logic/session-tail';
 
 describe('tailLines', () => {

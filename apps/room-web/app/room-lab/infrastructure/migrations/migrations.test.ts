@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { MIGRATIONS, migrationName, runMigrations } from './index';
 import {
   createVersionOneLibrary,
@@ -32,7 +32,9 @@ function columns(db: DatabaseSync, table: string): string[] {
 
 function versions(db: DatabaseSync): number[] {
   return (
-    db.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as unknown as Array<{ version: number }>
+    db.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as unknown as Array<{
+      version: number;
+    }>
   ).map((row) => Number(row.version));
 }
 
@@ -133,7 +135,9 @@ describe('runMigrations', () => {
 
     expect(runMigrations(db)).toEqual([3, 4, 5, 6, 7]);
 
-    const rows = db.prepare('SELECT system_prompt FROM agents').all() as unknown as Array<{ system_prompt: string }>;
+    const rows = db.prepare('SELECT system_prompt FROM agents').all() as unknown as Array<{
+      system_prompt: string;
+    }>;
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => row.system_prompt === DEFAULT_AGENT_SYSTEM_PROMPT)).toBe(true);
     expect(tables(db)).not.toContain('agent_system_prompts');
@@ -242,7 +246,9 @@ describe('runMigrations', () => {
     });
     // 0005: a member's row can carry a turn timeout, defaulting to none.
     expect(columns(db, 'agents')).toContain('timeout_ms');
-    expect(db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({ timeout_ms: null });
+    expect(db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({
+      timeout_ms: null,
+    });
     // 0006: the control plane's table and the endpoint's turn log, with the index.
     expect(tables(db)).toContain('member_leases');
     expect(tables(db)).toContain('turns');
@@ -277,7 +283,9 @@ describe('runMigrations', () => {
     );
     expect(columns(db, 'agent_sessions')).not.toContain('held_up_to_seq');
     // Nothing that was already stored moved.
-    expect(db.prepare('SELECT title FROM rooms WHERE id = ?').get('r_bbbbbbbbbb')).toEqual({ title: '升级前的房间' });
+    expect(db.prepare('SELECT title FROM rooms WHERE id = ?').get('r_bbbbbbbbbb')).toEqual({
+      title: '升级前的房间',
+    });
     expect(db.prepare('SELECT body FROM room_events WHERE room_id = ?').get('r_bbbbbbbbbb')).toEqual({
       body: '旧库里的一句话',
     });
@@ -344,7 +352,9 @@ describe('runMigrations', () => {
     // The snapshot table goes; the record, the seating and the cursor stay.
     expect(tables(db)).not.toContain('room_workspace');
     expect(columns(db, 'agent_sessions')).not.toContain('held_up_to_seq');
-    expect(db.prepare('SELECT title FROM rooms WHERE id = ?').get('r_cccccccccc')).toEqual({ title: '升级前的房间' });
+    expect(db.prepare('SELECT title FROM rooms WHERE id = ?').get('r_cccccccccc')).toEqual({
+      title: '升级前的房间',
+    });
     expect(db.prepare('SELECT body FROM room_events WHERE room_id = ?').get('r_cccccccccc')).toEqual({
       body: '旧库里的一句话',
     });

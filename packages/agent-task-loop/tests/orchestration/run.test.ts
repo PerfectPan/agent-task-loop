@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { OrchestrationSeatError } from '@rivus/agent-orchestration';
 import { Run } from '../../src/orchestration/run';
 

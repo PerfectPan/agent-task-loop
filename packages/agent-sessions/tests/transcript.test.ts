@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { parseTranscript, parseTranscriptLine, toLines } from '../src/index.js';
 
 /** Helper: parse a line then render it back to the legacy string form. */

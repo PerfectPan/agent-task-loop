@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import type { AppConfig } from '../../src/config/schema';
 import { CleanupService } from '../../src/services/cleanup-service';
 
@@ -79,7 +79,9 @@ describe('CleanupService', () => {
       ['-C', '/tmp/demo', 'worktree', 'remove', '/tmp/worktrees/TASK-102'],
       { reject: true },
     );
-    expect(exec).toHaveBeenNthCalledWith(2, 'git', ['-C', '/tmp/demo', 'worktree', 'prune'], { reject: true });
+    expect(exec).toHaveBeenNthCalledWith(2, 'git', ['-C', '/tmp/demo', 'worktree', 'prune'], {
+      reject: true,
+    });
     expect(taskService.updateCleanupState).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 'TASK-102' }),
       expect.objectContaining({ progressSummary: '已清理任务工作区' }),
@@ -194,7 +196,9 @@ describe('CleanupService', () => {
 
     expect(removeDir).toHaveBeenCalledWith('/tmp/worktrees/TASK-102');
     expect(exec).toHaveBeenCalledTimes(1);
-    expect(exec).toHaveBeenCalledWith('git', ['-C', '/tmp/demo', 'worktree', 'prune'], { reject: true });
+    expect(exec).toHaveBeenCalledWith('git', ['-C', '/tmp/demo', 'worktree', 'prune'], {
+      reject: true,
+    });
     expect(taskService.updateCleanupState).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 'TASK-102' }),
       expect.objectContaining({ progressSummary: '已强制清理任务工作区' }),

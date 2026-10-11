@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { copy } from '../copy';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { AgentDesk } from './agent-desk';
 
 vi.mock('react-router', () => ({

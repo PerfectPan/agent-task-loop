@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vite-plus/test';
 import type { RoomLabActionResponse } from '../read-model';
 import { RoomLab } from './room-lab';
 import { roomFixture } from './testing/room-fixture';

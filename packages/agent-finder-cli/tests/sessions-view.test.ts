@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { Session } from '@rivus/agent-sessions';
 import { relativeAge, renderInspect, renderSessionTable } from '../src/sessions/view.js';
 
 const NOW = Date.parse('2026-06-15T12:00:00Z');
 
 const SESSIONS: Session[] = [
-  { id: 'aaaaaaaa-1111-4111-8111-111111111111', agent: 'codex', path: '/c/a.jsonl', updatedAt: '2026-06-15T11:00:00Z' },
+  {
+    id: 'aaaaaaaa-1111-4111-8111-111111111111',
+    agent: 'codex',
+    path: '/c/a.jsonl',
+    updatedAt: '2026-06-15T11:00:00Z',
+  },
   {
     id: 'bbbbbbbb-2222-4222-8222-222222222222',
     agent: 'claude',

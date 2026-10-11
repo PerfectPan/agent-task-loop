@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import { ResizeGuard } from '../../../src/tui/components/resize-guard';

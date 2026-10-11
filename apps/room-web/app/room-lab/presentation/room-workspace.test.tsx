@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { copy } from '../copy';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 vi.mock('react-router', () => ({
   Link: ({
@@ -147,7 +147,9 @@ describe('Room workspace', () => {
     // the room it was opened from.
     const parentItem = screen.getByRole('link', { name: /产品讨论/ }).closest('li');
     expect(parentItem).toBeTruthy();
-    const childLink = within(parentItem as HTMLElement).getByRole('link', { name: /claude ↔ codex/ });
+    const childLink = within(parentItem as HTMLElement).getByRole('link', {
+      name: /claude ↔ codex/,
+    });
     expect(childLink.getAttribute('href')).toBe('/room/r_bbbbbbbbbb');
   });
 

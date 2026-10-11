@@ -6,7 +6,7 @@ import type {
   RivusToolExecutionContext,
 } from '@rivus/agent';
 import { RivusToolInputRejected } from '@rivus/agent';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   createRivusTaskManagerPlugin,
   TASK_CREATE_TOOL_ID,
@@ -263,7 +263,11 @@ describe('agent-task-loop Rivus Plugin', () => {
   });
 
   it('routes task-start once and applies the bounded default round count', async () => {
-    const result = { action: 'review-loop-completed', taskId: 'TASK-32', task: { taskId: 'TASK-32' } };
+    const result = {
+      action: 'review-loop-completed',
+      taskId: 'TASK-32',
+      task: { taskId: 'TASK-32' },
+    };
     const startTask = vi.fn().mockResolvedValue(result);
     const registrations = register(
       createRivusTaskManagerPlugin({

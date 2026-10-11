@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { FileTaskStateStore, stateFilePath } from '../../src/task-management/task-state-store';
 
 let dir: string;
@@ -22,7 +22,10 @@ describe('FileTaskStateStore', () => {
   it('shallow-merges successive patches and records cleared values', () => {
     store.merge('github:o/r', '7', { executionSessionId: 'sess-1', progressSummary: 'mid' });
     store.merge('github:o/r', '7', { progressSummary: '' });
-    expect(store.read('github:o/r', '7')).toEqual({ executionSessionId: 'sess-1', progressSummary: '' });
+    expect(store.read('github:o/r', '7')).toEqual({
+      executionSessionId: 'sess-1',
+      progressSummary: '',
+    });
   });
 
   it('returns undefined for an unknown key', () => {

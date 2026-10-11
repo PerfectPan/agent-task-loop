@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { RoomId } from '@rivus/agent-room';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 import { RoomLabHost } from '../application/room-lab-host.server';
@@ -56,7 +56,12 @@ describe('sqlite Room persistence', () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const created = await host.create({ title: '串行房', memberIds: ['codex'] });
-    void host.act(created.roomId, { action: 'settings', wake: 'addressed', serial: true, cwd: '/tmp/room-work' });
+    void host.act(created.roomId, {
+      action: 'settings',
+      wake: 'addressed',
+      serial: true,
+      cwd: '/tmp/room-work',
+    });
 
     const reopened = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const snapshot = await reopened.snapshot(created.roomId);

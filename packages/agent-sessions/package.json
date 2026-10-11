@@ -4,6 +4,12 @@
   "private": true,
   "description": "Tool-agnostic coding-agent session discovery and transcript parsing, shared by agent-finder-cli and agent-task-loop.",
   "license": "MIT",
+  "files": [
+    "dist/",
+    "src/**/*.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -12,28 +18,19 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist/",
-    "src/**/*.ts",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
+    "test": "vp test",
+    "test:watch": "vp test"
   },
   "devDependencies": {
-    "@rivus/rslib-config": "workspace:*",
-    "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
     "@types/node": "^24.19.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20"

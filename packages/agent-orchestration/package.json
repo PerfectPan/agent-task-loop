@@ -4,6 +4,12 @@
   "private": true,
   "description": "The agent collaboration control plane: registry, probe, lease, inbox, harness slots, and ACP connection.",
   "license": "GPL-3.0-only",
+  "files": [
+    "dist/",
+    "src/**/*.ts",
+    "bin/",
+    "README.md"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -17,34 +23,26 @@
       "import": "./dist/acp.js"
     }
   },
-  "files": [
-    "dist/",
-    "src/**/*.ts",
-    "bin/",
-    "README.md"
-  ],
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "prepack": "pnpm build",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
-  },
-  "devDependencies": {
-    "@rivus/rslib-config": "workspace:*",
-    "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
-    "@types/node": "^24.19.0",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
-  },
-  "engines": {
-    "node": ">=20"
+    "test": "vp test run",
+    "test:watch": "vp test"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.5.1",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.2.11",
+    "@types/node": "^24.19.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

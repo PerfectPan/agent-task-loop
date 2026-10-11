@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 const { runLarkCli } = vi.hoisted(() => ({ runLarkCli: vi.fn().mockResolvedValue('{}') }));
 vi.mock('../../src/services/lark-cli', () => ({ runLarkCli }));

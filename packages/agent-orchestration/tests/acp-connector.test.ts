@@ -2,7 +2,7 @@ import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import type { AgentBinding } from '../src/contracts/agent';
 import { AcpConnector } from '../src/infrastructure/acp-connector';
 import { fakeAcpProcess, type FakeAgentConfig } from './helpers/fake-acp-agent';
@@ -85,7 +85,9 @@ describe('AcpConnector', () => {
     connection.onPermissionRequest(async () => ({ outcome: 'selected', optionId: 'allow-once' }));
     const session = await connection.newSession({ cwd: '/tmp/fake-room' });
     await connection.prompt(session, [{ type: 'text', text: 'speak' }]);
-    expect(agent()?.permissionResponses[0]).toEqual({ outcome: { outcome: 'selected', optionId: 'allow-once' } });
+    expect(agent()?.permissionResponses[0]).toEqual({
+      outcome: { outcome: 'selected', optionId: 'allow-once' },
+    });
     await connection.close();
   });
 

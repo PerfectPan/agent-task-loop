@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { docToText, textToDoc, type MentionId } from './composer-doc';
 import { parseRoomMessage } from '../domain/room-message';
 
@@ -9,7 +9,10 @@ describe('composer document', () => {
   it('serialises a mention node back to the text the server parses', () => {
     const doc = textToDoc('@codex 先别写代码', ACTIVE);
     const paragraph = doc.content?.[0];
-    expect(paragraph?.content?.[0]).toEqual({ type: 'mention', attrs: { id: 'codex', label: 'codex' } });
+    expect(paragraph?.content?.[0]).toEqual({
+      type: 'mention',
+      attrs: { id: 'codex', label: 'codex' },
+    });
     expect(paragraph?.content?.[1]).toEqual({ type: 'text', text: ' 先别写代码' });
     expect(docToText(doc)).toBe('@codex 先别写代码');
   });
@@ -51,7 +54,10 @@ describe('composer document', () => {
 
   it('keeps @all as a mention', () => {
     const doc = textToDoc('@all 报个数', ACTIVE);
-    expect(doc.content?.[0]?.content?.[0]).toEqual({ type: 'mention', attrs: { id: 'all', label: 'all' } });
+    expect(doc.content?.[0]?.content?.[0]).toEqual({
+      type: 'mention',
+      attrs: { id: 'all', label: 'all' },
+    });
   });
 
   it('turns newlines into paragraphs and back', () => {

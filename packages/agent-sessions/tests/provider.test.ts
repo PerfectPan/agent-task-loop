@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import {
   FsSessionProvider,
   SessionRegistry,
@@ -45,7 +45,11 @@ describe('FsSessionProvider', () => {
   it('lists sessions with agent + path + mtime', async () => {
     const sessions = await provider.list();
     expect(sessions).toHaveLength(1);
-    expect(sessions[0]).toMatchObject({ id: CODEX_ID, agent: 'codex', path: `/codex/rollout-${CODEX_ID}.jsonl` });
+    expect(sessions[0]).toMatchObject({
+      id: CODEX_ID,
+      agent: 'codex',
+      path: `/codex/rollout-${CODEX_ID}.jsonl`,
+    });
   });
 
   it('parses the transcript for a known id and returns [] for unknown', async () => {
@@ -96,7 +100,11 @@ describe('default resume commands (verified against the CLIs)', () => {
   });
 
   it('returns null for an unknown id', async () => {
-    const provider = codexProvider({ home: '/h', readdir: async () => [], stat: async () => ({ mtimeMs: 0 }) });
+    const provider = codexProvider({
+      home: '/h',
+      readdir: async () => [],
+      stat: async () => ({ mtimeMs: 0 }),
+    });
     expect(await provider.resumeCommand('nope')).toBeNull();
   });
 });

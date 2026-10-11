@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vite-plus/test';
 import { discover, type HostProbe } from '../src/index';
 
 describe('@rivus/agent-finder-core discover', () => {

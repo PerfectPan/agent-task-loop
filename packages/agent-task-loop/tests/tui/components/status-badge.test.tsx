@@ -1,5 +1,5 @@
 import { render } from 'ink-testing-library';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { StatusBadge } from '../../../src/tui/components/status-badge';
 import { FRAMES } from '../../../src/tui/components/spinner';
 import { stripAnsi } from '../helpers';

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { CompositeTaskProvider } from '../../src/task-management/composite-task-provider';
 import type { SourceProvider } from '../../src/task-management/task-provider';
 import type { TaskRecord } from '../../src/types/task';
@@ -128,7 +128,13 @@ describe('CompositeTaskProvider', () => {
     const github = fakeProvider('github', []);
     const composite = new CompositeTaskProvider([feishu, github]);
 
-    const base = { taskId: 'X', title: 'X', project: 'demo', targetAgent: 'codex' as const, priority: 3 };
+    const base = {
+      taskId: 'X',
+      title: 'X',
+      project: 'demo',
+      targetAgent: 'codex' as const,
+      priority: 3,
+    };
     await composite.createTask({ ...base, source: 'github' });
     await composite.createTask(base); // no source ⇒ default (feishu)
 

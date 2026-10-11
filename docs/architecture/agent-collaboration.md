@@ -149,7 +149,7 @@ directory), with a forward-only migration chain in
   held, before and after a tool call update), then the last outcome. HELD is
   not shown to the person.
 - Room mutations (`routes/room.$roomId.tsx`) require `Content-Type:
-application/json` and an `Origin` of `http://127.0.0.1` or
+  application/json` and an `Origin` of `http://127.0.0.1` or
   `http://localhost` (`assertSameOriginJson`). The form actions for creating a
   room (`routes/room._index.tsx`) and managing agents (`routes/room.agents.tsx`)
   use `assertSameOriginForm`: no content-type check, and a request without an

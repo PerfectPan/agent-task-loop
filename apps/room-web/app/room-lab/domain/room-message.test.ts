@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { parseRoomMessage } from './room-message';
 import { TEST_AGENT_IDS } from '../presentation/testing/test-agents';
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { RoomLabAgentId } from './agent-registry';
 import { RoomComposition } from './room-composition';
 import { TEST_AGENT_IDS, testRegistry } from '../presentation/testing/test-agents';

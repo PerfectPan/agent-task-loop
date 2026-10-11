@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { GitHubIssuesTaskProvider, type GitHubRepoTarget } from '../../src/task-management/github-issues-task-provider';
 import { StatefulTaskProvider } from '../../src/task-management/stateful-task-provider';
 import { FileTaskStateStore } from '../../src/task-management/task-state-store';
@@ -62,7 +62,9 @@ function fakeGitHub(seed: FakeIssue[]) {
     const patch = pathname.match(/\/issues\/(\d+)$/);
     if (method === 'PATCH' && patch) {
       const number = Number(patch[1]);
-      const body = JSON.parse((init?.body as string | undefined) ?? '{}') as { state?: 'open' | 'closed' };
+      const body = JSON.parse((init?.body as string | undefined) ?? '{}') as {
+        state?: 'open' | 'closed';
+      };
       const current = byNumber.get(number);
       if (current && body.state) {
         byNumber.set(number, { ...current, state: body.state });
@@ -89,7 +91,12 @@ function issue(number: number, taskId: string): FakeIssue {
   };
 }
 
-const config: GitHubRepoTarget = { owner: 'rivus', repo: 'idea', token: 'test-token', defaultAgent: 'codex' };
+const config: GitHubRepoTarget = {
+  owner: 'rivus',
+  repo: 'idea',
+  token: 'test-token',
+  defaultAgent: 'codex',
+};
 const SOURCE = 'github:rivus/idea';
 
 describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
@@ -130,7 +137,11 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     expect((await sp.getTaskById('IDEA-50'))?.status).toBe('执行中');
 
     // execution done ⇒ 待复核.
-    await sp.updateReviewState(ref, { status: '待复核', reviewRound: 1, resultSummary: 'did the work' });
+    await sp.updateReviewState(ref, {
+      status: '待复核',
+      reviewRound: 1,
+      resultSummary: 'did the work',
+    });
     expect((await sp.getTaskById('IDEA-50'))?.status).toBe('待复核');
 
     // review passed + deliverable ⇒ 待发布 (this is the status complete() gates on).
@@ -157,7 +168,11 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     expect(published?.publishBranch).toBe('task/idea-50');
 
     // complete ⇒ 已完成; the issue is closed so the backend itself records it.
-    await sp.updateReviewState(ref, { status: '已完成', acceptanceVerdict: '通过', acceptanceRound: 1 });
+    await sp.updateReviewState(ref, {
+      status: '已完成',
+      acceptanceVerdict: '通过',
+      acceptanceRound: 1,
+    });
     expect((await sp.getTaskById('IDEA-50'))?.status).toBe('已完成');
     expect(fake.byNumber.get(50)?.state).toBe('closed');
 
@@ -183,8 +198,16 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     const { sp, fake } = buildStack([issue(51, 'IDEA-51')]);
     const ref: TaskRef = { taskId: 'IDEA-51', recordId: '51', source: SOURCE };
 
-    await sp.claimTask(ref, { claimedBy: 'codex@local', claimedAt: '2026-06-02T00:00:00Z', runId: 'run-2' });
-    await sp.updateReviewState(ref, { status: '已失败', lastError: 'boom', workspacePath: '/tmp/ws/51' });
+    await sp.claimTask(ref, {
+      claimedBy: 'codex@local',
+      claimedAt: '2026-06-02T00:00:00Z',
+      runId: 'run-2',
+    });
+    await sp.updateReviewState(ref, {
+      status: '已失败',
+      lastError: 'boom',
+      workspacePath: '/tmp/ws/51',
+    });
     expect((await sp.getTaskById('IDEA-51'))?.status).toBe('已失败');
     // A failed task cannot be represented by closing the issue (closed ⇒ 已完成),
     // so the issue stays open — the run-time store is what holds 已失败.
@@ -201,7 +224,11 @@ describe('GitHub-only lifecycle (real stack + fake GitHub)', () => {
     const { sp } = buildStack([issue(52, 'IDEA-52')]);
     const ref: TaskRef = { taskId: 'IDEA-52', recordId: '52', source: SOURCE };
 
-    await sp.claimTask(ref, { claimedBy: 'codex@local', claimedAt: '2026-06-02T00:00:00Z', runId: 'run-3' });
+    await sp.claimTask(ref, {
+      claimedBy: 'codex@local',
+      claimedAt: '2026-06-02T00:00:00Z',
+      runId: 'run-3',
+    });
     await sp.updateReviewState(ref, { status: '待复核', reviewRound: 1 });
     // review rejected ⇒ 修复中 with findings, then a re-claim for the next round.
     await sp.updateReviewState(ref, {

@@ -1,6 +1,6 @@
 import type { RivusPluginRegistry, RivusToolDescriptor, RivusToolExecutionContext } from '@rivus/agent';
 import { assertRivusPluginConforms } from '@rivus/agent/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { createRivusTaskManagerPlugin, TASK_GET_TOOL_ID, TASK_MANAGER_PROFILE_ID } from '../src/rivus-plugin';
 import { createTaskManagerApplication } from '../src/task-manager/task-manager-application';
 import type { TaskProvider } from '../src/task-management/task-provider';

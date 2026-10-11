@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -20,7 +20,10 @@ describe('published package surface', () => {
 
   it('ships only the bundled CLI and its declarations from dist', () => {
     const [pack] = JSON.parse(
-      execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: packageRoot, encoding: 'utf8' }),
+      execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+        cwd: packageRoot,
+        encoding: 'utf8',
+      }),
     ) as [{ files: { path: string }[] }];
     const distFiles = pack.files
       .map((file) => file.path)

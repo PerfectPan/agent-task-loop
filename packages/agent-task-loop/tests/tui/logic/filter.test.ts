@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { filterTasks } from '../../../src/tui/logic/filter';
 import type { TaskRecord, TaskStatus } from '../../../src/types/task';
 

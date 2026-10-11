@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { RouterContextProvider } from 'react-router';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { action, loader } from '../../routes/room.$roomId';
 import { action as agentsAction } from '../../routes/room.agents';
 import { isLocalOrigin } from '../infrastructure/local-guard.server';

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { buildMentionOptions, mentionCompletion } from './mention-completion';
 import { TEST_AGENTS, TEST_AGENT_IDS } from './testing/test-agents';
 

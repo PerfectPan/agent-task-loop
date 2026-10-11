@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vite-plus/test';
 
 const cli = join(process.cwd(), 'src', 'cli.ts');
 const loader = join(process.cwd(), 'node_modules', 'tsx', 'dist', 'loader.mjs');
@@ -29,7 +29,9 @@ describe('@rivus/agent-finder-cli', () => {
   });
 
   test('prints the package version', () => {
-    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+      version: string;
+    };
 
     const result = runCli(['-v']);
     expect(result.status).toBe(0);
@@ -38,9 +40,13 @@ describe('@rivus/agent-finder-cli', () => {
   });
 
   test('prints the package version from the built CLI', () => {
-    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+    const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+      version: string;
+    };
 
-    const result = spawnSync(process.execPath, [join(process.cwd(), 'dist', 'cli.js'), '-v'], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [join(process.cwd(), 'dist', 'cli.js'), '-v'], {
+      encoding: 'utf8',
+    });
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe(version);
   });

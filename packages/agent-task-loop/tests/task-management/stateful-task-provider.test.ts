@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import type { TaskRecord } from '../../src/types/task';
 import type { RuntimeTaskState } from '../../src/task-management/runtime-state';
 import type { TaskStateStore } from '../../src/task-management/task-state-store';
@@ -98,8 +98,16 @@ describe('StatefulTaskProvider', () => {
     const store = new MemStore();
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
-    await sp.updateReviewState(ref, { status: '待发布', reviewRound: 2, reviewSessionId: 'rev-1' } as never);
-    expect(store.read('github:o/r', '7')).toMatchObject({ status: '待发布', reviewRound: 2, reviewSessionId: 'rev-1' });
+    await sp.updateReviewState(ref, {
+      status: '待发布',
+      reviewRound: 2,
+      reviewSessionId: 'rev-1',
+    } as never);
+    expect(store.read('github:o/r', '7')).toMatchObject({
+      status: '待发布',
+      reviewRound: 2,
+      reviewSessionId: 'rev-1',
+    });
     expect(inner.updateReviewState).toHaveBeenCalledTimes(1);
   });
 
@@ -187,7 +195,11 @@ describe('StatefulTaskProvider', () => {
 
   it('updateCleanupState clears transient run-time state but keeps session ids and delegates', async () => {
     const store = new MemStore();
-    store.merge('github:o/r', '7', { runnerPid: 9, executionSessionId: 'sess-1', workspacePath: '/ws/x' });
+    store.merge('github:o/r', '7', {
+      runnerPid: 9,
+      executionSessionId: 'sess-1',
+      workspacePath: '/ws/x',
+    });
     const inner = fakeInner();
     const sp = new StatefulTaskProvider(inner, store);
     await sp.updateCleanupState(ref, { progressSummary: 'cleaned' });

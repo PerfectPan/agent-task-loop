@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { pickNextTask } from '../../src/utils/priority';
 import type { TaskRecord } from '../../src/types/task';
 import { TaskService } from '../../src/services/task-service';

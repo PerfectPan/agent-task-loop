@@ -3,28 +3,36 @@
   "version": "0.11.1",
   "private": false,
   "description": "Run AI coding agents through task execution, review, rework, and pull request handoff.",
+  "keywords": [
+    "ai-agent",
+    "cli",
+    "coding-agent",
+    "task-runner",
+    "workflow"
+  ],
+  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
+  "bugs": {
+    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
+  },
   "license": "GPL-3.0-only",
-  "type": "module",
   "author": "PerfectPan <perfectpan325@gmail.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/PerfectPan/agent-task-loop",
     "directory": "packages/agent-task-loop"
   },
-  "bugs": {
-    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
-  },
-  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
-  "keywords": [
-    "ai-agent",
-    "coding-agent",
-    "task-runner",
-    "cli",
-    "workflow"
-  ],
   "bin": {
     "agent-task-loop": "./bin/agent-task-loop.mjs"
   },
+  "files": [
+    "bin/",
+    "dist/",
+    "docs/rivus-plugin.md",
+    "skills/agent-task-loop-cli/",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
   "exports": {
     "./task-delivery": {
       "types": "./dist/task-delivery.d.ts",
@@ -39,27 +47,19 @@
       "import": "./dist/rivus-plugin.js"
     }
   },
-  "files": [
-    "bin/",
-    "dist/",
-    "docs/rivus-plugin.md",
-    "skills/agent-task-loop-cli/",
-    "README.md",
-    "LICENSE"
-  ],
   "publishConfig": {
-    "registry": "https://registry.npmjs.org",
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/cli.ts",
-    "prepack": "rslib build",
+    "prepack": "vp pack",
     "prepublishOnly": "pnpm test",
     "package:check": "node scripts/check-package.mjs",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
+    "test": "vp pack && vp test run",
+    "test:watch": "vp test"
   },
   "dependencies": {
     "@rivus/agent-finder-core": "workspace:*",
@@ -73,16 +73,14 @@
     "@rivus/agent": "0.17.0",
     "@rivus/agent-orchestration": "workspace:*",
     "@rivus/agent-sessions": "workspace:*",
-    "@rivus/rslib-config": "workspace:*",
     "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
     "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "@typescript/typescript6": "^6.0.2",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@rivus/agent": ">=0.17.0 <0.18.0"

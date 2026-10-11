@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { leasePath, type LeaseRecord, type LeaseStore } from '../src/index';
 import { LeaseManager } from '../src/application/lease-manager';
 import { FileLeaseStore } from '../src/infrastructure/file-lease-store';
@@ -50,9 +50,12 @@ describe.each(stores)('$name', ({ store }) => {
     leases.tryCreate(expected.key, expected);
 
     const staleHeartbeat = { ...expected, heartbeatAt: new Date(500).toISOString() };
-    expect(leases.tryTouch(staleHeartbeat, { ...staleHeartbeat, heartbeatAt: new Date(600).toISOString() })).toBe(
-      false,
-    );
+    expect(
+      leases.tryTouch(staleHeartbeat, {
+        ...staleHeartbeat,
+        heartbeatAt: new Date(600).toISOString(),
+      }),
+    ).toBe(false);
     const renewed = { ...expected, heartbeatAt: new Date(1_500).toISOString() };
     expect(leases.tryTouch(expected, renewed)).toBe(true);
 
@@ -189,8 +192,18 @@ describe('LeaseManager', () => {
   it('renews with a compare-and-swap and conflicts once the lease is lost', () => {
     let now = 1_000;
     const dir = tempDir();
-    const first = manager({ baseDir: dir, holderId: 'holder-a', now: () => now, staleAfterMs: 100 });
-    const second = manager({ baseDir: dir, holderId: 'holder-b', now: () => now, staleAfterMs: 100 });
+    const first = manager({
+      baseDir: dir,
+      holderId: 'holder-a',
+      now: () => now,
+      staleAfterMs: 100,
+    });
+    const second = manager({
+      baseDir: dir,
+      holderId: 'holder-b',
+      now: () => now,
+      staleAfterMs: 100,
+    });
     first.acquire('room:r1:member:claude');
     const renewed = first.heartbeat('room:r1:member:claude');
     expect(Date.parse(renewed.heartbeatAt)).toBeGreaterThan(0);

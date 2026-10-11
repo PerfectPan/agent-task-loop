@@ -1,6 +1,6 @@
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { TaskRecord } from '../../../src/types/task';
 import { useTaskPoll } from '../../../src/tui/hooks/use-task-poll';
 import { stripAnsi } from '../helpers';

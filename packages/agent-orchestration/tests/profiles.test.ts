@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import type { Harness } from '../src/contracts/harness';
 import { claudeProfile, codexProfile, fallbackProfile, opencodeProfile } from '../src/infrastructure/profiles';
 

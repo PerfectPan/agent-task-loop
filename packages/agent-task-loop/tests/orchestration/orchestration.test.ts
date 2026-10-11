@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   leasePath,
   OrchestrationConflictError,
@@ -472,7 +472,9 @@ describe('Orchestration allow / facts / mail / spawn', () => {
       runner: (input) =>
         new Promise((_resolve, reject) => {
           signal = input.signal;
-          input.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+          input.signal?.addEventListener('abort', () => reject(new Error('aborted')), {
+            once: true,
+          });
         }),
     });
     const b = createOrchestration({

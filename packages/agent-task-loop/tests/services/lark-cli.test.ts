@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { execa } from 'execa';
 import { runLarkCli } from '../../src/services/lark-cli';
 

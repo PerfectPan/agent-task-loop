@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { ProcessRunner } from '../src/orchestration/types';
 import {
   MemoryOrchestratedTaskRuntime,
@@ -89,7 +89,11 @@ describe('TaskDelivery aggregate', () => {
   });
 
   it('rejects an invalid runtime verdict without corrupting aggregate state', () => {
-    const task = TaskDelivery.start({ taskId: 'WEB-INVALID', title: 'Guard verdicts', maxRounds: 1 });
+    const task = TaskDelivery.start({
+      taskId: 'WEB-INVALID',
+      title: 'Guard verdicts',
+      maxRounds: 1,
+    });
     task.recordImplementation('answer');
 
     expect(() => task.recordReview('UNKNOWN' as never, 'review')).toThrow(TaskDeliveryValidationError);

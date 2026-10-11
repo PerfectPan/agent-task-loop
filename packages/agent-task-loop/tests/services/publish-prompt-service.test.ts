@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { buildCommitPrompt, buildPullRequestPrompt } from '../../src/services/publish-prompt-service';
 
 describe('publish-prompt-service', () => {

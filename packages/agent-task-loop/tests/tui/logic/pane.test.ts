@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { PREVIEW_MODES } from '../../../src/tui/types';
 import { PANE_ORDER, nextPane, prevPane, nextPreviewMode } from '../../../src/tui/logic/pane';

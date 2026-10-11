@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import { useTerminalSize } from '../../../src/tui/hooks/use-terminal-size';

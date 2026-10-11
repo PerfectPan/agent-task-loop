@@ -1,5 +1,5 @@
 import { runCommand } from 'citty';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const cleanupSpy = vi.fn();
 
@@ -111,7 +111,9 @@ describe('cleanupCommand', () => {
     }) as never);
 
     await expect(
-      runCommand(withCommandGuards(cleanupCommand), { rawArgs: ['--task', 'TASK-102', '--force', 'false'] }),
+      runCommand(withCommandGuards(cleanupCommand), {
+        rawArgs: ['--task', 'TASK-102', '--force', 'false'],
+      }),
     ).rejects.toThrow('exit');
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Unexpected argument: false.'));

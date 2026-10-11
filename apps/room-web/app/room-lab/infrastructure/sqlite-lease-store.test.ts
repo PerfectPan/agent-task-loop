@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { LeaseManager, type LeaseRecord } from '@rivus/agent-orchestration';
 import { SqliteLeaseStore } from './sqlite-lease-store.server';
 import { SqliteRoomStore } from './sqlite-room-store.server';

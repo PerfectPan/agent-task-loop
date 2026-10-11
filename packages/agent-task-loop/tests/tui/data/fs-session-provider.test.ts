@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import type { TaskRecord } from '../../../src/types/task';
 import type { SessionPreview } from '../../../src/tui/types';
 import { fixedNow } from '../helpers';

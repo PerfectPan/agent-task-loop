@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite-plus';
 
 // Component tests need JSX, not React Router's browser-only Fast Refresh preamble.
 // Keep the runtime Vite/React Router configuration out of the jsdom test pipeline.

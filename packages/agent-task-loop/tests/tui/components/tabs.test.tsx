@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { Tabs } from '../../../src/tui/components/tabs';
 import { TABS, type TabKey } from '../../../src/tui/logic/status';

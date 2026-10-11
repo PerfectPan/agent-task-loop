@@ -1,5 +1,5 @@
 import { render } from 'ink-testing-library';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { ConfirmPrompt } from '../../../src/tui/components/confirm-prompt';
 import { stripAnsi, tick } from '../helpers';

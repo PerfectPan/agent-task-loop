@@ -144,7 +144,7 @@ function cellText(value: unknown): string {
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
-  // JSON.stringify 对 undefined/symbol/function 入参返回 undefined（TS 内置类型未体现），按可缺失处理。
+  // JSON.stringify returns undefined for undefined/symbol/function inputs, which its TS signature does not reflect.
   return (JSON.stringify(value) as string | undefined) ?? '';
 }
 

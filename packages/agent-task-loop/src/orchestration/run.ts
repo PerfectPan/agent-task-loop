@@ -9,7 +9,7 @@ function validateSnapshot(snapshot: RunSnapshot): void {
   if (seats.length === 0) {
     throw new OrchestrationRunError(`run ${snapshot.key} has no seats`);
   }
-  // allowed 来自落盘快照，可能指向已不存在的 seat，按可缺失读取。
+  // allowed comes from a persisted snapshot and can point at a seat that no longer exists.
   if (!(snapshot.seats[snapshot.allowed] as SeatState | undefined)) {
     throw new OrchestrationRunError(`run ${snapshot.key} allows unknown seat ${snapshot.allowed}`);
   }
@@ -57,7 +57,7 @@ export class Run {
 
     const seats: Record<string, SeatState> = {};
     for (const name of input.template.seats) {
-      // bind 由调用方传入，seat 可能未绑定，按可缺失读取。
+      // bind is caller-supplied and the seat may be unbound.
       const bound = bind[name] as SeatBinding | undefined;
       seats[name] = {
         ...(bound?.cmd ? { cmd: bound.cmd } : {}),
@@ -196,7 +196,7 @@ export class Run {
   }
 
   private requireSeat(seat: string): SeatState {
-    // seat 名可能不在模板里，按可缺失读取。
+    // A seat name may not exist in the template.
     const state = this.state.seats[seat] as SeatState | undefined;
     if (!state) {
       throw new OrchestrationSeatError(this.key, `unknown seat ${seat}`);

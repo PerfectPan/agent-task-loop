@@ -40,7 +40,7 @@ function moduleSpecifiers(file: string): string[] {
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference) &&
-      // expression 在解析出错的 AST 上运行时可能缺失，类型未体现，按可缺失处理。
+      // expression can be missing at runtime on an error AST its types do not reflect.
       (node.moduleReference.expression as ts.Expression | undefined) &&
       ts.isStringLiteralLike(node.moduleReference.expression)
     ) {

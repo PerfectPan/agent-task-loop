@@ -15,7 +15,7 @@ function formatKnownKeys(record: Record<string, unknown>): string {
 
 export function resolveTaskExecutionContext(config: AppConfig, task: TaskRecord): TaskExecutionContext {
   const projectKey = task.project;
-  // projectKey 来自任务源（飞书行/GitHub issue），对应条目运行时可能未配置，按可缺失读取。
+  // projectKey comes from the task source (a Feishu row or a GitHub issue); its config entry may be absent.
   const project = (config.projects as Record<string, AppConfig['projects'][string] | undefined>)[projectKey];
 
   if (!project) {

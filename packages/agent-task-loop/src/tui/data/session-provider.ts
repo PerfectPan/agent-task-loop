@@ -61,7 +61,7 @@ export function createFakeSessionProvider(
   return {
     async getPreview(task: TaskRecord, now: number): Promise<SessionPreview> {
       const base = buildPreviewFromTask(task, now);
-      // overrides 只覆盖传入的 taskId，索引读取按可缺失处理。
+      // overrides covers only the taskId it was passed.
       const override = overrides[task.taskId] as Partial<SessionPreview> | undefined;
       return override ? { ...base, ...override } : base;
     },

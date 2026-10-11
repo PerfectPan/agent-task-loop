@@ -47,7 +47,7 @@ export const tuiCommand = defineCommand({
         : []),
     ];
     // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
-    // agents 配置由用户手写，claude 条目运行时可能未配置，按可缺失读取。
+    // The agents config is hand-written; its claude entry may be absent at runtime.
     const onRefineDescription = (config.agents as Record<string, AppConfig['agents'][string] | undefined>).claude
       ? (input: { title: string; description: string }) => refineDescription(config, input)
       : undefined;

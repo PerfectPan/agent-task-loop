@@ -58,7 +58,6 @@ export function TaskForm({
   );
 
   const targetAgent = TARGET_AGENTS[agentIndex] as TargetAgent;
-  // sourceOptions 可能是空数组，索引读取按可缺失处理。
   const source = (showSource ? sourceOptions[sourceIndex] : sourceOptions[0]) as string | undefined;
   const text: Record<FieldKey, string> = {
     taskId,

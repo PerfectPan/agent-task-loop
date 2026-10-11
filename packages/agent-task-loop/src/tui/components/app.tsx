@@ -168,7 +168,6 @@ export function App({
   // Rounds (each its own agent session) and which one is selected for drill-in.
   const history = preview?.history ?? [];
   const effRound = roundIndex < 0 ? Math.max(0, history.length - 1) : clampIndex(roundIndex, history.length);
-  // history 可能为空数组，索引读取按可缺失处理。
   const selectedRound = history[effRound] as (typeof history)[number] | undefined;
   const transcriptSessionId =
     previewMode === 'logs' ? (selectedRound?.sessionId ?? selected?.executionSessionId ?? null) : null;

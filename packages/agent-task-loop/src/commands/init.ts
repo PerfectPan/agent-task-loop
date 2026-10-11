@@ -8,7 +8,7 @@ import { ensureGitHubExecutionEntries, type EditableConfig } from '../config/sou
 
 export { globalConfigPath };
 
-// 键只覆盖已知 agent id，外部探测报告里的 id 可能不在表内，读取按可缺失处理。
+// The keys cover only known agent ids; a probe report can name one outside the table.
 const AGENT_MAP: Record<string, { name: string; command: string } | undefined> = {
   'claude-code': { name: 'claude', command: 'claude' },
   codex: { name: 'codex', command: 'codex' },

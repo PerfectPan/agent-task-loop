@@ -4,7 +4,7 @@ import type { AppConfig, GitHubIssuesConfigInput } from './schema';
 /** The pre-validation config object shape the `source` ops read/write. */
 export type EditableConfig = {
   feishu?: AppConfig['feishu'];
-  // source 命令直接读盘（JSON.parse 后未经 schema 解析），githubIssues 按解析前形态看待。
+  // The source command reads the file straight from disk (JSON.parse, no schema pass), so githubIssues keeps its pre-parse shape.
   githubIssues?: GitHubIssuesConfigInput;
   projects?: Record<string, unknown>;
   repositories?: Record<string, unknown>;

@@ -38,7 +38,7 @@ export const rejectCommand = defineCommand({
 
     const taskService = new TaskService(config);
     const runner = new ReviewLoopRunner({ config, taskService });
-    // citty 参数声明了 default: '5'，解析结果必为 string。
+    // The citty argument declares default: '5', so the parsed value is always a string.
     const configuredMaxRounds = Number(args.maxRounds);
     const taskId = String(args.task);
     await new TaskOccupancyService().run({ taskId }, async ({ signal, mutationFence }) => {

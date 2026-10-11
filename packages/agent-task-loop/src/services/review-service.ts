@@ -9,7 +9,7 @@ export interface ReviewResult {
   logPath?: string;
 }
 
-// verdict 来自外部 JSON 输出，运行时可能是任意字符串，经校验后才收窄为 ReviewVerdict。
+// verdict comes from external JSON output and is any string at runtime; it narrows to ReviewVerdict only after validation.
 interface ParsedReviewPayload {
   verdict: string;
   findings: string[];

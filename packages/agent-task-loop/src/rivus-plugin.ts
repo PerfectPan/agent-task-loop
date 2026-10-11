@@ -108,7 +108,7 @@ function parseInput<T>(toolName: string, schema: z.ZodType<T>, input: unknown): 
   if (result.success) {
     return result.data;
   }
-  // zod 校验失败也可能不带任何 issue，索引读取按可缺失处理。
+  // A failed zod parse can also carry no issue at all.
   const issue = result.error.issues[0] as z.core.$ZodIssue | undefined;
   const field = issue?.path.length ? issue.path.slice(0, 3).join('.').slice(0, 64) : 'input';
   throw new RivusToolInputRejected(`Invalid ${toolName} ${field}: ${inputRejectionReason(issue)}`);

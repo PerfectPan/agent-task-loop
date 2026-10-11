@@ -53,98 +53,6 @@ interface Built {
   wakeKeys(): string[];
 }
 
-/**
- * The parent service plus the gateway, wired exactly as `RoomLabHost` wires
- * them: one catalog, one library, one runtime, services opened per room and
- * memoized, child rooms charging the room their dm roots name.
- */
-function buildLinked(options: BuildOptions = {}): Built {
-  const members = options.members ?? SEATED;
-  const settings: RoomSettings = { wake: 'broadcast', serial: false, ...options.settings };
-  const store = SqliteRoomStore.memory();
-  const catalog = new RoomCatalog([], undefined, store.agents);
-  catalog.create({ id: PARENT, title: '大房间', now: now(), memberIds: members });
-  store.saveRoom(catalog.get(PARENT));
-  const turnLog = new WaitingTurnLog(new SqliteTurnLog(store.db));
-  const runtime = new FakeRuntime();
-  const registry: AgentRegistry = {
-    get: async (id) => (store.agents.has(id) ? agentOf(id) : undefined),
-    list: async () => store.agents.list().map((agent) => agentOf(agent.id)),
-    save: async () => {},
-    remove: async () => {},
-  };
-  const services = new Map<string, RoomService>();
-  const dm: RoomDmGateway = new RoomDm({
-    findPrivate: (parentRoomId, pair) => catalog.findPrivate(parentRoomId, pair),
-    openPrivate: (input) => {
-      const record = catalog.openPrivate(input);
-      store.saveRoom(record);
-      return record;
-    },
-    stream: (roomId) => store.stream(roomId),
-    dispatch: (roomId, event) => serviceOf(roomId).dispatch(event),
-    now,
-  });
-  function serviceOptions(roomId: string): ConstructorParameters<typeof RoomService>[0] {
-    return {
-      roomId: roomIdOf(roomId),
-      store: store.stream(roomId),
-      registry,
-      runtime,
-      lease: { fence: (_key, op) => op(), read: () => undefined },
-      turnLog,
-      members: () => catalog.get(roomId).memberIds,
-      agents: (): AgentDescriptor[] =>
-        store.agents.list().map((agent) => ({
-          id: agent.id,
-          label: agent.label,
-          role: agent.role,
-          color: agent.color,
-        })),
-      settings: () => (roomId === PARENT ? { ...settings } : { wake: 'broadcast', serial: false }),
-      roomTitle: () => catalog.get(roomId).title,
-      workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-dm-')),
-      toolHost: async ({ tools }) => {
-        runtime.tools.push(tools);
-        return {
-          endpoint: {} as unknown as McpServer,
-          url: 'http://127.0.0.1:0/mcp',
-          serveTurn: () => undefined,
-          close: async () => {},
-        };
-      },
-      dm,
-      ...(roomId === PARENT ? {} : { parentTitle: () => catalog.get(PARENT).title }),
-      ledgerOf: (ancestor) => serviceOf(ancestor),
-      childRooms: () =>
-        catalog
-          .list()
-          .filter((room) => room.parentRoomId === roomId)
-          .map((room) => room.id),
-    };
-  }
-  function serviceOf(roomId: string): RoomService {
-    const existing = services.get(roomId);
-    if (existing) {
-      return existing;
-    }
-    const service = new RoomService(serviceOptions(roomId));
-    services.set(roomId, service);
-    return service;
-  }
-  runtime.serviceOf = serviceOf;
-  return {
-    parent: serviceOf(PARENT),
-    catalog,
-    store,
-    runtime,
-    turnLog,
-    /** A fresh service over the same room: what a restart hands the record. */
-    reopen: (roomId) => new RoomService(serviceOptions(roomId)),
-    wakeKeys: () => runtime.wakes.slice(),
-  };
-}
-
 function agentOf(id: string): Agent {
   return { id, label: LABELS[id] ?? id, binding: { command: `${id}-acp` }, systemPrompt: '' };
 }
@@ -155,15 +63,6 @@ function roomIdOf(id: string): RoomId {
 
 function now(): string {
   return new Date().toISOString();
-}
-
-function sessionId(roomId: string, agentId: string): AgentSessionId {
-  return { tenantId: TENANT, agentId, roomId: roomIdOf(roomId), runtimeGenerationId: 'web-v1' };
-}
-
-async function eventsOf(store: SqliteRoomStore, roomId: string): Promise<RoomEvent[]> {
-  const slice = await store.stream(roomId).readSlice(roomIdOf(roomId), 0, { maxEvents: 100 });
-  return slice.events;
 }
 
 /** One started activation: the harness, its end, and its Room tools. */
@@ -203,7 +102,7 @@ class FakeRuntime implements RoomMemberRuntime {
           stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
           // `null` with no error is the runtime's watchdog, the only way a
           // turn ends as timeout; anything else ended as itself.
-          timedOut: result?.stopReason === null && !result?.error,
+          timedOut: result?.stopReason === null && !result.error,
           token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
@@ -271,6 +170,110 @@ class WaitingTurnLog implements TurnLog {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
+}
+
+/**
+ * The parent service plus the gateway, wired exactly as `RoomLabHost` wires
+ * them: one catalog, one library, one runtime, services opened per room and
+ * memoized, child rooms charging the room their dm roots name.
+ */
+function buildLinked(options: BuildOptions = {}): Built {
+  const members = options.members ?? SEATED;
+  const settings: RoomSettings = { wake: 'broadcast', serial: false, ...options.settings };
+  const store = SqliteRoomStore.memory();
+  const catalog = new RoomCatalog([], undefined, store.agents);
+  catalog.create({ id: PARENT, title: '大房间', now: now(), memberIds: members });
+  store.saveRoom(catalog.get(PARENT));
+  const turnLog = new WaitingTurnLog(new SqliteTurnLog(store.db));
+  const runtime = new FakeRuntime();
+  const registry: AgentRegistry = {
+    get: async (id) => (store.agents.has(id) ? agentOf(id) : undefined),
+    list: async () => store.agents.list().map((agent) => agentOf(agent.id)),
+    save: async () => {},
+    remove: async () => {},
+  };
+  const services = new Map<string, RoomService>();
+  function serviceOf(roomId: string): RoomService {
+    const existing = services.get(roomId);
+    if (existing) {
+      return existing;
+    }
+    // dm↔serviceOf↔serviceOptions 声明环：dm.dispatch 与 serviceOptions.ledgerOf 回调都走 serviceOf，
+    // serviceOf 又经 serviceOptions 组装 service；函数声明的提升保证调用时（dm 初始化之后）已可用。
+    // oxlint-disable-next-line no-use-before-define -- 上一行说明
+    const service = new RoomService(serviceOptions(roomId));
+    services.set(roomId, service);
+    return service;
+  }
+  const dm: RoomDmGateway = new RoomDm({
+    findPrivate: (parentRoomId, pair) => catalog.findPrivate(parentRoomId, pair),
+    openPrivate: (input) => {
+      const record = catalog.openPrivate(input);
+      store.saveRoom(record);
+      return record;
+    },
+    stream: (roomId) => store.stream(roomId),
+    dispatch: (roomId, event) => serviceOf(roomId).dispatch(event),
+    now,
+  });
+  function serviceOptions(roomId: string): ConstructorParameters<typeof RoomService>[0] {
+    return {
+      roomId: roomIdOf(roomId),
+      store: store.stream(roomId),
+      registry,
+      runtime,
+      lease: { fence: (_key, op) => op(), read: () => undefined },
+      turnLog,
+      members: () => catalog.get(roomId).memberIds,
+      agents: (): AgentDescriptor[] =>
+        store.agents.list().map((agent) => ({
+          id: agent.id,
+          label: agent.label,
+          role: agent.role,
+          color: agent.color,
+        })),
+      settings: () => (roomId === PARENT ? { ...settings } : { wake: 'broadcast', serial: false }),
+      roomTitle: () => catalog.get(roomId).title,
+      workRoot: () => mkdtempSync(join(tmpdir(), 'rivus-room-dm-')),
+      toolHost: async ({ tools }) => {
+        runtime.tools.push(tools);
+        return {
+          endpoint: {} as unknown as McpServer,
+          url: 'http://127.0.0.1:0/mcp',
+          serveTurn: () => undefined,
+          close: async () => {},
+        };
+      },
+      dm,
+      ...(roomId === PARENT ? {} : { parentTitle: () => catalog.get(PARENT).title }),
+      ledgerOf: (ancestor) => serviceOf(ancestor),
+      childRooms: () =>
+        catalog
+          .list()
+          .filter((room) => room.parentRoomId === roomId)
+          .map((room) => room.id),
+    };
+  }
+  runtime.serviceOf = serviceOf;
+  return {
+    parent: serviceOf(PARENT),
+    catalog,
+    store,
+    runtime,
+    turnLog,
+    /** A fresh service over the same room: what a restart hands the record. */
+    reopen: (roomId) => new RoomService(serviceOptions(roomId)),
+    wakeKeys: () => runtime.wakes.slice(),
+  };
+}
+
+function sessionId(roomId: string, agentId: string): AgentSessionId {
+  return { tenantId: TENANT, agentId, roomId: roomIdOf(roomId), runtimeGenerationId: 'web-v1' };
+}
+
+async function eventsOf(store: SqliteRoomStore, roomId: string): Promise<RoomEvent[]> {
+  const slice = await store.stream(roomId).readSlice(roomIdOf(roomId), 0, { maxEvents: 100 });
+  return slice.events;
 }
 
 describe('room_dm', () => {

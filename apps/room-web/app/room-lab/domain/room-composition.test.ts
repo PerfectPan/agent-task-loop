@@ -3,6 +3,15 @@ import type { RoomLabAgentId } from './agent-registry';
 import { RoomComposition } from './room-composition';
 import { TEST_AGENT_IDS, testRegistry } from '../presentation/testing/test-agents';
 
+function permutations(agentIds: readonly RoomLabAgentId[]): RoomLabAgentId[][] {
+  if (agentIds.length === 0) {
+    return [[]];
+  }
+  return agentIds.flatMap((agentId, index) =>
+    permutations(agentIds.filter((_, candidateIndex) => candidateIndex !== index)).map((tail) => [agentId, ...tail]),
+  );
+}
+
 describe('RoomComposition', () => {
   it('keeps an ordered non-empty subset of the registry', () => {
     const composition = new RoomComposition(['dsh', 'claude', 'codex'], testRegistry());
@@ -56,12 +65,3 @@ describe('RoomComposition', () => {
     }
   });
 });
-
-function permutations(agentIds: readonly RoomLabAgentId[]): RoomLabAgentId[][] {
-  if (agentIds.length === 0) {
-    return [[]];
-  }
-  return agentIds.flatMap((agentId, index) =>
-    permutations(agentIds.filter((_, candidateIndex) => candidateIndex !== index)).map((tail) => [agentId, ...tail]),
-  );
-}

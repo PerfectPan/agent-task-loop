@@ -19,17 +19,16 @@ export interface TerminalSize {
 export function useTerminalSize(): TerminalSize {
   const { stdout } = useStdout();
 
-  const read = (): TerminalSize => ({
-    columns: stdout?.columns ?? DEFAULT_COLUMNS,
-    rows: stdout?.rows ?? DEFAULT_ROWS,
-  });
+  const read = (): TerminalSize => {
+    // stdout 由 Ink 上下文保证存在（默认即 process.stdout）；
+    // columns/rows 在非 TTY（管道）流上运行时可能缺失，按可缺失读取。
+    const { columns, rows } = stdout as { columns?: number; rows?: number };
+    return { columns: columns ?? DEFAULT_COLUMNS, rows: rows ?? DEFAULT_ROWS };
+  };
 
   const [size, setSize] = useState<TerminalSize>(read);
 
   useEffect(() => {
-    if (!stdout) {
-      return;
-    }
     const onResize = (): void => setSize(read());
     stdout.on('resize', onResize);
     // Sync once in case the size changed before the listener attached.

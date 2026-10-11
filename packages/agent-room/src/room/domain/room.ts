@@ -11,6 +11,51 @@ import type {
 } from './model';
 import { sameRoomId } from './model';
 
+function validateRoomState(id: RoomId, events: RoomEvent[]): void {
+  if (!id.tenantId.trim() || !id.conversationId.trim()) {
+    throw new RoomValidationError('room identity is incomplete');
+  }
+  const transportMessageIds = new Set<string>();
+  for (const [index, event] of events.entries()) {
+    if (!sameRoomId(event.roomId, id)) {
+      throw new RoomValidationError('restored event belongs to a different room');
+    }
+    if (event.seq !== index + 1) {
+      throw new RoomValidationError('restored room sequence is not contiguous');
+    }
+    if (!event.messageId.trim()) {
+      throw new RoomValidationError('restored room contains a blank messageId');
+    }
+    if (!Number.isSafeInteger(event.wakeDepth) || event.wakeDepth < 0) {
+      throw new RoomValidationError('restored room contains an invalid wakeDepth');
+    }
+    if (
+      event.transportMessageId !== undefined &&
+      (!event.transportMessageId.trim() || transportMessageIds.has(event.transportMessageId))
+    ) {
+      throw new RoomValidationError('restored room contains an invalid or duplicate transport messageId');
+    }
+    if (event.transportMessageId) {
+      transportMessageIds.add(event.transportMessageId);
+    }
+  }
+}
+
+function assertSeq(seq: RoomSeq, label: string): void {
+  if (!Number.isSafeInteger(seq) || seq < 0) {
+    throw new RoomValidationError(`${label} must be a non-negative integer`);
+  }
+}
+
+export function cloneRoomEvent(event: RoomEvent): RoomEvent {
+  return {
+    ...event,
+    roomId: { ...event.roomId },
+    author: { ...event.author },
+    addressedTo: [...event.addressedTo],
+  };
+}
+
 /** Aggregate root for one tenant conversation's ordered posted stream. */
 export class Room {
   private readonly events: RoomEvent[];
@@ -125,49 +170,4 @@ export class Room {
   snapshot(): RoomEvent[] {
     return this.events.map(cloneRoomEvent);
   }
-}
-
-function validateRoomState(id: RoomId, events: RoomEvent[]): void {
-  if (!id.tenantId.trim() || !id.conversationId.trim()) {
-    throw new RoomValidationError('room identity is incomplete');
-  }
-  const transportMessageIds = new Set<string>();
-  for (const [index, event] of events.entries()) {
-    if (!sameRoomId(event.roomId, id)) {
-      throw new RoomValidationError('restored event belongs to a different room');
-    }
-    if (event.seq !== index + 1) {
-      throw new RoomValidationError('restored room sequence is not contiguous');
-    }
-    if (!event.messageId.trim()) {
-      throw new RoomValidationError('restored room contains a blank messageId');
-    }
-    if (!Number.isSafeInteger(event.wakeDepth) || event.wakeDepth < 0) {
-      throw new RoomValidationError('restored room contains an invalid wakeDepth');
-    }
-    if (
-      event.transportMessageId !== undefined &&
-      (!event.transportMessageId.trim() || transportMessageIds.has(event.transportMessageId))
-    ) {
-      throw new RoomValidationError('restored room contains an invalid or duplicate transport messageId');
-    }
-    if (event.transportMessageId) {
-      transportMessageIds.add(event.transportMessageId);
-    }
-  }
-}
-
-function assertSeq(seq: RoomSeq, label: string): void {
-  if (!Number.isSafeInteger(seq) || seq < 0) {
-    throw new RoomValidationError(`${label} must be a non-negative integer`);
-  }
-}
-
-export function cloneRoomEvent(event: RoomEvent): RoomEvent {
-  return {
-    ...event,
-    roomId: { ...event.roomId },
-    author: { ...event.author },
-    addressedTo: [...event.addressedTo],
-  };
 }

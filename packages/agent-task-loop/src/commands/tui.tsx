@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { render } from 'ink';
 import { loadConfig } from '../config/load-config';
+import type { AppConfig } from '../config/schema';
 import { normalizeGitHubRepos } from '../config/github-repos';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { githubSource } from '../task-management/github-issues-task-provider';
@@ -46,7 +47,8 @@ export const tuiCommand = defineCommand({
         : []),
     ];
     // AI-refine the new-task description (Ctrl+R) — only when a claude agent exists.
-    const onRefineDescription = config.agents.claude
+    // agents 配置由用户手写，claude 条目运行时可能未配置，按可缺失读取。
+    const onRefineDescription = (config.agents as Record<string, AppConfig['agents'][string] | undefined>).claude
       ? (input: { title: string; description: string }) => refineDescription(config, input)
       : undefined;
 

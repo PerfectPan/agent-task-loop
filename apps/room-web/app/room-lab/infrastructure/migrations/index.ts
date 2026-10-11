@@ -82,6 +82,10 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 `;
 
+export function migrationName(migration: Migration): string {
+  return `${String(migration.version).padStart(4, '0')}_${migration.name}`;
+}
+
 /**
  * Applies every pending migration in version order, each inside its own
  * transaction: a version is recorded only if its whole `up` committed, so a
@@ -122,8 +126,4 @@ export function runMigrations(
     }
   }
   return pending.map((migration) => migration.version);
-}
-
-export function migrationName(migration: Migration): string {
-  return `${String(migration.version).padStart(4, '0')}_${migration.name}`;
 }

@@ -27,12 +27,70 @@ export interface RoomRecord {
   openedAtSeq?: number;
 }
 
+/**
+ * A record as the catalog accepts it on load: a row saved before the settings
+ * columns (a legacy catalog.json) has no wake or serial on it.
+ */
+export type RoomRecordSeed = Omit<RoomRecord, 'wake' | 'serial'> & Partial<Pick<RoomRecord, 'wake' | 'serial'>>;
+
+function validateTitle(value: string): string {
+  const title = value.trim().replace(/\s+/g, ' ');
+  if (!title) {
+    throw new RoomCatalogInvariantError('Room title is required');
+  }
+  if (title.length > 80) {
+    throw new RoomCatalogInvariantError('Room title must be at most 80 characters');
+  }
+  return title;
+}
+
+function optionalGoal(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const goal = value.trim();
+  if (!goal) {
+    return undefined;
+  }
+  if (goal.length > 400) {
+    throw new RoomCatalogInvariantError('Room goal must be at most 400 characters');
+  }
+  return goal;
+}
+
+/** An empty settings field clears the room's own value. */
+function optionalCwd(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const cwd = value.trim();
+  if (!cwd) {
+    return undefined;
+  }
+  if (cwd.length > 400) {
+    throw new RoomCatalogInvariantError('Room cwd must be at most 400 characters');
+  }
+  return cwd;
+}
+
+function cloneRecord(room: RoomRecord): RoomRecord {
+  return {
+    ...room,
+    memberIds: [...room.memberIds],
+  };
+}
+
+/** A pair as one comparable word, order-free: the same two members, one room. */
+function pairKey(memberIds: readonly RoomLabAgentId[]): string {
+  return [...memberIds].sort().join('\n');
+}
+
 export class RoomCatalog {
   private rooms: RoomRecord[];
   private lastOpenedId?: string;
 
   constructor(
-    rooms: readonly RoomRecord[] = [],
+    rooms: readonly RoomRecordSeed[] = [],
     lastOpenedId?: string,
     private readonly known?: KnownAgentIds,
   ) {
@@ -208,55 +266,3 @@ export class RoomCatalog {
 }
 
 export { RoomCatalogInvariantError };
-
-function validateTitle(value: string): string {
-  const title = value.trim().replace(/\s+/g, ' ');
-  if (!title) {
-    throw new RoomCatalogInvariantError('Room title is required');
-  }
-  if (title.length > 80) {
-    throw new RoomCatalogInvariantError('Room title must be at most 80 characters');
-  }
-  return title;
-}
-
-function optionalGoal(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const goal = value.trim();
-  if (!goal) {
-    return undefined;
-  }
-  if (goal.length > 400) {
-    throw new RoomCatalogInvariantError('Room goal must be at most 400 characters');
-  }
-  return goal;
-}
-
-/** An empty settings field clears the room's own value. */
-function optionalCwd(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const cwd = value.trim();
-  if (!cwd) {
-    return undefined;
-  }
-  if (cwd.length > 400) {
-    throw new RoomCatalogInvariantError('Room cwd must be at most 400 characters');
-  }
-  return cwd;
-}
-
-function cloneRecord(room: RoomRecord): RoomRecord {
-  return {
-    ...room,
-    memberIds: [...room.memberIds],
-  };
-}
-
-/** A pair as one comparable word, order-free: the same two members, one room. */
-function pairKey(memberIds: readonly RoomLabAgentId[]): string {
-  return [...memberIds].sort().join('\n');
-}

@@ -7,6 +7,22 @@ import {
   type RoomLabState,
 } from './read-model';
 
+function stateAt(revision: number, epoch = 'epoch-a', roomId = 'r_aaaaaaaaaa', title = '产品讨论'): RoomLabState {
+  return {
+    roomId,
+    title,
+    epoch,
+    head: revision,
+    revision,
+    settings: { wake: 'broadcast', serial: false },
+    activeAgentIds: [],
+    events: [],
+    agents: [],
+    turns: [],
+    catalog: [],
+  };
+}
+
 describe('deriveAgentAvailability', () => {
   it('shows the probe answer as the desk word, verbatim', () => {
     expect(deriveAgentAvailability({ probe: 'missing', seatedIn: 0 })).toBe('missing');
@@ -90,19 +106,3 @@ describe('RoomLabStateSelector', () => {
     expect(selector.takeAction(readme, pricing)).toBe(readme);
   });
 });
-
-function stateAt(revision: number, epoch = 'epoch-a', roomId = 'r_aaaaaaaaaa', title = '产品讨论'): RoomLabState {
-  return {
-    roomId,
-    title,
-    epoch,
-    head: revision,
-    revision,
-    settings: { wake: 'broadcast', serial: false },
-    activeAgentIds: [],
-    events: [],
-    agents: [],
-    turns: [],
-    catalog: [],
-  };
-}

@@ -1,5 +1,16 @@
 import type { Agent, AgentId, AgentRegistry } from '../contracts/agent';
 
+function copyAgent(agent: Agent): Agent {
+  return {
+    ...agent,
+    binding: {
+      ...agent.binding,
+      ...(agent.binding.args ? { args: [...agent.binding.args] } : {}),
+      ...(agent.binding.env ? { env: { ...agent.binding.env } } : {}),
+    },
+  };
+}
+
 /** In-memory roster for tests and single-process endpoints. */
 export class MemoryAgentRegistry implements AgentRegistry {
   private readonly agents = new Map<AgentId, Agent>();
@@ -20,15 +31,4 @@ export class MemoryAgentRegistry implements AgentRegistry {
   async remove(id: AgentId): Promise<void> {
     this.agents.delete(id);
   }
-}
-
-function copyAgent(agent: Agent): Agent {
-  return {
-    ...agent,
-    binding: {
-      ...agent.binding,
-      ...(agent.binding.args ? { args: [...agent.binding.args] } : {}),
-      ...(agent.binding.env ? { env: { ...agent.binding.env } } : {}),
-    },
-  };
 }

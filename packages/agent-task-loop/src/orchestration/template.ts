@@ -1,6 +1,14 @@
 import { OrchestrationTemplateError } from '@rivus/agent-orchestration';
 import type { TemplateSpec } from './types';
 
+function copyTemplate(spec: TemplateSpec): TemplateSpec {
+  return {
+    id: spec.id,
+    seats: [...spec.seats],
+    ...(spec.allow ? { allow: { ...spec.allow } } : {}),
+  };
+}
+
 export class TemplateRegistry {
   private readonly templates = new Map<string, TemplateSpec>();
 
@@ -35,12 +43,4 @@ export class TemplateRegistry {
   list(): TemplateSpec[] {
     return [...this.templates.values()].map(copyTemplate);
   }
-}
-
-function copyTemplate(spec: TemplateSpec): TemplateSpec {
-  return {
-    id: spec.id,
-    seats: [...spec.seats],
-    ...(spec.allow ? { allow: { ...spec.allow } } : {}),
-  };
 }

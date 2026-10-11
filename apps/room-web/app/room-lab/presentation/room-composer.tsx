@@ -67,6 +67,18 @@ export function RoomComposer({
     setMenuOpen(open);
   }, []);
 
+  const characters = value.length;
+  const canSend = !sending && !!value.trim() && characters <= ROOM_MESSAGE_LIMIT;
+  const canSendRef = useRef(canSend);
+  canSendRef.current = canSend;
+
+  function send() {
+    if (!canSendRef.current) {
+      return;
+    }
+    submitRef.current();
+  }
+
   const editor = useEditor(
     {
       // A chat line, not a document: no headings, no lists, no bold.
@@ -134,18 +146,6 @@ export function RoomComposer({
     },
     [],
   );
-
-  const characters = value.length;
-  const canSend = !sending && !!value.trim() && characters <= ROOM_MESSAGE_LIMIT;
-  const canSendRef = useRef(canSend);
-  canSendRef.current = canSend;
-
-  function send() {
-    if (!canSendRef.current) {
-      return;
-    }
-    submitRef.current();
-  }
 
   // The value can change from outside: a send clears it, a failed send puts the
   // draft back. Rebuild only when the string really differs from what the

@@ -12,6 +12,19 @@ function mockOrchestration() {
   };
 }
 
+function task(overrides: Partial<TaskRecord>): TaskRecord {
+  return {
+    taskId: 'TASK-DEFAULT',
+    title: 'Task',
+    description: 'Description',
+    project: 'project',
+    targetAgent: 'codex',
+    priority: 1,
+    status: '待处理',
+    ...overrides,
+  };
+}
+
 describe('TaskStartService', () => {
   it('preserves the CLI missing-task error message', async () => {
     const orchestration = mockOrchestration();
@@ -256,16 +269,3 @@ describe('TaskStartService', () => {
     });
   });
 });
-
-function task(overrides: Partial<TaskRecord>): TaskRecord {
-  return {
-    taskId: 'TASK-DEFAULT',
-    title: 'Task',
-    description: 'Description',
-    project: 'project',
-    targetAgent: 'codex',
-    priority: 1,
-    status: '待处理',
-    ...overrides,
-  };
-}

@@ -19,6 +19,11 @@ export const DEFAULT_AGENT_SYSTEM_PROMPT =
  *
  * A whitespace-only stored prompt counts as none and takes the default.
  */
+function hasTable(db: DatabaseSync, name: string): boolean {
+  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get(name);
+  return row !== undefined;
+}
+
 export function adoptSystemPrompts(db: DatabaseSync, fallback: string = DEFAULT_AGENT_SYSTEM_PROMPT): void {
   if (hasTable(db, 'agent_system_prompts')) {
     db.exec(`
@@ -33,9 +38,4 @@ export function adoptSystemPrompts(db: DatabaseSync, fallback: string = DEFAULT_
     db.exec('DROP TABLE agent_system_prompts');
   }
   db.prepare(`UPDATE agents SET system_prompt = ? WHERE trim(system_prompt) = ''`).run(fallback);
-}
-
-function hasTable(db: DatabaseSync, name: string): boolean {
-  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get(name);
-  return row !== undefined;
 }

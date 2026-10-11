@@ -13,6 +13,60 @@ import {
   type TaskDeliverySeat,
 } from '../src/task-delivery';
 
+class FakeRuntime implements TaskDeliveryRuntime {
+  readonly calls: Array<{ seat: TaskDeliverySeat; prompt: string }> = [];
+  readonly mail: string[] = [];
+  private occupied = false;
+  private allowedSeat: TaskDeliverySeat = 'impl';
+
+  constructor(private readonly outputs: string[]) {}
+
+  async open(): Promise<void> {
+    this.occupied = true;
+    this.allowedSeat = 'impl';
+  }
+
+  async fence<T>(_taskId: string, operation: () => Promise<T>): Promise<T> {
+    if (!this.occupied) {
+      throw new Error('task is not occupied');
+    }
+    return operation();
+  }
+
+  async run(input: { seat: TaskDeliverySeat; prompt: string }): Promise<{ text: string; latencyMs: number }> {
+    if (!this.occupied || input.seat !== this.allowedSeat) {
+      throw new Error('seat is not allowed');
+    }
+    this.calls.push({ seat: input.seat, prompt: input.prompt });
+    return { text: this.outputs.shift() ?? '', latencyMs: 1 };
+  }
+
+  allow(_taskId: string, seat: TaskDeliverySeat): void {
+    this.allowedSeat = seat;
+  }
+
+  appendFact(): void {}
+
+  sendMail(_taskId: string, input: { body: string }): void {
+    this.mail.push(input.body);
+  }
+
+  inspect() {
+    return { occupied: this.occupied, allowedSeat: this.allowedSeat };
+  }
+
+  async release(): Promise<void> {
+    this.occupied = false;
+  }
+}
+
+class ReleaseFailingRuntime extends FakeRuntime {
+  override async release(): Promise<void> {
+    await super.release();
+    throw new Error('workspace cleanup failed');
+  }
+}
+
 describe('TaskDelivery aggregate', () => {
   it('guards the implementation-review-rework transitions', () => {
     const task = TaskDelivery.start({ taskId: 'WEB-001', title: 'Prove Room value', maxRounds: 2 });
@@ -167,57 +221,3 @@ describe('TaskDeliveryApplication', () => {
     });
   });
 });
-
-class FakeRuntime implements TaskDeliveryRuntime {
-  readonly calls: Array<{ seat: TaskDeliverySeat; prompt: string }> = [];
-  readonly mail: string[] = [];
-  private occupied = false;
-  private allowedSeat: TaskDeliverySeat = 'impl';
-
-  constructor(private readonly outputs: string[]) {}
-
-  async open(): Promise<void> {
-    this.occupied = true;
-    this.allowedSeat = 'impl';
-  }
-
-  async fence<T>(_taskId: string, operation: () => Promise<T>): Promise<T> {
-    if (!this.occupied) {
-      throw new Error('task is not occupied');
-    }
-    return operation();
-  }
-
-  async run(input: { seat: TaskDeliverySeat; prompt: string }): Promise<{ text: string; latencyMs: number }> {
-    if (!this.occupied || input.seat !== this.allowedSeat) {
-      throw new Error('seat is not allowed');
-    }
-    this.calls.push({ seat: input.seat, prompt: input.prompt });
-    return { text: this.outputs.shift() ?? '', latencyMs: 1 };
-  }
-
-  allow(_taskId: string, seat: TaskDeliverySeat): void {
-    this.allowedSeat = seat;
-  }
-
-  appendFact(): void {}
-
-  sendMail(_taskId: string, input: { body: string }): void {
-    this.mail.push(input.body);
-  }
-
-  inspect() {
-    return { occupied: this.occupied, allowedSeat: this.allowedSeat };
-  }
-
-  async release(): Promise<void> {
-    this.occupied = false;
-  }
-}
-
-class ReleaseFailingRuntime extends FakeRuntime {
-  override async release(): Promise<void> {
-    await super.release();
-    throw new Error('workspace cleanup failed');
-  }
-}

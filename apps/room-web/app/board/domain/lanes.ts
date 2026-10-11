@@ -77,8 +77,8 @@ function parseUpdatedAt(value: string | undefined): number {
 }
 
 function compareTasks(a: TaskRecord, b: TaskRecord): number {
-  const priorityA = a.priority ?? Number.POSITIVE_INFINITY;
-  const priorityB = b.priority ?? Number.POSITIVE_INFINITY;
+  const priorityA = a.priority;
+  const priorityB = b.priority;
   if (priorityA !== priorityB) {
     return priorityA - priorityB;
   }

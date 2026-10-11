@@ -29,14 +29,17 @@ export function assertRuntimeConfig(config: AppConfig): void {
   }
 
   if (config.githubIssues) {
+    // Record 的键来自用户配置文件，索引可能实际缺失，这里按可缺失读取。
+    const projects = config.projects as Record<string, AppConfig['projects'][string] | undefined>;
+    const repositories = config.repositories as Record<string, AppConfig['repositories'][string] | undefined>;
     for (const repo of normalizeGitHubRepos(config.githubIssues)) {
       const projectKey = repo.repo; // mapIssue stamps project = repo name
       const repositoryKey = `${repo.owner}/${repo.repo}`; // …and repository = owner/repo
       const hint = `Run \`agent-task-loop source add --type github --owner ${repo.owner} --repo ${repo.repo}\` to scaffold them, then fill localPath/workspaceRoot.`;
-      if (!config.projects?.[projectKey]) {
+      if (!projects[projectKey]) {
         throw new Error(`GitHub source ${repositoryKey} has no matching projects["${projectKey}"]. ${hint}`);
       }
-      const repository = config.repositories?.[repositoryKey];
+      const repository = repositories[repositoryKey];
       if (!repository) {
         throw new Error(`GitHub source ${repositoryKey} has no matching repositories["${repositoryKey}"]. ${hint}`);
       }

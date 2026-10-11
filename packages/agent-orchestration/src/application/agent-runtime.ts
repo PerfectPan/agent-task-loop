@@ -60,6 +60,60 @@ interface InboxRecord extends Inbox {
   lastError?: string;
 }
 
+function errorText(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error === undefined) {
+    return '';
+  }
+  return typeof error === 'string' ? error : inspect(error);
+}
+
+function denyOutcome(request: PermissionRequest): PermissionOutcome {
+  const reject =
+    request.options.find((option) => option.kind === 'reject_once') ??
+    request.options.find((option) => option.kind === 'reject_always');
+  return reject ? { outcome: 'selected', optionId: reject.optionId } : { outcome: 'cancelled' };
+}
+
+function abortError(signal: AbortSignal, label: string): Error {
+  const reason = signal.reason;
+  return reason instanceof Error ? reason : new Error(`${label} aborted`);
+}
+
+/**
+ * Ends a pending step with the abort rather than waiting out whatever the
+ * other side is doing: the step's own promise keeps running, but the
+ * activation moves on to discard the connection it was running on.
+ */
+function raceAborted<T>(promise: Promise<T>, signal: AbortSignal, label: string): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(abortError(signal, label));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError(signal, label));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+/** The member id a runtime key carries, or undefined when the key is foreign. */
+export function agentIdOf(key: string): AgentId | undefined {
+  const marker = ':member:';
+  const at = key.lastIndexOf(marker);
+  return at === -1 ? undefined : key.slice(at + marker.length);
+}
+
 /**
  * The actor-model scheduler between the endpoint and the agents (docs/architecture/agent-collaboration.md):
  * `wake` never blocks the caller, an activation acquires the lease, reuses or
@@ -241,7 +295,7 @@ export class AgentRuntime {
       unwire = this.wire(connection, harness);
 
       const prompt = await connection.prompt(inbox.session, blocks, controller.signal);
-      afterTurn = this.emitAfterTurn(harness, timedOut, prompt?.stopReason ?? null, record, undefined);
+      afterTurn = this.emitAfterTurn(harness, timedOut, prompt.stopReason, record, undefined);
     } catch (error) {
       inbox.lastError = errorText(error);
       // A lease lost mid-turn is the successor's business, not this turn's;
@@ -400,64 +454,10 @@ export class AgentRuntime {
   }
 }
 
-function denyOutcome(request: PermissionRequest): PermissionOutcome {
-  const reject =
-    request.options.find((option) => option.kind === 'reject_once') ??
-    request.options.find((option) => option.kind === 'reject_always');
-  return reject ? { outcome: 'selected', optionId: reject.optionId } : { outcome: 'cancelled' };
-}
-
-/**
- * Ends a pending step with the abort rather than waiting out whatever the
- * other side is doing: the step's own promise keeps running, but the
- * activation moves on to discard the connection it was running on.
- */
-function raceAborted<T>(promise: Promise<T>, signal: AbortSignal, label: string): Promise<T> {
-  if (signal.aborted) {
-    return Promise.reject(abortError(signal, label));
-  }
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(abortError(signal, label));
-    signal.addEventListener('abort', onAbort, { once: true });
-    promise.then(
-      (value) => {
-        signal.removeEventListener('abort', onAbort);
-        resolve(value);
-      },
-      (error) => {
-        signal.removeEventListener('abort', onAbort);
-        reject(error);
-      },
-    );
-  });
-}
-
-function abortError(signal: AbortSignal, label: string): Error {
-  const reason = signal.reason;
-  return reason instanceof Error ? reason : new Error(`${label} aborted`);
-}
-
-function errorText(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (error === undefined) {
-    return '';
-  }
-  return typeof error === 'string' ? error : inspect(error);
-}
-
 /**
  * One key per (room, member), shared by the Inbox and the lease:
  * `room:<roomId>:member:<agentId>`.
  */
 export function runtimeKey(roomId: string, agentId: AgentId): string {
   return `room:${roomId}:member:${agentId}`;
-}
-
-/** The member id a runtime key carries, or undefined when the key is foreign. */
-export function agentIdOf(key: string): AgentId | undefined {
-  const marker = ':member:';
-  const at = key.lastIndexOf(marker);
-  return at === -1 ? undefined : key.slice(at + marker.length);
 }

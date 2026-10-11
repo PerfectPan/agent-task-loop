@@ -78,7 +78,7 @@ describe('Orchestration open / occupy', () => {
 
     expect(snapshot.occupied).toBe(true);
     expect(snapshot.allowed).toBe('impl');
-    expect(snapshot.seats.impl?.cmd).toBe('grok');
+    expect(snapshot.seats.impl.cmd).toBe('grok');
     expect(snapshot.context.goal).toBe('fix the leak');
     expect(snapshot.context.ref).toEqual({ taskId: 'T-1' });
     expect(instance.inspect('task:T-1').key).toBe('task:T-1');
@@ -380,7 +380,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
     instance.allow('task:T-1', 'review');
     const result = await instance.spawn('task:T-1', 'review', { cwd: dir });
     expect(result.exitCode).toBe(0);
-    expect(instance.inspect('task:T-1').seats.review?.status).toBe('exited');
+    expect(instance.inspect('task:T-1').seats.review.status).toBe('exited');
   });
 
   it('appends facts and mail onto the run context', async () => {
@@ -425,7 +425,7 @@ describe('Orchestration allow / facts / mail / spawn', () => {
       bind: { impl: { cmd: 'grok' } },
     });
     await expect(instance.spawn('task:T-1', 'impl', { cwd: dir })).rejects.toThrow('child crashed');
-    expect(instance.inspect('task:T-1').seats.impl?.status).toBe('exited');
+    expect(instance.inspect('task:T-1').seats.impl.status).toBe('exited');
   });
 
   it('refuses mutating APIs unless this process holds a fresh lock', async () => {

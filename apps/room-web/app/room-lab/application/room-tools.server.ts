@@ -39,6 +39,22 @@ export type SpeakThroughLease = (input: {
   triggerSeq: RoomSeq;
 }) => Promise<SpeakResult>;
 
+function toToolEvent(event: RoomEvent): {
+  seq: RoomSeq;
+  from: string;
+  to?: string[];
+  kind: RoomEvent['kind'];
+  body: string;
+} {
+  return {
+    seq: event.seq,
+    from: `@${event.author.id}`,
+    ...(event.addressedTo.length > 0 ? { to: event.addressedTo } : {}),
+    kind: event.kind,
+    body: event.body,
+  };
+}
+
 /**
  * The one post a turn may make (docs/architecture/agent-collaboration.md). HELD is answered to the member,
  * which reads what it missed with `room_read` and calls again — three HELDs
@@ -196,21 +212,5 @@ export function roomReadTool(
       }
       return { events: slice.events.map(toToolEvent), head: slice.head };
     },
-  };
-}
-
-function toToolEvent(event: RoomEvent): {
-  seq: RoomSeq;
-  from: string;
-  to?: string[];
-  kind: RoomEvent['kind'];
-  body: string;
-} {
-  return {
-    seq: event.seq,
-    from: `@${event.author.id}`,
-    ...(event.addressedTo.length > 0 ? { to: event.addressedTo } : {}),
-    kind: event.kind,
-    body: event.body,
   };
 }

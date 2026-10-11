@@ -21,7 +21,7 @@ export function AgentDesk({ desk, error }: { desk: AgentDeskView; error?: string
   const busy = navigation.state !== 'idle';
   const preferred = desk.agents.find((agent) => SEATABLE.has(agent.availability))?.id ?? desk.agents[0]?.id;
   const [selected, setSelected] = useState<RoomLabAgentId | undefined>(preferred);
-  const current = desk.agents.find((agent) => agent.id === selected) ?? desk.agents[0];
+  const current = desk.agents.find((agent) => agent.id === selected) ?? desk.agents.at(0);
   const seatable = desk.agents.filter((agent) => SEATABLE.has(agent.availability)).length;
   return (
     <main className="min-h-dvh bg-background px-4 py-8 font-sans text-foreground">

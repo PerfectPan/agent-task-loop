@@ -3,6 +3,24 @@ import type { RoomWakeMode } from '../domain/room-catalog';
 import type { RoomLabAction } from '../read-model';
 import { RoomInputError } from './room-service.server';
 
+/** The settings fields present on the payload; absent fields stay absent. */
+function settingsOf(
+  input: Record<string, unknown>,
+  isWake: (candidate: unknown) => candidate is RoomWakeMode,
+): { wake?: RoomWakeMode; serial?: boolean; cwd?: string } | undefined {
+  const settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string } = {};
+  if (isWake(input.wake)) {
+    settings.wake = input.wake;
+  }
+  if (typeof input.serial === 'boolean') {
+    settings.serial = input.serial;
+  }
+  if (typeof input.cwd === 'string') {
+    settings.cwd = input.cwd;
+  }
+  return Object.keys(settings).length > 0 ? settings : undefined;
+}
+
 /** `known` is the registry: an id that is not a row is not an agent. */
 export function parseRoomAction(value: unknown, known: KnownAgentIds): RoomLabAction {
   if (!value || typeof value !== 'object' || !('action' in value)) {
@@ -52,22 +70,4 @@ export function parseRoomAction(value: unknown, known: KnownAgentIds): RoomLabAc
       return { action: 'reset' };
   }
   throw new RoomInputError('Room action payload is invalid');
-}
-
-/** The settings fields present on the payload; absent fields stay absent. */
-function settingsOf(
-  input: Record<string, unknown>,
-  isWake: (candidate: unknown) => candidate is RoomWakeMode,
-): { wake?: RoomWakeMode; serial?: boolean; cwd?: string } | undefined {
-  const settings: { wake?: RoomWakeMode; serial?: boolean; cwd?: string } = {};
-  if (isWake(input.wake)) {
-    settings.wake = input.wake;
-  }
-  if (typeof input.serial === 'boolean') {
-    settings.serial = input.serial;
-  }
-  if (typeof input.cwd === 'string') {
-    settings.cwd = input.cwd;
-  }
-  return Object.keys(settings).length > 0 ? settings : undefined;
 }

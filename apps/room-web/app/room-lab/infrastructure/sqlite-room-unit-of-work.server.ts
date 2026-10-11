@@ -32,6 +32,66 @@ import {
  * commits under. Nothing is cached across units of work; every one starts
  * from the rows as committed.
  */
+interface EventRow {
+  seq: number;
+  message_id: string;
+  transport_message_id: string | null;
+  author_kind: RoomEvent['author']['kind'];
+  author_id: string;
+  kind: RoomEvent['kind'];
+  body: string;
+  addressed_to: string;
+  origin: RoomEvent['origin'];
+  wake_depth: number;
+  at: string;
+}
+
+interface SessionRow {
+  tenant_id: string;
+  agent_id: string;
+  room_id: string;
+  runtime_generation_id: string;
+  seen_seq: number;
+}
+
+function toEvent(roomId: RoomId, row: EventRow): RoomEvent {
+  return {
+    seq: Number(row.seq),
+    roomId,
+    messageId: row.message_id,
+    ...(row.transport_message_id ? { transportMessageId: row.transport_message_id } : {}),
+    author: { kind: row.author_kind, id: row.author_id },
+    kind: row.kind,
+    body: row.body,
+    origin: row.origin,
+    addressedTo: JSON.parse(row.addressed_to) as string[],
+    wakeDepth: Number(row.wake_depth),
+    at: row.at,
+  };
+}
+
+function toSession(row: SessionRow): AgentSession {
+  return {
+    id: {
+      tenantId: row.tenant_id,
+      agentId: row.agent_id,
+      roomId: { tenantId: row.tenant_id, conversationId: row.room_id },
+      runtimeGenerationId: row.runtime_generation_id,
+    },
+    seenSeq: Number(row.seen_seq),
+  };
+}
+
+function cloneSession(session: AgentSession): AgentSession {
+  return {
+    id: {
+      ...session.id,
+      roomId: { ...session.id.roomId },
+    },
+    seenSeq: session.seenSeq,
+  };
+}
+
 export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
   private events: RoomEvent[];
   private readonly sessions = new Map<string, AgentSession>();
@@ -302,64 +362,4 @@ export class SqliteRoomStreamStore {
   private roomIdOf(): RoomId {
     return { tenantId: this.roomId.tenantId, conversationId: this.roomId.conversationId };
   }
-}
-
-interface EventRow {
-  seq: number;
-  message_id: string;
-  transport_message_id: string | null;
-  author_kind: RoomEvent['author']['kind'];
-  author_id: string;
-  kind: RoomEvent['kind'];
-  body: string;
-  addressed_to: string;
-  origin: RoomEvent['origin'];
-  wake_depth: number;
-  at: string;
-}
-
-interface SessionRow {
-  tenant_id: string;
-  agent_id: string;
-  room_id: string;
-  runtime_generation_id: string;
-  seen_seq: number;
-}
-
-function toEvent(roomId: RoomId, row: EventRow): RoomEvent {
-  return {
-    seq: Number(row.seq),
-    roomId,
-    messageId: row.message_id,
-    ...(row.transport_message_id ? { transportMessageId: row.transport_message_id } : {}),
-    author: { kind: row.author_kind, id: row.author_id },
-    kind: row.kind,
-    body: row.body,
-    origin: row.origin,
-    addressedTo: JSON.parse(row.addressed_to) as string[],
-    wakeDepth: Number(row.wake_depth),
-    at: row.at,
-  };
-}
-
-function toSession(row: SessionRow): AgentSession {
-  return {
-    id: {
-      tenantId: row.tenant_id,
-      agentId: row.agent_id,
-      roomId: { tenantId: row.tenant_id, conversationId: row.room_id },
-      runtimeGenerationId: row.runtime_generation_id,
-    },
-    seenSeq: Number(row.seen_seq),
-  };
-}
-
-function cloneSession(session: AgentSession): AgentSession {
-  return {
-    id: {
-      ...session.id,
-      roomId: { ...session.id.roomId },
-    },
-    seenSeq: session.seenSeq,
-  };
 }

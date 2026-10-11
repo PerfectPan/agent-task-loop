@@ -3,6 +3,13 @@ import { AGENT_ID_PATTERN, type KnownAgentIds, type RoomLabAgentId } from './age
 // TODO(agents-registry): task gate still names two agents; make seats configurable.
 const TASK_GATE_AGENTS: readonly RoomLabAgentId[] = ['codex', 'claude'];
 
+export class RoomCompositionInvariantError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RoomCompositionInvariantError';
+  }
+}
+
 export class RoomComposition {
   private agentIds: RoomLabAgentId[];
 
@@ -52,12 +59,5 @@ export class RoomComposition {
       unique.add(agentId);
     }
     return [...agentIds];
-  }
-}
-
-export class RoomCompositionInvariantError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RoomCompositionInvariantError';
   }
 }

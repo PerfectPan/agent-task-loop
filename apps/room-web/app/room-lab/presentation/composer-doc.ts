@@ -19,26 +19,6 @@ export const MENTION_NODE = 'mention';
 /** Ids a rebuild is allowed to turn back into chips: the room's own agent ids plus `'all'`. */
 export type MentionId = RoomLabAgentId;
 
-/**
- * Document → string. Paragraphs join with a newline, a hard break is a newline,
- * a mention is `@id`. The result is trimmed at both ends, so a trailing empty
- * paragraph (which is what an editor holds after you press Enter once) does not
- * make an otherwise blank message look non-empty.
- */
-export function docToText(doc: JSONContent | null | undefined): string {
-  if (!doc?.content) {
-    return '';
-  }
-  return doc.content.map(blockToText).join('\n').trim();
-}
-
-function blockToText(block: JSONContent): string {
-  if (!block.content) {
-    return '';
-  }
-  return block.content.map(inlineToText).join('');
-}
-
 function inlineToText(node: JSONContent): string {
   if (node.type === MENTION_NODE) {
     const id = node.attrs?.id;
@@ -50,22 +30,24 @@ function inlineToText(node: JSONContent): string {
   return node.text ?? '';
 }
 
+function blockToText(block: JSONContent): string {
+  if (!block.content) {
+    return '';
+  }
+  return block.content.map(inlineToText).join('');
+}
+
 /**
- * String → document. Splits on newlines into paragraphs, then cuts each line on
- * the room's own mention grammar. Only ids the room actually knows become
- * chips: `@nobody` is not a mention to the server, so it must not look like one
- * here either.
+ * Document → string. Paragraphs join with a newline, a hard break is a newline,
+ * a mention is `@id`. The result is trimmed at both ends, so a trailing empty
+ * paragraph (which is what an editor holds after you press Enter once) does not
+ * make an otherwise blank message look non-empty.
  */
-export function textToDoc(value: string, mentionable: readonly MentionId[]): JSONContent {
-  const allowed = new Set<string>(mentionable);
-  const lines = value.split('\n');
-  return {
-    type: 'doc',
-    content: lines.map((line) => ({
-      type: 'paragraph',
-      ...(line.length > 0 ? { content: lineToInline(line, allowed) } : {}),
-    })),
-  };
+export function docToText(doc: JSONContent | null | undefined): string {
+  if (!doc?.content) {
+    return '';
+  }
+  return doc.content.map(blockToText).join('\n').trim();
 }
 
 function lineToInline(line: string, allowed: Set<string>): JSONContent[] {
@@ -85,8 +67,26 @@ function lineToInline(line: string, allowed: Set<string>): JSONContent[] {
     }
     push(line.slice(cursor, match.index));
     nodes.push({ type: MENTION_NODE, attrs: { id, label: id } });
-    cursor = (match.index ?? 0) + match[0].length;
+    cursor = match.index + match[0].length;
   }
   push(line.slice(cursor));
   return nodes;
+}
+
+/**
+ * String → document. Splits on newlines into paragraphs, then cuts each line on
+ * the room's own mention grammar. Only ids the room actually knows become
+ * chips: `@nobody` is not a mention to the server, so it must not look like one
+ * here either.
+ */
+export function textToDoc(value: string, mentionable: readonly MentionId[]): JSONContent {
+  const allowed = new Set<string>(mentionable);
+  const lines = value.split('\n');
+  return {
+    type: 'doc',
+    content: lines.map((line) => ({
+      type: 'paragraph',
+      ...(line.length > 0 ? { content: lineToInline(line, allowed) } : {}),
+    })),
+  };
 }

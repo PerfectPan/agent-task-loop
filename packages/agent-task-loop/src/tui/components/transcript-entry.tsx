@@ -1,7 +1,8 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 
-const ROLE_STYLE: Record<string, { color: string; icon: string }> = {
+// role 取自逐行解析的转录文本，可能不在表内，读取按可缺失处理。
+const ROLE_STYLE: Record<string, { color: string; icon: string } | undefined> = {
   user: { color: 'cyan', icon: '▌' },
   assistant: { color: 'green', icon: '▌' },
   reasoning: { color: 'magenta', icon: '·' },

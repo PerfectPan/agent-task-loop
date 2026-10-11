@@ -1,5 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
+async function readJson(path) {
+  return JSON.parse(await readFile(path, 'utf8'));
+}
+
 export async function syncMoonBitVersion(input) {
   const packageJson = await readJson(input.packageJsonPath);
   const moonModJson = await readJson(input.moonModJsonPath);
@@ -24,8 +28,4 @@ export async function syncMoonBitVersion(input) {
 
   await writeFile(input.moonModJsonPath, JSON.stringify({ ...moonModJson, version: packageVersion }, null, 2) + '\n');
   return { changed: true, version: packageVersion };
-}
-
-async function readJson(path) {
-  return JSON.parse(await readFile(path, 'utf8'));
 }

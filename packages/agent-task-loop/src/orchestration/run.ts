@@ -1,6 +1,41 @@
 import { OrchestrationRunError, OrchestrationSeatError } from '@rivus/agent-orchestration';
 import type { ObservedRun, OpenRunInput, RunSnapshot, SeatBinding, SeatState, TemplateSpec } from './types';
 
+function validateSnapshot(snapshot: RunSnapshot): void {
+  if (!snapshot.key.trim()) {
+    throw new OrchestrationRunError('run key is required');
+  }
+  const seats = Object.keys(snapshot.seats);
+  if (seats.length === 0) {
+    throw new OrchestrationRunError(`run ${snapshot.key} has no seats`);
+  }
+  // allowed 来自落盘快照，可能指向已不存在的 seat，按可缺失读取。
+  if (!(snapshot.seats[snapshot.allowed] as SeatState | undefined)) {
+    throw new OrchestrationRunError(`run ${snapshot.key} allows unknown seat ${snapshot.allowed}`);
+  }
+  if (snapshot.occupied && (snapshot.holderPid === undefined || !snapshot.holderId || !snapshot.heartbeatAt)) {
+    throw new OrchestrationRunError(`occupied run ${snapshot.key} has no live holder record`);
+  }
+}
+
+function cloneSnapshot(snapshot: RunSnapshot): RunSnapshot {
+  return {
+    ...snapshot,
+    seats: Object.fromEntries(
+      Object.entries(snapshot.seats).map(([name, seat]) => [
+        name,
+        { ...seat, ...(seat.args ? { args: [...seat.args] } : {}) },
+      ]),
+    ),
+    context: {
+      ...(snapshot.context.goal ? { goal: snapshot.context.goal } : {}),
+      ...(snapshot.context.ref ? { ref: { ...snapshot.context.ref } } : {}),
+      facts: snapshot.context.facts.map((fact) => ({ ...fact })),
+      mail: snapshot.context.mail.map((mail) => ({ ...mail })),
+    },
+  };
+}
+
 /** Aggregate root for one occupied orchestration run. */
 export class Run {
   private constructor(private readonly state: RunSnapshot) {}
@@ -22,7 +57,8 @@ export class Run {
 
     const seats: Record<string, SeatState> = {};
     for (const name of input.template.seats) {
-      const bound = bind[name];
+      // bind 由调用方传入，seat 可能未绑定，按可缺失读取。
+      const bound = bind[name] as SeatBinding | undefined;
       seats[name] = {
         ...(bound?.cmd ? { cmd: bound.cmd } : {}),
         ...(bound?.args ? { args: [...bound.args] } : {}),
@@ -160,7 +196,8 @@ export class Run {
   }
 
   private requireSeat(seat: string): SeatState {
-    const state = this.state.seats[seat];
+    // seat 名可能不在模板里，按可缺失读取。
+    const state = this.state.seats[seat] as SeatState | undefined;
     if (!state) {
       throw new OrchestrationSeatError(this.key, `unknown seat ${seat}`);
     }
@@ -172,38 +209,4 @@ export class Run {
       throw new OrchestrationRunError(`run ${this.key} has been released`);
     }
   }
-}
-
-function validateSnapshot(snapshot: RunSnapshot): void {
-  if (!snapshot.key.trim()) {
-    throw new OrchestrationRunError('run key is required');
-  }
-  const seats = Object.keys(snapshot.seats);
-  if (seats.length === 0) {
-    throw new OrchestrationRunError(`run ${snapshot.key} has no seats`);
-  }
-  if (!snapshot.seats[snapshot.allowed]) {
-    throw new OrchestrationRunError(`run ${snapshot.key} allows unknown seat ${snapshot.allowed}`);
-  }
-  if (snapshot.occupied && (snapshot.holderPid === undefined || !snapshot.holderId || !snapshot.heartbeatAt)) {
-    throw new OrchestrationRunError(`occupied run ${snapshot.key} has no live holder record`);
-  }
-}
-
-function cloneSnapshot(snapshot: RunSnapshot): RunSnapshot {
-  return {
-    ...snapshot,
-    seats: Object.fromEntries(
-      Object.entries(snapshot.seats).map(([name, seat]) => [
-        name,
-        { ...seat, ...(seat.args ? { args: [...seat.args] } : {}) },
-      ]),
-    ),
-    context: {
-      ...(snapshot.context.goal ? { goal: snapshot.context.goal } : {}),
-      ...(snapshot.context.ref ? { ref: { ...snapshot.context.ref } } : {}),
-      facts: snapshot.context.facts.map((fact) => ({ ...fact })),
-      mail: snapshot.context.mail.map((mail) => ({ ...mail })),
-    },
-  };
 }

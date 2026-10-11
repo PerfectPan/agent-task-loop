@@ -23,23 +23,13 @@ interface MoonBitProviderSpec {
   warnings: string[];
 }
 
-export const moonbitApi = {
-  listCommandCandidates(): string[] {
-    return parseJson(command_candidates_json());
-  },
+function parseJson<T>(json: string): T {
+  return JSON.parse(json) as T;
+}
 
-  listPathCandidates(): string[] {
-    return parseJson(path_candidates_json());
-  },
-
-  listProviders(): ProviderSpec[] {
-    return parseJson<MoonBitProviderSpec[]>(providers_json()).map(mapProviderSpec);
-  },
-
-  discover(probe: HostProbe): DiscoveryReport {
-    return parseMoonBitResult(scan_json(JSON.stringify(toMoonBitProbe(probe))));
-  },
-};
+function isMoonBitError(value: unknown): value is MoonBitError {
+  return typeof value === 'object' && value !== null && 'error' in value;
+}
 
 function parseMoonBitResult<T>(json: string): T {
   const value = parseJson<T | MoonBitError>(json);
@@ -47,14 +37,6 @@ function parseMoonBitResult<T>(json: string): T {
     throw new Error(value.error);
   }
   return value;
-}
-
-function parseJson<T>(json: string): T {
-  return JSON.parse(json) as T;
-}
-
-function isMoonBitError(value: unknown): value is MoonBitError {
-  return typeof value === 'object' && value !== null && 'error' in value;
 }
 
 function toMoonBitProbe(probe: HostProbe) {
@@ -84,3 +66,21 @@ function mapProviderSpec(provider: MoonBitProviderSpec): ProviderSpec {
     warnings: [...provider.warnings],
   };
 }
+
+export const moonbitApi = {
+  listCommandCandidates(): string[] {
+    return parseJson(command_candidates_json());
+  },
+
+  listPathCandidates(): string[] {
+    return parseJson(path_candidates_json());
+  },
+
+  listProviders(): ProviderSpec[] {
+    return parseJson<MoonBitProviderSpec[]>(providers_json()).map(mapProviderSpec);
+  },
+
+  discover(probe: HostProbe): DiscoveryReport {
+    return parseMoonBitResult(scan_json(JSON.stringify(toMoonBitProbe(probe))));
+  },
+};

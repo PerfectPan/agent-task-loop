@@ -43,6 +43,25 @@ function lastFrame(frame: string | undefined): string {
   return stripAnsi(frame ?? '');
 }
 
+// ---- real probe components used by the tests above ----
+
+function ProbeReal({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
+  const { preview, isLoading } = useSessionPreview(provider, task, {
+    intervalMs: INTERVAL,
+    now: () => FIXED_NOW,
+  });
+  return <Text>{`id=${preview?.taskId ?? 'none'} loading=${String(isLoading)}`}</Text>;
+}
+
+function ProbeDisabled({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
+  const { preview } = useSessionPreview(provider, task, {
+    intervalMs: INTERVAL,
+    now: () => FIXED_NOW,
+    enabled: false,
+  });
+  return <Text>{`id=${preview?.taskId ?? 'none'}`}</Text>;
+}
+
 describe('useSessionPreview', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -108,22 +127,3 @@ describe('useSessionPreview', () => {
     expect(lastFrame(frame())).toContain('id=T-2');
   });
 });
-
-// ---- real probe components used by the tests above ----
-
-function ProbeReal({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
-  const { preview, isLoading } = useSessionPreview(provider, task, {
-    intervalMs: INTERVAL,
-    now: () => FIXED_NOW,
-  });
-  return <Text>{`id=${preview?.taskId ?? 'none'} loading=${String(isLoading)}`}</Text>;
-}
-
-function ProbeDisabled({ provider, task }: { provider: SessionProvider; task: TaskRecord | null }) {
-  const { preview } = useSessionPreview(provider, task, {
-    intervalMs: INTERVAL,
-    now: () => FIXED_NOW,
-    enabled: false,
-  });
-  return <Text>{`id=${preview?.taskId ?? 'none'}`}</Text>;
-}

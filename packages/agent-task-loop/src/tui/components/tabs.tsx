@@ -18,7 +18,8 @@ export function Tabs({ active, counts }: TabsProps): React.ReactElement {
     <Box flexDirection="row">
       {TABS.map((tab, index) => {
         const isActive = tab.key === active;
-        const chip = `${tab.label}(${counts[tab.key] ?? 0})`;
+        // counts 由调用方按全部 TabKey 构造（见 App 的 useMemo），恒有值。
+        const chip = `${tab.label}(${counts[tab.key]})`;
         return (
           <Box key={tab.key} marginRight={index < TABS.length - 1 ? 1 : 0}>
             <Text color={isActive ? 'cyan' : undefined} inverse={isActive} bold={isActive} dimColor={!isActive}>

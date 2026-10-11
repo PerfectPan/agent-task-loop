@@ -4,6 +4,11 @@ import { RoomLabStateSelector } from '../read-model';
 import type { RoomLabAction, RoomLabActionResponse, RoomLabEventView, RoomLabState } from '../read-model';
 import { RoomWorkspace } from './room-workspace';
 
+function mergeEvents(events: RoomLabEventView[], optimistic: RoomLabEventView[]): RoomLabEventView[] {
+  const posted = new Set(events.map((event) => event.messageId));
+  return [...events, ...optimistic.filter((event) => !posted.has(event.messageId))];
+}
+
 export function RoomLab({ initialState }: { initialState: RoomLabState }) {
   const fetcher = useFetcher<RoomLabActionResponse>();
   const revalidator = useRevalidator();
@@ -128,9 +133,4 @@ export function RoomLab({ initialState }: { initialState: RoomLabState }) {
       onAction={runAction}
     />
   );
-}
-
-function mergeEvents(events: RoomLabEventView[], optimistic: RoomLabEventView[]): RoomLabEventView[] {
-  const posted = new Set(events.map((event) => event.messageId));
-  return [...events, ...optimistic.filter((event) => !posted.has(event.messageId))];
 }

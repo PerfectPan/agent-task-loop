@@ -15,6 +15,27 @@ import { nowIso } from './room-home.server';
  * command line run through the person's login shell, so `save` persists
  * `command` alone and a read hands back a binding with just that command.
  */
+interface AgentRow {
+  id: string;
+  label: string;
+  role: string;
+  command: string;
+  color: number;
+  position: number;
+  system_prompt: string;
+  timeout_ms: number | null;
+}
+
+function toAgent(row: AgentRow): Agent {
+  return {
+    id: row.id,
+    label: row.label,
+    binding: { command: row.command },
+    systemPrompt: row.system_prompt,
+    ...(row.timeout_ms === null ? {} : { timeoutMs: Number(row.timeout_ms) }),
+  };
+}
+
 export class SqliteAgentRegistry implements AgentRegistry {
   constructor(private readonly db: DatabaseSync) {}
 
@@ -85,25 +106,4 @@ export class SqliteAgentRegistry implements AgentRegistry {
   private readRow(id: AgentId): AgentRow | undefined {
     return this.db.prepare('SELECT id FROM agents WHERE id = ?').get(id) as unknown as AgentRow | undefined;
   }
-}
-
-interface AgentRow {
-  id: string;
-  label: string;
-  role: string;
-  command: string;
-  color: number;
-  position: number;
-  system_prompt: string;
-  timeout_ms: number | null;
-}
-
-function toAgent(row: AgentRow): Agent {
-  return {
-    id: row.id,
-    label: row.label,
-    binding: { command: row.command },
-    systemPrompt: row.system_prompt,
-    ...(row.timeout_ms === null || row.timeout_ms === undefined ? {} : { timeoutMs: Number(row.timeout_ms) }),
-  };
 }

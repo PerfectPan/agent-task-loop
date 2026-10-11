@@ -63,37 +63,6 @@ function AcceptanceVerdictBadge({ verdict }: { verdict: string }) {
   );
 }
 
-export default function TaskDetailRoute() {
-  const { task, error } = useLoaderData<typeof loader>();
-
-  return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
-      <header className="border-b border-border bg-background sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link
-            to="/board"
-            className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-1 -ml-1.5"
-          >
-            ← 返回看板
-          </Link>
-          {task ? <span className="text-xs text-muted-foreground">{task.taskId}</span> : null}
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        {error ? (
-          <div className="rounded-lg border border-destructive bg-muted p-6">
-            <h2 className="text-base font-semibold text-destructive mb-2">无法显示任务</h2>
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        ) : task ? (
-          <TaskDetailContent task={task} />
-        ) : null}
-      </main>
-    </div>
-  );
-}
-
 function TaskDetailContent({ task }: { task: TaskRecord }) {
   const isFailed = task.status === '已失败';
   const hasLastError = hasValue(task.lastError);
@@ -364,5 +333,36 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
         </section>
       ) : null}
     </article>
+  );
+}
+
+export default function TaskDetailRoute() {
+  const { task, error } = useLoaderData<typeof loader>();
+
+  return (
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <header className="border-b border-border bg-background sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link
+            to="/board"
+            className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-1 -ml-1.5"
+          >
+            ← 返回看板
+          </Link>
+          {task ? <span className="text-xs text-muted-foreground">{task.taskId}</span> : null}
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {error ? (
+          <div className="rounded-lg border border-destructive bg-muted p-6">
+            <h2 className="text-base font-semibold text-destructive mb-2">无法显示任务</h2>
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        ) : task ? (
+          <TaskDetailContent task={task} />
+        ) : null}
+      </main>
+    </div>
   );
 }

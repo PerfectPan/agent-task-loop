@@ -54,6 +54,14 @@ export interface TaskManagerApplicationDependencies {
   startTask(input: StartTaskInput): Promise<TaskRecord>;
 }
 
+async function callBackend<T>(message: string, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch {
+    throw new TaskManagerOperationError('task-backend-failed', message);
+  }
+}
+
 export function createTaskManagerApplication(dependencies: TaskManagerApplicationDependencies): TaskManagerApplication {
   return {
     async listTasks(input) {
@@ -103,12 +111,4 @@ export function createTaskManagerApplication(dependencies: TaskManagerApplicatio
       };
     },
   };
-}
-
-async function callBackend<T>(message: string, operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch {
-    throw new TaskManagerOperationError('task-backend-failed', message);
-  }
 }

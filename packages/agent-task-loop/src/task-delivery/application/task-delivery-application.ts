@@ -18,6 +18,22 @@ export interface TaskDeliveryApplicationOptions {
   onUpdate?: (view: TaskDeliveryView) => void;
 }
 
+function buildImplementationPrompt(task: TaskDeliverySnapshot): string {
+  const rework =
+    task.status === 'reworking' && task.findings
+      ? `Address this independent review:\n${task.findings}`
+      : 'State assumptions and provide a verifiable result.';
+  return `You occupy the impl seat for ${task.taskId}. Produce a concise Chinese deliverable for this task: ${task.title}. Round ${task.round}. ${rework} Do not use tools. Return only the deliverable.`;
+}
+
+function buildReviewPrompt(task: TaskDeliverySnapshot): string {
+  return `You occupy the independent review seat for ${task.taskId}. Review round ${task.round} against this task: ${task.title}.\n\nImplementation:\n${task.implementation ?? ''}\n\nThe first line must be exactly VERDICT: PASS or VERDICT: CHANGES_REQUESTED. Then give concise Chinese findings. PASS only if the result directly satisfies the task and is internally consistent. Do not use tools.`;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message.trim() ? error.message : 'Task delivery failed';
+}
+
 /** Coordinates the Task Delivery aggregate, occupied seats, and external projections. */
 export class TaskDeliveryApplication {
   constructor(private readonly options: TaskDeliveryApplicationOptions) {}
@@ -170,20 +186,4 @@ export class TaskDeliveryApplication {
       // A Room/read-model projection is never allowed to decide Task success.
     }
   }
-}
-
-function buildImplementationPrompt(task: TaskDeliverySnapshot): string {
-  const rework =
-    task.status === 'reworking' && task.findings
-      ? `Address this independent review:\n${task.findings}`
-      : 'State assumptions and provide a verifiable result.';
-  return `You occupy the impl seat for ${task.taskId}. Produce a concise Chinese deliverable for this task: ${task.title}. Round ${task.round}. ${rework} Do not use tools. Return only the deliverable.`;
-}
-
-function buildReviewPrompt(task: TaskDeliverySnapshot): string {
-  return `You occupy the independent review seat for ${task.taskId}. Review round ${task.round} against this task: ${task.title}.\n\nImplementation:\n${task.implementation ?? ''}\n\nThe first line must be exactly VERDICT: PASS or VERDICT: CHANGES_REQUESTED. Then give concise Chinese findings. PASS only if the result directly satisfies the task and is internally consistent. Do not use tools.`;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() ? error.message : 'Task delivery failed';
 }

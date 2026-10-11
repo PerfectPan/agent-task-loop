@@ -19,6 +19,47 @@ import {
 import type { TaskManagerApplication } from '../src/task-manager/task-manager-application';
 import { TaskManagerInputError } from '../src/task-manager/task-manager-application';
 
+function register(plugin: { register(registry: RivusPluginRegistry): void }): {
+  profile: RivusAgentProfile;
+  tools: Map<string, RivusToolDescriptor>;
+} {
+  const profiles: RivusAgentProfile[] = [];
+  const tools = new Map<string, RivusToolDescriptor>();
+  plugin.register({
+    registerAgentProfile: (profile) => profiles.push(profile),
+    registerAutomation: () => undefined,
+    registerSkill: () => undefined,
+    registerTool: (tool) => tools.set(tool.id, tool),
+  });
+  if (!profiles[0]) {
+    throw new Error('Task Manager Profile was not registered');
+  }
+  return { profile: profiles[0], tools };
+}
+
+function fakeTaskManager(overrides: Partial<TaskManagerApplication> = {}): TaskManagerApplication {
+  return {
+    listTasks: vi.fn(),
+    getTask: vi.fn(),
+    createTask: vi.fn(),
+    startTask: vi.fn(),
+    ...overrides,
+  };
+}
+
+function executionContext(toolId: string): RivusToolExecutionContext {
+  return {
+    agentId: 'task-manager',
+    callId: 'call-1',
+    instanceId: 'task-manager:terminal',
+    policyEpoch: 1,
+    runId: 'run-1',
+    sessionKey: 'local:task-manager:test',
+    toolId,
+    toolVersion: '1.0.0',
+  };
+}
+
 describe('agent-task-loop Rivus Plugin', () => {
   it('conforms with a Task Manager Profile and four exact Tools without activating dependencies', async () => {
     const createTaskManager = vi.fn();
@@ -332,44 +373,3 @@ describe('agent-task-loop Rivus Plugin', () => {
     expect(createTaskManager).not.toHaveBeenCalled();
   });
 });
-
-function register(plugin: { register(registry: RivusPluginRegistry): void }): {
-  profile: RivusAgentProfile;
-  tools: Map<string, RivusToolDescriptor>;
-} {
-  const profiles: RivusAgentProfile[] = [];
-  const tools = new Map<string, RivusToolDescriptor>();
-  plugin.register({
-    registerAgentProfile: (profile) => profiles.push(profile),
-    registerAutomation: () => undefined,
-    registerSkill: () => undefined,
-    registerTool: (tool) => tools.set(tool.id, tool),
-  });
-  if (!profiles[0]) {
-    throw new Error('Task Manager Profile was not registered');
-  }
-  return { profile: profiles[0], tools };
-}
-
-function fakeTaskManager(overrides: Partial<TaskManagerApplication> = {}): TaskManagerApplication {
-  return {
-    listTasks: vi.fn(),
-    getTask: vi.fn(),
-    createTask: vi.fn(),
-    startTask: vi.fn(),
-    ...overrides,
-  };
-}
-
-function executionContext(toolId: string): RivusToolExecutionContext {
-  return {
-    agentId: 'task-manager',
-    callId: 'call-1',
-    instanceId: 'task-manager:terminal',
-    policyEpoch: 1,
-    runId: 'run-1',
-    sessionKey: 'local:task-manager:test',
-    toolId,
-    toolVersion: '1.0.0',
-  };
-}

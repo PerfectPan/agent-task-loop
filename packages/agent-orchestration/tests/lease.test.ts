@@ -7,24 +7,24 @@ import { LeaseManager } from '../src/application/lease-manager';
 import { FileLeaseStore } from '../src/infrastructure/file-lease-store';
 import { MemoryLeaseStore } from '../src/infrastructure/memory-lease-store';
 
+const dirs: string[] = [];
+function tempDir(): string {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'agent-lease-'));
+  dirs.push(dir);
+  return dir;
+}
+
 const stores: { name: string; store: () => LeaseStore }[] = [
   { name: 'MemoryLeaseStore', store: () => new MemoryLeaseStore() },
   { name: 'FileLeaseStore', store: () => new FileLeaseStore(tempDir()) },
 ];
 
-const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs) {
     rmSync(dir, { recursive: true, force: true });
   }
   dirs.length = 0;
 });
-
-function tempDir(): string {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'agent-lease-'));
-  dirs.push(dir);
-  return dir;
-}
 
 function record(key: string, holderPid = 1, holderId = 'holder-a', at = 1_000): LeaseRecord {
   return { key, holderPid, holderId, heartbeatAt: new Date(at).toISOString() };

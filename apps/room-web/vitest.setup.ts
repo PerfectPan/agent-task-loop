@@ -29,12 +29,12 @@ if (typeof window !== 'undefined') {
   }
 
   // Radix's menus capture the pointer and scroll the active item into view.
-  if (!Element.prototype.hasPointerCapture) {
+  if (typeof Element.prototype.hasPointerCapture !== 'function') {
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.setPointerCapture = () => {};
     Element.prototype.releasePointerCapture = () => {};
   }
-  if (!Element.prototype.scrollIntoView) {
+  if (typeof Element.prototype.scrollIntoView !== 'function') {
     Element.prototype.scrollIntoView = () => {};
   }
 
@@ -53,7 +53,7 @@ if (typeof window !== 'undefined') {
       height: 0,
       toJSON: () => ({}),
     }) as DOMRect;
-  if (!Range.prototype.getClientRects) {
+  if (typeof Range.prototype.getClientRects !== 'function') {
     Range.prototype.getClientRects = () =>
       ({
         length: 0,
@@ -61,13 +61,13 @@ if (typeof window !== 'undefined') {
         [Symbol.iterator]: function* () {},
       }) as unknown as DOMRectList;
   }
-  if (!Range.prototype.getBoundingClientRect) {
+  if (typeof Range.prototype.getBoundingClientRect !== 'function') {
     Range.prototype.getBoundingClientRect = zeroRect;
   }
-  if (!document.elementFromPoint) {
+  if (typeof document.elementFromPoint !== 'function') {
     document.elementFromPoint = () => null;
   }
-  if (!document.createRange) {
+  if (typeof document.createRange !== 'function') {
     document.createRange = () => new Range();
   }
 }

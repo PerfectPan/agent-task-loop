@@ -37,7 +37,8 @@ function parseLine(line: string): SessionHistoryEntry | null {
   }
 
   let timestamp: string | undefined;
-  const fields: Record<string, string> = {};
+  // 字段来自逐段解析的 key=value，只有出现过的键才存在，读取按可缺失处理。
+  const fields: Record<string, string | undefined> = {};
 
   for (const segment of segments) {
     const ts = parseTimestamp(segment);

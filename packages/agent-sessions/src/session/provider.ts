@@ -48,6 +48,13 @@ export interface FsSessionProviderOptions {
   resume?: (session: Session) => string | null;
 }
 
+function matches(session: Session, needle: string): boolean {
+  const q = needle.toLowerCase();
+  return [session.id, session.title, session.cwd, session.path]
+    .filter((v): v is string => typeof v === 'string')
+    .some((v) => v.toLowerCase().includes(q));
+}
+
 /** A {@link SessionProvider} for filesystem-backed tools (Codex, Claude). */
 export class FsSessionProvider implements SessionProvider {
   readonly agent: AgentKind;
@@ -131,13 +138,6 @@ export class FsSessionProvider implements SessionProvider {
     }
     return this.opts.resume(session);
   }
-}
-
-function matches(session: Session, needle: string): boolean {
-  const q = needle.toLowerCase();
-  return [session.id, session.title, session.cwd, session.path]
-    .filter((v): v is string => typeof v === 'string')
-    .some((v) => v.toLowerCase().includes(q));
 }
 
 export interface ProviderFactoryOptions extends Partial<Omit<FsSessionProviderOptions, 'agent' | 'roots'>> {

@@ -63,6 +63,29 @@ export interface ColumnWidths {
 }
 
 /**
+ * Ensure the panes fit within `total`. When the naive split overflows (tight
+ * terminals where every pane hit its minimum), trim from the widest pane first
+ * so the layout degrades gracefully instead of clipping.
+ */
+function clamp(w: ColumnWidths, total: number, previewOpen: boolean): ColumnWidths {
+  const result: ColumnWidths = { ...w };
+  const panes: Array<keyof ColumnWidths> = previewOpen ? ['list', 'detail', 'preview'] : ['list', 'detail'];
+
+  let overflow = result.list + result.detail + result.preview - total;
+  while (overflow > 0) {
+    const widest = panes.reduce((a, b) => (result[b] > result[a] ? b : a));
+    if (result[widest] <= MIN_PANE) {
+      break;
+    }
+    const take = Math.min(overflow, result[widest] - MIN_PANE);
+    result[widest] -= take;
+    overflow -= take;
+  }
+
+  return result;
+}
+
+/**
  * Divide the available columns between the panes.
  *
  * - preview open  -> ~40% list / ~30% detail / ~30% preview
@@ -84,27 +107,4 @@ export function computeColumnWidths(totalCols: number, opts: { previewOpen: bool
   const detail = Math.max(MIN_PANE, Math.floor(total * 0.3));
   const preview = Math.max(MIN_PANE, total - list - detail);
   return clamp({ list, detail, preview }, total, true);
-}
-
-/**
- * Ensure the panes fit within `total`. When the naive split overflows (tight
- * terminals where every pane hit its minimum), trim from the widest pane first
- * so the layout degrades gracefully instead of clipping.
- */
-function clamp(w: ColumnWidths, total: number, previewOpen: boolean): ColumnWidths {
-  const result: ColumnWidths = { ...w };
-  const panes: Array<keyof ColumnWidths> = previewOpen ? ['list', 'detail', 'preview'] : ['list', 'detail'];
-
-  let overflow = result.list + result.detail + result.preview - total;
-  while (overflow > 0) {
-    const widest = panes.reduce((a, b) => (result[b] > result[a] ? b : a));
-    if (result[widest] <= MIN_PANE) {
-      break;
-    }
-    const take = Math.min(overflow, result[widest] - MIN_PANE);
-    result[widest] -= take;
-    overflow -= take;
-  }
-
-  return result;
 }

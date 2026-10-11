@@ -29,7 +29,9 @@ export function SessionsBrowser({
   const [selected, setSelected] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [resume, setResume] = useState<string | null>(null);
-  const current = sessions[selected];
+  // Indexing can miss at runtime (empty list, or `selected` past a shrunk list),
+  // but noUncheckedIndexedAccess is off — widen locally to keep the guards honest.
+  const current = sessions[selected] as Session | undefined;
 
   useInput((input, key) => {
     if (input === 'q' || key.escape) {

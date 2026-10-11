@@ -88,4 +88,7 @@ export type FeishuConfig = z.infer<typeof feishuConfigSchema>;
 
 export type GitHubIssuesConfig = z.infer<typeof githubIssuesConfigSchema>;
 
+/** 未经 zod 解析的配置文件里 githubIssues 的真实形态（defaultAgent 可缺失）。 */
+export type GitHubIssuesConfigInput = z.input<typeof githubIssuesConfigSchema>;
+
 export type AppConfig = z.infer<typeof appConfigSchema>;

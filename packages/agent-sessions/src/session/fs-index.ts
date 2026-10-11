@@ -39,6 +39,15 @@ export function defaultSessionRoots(home: string = homedir()): SessionRoot[] {
   ];
 }
 
+async function mtimeIso(stat: Stat, path: string): Promise<string> {
+  try {
+    const { mtimeMs } = await stat(path);
+    return new Date(mtimeMs).toISOString();
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Build a bounded `id → Session` index by walking the given roots for
  * UUID-named `.jsonl` transcripts. Generalized from agent-task-loop's
@@ -93,13 +102,4 @@ export async function buildFsIndex(opts: BuildFsIndexOptions): Promise<Map<strin
     await walk(root.path, root.agent, 0);
   }
   return map;
-}
-
-async function mtimeIso(stat: Stat, path: string): Promise<string> {
-  try {
-    const { mtimeMs } = await stat(path);
-    return new Date(mtimeMs).toISOString();
-  } catch {
-    return '';
-  }
 }

@@ -39,6 +39,22 @@ export interface RoomLabHostBindings {
 }
 
 /**
+ * `room:<roomId>:member:<agentId>` back into its two ids. The split is the
+ * last `:member:` marker, so a room id containing colons still parses.
+ */
+function parseRuntimeKey(key: string): { roomId: string; agentId: RoomLabAgentId } {
+  const marker = ':member:';
+  const at = key.lastIndexOf(marker);
+  if (at === -1 || !key.startsWith('room:')) {
+    throw new Error(`runtime key ${key} does not name a room member`);
+  }
+  return {
+    roomId: key.slice('room:'.length, at),
+    agentId: key.slice(at + marker.length) as RoomLabAgentId,
+  };
+}
+
+/**
  * The endpoint's assembly (docs/architecture/agent-collaboration.md): the record comes from `@rivus/agent-room`
  * through the sqlite stream store, the control plane — registry, lease,
  * runtime, tool server — from `@rivus/agent-orchestration`, and everything
@@ -468,19 +484,3 @@ export class RoomLabHost {
 
 export { RoomCatalogInvariantError };
 export { RoomInputError };
-
-/**
- * `room:<roomId>:member:<agentId>` back into its two ids. The split is the
- * last `:member:` marker, so a room id containing colons still parses.
- */
-function parseRuntimeKey(key: string): { roomId: string; agentId: RoomLabAgentId } {
-  const marker = ':member:';
-  const at = key.lastIndexOf(marker);
-  if (at === -1 || !key.startsWith('room:')) {
-    throw new Error(`runtime key ${key} does not name a room member`);
-  }
-  return {
-    roomId: key.slice('room:'.length, at),
-    agentId: key.slice(at + marker.length) as RoomLabAgentId,
-  };
-}

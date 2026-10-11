@@ -15,7 +15,6 @@ package is a bounded context or a public delivery surface.
 | `@rivus/agent-sessions` (`packages/agent-sessions`)           | Which agent sessions exist on disk and what they said                                     | internal, bundled                                      |
 | `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal                                               |
 | `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal                                               |
-| `@rivus/rslib-config` (`packages/rslib-config`)               | Shared build configuration                                                                | internal                                               |
 | `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app                                           |
 | `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app                                           |
 

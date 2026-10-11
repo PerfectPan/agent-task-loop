@@ -179,7 +179,6 @@ Tools and libraries use MIT; applications use GPL-3.0-only. The repository is li
 | `@rivus/agent-finder-core` and the MoonBit module `PerfectPan/agent-finder` | `packages/agent-finder/`     |
 | `@rivus/agent-finder-cli`                                                   | `packages/agent-finder-cli/` |
 | `@rivus/agent-sessions` (private)                                           | `packages/agent-sessions/`   |
-| `@rivus/rslib-config` (private shared build config)                         | `packages/rslib-config/`     |
 
 Everything else, including `@rivus/agent-task-loop`, `@rivus/agent-room`, `@rivus/agent-orchestration` and `apps/`, is GPL-3.0-only. Distributing a GPL-3.0-only package or a modified version requires releasing its source under the same license.
 

@@ -30,7 +30,6 @@ GPL-3.0-only (see [LICENSE](./LICENSE)), except these library and tool packages,
 - `@rivus/agent-finder-core` and the MoonBit module `PerfectPan/agent-finder`: [`packages/agent-finder/`](./packages/agent-finder/)
 - `@rivus/agent-finder-cli`: [`packages/agent-finder-cli/`](./packages/agent-finder-cli/)
 - `@rivus/agent-sessions`: [`packages/agent-sessions/`](./packages/agent-sessions/)
-- `@rivus/rslib-config`, the shared build config: [`packages/rslib-config/`](./packages/rslib-config/)
 
 Tools and libraries use MIT; applications use GPL-3.0-only. See [CONTRIBUTING.md](./CONTRIBUTING.md#license).
 

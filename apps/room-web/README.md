@@ -78,6 +78,7 @@ Enter sends, Shift+Enter inserts a line break, and Enter or Tab selects an open
 mention suggestion. IME composition does not submit. Escape closes dialogs and
 returns focus to their trigger. Drafts survive failed actions and polling updates.
 
-Component tests use the separate `vitest.config.ts`; React Router's browser Fast
-Refresh pipeline is not loaded into jsdom. Run `pnpm --filter @rivus/room-web test` and
-`pnpm --filter @rivus/room-web typecheck` to check this app.
+Component tests share this `vite.config.ts`; the React Router plugin is gated on
+`!process.env.VITEST`, keeping its browser Fast Refresh pipeline out of jsdom. Run
+`pnpm --filter @rivus/room-web test` and `pnpm --filter @rivus/room-web typecheck` to
+check this app.

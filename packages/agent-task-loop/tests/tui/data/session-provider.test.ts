@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { TaskRecord } from '../../../src/types/task';
 import { buildPreviewFromTask, createFakeSessionProvider } from '../../../src/tui/data/session-provider';
 import { formatSessionHistoryEntry } from '../../../src/services/session-history';

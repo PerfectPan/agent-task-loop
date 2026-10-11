@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import {
   HEARTBEAT_FRESH_MS,
   HEARTBEAT_STALE_MS,

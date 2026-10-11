@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { GitHubPullRequestService } from '../../src/services/github-pull-request-service';
 
 describe('GitHubPullRequestService', () => {

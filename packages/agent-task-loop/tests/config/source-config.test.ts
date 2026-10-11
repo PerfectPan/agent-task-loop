@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import {
   addFeishuSource,
   addGitHubRepo,
@@ -29,7 +29,13 @@ describe('addGitHubRepo scaffolding', () => {
     const seeded: EditableConfig = {
       ...empty,
       projects: {
-        r: { key: 'r', name: 'mine', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' },
+        r: {
+          key: 'r',
+          name: 'mine',
+          defaultRepository: 'o/r',
+          workspaceRoot: '/ws',
+          taskTemplatePrompt: '',
+        },
       },
       repositories: {
         'o/r': {
@@ -70,7 +76,10 @@ describe('listSources', () => {
   });
 
   it('defaults to the first github repo when there is no feishu', () => {
-    const cfg: EditableConfig = { ...empty, githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' } };
+    const cfg: EditableConfig = {
+      ...empty,
+      githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' },
+    };
     expect(listSources(cfg)).toEqual([{ id: 'github:o/r', label: 'o/r', isDefault: true }]);
   });
 
@@ -87,7 +96,10 @@ describe('addGitHubRepo', () => {
   });
 
   it('appends to repositories[] when a github repo already exists', () => {
-    const single: EditableConfig = { ...empty, githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' } };
+    const single: EditableConfig = {
+      ...empty,
+      githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' },
+    };
     const out = addGitHubRepo(single, { owner: 'o', repo: 'b', defaultAgent: 'claude' });
     expect(out.githubIssues).toMatchObject({
       defaultAgent: 'codex',
@@ -99,12 +111,18 @@ describe('addGitHubRepo', () => {
   });
 
   it('throws on a duplicate owner/repo', () => {
-    const single: EditableConfig = { ...empty, githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' } };
+    const single: EditableConfig = {
+      ...empty,
+      githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' },
+    };
     expect(() => addGitHubRepo(single, { owner: 'o', repo: 'a' })).toThrow(/already configured/);
   });
 
   it('does not mutate the input', () => {
-    const single: EditableConfig = { ...empty, githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' } };
+    const single: EditableConfig = {
+      ...empty,
+      githubIssues: { owner: 'o', repo: 'a', defaultAgent: 'codex' },
+    };
     addGitHubRepo(single, { owner: 'o', repo: 'b' });
     expect(single.githubIssues).toEqual({ owner: 'o', repo: 'a', defaultAgent: 'codex' });
   });
@@ -112,7 +130,10 @@ describe('addGitHubRepo', () => {
 
 describe('addFeishuSource', () => {
   it('adds feishu, keeping github', () => {
-    const cfg: EditableConfig = { ...empty, githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' } };
+    const cfg: EditableConfig = {
+      ...empty,
+      githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' },
+    };
     const out = addFeishuSource(cfg, feishu);
     expect(out.feishu).toEqual(feishu);
     expect(out.githubIssues).toBeDefined();
@@ -125,7 +146,11 @@ describe('addFeishuSource', () => {
 
 describe('removeSource', () => {
   it('removes feishu when another source remains', () => {
-    const cfg: EditableConfig = { ...empty, feishu, githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' } };
+    const cfg: EditableConfig = {
+      ...empty,
+      feishu,
+      githubIssues: { owner: 'o', repo: 'r', defaultAgent: 'codex' },
+    };
     const out = removeSource(cfg, 'feishu');
     expect(out.feishu).toBeUndefined();
     expect(out.githubIssues).toBeDefined();

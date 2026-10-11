@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { shouldWake, type RoomEvent } from '../src/index';
 
 const room = { tenantId: 't1', conversationId: 'c1' };
@@ -51,13 +51,25 @@ describe('shouldWake', () => {
   });
 
   it('wakes nobody for an event at the ceiling, and everyone below it', () => {
-    const atCeiling = event({ kind: 'posted', author: { kind: 'agent', id: 'bot-a' }, wakeDepth: 6 });
+    const atCeiling = event({
+      kind: 'posted',
+      author: { kind: 'agent', id: 'bot-a' },
+      wakeDepth: 6,
+    });
     expect(shouldWake({ event: atCeiling, memberId: 'bot-b', ceiling: 6 })).toBe(false);
 
-    const aboveCeiling = event({ kind: 'posted', author: { kind: 'agent', id: 'bot-a' }, wakeDepth: 7 });
+    const aboveCeiling = event({
+      kind: 'posted',
+      author: { kind: 'agent', id: 'bot-a' },
+      wakeDepth: 7,
+    });
     expect(shouldWake({ event: aboveCeiling, memberId: 'bot-b', ceiling: 6 })).toBe(false);
 
-    const belowCeiling = event({ kind: 'posted', author: { kind: 'agent', id: 'bot-a' }, wakeDepth: 5 });
+    const belowCeiling = event({
+      kind: 'posted',
+      author: { kind: 'agent', id: 'bot-a' },
+      wakeDepth: 5,
+    });
     expect(shouldWake({ event: belowCeiling, memberId: 'bot-b', ceiling: 6 })).toBe(true);
   });
 

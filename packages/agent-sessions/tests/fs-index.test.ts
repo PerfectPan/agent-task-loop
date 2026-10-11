@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { buildFsIndex, defaultSessionRoots, type SessionRoot } from '../src/index.js';
 
 const UUID_A = '11111111-1111-4111-8111-111111111111';
@@ -63,7 +63,11 @@ describe('buildFsIndex', () => {
       '/codex': [{ name: 'README.md' }, { name: `s-${UUID_A}.jsonl` }, { name: 'missing', dir: true }],
       // "/codex/missing" intentionally absent -> readdir throws, walk continues
     });
-    const index = await buildFsIndex({ roots: [{ path: '/codex', agent: 'codex' }], readdir, stat });
+    const index = await buildFsIndex({
+      roots: [{ path: '/codex', agent: 'codex' }],
+      readdir,
+      stat,
+    });
     expect([...index.keys()]).toEqual([UUID_A]);
     expect(index.get(UUID_A)?.updatedAt).toBe(''); // stat threw -> empty, not a crash
   });

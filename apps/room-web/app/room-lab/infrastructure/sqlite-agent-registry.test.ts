@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { Agent } from '@rivus/agent-orchestration';
 import { SqliteAgentRegistry } from './sqlite-agent-registry.server';
 import { SqliteRoomStore } from './sqlite-room-store.server';
@@ -121,7 +121,9 @@ describe('SqliteAgentRegistry', () => {
     expect((await registry.get('codex'))?.timeoutMs).toBe(300_000);
 
     await registry.save(agent({ id: 'codex', label: 'Codex', command: 'codex-acp' }));
-    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({ timeout_ms: null });
+    expect(store.db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({
+      timeout_ms: null,
+    });
     expect((await registry.get('codex'))?.timeoutMs).toBeUndefined();
   });
 

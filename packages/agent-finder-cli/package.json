@@ -3,32 +3,25 @@
   "version": "0.2.0",
   "private": false,
   "description": "Command-line interface for local code agent discovery.",
+  "keywords": [
+    "ai-agent",
+    "cli",
+    "coding-agent",
+    "discovery",
+    "inventory"
+  ],
+  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
+  "bugs": {
+    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
+  },
   "license": "MIT",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/PerfectPan/agent-task-loop",
     "directory": "packages/agent-finder-cli"
   },
-  "bugs": {
-    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
-  },
-  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
-  "keywords": [
-    "ai-agent",
-    "coding-agent",
-    "discovery",
-    "inventory",
-    "cli"
-  ],
   "bin": {
     "agent-finder": "./bin/agent-finder.mjs"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.js"
-    }
   },
   "files": [
     "bin/",
@@ -36,18 +29,25 @@
     "README.md",
     "LICENSE"
   ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org",
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "dev": "tsx --conditions=development src/cli.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
+    "test": "vp pack && vp test run",
+    "test:watch": "vp test"
   },
   "dependencies": {
     "@rivus/agent-finder-core": "workspace:*",
@@ -57,15 +57,13 @@
   },
   "devDependencies": {
     "@rivus/agent-sessions": "workspace:*",
-    "@rivus/rslib-config": "workspace:*",
     "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
     "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=22"

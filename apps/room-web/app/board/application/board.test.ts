@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { TaskProvider, TaskRecord } from '@rivus/agent-task-loop/task-management';
 import { loadBoard } from './board.server';
 

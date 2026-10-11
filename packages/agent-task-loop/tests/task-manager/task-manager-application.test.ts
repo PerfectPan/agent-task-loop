@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   createTaskManagerApplication,
   TaskManagerInputError,
@@ -114,9 +114,16 @@ describe('Task Manager application', () => {
       task({ taskId: 'TASK-1', status: '待处理', targetAgent: 'claude' }),
       task({ taskId: 'TASK-2', status: '待处理', targetAgent: 'claude' }),
     ]);
-    const application = createTaskManagerApplication({ taskProvider: provider, startTask: vi.fn() });
+    const application = createTaskManagerApplication({
+      taskProvider: provider,
+      startTask: vi.fn(),
+    });
 
-    const result = await application.listTasks({ limit: 1, status: '待处理', targetAgent: 'claude' });
+    const result = await application.listTasks({
+      limit: 1,
+      status: '待处理',
+      targetAgent: 'claude',
+    });
 
     expect(result.tasks.map((item) => item.taskId)).toEqual(['TASK-1']);
     expect(result.count).toBe(1);
@@ -127,7 +134,10 @@ describe('Task Manager application', () => {
     const provider = fakeTaskProvider([]);
     const getTaskById = vi.fn().mockResolvedValue(task({ taskId: 'TASK-7', workspacePath: '/private/task-7' }));
     provider.getTaskById = getTaskById;
-    const application = createTaskManagerApplication({ taskProvider: provider, startTask: vi.fn() });
+    const application = createTaskManagerApplication({
+      taskProvider: provider,
+      startTask: vi.fn(),
+    });
 
     const result = await application.getTask({ taskId: 'TASK-7' });
 
@@ -155,7 +165,10 @@ describe('Task Manager application', () => {
     const provider = fakeTaskProvider([]);
     const createTask = vi.fn().mockResolvedValue(undefined);
     provider.createTask = createTask;
-    const application = createTaskManagerApplication({ taskProvider: provider, startTask: vi.fn() });
+    const application = createTaskManagerApplication({
+      taskProvider: provider,
+      startTask: vi.fn(),
+    });
     const input = {
       taskId: 'TASK-8',
       title: 'Create from Rivus',
@@ -240,7 +253,10 @@ describe('Task Manager application', () => {
   it('maps a raw Provider failure to a neutral backend error', async () => {
     const provider = fakeTaskProvider([]);
     provider.listTasks = vi.fn().mockRejectedValue(new Error('request failed with sensitive provider detail'));
-    const application = createTaskManagerApplication({ taskProvider: provider, startTask: vi.fn() });
+    const application = createTaskManagerApplication({
+      taskProvider: provider,
+      startTask: vi.fn(),
+    });
 
     await expect(application.listTasks({ limit: 50 })).rejects.toEqual(
       expect.objectContaining<TaskManagerOperationError>({

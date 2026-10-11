@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { Header } from '../../../src/tui/components/header';
 import { FIXED_NOW, isoSecondsAgo, stripAnsi } from '../helpers';

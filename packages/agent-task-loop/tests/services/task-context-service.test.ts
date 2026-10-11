@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { AppConfig } from '../../src/config/schema';
 import type { TaskRecord } from '../../src/types/task';
 import { resolveTaskExecutionContext } from '../../src/services/task-context-service';

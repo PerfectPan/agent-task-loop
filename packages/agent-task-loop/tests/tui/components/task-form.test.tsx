@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { TaskForm } from '../../../src/tui/components/task-form';
 import { stripAnsi, tick } from '../helpers';

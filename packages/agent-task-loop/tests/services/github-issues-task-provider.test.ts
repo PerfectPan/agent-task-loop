@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { GitHubIssuesTaskProvider, type GitHubRepoTarget } from '../../src/task-management/github-issues-task-provider';
 
 const { execaMock } = vi.hoisted(() => ({ execaMock: vi.fn() }));
@@ -295,7 +295,12 @@ describe('GitHubIssuesTaskProvider', () => {
     delete process.env.GITHUB_TOKEN;
     execaMock.mockImplementation(async (command: string) => {
       if (command === 'gh') {
-        return { stdout: '', stderr: 'env: gh: No such file or directory', exitCode: 127, failed: true };
+        return {
+          stdout: '',
+          stderr: 'env: gh: No such file or directory',
+          exitCode: 127,
+          failed: true,
+        };
       }
       if (command === '/opt/homebrew/bin/gh') {
         return { stdout: 'ghp_absolute\n', stderr: '', exitCode: 0, failed: false };

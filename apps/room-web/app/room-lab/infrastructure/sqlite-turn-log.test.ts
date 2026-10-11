@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 import { SqliteTurnLog, type TurnRecord } from './sqlite-turn-log.server';
 
@@ -92,7 +92,13 @@ describe('SqliteTurnLog', () => {
     const log = new SqliteTurnLog(store.db);
     log.append(turn({ id: 'turn:later', agentId: 'codex', startedAt: '2026-09-28T10:05:00.000Z' }));
     log.append(turn({ id: 'turn:earlier', agentId: 'claude', startedAt: '2026-09-28T10:01:00.000Z' }));
-    log.append(turn({ id: 'turn:other-room', roomId: 'r_bbbbbbbbbb', startedAt: '2026-09-28T09:00:00.000Z' }));
+    log.append(
+      turn({
+        id: 'turn:other-room',
+        roomId: 'r_bbbbbbbbbb',
+        startedAt: '2026-09-28T09:00:00.000Z',
+      }),
+    );
 
     expect(log.listByRoom(ROOM).map((row) => row.id)).toEqual(['turn:earlier', 'turn:later']);
     expect(log.listByRoom('r_bbbbbbbbbb').map((row) => row.id)).toEqual(['turn:other-room']);

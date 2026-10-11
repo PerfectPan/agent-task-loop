@@ -1,5 +1,5 @@
 import { render } from 'ink-testing-library';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { HelpOverlay } from '../../../src/tui/components/help-overlay';
 import { stripAnsi } from '../helpers';
 

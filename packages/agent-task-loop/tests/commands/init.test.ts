@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@rivus/agent-finder-core', () => ({
   collectHostProbe: vi.fn().mockResolvedValue({}),
@@ -94,7 +94,10 @@ describe('createGlobalConfig', () => {
     // The matching project/repository entries are scaffolded (keyed repo / owner/repo)
     // so the GitHub-only config is runnable once the CHANGE_ME paths are filled in.
     expect(written.projects.r).toMatchObject({ key: 'r', defaultRepository: 'o/r' });
-    expect(written.repositories['o/r']).toMatchObject({ key: 'o/r', workspaceStrategy: 'worktree' });
+    expect(written.repositories['o/r']).toMatchObject({
+      key: 'o/r',
+      workspaceStrategy: 'worktree',
+    });
     expect(written.repositories['o/r'].localPath).toContain('CHANGE_ME');
   });
 
@@ -103,7 +106,12 @@ describe('createGlobalConfig', () => {
     await mkdir(path.dirname(configPath), { recursive: true });
     writeFileSync(
       configPath,
-      JSON.stringify({ feishu: { baseToken: 'original', tableId: 't' }, projects: {}, repositories: {}, agents: {} }),
+      JSON.stringify({
+        feishu: { baseToken: 'original', tableId: 't' },
+        projects: {},
+        repositories: {},
+        agents: {},
+      }),
       'utf8',
     );
 

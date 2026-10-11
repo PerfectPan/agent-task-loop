@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { appendSessionHistory, formatSessionHistoryEntry } from '../../src/services/session-history';
 
 describe('session-history', () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { resolveWorkspacePath } from '../../src/services/workspace-service';
 
 describe('resolveWorkspacePath', () => {

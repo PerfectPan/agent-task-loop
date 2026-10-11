@@ -3,29 +3,21 @@
   "version": "0.1.2",
   "private": false,
   "description": "Read-only local code agent discovery core for JavaScript consumers.",
-  "license": "MIT",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/PerfectPan/agent-task-loop",
-    "directory": "packages/agent-finder"
-  },
-  "bugs": {
-    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
-  },
-  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
   "keywords": [
     "ai-agent",
     "coding-agent",
     "discovery",
     "inventory"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "development": "./src/index.ts",
-      "import": "./dist/index.js"
-    }
+  "homepage": "https://github.com/PerfectPan/agent-task-loop#readme",
+  "bugs": {
+    "url": "https://github.com/PerfectPan/agent-task-loop/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PerfectPan/agent-task-loop",
+    "directory": "packages/agent-finder"
   },
   "files": [
     "dist/",
@@ -39,27 +31,33 @@
     "moon.mod.json",
     "agent_discovery_core/"
   ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org",
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
+    "test": "vp test",
+    "test:watch": "vp test watch"
   },
   "devDependencies": {
-    "@rivus/rslib-config": "workspace:*",
     "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
     "@types/node": "^24.19.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20"

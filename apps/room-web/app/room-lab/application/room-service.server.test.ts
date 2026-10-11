@@ -1,7 +1,7 @@
 import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { MemoryRoomStreamStore, type AgentSessionId, type RoomEvent, type RoomId } from '@rivus/agent-room';
 import {
   LeaseManager,
@@ -750,7 +750,11 @@ describe('RoomService turns', () => {
     const codex = await h.runtime.activated(keyOf('codex'));
     await codex.end({ stopReason: 'end_turn', error: 'ACP connection closed' });
     await h.turnLog.waitFor(2);
-    expect(h.turnLog.rows[1]).toMatchObject({ agentId: 'codex', outcome: 'failed', error: 'ACP connection closed' });
+    expect(h.turnLog.rows[1]).toMatchObject({
+      agentId: 'codex',
+      outcome: 'failed',
+      error: 'ACP connection closed',
+    });
 
     // A prompt that resolved but reported no stop reason is a pass, not a
     // timeout: only the watchdog makes a timeout.
@@ -895,7 +899,11 @@ describe('RoomService turns', () => {
       locations: [{ path: join(claude.harness.cwd, '..dots.md') }],
     });
     expect(dotDots).toEqual({ outcome: 'selected', optionId: 'allow-once' });
-    const relative = await ask({ toolCallId: 'c7', kind: 'edit', locations: [{ path: 'note.md' }] });
+    const relative = await ask({
+      toolCallId: 'c7',
+      kind: 'edit',
+      locations: [{ path: 'note.md' }],
+    });
     expect(relative).toEqual({ outcome: 'selected', optionId: 'reject-once' });
     const chainEnd = mkdtempSync(join(tmpdir(), 'rivus-chain-end-'));
     let chainLink: string = join(chainEnd, 'far.md');
@@ -904,7 +912,11 @@ describe('RoomService turns', () => {
       symlinkSync(chainLink, next);
       chainLink = next;
     }
-    const viaChain = await ask({ toolCallId: 'c8', kind: 'edit', locations: [{ path: chainLink }] });
+    const viaChain = await ask({
+      toolCallId: 'c8',
+      kind: 'edit',
+      locations: [{ path: chainLink }],
+    });
     expect(viaChain).toEqual({ outcome: 'selected', optionId: 'reject-once' });
 
     await claude.end();
@@ -1116,7 +1128,9 @@ describe('RoomService truncated inbox', () => {
     // A room_read that skips ahead of the cursor returns its events but
     // advances the handle nowhere: the gap stays honestly unread.
     const read = h.toolOf('codex', 'room_read');
-    const skipped = (await read.handler({ afterSeq: 55 }, { sessionId: undefined })) as { events: ToolEvent[] };
+    const skipped = (await read.handler({ afterSeq: 55 }, { sessionId: undefined })) as {
+      events: ToolEvent[];
+    };
     expect(skipped.events.map((event) => event.seq)).toEqual([56, 57, 58, 59, 60]);
     await codex.end();
     expect(h.store.inspectSession(sessionId('codex'))?.seenSeq).toBe(50);

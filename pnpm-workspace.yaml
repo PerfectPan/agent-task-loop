@@ -7,6 +7,16 @@ packages:
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@rivus/*'
+  - vite-plus
+  - '@voidzero-dev/*'
+  - oxlint
+  - '@oxlint/*'
+  - oxlint-tsgolint
+  - '@oxlint-tsgolint/*'
+  - oxfmt
+  - '@oxfmt/*'
+  - vitest
+  - '@vitest/*'
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:
@@ -18,3 +28,17 @@ allowBuilds:
   # protobufjs's postinstall only warns about outdated dependents.
   '@google/genai': false
   protobufjs: false
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.1.0
+  vitest: 5.0.3
+  vite-plus: 1.1.0
+overrides:
+  vite@*: 'catalog:'
+  vitest@*: 'catalog:'
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: '*'
+    vitest: '*'

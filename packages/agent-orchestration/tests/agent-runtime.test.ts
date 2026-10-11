@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -39,7 +39,11 @@ interface FakeConnectionOptions {
 }
 
 class FakeConnection implements AgentConnection {
-  readonly newSessionRequests: { cwd: string; mcpServers: unknown[]; meta?: Record<string, unknown> }[] = [];
+  readonly newSessionRequests: {
+    cwd: string;
+    mcpServers: unknown[];
+    meta?: Record<string, unknown>;
+  }[] = [];
   readonly prompts: { session: string; blocks: ContentBlock[] }[] = [];
   readonly cancelledSessions: string[] = [];
   newSessionCalls = 0;
@@ -56,7 +60,11 @@ class FakeConnection implements AgentConnection {
 
   async newSession(input: { cwd: string; mcpServers?: unknown[]; meta?: Record<string, unknown> }): Promise<string> {
     this.newSessionCalls += 1;
-    this.newSessionRequests.push({ cwd: input.cwd, mcpServers: input.mcpServers ?? [], meta: input.meta });
+    this.newSessionRequests.push({
+      cwd: input.cwd,
+      mcpServers: input.mcpServers ?? [],
+      meta: input.meta,
+    });
     return `session-${this.newSessionCalls}`;
   }
 
@@ -195,7 +203,11 @@ describe('Inbox and runtime', () => {
 
     expect(connector.connections[0]?.newSessionCalls).toBe(1);
     expect(connector.connections[0]?.promptCalls).toBe(1);
-    expect(runtime.inbox(key)).toMatchObject({ state: 'idle', pending: false, session: 'session-1' });
+    expect(runtime.inbox(key)).toMatchObject({
+      state: 'idle',
+      pending: false,
+      session: 'session-1',
+    });
     expect(lease.read(key)).toBeUndefined();
   });
 
@@ -294,7 +306,9 @@ describe('Inbox and runtime', () => {
   }, 15_000);
 
   it('cancel ends the activation and clears pending', async () => {
-    const { runtime, connector, lease } = await runtimeWith({ connectorOptions: { hangPrompt: true } });
+    const { runtime, connector, lease } = await runtimeWith({
+      connectorOptions: { hangPrompt: true },
+    });
     runtime.wake(key);
     await vi.waitFor(() => expect(connector.connections[0]?.promptCalls).toBe(1));
     runtime.wake(key);
@@ -488,7 +502,10 @@ describe('Inbox and runtime', () => {
     await settled(runtime, key);
 
     expect(decisions).toEqual([]);
-    expect(connector.connections[0]?.permissionResult).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    expect(connector.connections[0]?.permissionResult).toEqual({
+      outcome: 'selected',
+      optionId: 'reject-once',
+    });
   });
 
   it('answers through the permission policy when the hook allows', async () => {
@@ -507,7 +524,10 @@ describe('Inbox and runtime', () => {
     await settled(runtime, key);
 
     expect(decisions).toEqual(['policy']);
-    expect(connector.connections[0]?.permissionResult).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+    expect(connector.connections[0]?.permissionResult).toEqual({
+      outcome: 'selected',
+      optionId: 'allow-once',
+    });
   });
 
   it('skips the turn when another process holds the lease', async () => {

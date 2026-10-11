@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { clampIndex, computeVisibleWindow, nextIndex } from '../../../src/tui/logic/viewport';
 
 describe('clampIndex', () => {

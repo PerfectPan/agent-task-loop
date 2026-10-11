@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { App } from '../../../src/tui/components/app';
 import { createFakeSessionProvider } from '../../../src/tui/data/session-provider';
@@ -195,7 +195,10 @@ describe('App dashboard', () => {
     app.stdin.write('\r');
     await settle();
     expect(onCreateTask).toHaveBeenCalledTimes(1);
-    expect(onCreateTask.mock.calls[0][0]).toMatchObject({ taskId: 'IDEA-900', title: 'Wire it up' });
+    expect(onCreateTask.mock.calls[0][0]).toMatchObject({
+      taskId: 'IDEA-900',
+      title: 'Wire it up',
+    });
     // form closes after a successful create
     expect(stripAnsi(app.lastFrame() ?? '')).not.toContain('New task');
     app.unmount();

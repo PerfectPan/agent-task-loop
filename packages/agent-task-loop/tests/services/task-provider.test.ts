@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { TaskService } from '../../src/services/task-service';
 import type { TaskProvider } from '../../src/task-management/task-provider';
 import type { TaskRecord } from '../../src/types/task';

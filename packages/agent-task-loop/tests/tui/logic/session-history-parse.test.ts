@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { parseSessionHistory } from '../../../src/tui/logic/session-history-parse';
 import { formatSessionHistoryEntry } from '../../../src/services/session-history';
 import { isoSecondsAgo } from '../helpers';

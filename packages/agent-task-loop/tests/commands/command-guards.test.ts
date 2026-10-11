@@ -1,5 +1,5 @@
 import { defineCommand, runCommand } from 'citty';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { withCommandGuards } from '../../src/commands/command-guards';
 
 const runSpy = vi.fn();
@@ -57,7 +57,9 @@ describe('withCommandGuards', () => {
   it('skips a cause whose message the previous error already contains', async () => {
     const spawnError = new Error('spawn lark-cli ENOENT');
     runSpy.mockRejectedValue(
-      new Error('Command failed with ENOENT: lark-cli base\nspawn lark-cli ENOENT', { cause: spawnError }),
+      new Error('Command failed with ENOENT: lark-cli base\nspawn lark-cli ENOENT', {
+        cause: spawnError,
+      }),
     );
 
     await expect(runCommand(command, { rawArgs: ['--task', 'TASK-1'] })).rejects.toThrow('exit');

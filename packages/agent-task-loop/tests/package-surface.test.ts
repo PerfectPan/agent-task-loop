@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 const packageRoot = path.resolve(new URL('..', import.meta.url).pathname);
 
@@ -26,11 +26,11 @@ describe('published package surface', () => {
     expect(packageJson.files).toContain('docs/rivus-plugin.md');
     expect(packageJson.peerDependenciesMeta['@rivus/agent']).toEqual({ optional: true });
     expect(packageJson.scripts['package:check']).toBe('node scripts/check-package.mjs');
-    expect(packageJson.scripts.prepack).toBe('rslib build');
+    expect(packageJson.scripts.prepack).toBe('vp pack');
   });
 
   it('builds a dedicated Rivus Plugin entry', async () => {
-    const config = await readFile(path.join(packageRoot, 'rslib.config.ts'), 'utf8');
+    const config = await readFile(path.join(packageRoot, 'vite.config.ts'), 'utf8');
 
     expect(config).toMatch(/["']rivus-plugin["']: ["']src\/rivus-plugin\.ts["']/);
     expect(config).toMatch(/["']task-delivery["']: ["']src\/task-delivery\.ts["']/);

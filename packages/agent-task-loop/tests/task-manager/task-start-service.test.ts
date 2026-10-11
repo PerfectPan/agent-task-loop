@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { OrchestrationConflictError } from '@rivus/agent-orchestration';
 import { TaskStartService } from '../../src/task-manager/task-start-service';
 import type { TaskRecord } from '../../src/types/task';
@@ -50,7 +50,11 @@ describe('TaskStartService', () => {
       orchestration,
     });
 
-    const result = await service.startTask({ taskId: 'TASK-20', maxRounds: 4, targetAgent: 'claude' });
+    const result = await service.startTask({
+      taskId: 'TASK-20',
+      maxRounds: 4,
+      targetAgent: 'claude',
+    });
 
     expect(run).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledWith({
@@ -150,7 +154,9 @@ describe('TaskStartService', () => {
       (input: { signal?: AbortSignal }) =>
         new Promise<void>((_resolve, reject) => {
           runnerSignal = input.signal;
-          input.signal?.addEventListener('abort', () => reject(input.signal?.reason), { once: true });
+          input.signal?.addEventListener('abort', () => reject(input.signal?.reason), {
+            once: true,
+          });
         }),
     );
     const service = new TaskStartService({
@@ -170,7 +176,10 @@ describe('TaskStartService', () => {
     const orchestration = mockOrchestration();
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-26' })) },
-      runner: { run: vi.fn().mockRejectedValue(new Error('runner exploded')), resumeReview: vi.fn() },
+      runner: {
+        run: vi.fn().mockRejectedValue(new Error('runner exploded')),
+        resumeReview: vi.fn(),
+      },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
       orchestration,
     });
@@ -186,7 +195,12 @@ describe('TaskStartService', () => {
       workspacePath: '/workspace/task-22',
       resultSummary: 'Implementation ready',
     });
-    const inspection = { state: 'stale' as const, mode: 'review' as const, round: 3, reason: 'stale runner' };
+    const inspection = {
+      state: 'stale' as const,
+      mode: 'review' as const,
+      round: 3,
+      reason: 'stale runner',
+    };
     const resumeReview = vi.fn().mockResolvedValue(undefined);
     const onRecovery = vi.fn();
     const service = new TaskStartService({

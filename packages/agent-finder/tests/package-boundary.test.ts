@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vite-plus/test';
 
 describe('@rivus/agent-finder-core package boundary', () => {
   test('core package does not depend on CLI framework packages', () => {

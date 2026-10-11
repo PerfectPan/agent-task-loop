@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { extractClaudeStructured, stripCodeFences } from '../../src/services/structured-ai-service';
 
 describe('extractClaudeStructured', () => {

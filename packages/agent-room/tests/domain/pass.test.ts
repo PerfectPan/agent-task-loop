@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { AgentSessionAggregate } from '../../src/agent-session/domain/agent-session';
 import { pass } from '../../src/room/domain/pass';
 import { Room } from '../../src/room/domain/room';

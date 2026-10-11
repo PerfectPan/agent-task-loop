@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { AppConfig } from '../../src/config/schema';
 import { CompleteService } from '../../src/services/complete-service';
 import { TaskService } from '../../src/services/task-service';
@@ -59,7 +59,9 @@ function fakeGitHub(seed: FakeIssue[]) {
     const patch = pathname.match(/\/issues\/(\d+)$/);
     if (method === 'PATCH' && patch) {
       const number = Number(patch[1]);
-      const body = JSON.parse((init?.body as string | undefined) ?? '{}') as { state?: 'open' | 'closed' };
+      const body = JSON.parse((init?.body as string | undefined) ?? '{}') as {
+        state?: 'open' | 'closed';
+      };
       const current = byNumber.get(number);
       if (current && body.state) {
         byNumber.set(number, { ...current, state: body.state });
@@ -71,7 +73,12 @@ function fakeGitHub(seed: FakeIssue[]) {
   return { fetchMock, byNumber };
 }
 
-const repoConfig: GitHubRepoTarget = { owner: 'rivus', repo: 'idea', token: 'test-token', defaultAgent: 'codex' };
+const repoConfig: GitHubRepoTarget = {
+  owner: 'rivus',
+  repo: 'idea',
+  token: 'test-token',
+  defaultAgent: 'codex',
+};
 const SOURCE = 'github:rivus/idea';
 
 // resolveTaskExecutionContext keys: project = repo name, repository = owner/repo.
@@ -184,9 +191,12 @@ describe('CompleteService over a GitHub-only stack', () => {
       generateCommitMessage: vi
         .fn()
         .mockResolvedValue({ message: 'feat: feature', sessionId: 'c1', sessionName: 's1' }),
-      generatePullRequestContent: vi
-        .fn()
-        .mockResolvedValue({ title: 'feat: feature', body: 'pr body', sessionId: 'p1', sessionName: 's2' }),
+      generatePullRequestContent: vi.fn().mockResolvedValue({
+        title: 'feat: feature',
+        body: 'pr body',
+        sessionId: 'p1',
+        sessionName: 's2',
+      }),
     });
 
     const result = await service.complete({ taskId: 'TASK-360' });

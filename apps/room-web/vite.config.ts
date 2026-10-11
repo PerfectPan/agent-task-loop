@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { reactRouter } from '@react-router/dev/vite';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite-plus';
 
 const MIGRATIONS_DIR = path.resolve(import.meta.dirname, 'app/room-lab/infrastructure/migrations');
 

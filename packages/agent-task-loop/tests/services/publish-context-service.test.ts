@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { PublishContextService } from '../../src/services/publish-context-service';
 
 describe('PublishContextService', () => {

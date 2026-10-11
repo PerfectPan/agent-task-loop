@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import type { Pane } from '../../../src/tui/types';
 import { StatusBar } from '../../../src/tui/components/status-bar';

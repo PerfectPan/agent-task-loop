@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { TaskRunnerLivenessService } from '../../src/services/task-runner-liveness-service';
 
 describe('TaskRunnerLivenessService', () => {

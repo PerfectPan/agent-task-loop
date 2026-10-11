@@ -2,7 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { ToolServer, type TurnTools } from '../src/application/tool-server';
 
 function echoTool(
@@ -65,7 +65,10 @@ describe('ToolServer', () => {
         { name: 'room_echo', arguments: { text: 'SPIKE-ECHO-7733' } },
         CallToolResultSchema,
       )) as { content: Array<{ type: string; text: string }> };
-      expect(result.content[0]).toEqual({ type: 'text', text: JSON.stringify({ echo: 'SPIKE-ECHO-7733' }) });
+      expect(result.content[0]).toEqual({
+        type: 'text',
+        text: JSON.stringify({ echo: 'SPIKE-ECHO-7733' }),
+      });
       expect(seenSessionIds[0]).toEqual(expect.any(String));
     } finally {
       await client.close();
@@ -110,7 +113,10 @@ describe('ToolServer', () => {
 
   it('serves each turn on the same endpoint: the session keeps one URL across turns', async () => {
     const toolServer = new ToolServer();
-    const first: TurnTools = { tools: [echoTool(() => Promise.resolve({ turn: 1 }))], authorize: () => true };
+    const first: TurnTools = {
+      tools: [echoTool(() => Promise.resolve({ turn: 1 }))],
+      authorize: () => true,
+    };
     const hosted = await toolServer.hostTools({ ...first, token: 'turn-token-4' });
     const client = await connect(hosted.url);
     try {

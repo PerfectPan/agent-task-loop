@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { ReviewLoopService } from '../../src/services/review-loop-service';
 
 const immediateMutationFence = {
@@ -9,8 +9,16 @@ describe('ReviewLoopService', () => {
   it('re-enters execution when review rejects and exits when review passes', async () => {
     const executeRound = vi
       .fn()
-      .mockResolvedValueOnce({ resultSummary: 'round-1', sessionId: 'exec-1', sessionName: 'task-201-claude-r1' })
-      .mockResolvedValueOnce({ resultSummary: 'round-2', sessionId: 'exec-2', sessionName: 'task-201-claude-r2' });
+      .mockResolvedValueOnce({
+        resultSummary: 'round-1',
+        sessionId: 'exec-1',
+        sessionName: 'task-201-claude-r1',
+      })
+      .mockResolvedValueOnce({
+        resultSummary: 'round-2',
+        sessionId: 'exec-2',
+        sessionName: 'task-201-claude-r2',
+      });
     const review = vi
       .fn()
       .mockResolvedValueOnce({

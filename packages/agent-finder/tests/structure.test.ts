@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vite-plus/test';
 
 const packageRoot = join(process.cwd(), 'agent_discovery_core');
 const sourceRoot = join(process.cwd(), 'src');

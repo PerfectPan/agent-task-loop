@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { execa } from 'execa';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { getPackageVersion } from '../../src/package-info';
 
 describe('agent-task-loop local launcher', () => {

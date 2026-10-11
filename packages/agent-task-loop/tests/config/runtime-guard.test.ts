@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { AppConfig } from '../../src/config/schema';
 import { assertRuntimeConfig } from '../../src/config/runtime-guard';
 
@@ -27,8 +27,23 @@ describe('assertRuntimeConfig', () => {
   const githubRunnable = {
     agents: {},
     githubIssues: { owner: 'o', repo: 'r' },
-    projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
-    repositories: { 'o/r': { key: 'o/r', localPath: '/repo', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
+    projects: {
+      r: {
+        key: 'r',
+        name: 'r',
+        defaultRepository: 'o/r',
+        workspaceRoot: '/ws',
+        taskTemplatePrompt: '',
+      },
+    },
+    repositories: {
+      'o/r': {
+        key: 'o/r',
+        localPath: '/repo',
+        defaultBranch: 'main',
+        workspaceStrategy: 'worktree',
+      },
+    },
   } as unknown as AppConfig;
 
   it('passes for a github-only config with matching project/repository entries', () => {
@@ -44,8 +59,18 @@ describe('assertRuntimeConfig', () => {
     const bad = {
       agents: {},
       githubIssues: { owner: 'o', repo: 'r' },
-      projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '/ws', taskTemplatePrompt: '' } },
-      repositories: { 'o/r': { key: 'o/r', localPath: '', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
+      projects: {
+        r: {
+          key: 'r',
+          name: 'r',
+          defaultRepository: 'o/r',
+          workspaceRoot: '/ws',
+          taskTemplatePrompt: '',
+        },
+      },
+      repositories: {
+        'o/r': { key: 'o/r', localPath: '', defaultBranch: 'main', workspaceStrategy: 'worktree' },
+      },
     } as unknown as AppConfig;
     expect(() => assertRuntimeConfig(bad)).toThrow(/localPath is not set/);
   });
@@ -54,8 +79,23 @@ describe('assertRuntimeConfig', () => {
     const bad = {
       agents: {},
       githubIssues: { owner: 'o', repo: 'r' },
-      projects: { r: { key: 'r', name: 'r', defaultRepository: 'o/r', workspaceRoot: '', taskTemplatePrompt: '' } },
-      repositories: { 'o/r': { key: 'o/r', localPath: '/repo', defaultBranch: 'main', workspaceStrategy: 'worktree' } },
+      projects: {
+        r: {
+          key: 'r',
+          name: 'r',
+          defaultRepository: 'o/r',
+          workspaceRoot: '',
+          taskTemplatePrompt: '',
+        },
+      },
+      repositories: {
+        'o/r': {
+          key: 'o/r',
+          localPath: '/repo',
+          defaultBranch: 'main',
+          workspaceStrategy: 'worktree',
+        },
+      },
     } as unknown as AppConfig;
     expect(() => assertRuntimeConfig(bad)).toThrow(/workspaceRoot is not set/);
   });

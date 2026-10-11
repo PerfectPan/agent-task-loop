@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { normalizeGitHubRepos } from '../../src/config/github-repos';
 import type { GitHubIssuesConfig } from '../../src/config/schema';
 

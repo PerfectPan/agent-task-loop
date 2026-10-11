@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { Room, RoomValidationError } from '../src/index';
 
 const roomId = { tenantId: 'tenant', conversationId: 'conversation' };

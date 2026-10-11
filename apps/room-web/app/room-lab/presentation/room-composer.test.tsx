@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState, type ComponentProps } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { RoomComposer } from './room-composer';
 import { TEST_AGENTS } from './testing/test-agents';

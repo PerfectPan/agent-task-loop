@@ -1,5 +1,5 @@
 import type { TaskRecord, TaskStatus } from '@rivus/agent-task-loop/task-management';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { groupIntoLanes, laneOf, type LaneId } from './lanes';
 
 function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {

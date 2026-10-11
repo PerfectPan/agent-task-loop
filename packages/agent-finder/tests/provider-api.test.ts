@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vite-plus/test';
 import { inspectProvider, listProviders } from '../src/index';
 
 const providerIds = [

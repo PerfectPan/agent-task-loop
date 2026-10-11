@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import type { TaskRecord } from '../../src/types/task';
 import { overlayRuntimeState, pickRuntimeState } from '../../src/task-management/runtime-state';
 
@@ -15,7 +15,12 @@ describe('pickRuntimeState', () => {
       runnerPid: 4242,
       workspacePath: '/ws/x',
     });
-    expect(picked).toEqual({ status: '待发布', executionSessionId: 'sess-1', runnerPid: 4242, workspacePath: '/ws/x' });
+    expect(picked).toEqual({
+      status: '待发布',
+      executionSessionId: 'sess-1',
+      runnerPid: 4242,
+      workspacePath: '/ws/x',
+    });
   });
 
   it('records cleared values (empty string / 0 / null), not just truthy ones', () => {

@@ -4,6 +4,11 @@
   "private": true,
   "description": "Shared posted stream, per-agent session, and write-point HELD. Occupancy and tasks are not this package.",
   "license": "GPL-3.0-only",
+  "files": [
+    "dist/",
+    "src/**/*.ts",
+    "README.md"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -12,26 +17,19 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist/",
-    "src/**/*.ts",
-    "README.md"
-  ],
   "scripts": {
-    "build": "rslib build",
+    "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "prepack": "pnpm build",
-    "test": "rslib build && vitest run",
-    "test:watch": "vitest"
+    "test": "vp test",
+    "test:watch": "vp test watch"
   },
   "devDependencies": {
-    "@rivus/rslib-config": "workspace:*",
     "@rsbuild/core": "^2.2.11",
-    "@rslib/core": "^1.0.3",
     "@types/node": "^24.19.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20"

@@ -24,7 +24,7 @@
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
     "test": "vp pack && vp test",
-    "test:watch": "vp test"
+    "test:watch": "vp test watch"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

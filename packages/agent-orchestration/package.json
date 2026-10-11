@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit",
     "prepack": "pnpm build",
     "test": "vp pack && vp test run",
-    "test:watch": "vp test"
+    "test:watch": "vp test watch"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.5.1",
@@ -36,7 +36,6 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.2.11",
     "@types/node": "^24.19.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

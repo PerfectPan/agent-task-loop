@@ -7,16 +7,6 @@ packages:
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@rivus/*'
-  - vite-plus
-  - '@voidzero-dev/*'
-  - oxlint
-  - '@oxlint/*'
-  - oxlint-tsgolint
-  - '@oxlint-tsgolint/*'
-  - oxfmt
-  - '@oxfmt/*'
-  - vitest
-  - '@vitest/*'
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:

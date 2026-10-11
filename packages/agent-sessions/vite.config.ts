@@ -13,4 +13,7 @@ export default defineConfig({
     // `.mjs` / `.d.mts` even for a `"type": "module"` package.
     outExtensions: () => ({ js: '.js', dts: '.d.ts' }),
   },
+  test: {
+    include: ['tests/**/*.test.ts'],
+  },
 });

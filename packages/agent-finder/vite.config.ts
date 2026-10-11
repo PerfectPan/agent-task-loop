@@ -41,4 +41,7 @@ export default defineConfig({
       'build:prepare': syncMoonBitOutput,
     },
   },
+  test: {
+    include: ['tests/**/*.test.ts'],
+  },
 });

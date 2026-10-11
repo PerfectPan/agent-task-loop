@@ -6,7 +6,9 @@ export default defineConfig({
     format: 'esm',
     dts: true,
     platform: 'node',
-    splitting: true,
     fixedExtension: false,
+  },
+  test: {
+    include: ['tests/**/*.test.ts'],
   },
 });

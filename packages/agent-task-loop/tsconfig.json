@@ -5,5 +5,5 @@
     "outDir": "dist",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests", "task.config.example.ts", "vitest.config.ts"]
+  "include": ["src", "tests", "task.config.example.ts", "vite.config.ts"]
 }

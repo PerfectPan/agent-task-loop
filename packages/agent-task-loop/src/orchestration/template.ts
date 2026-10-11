@@ -1,4 +1,4 @@
-import { OrchestrationTemplateError } from '@rivus/agent-orchestration';
+import { OrchestrationTemplateError } from './errors';
 import type { TemplateSpec } from './types';
 
 function copyTemplate(spec: TemplateSpec): TemplateSpec {

@@ -376,7 +376,7 @@ importers:
     dependencies:
       '@rivus/agent-kit':
         specifier: 0.11.0
-        version: 0.11.0
+        version: 0.11.0(effect@4.0.1)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
@@ -450,10 +450,16 @@ importers:
     dependencies:
       '@rivus/agent-kit':
         specifier: 0.11.0
-        version: 0.11.0
+        version: 0.11.0(effect@4.0.1)
+      '@rivus/agent-kit-collab':
+        specifier: 0.11.0
+        version: 0.11.0(@rivus/agent-kit@0.11.0(effect@4.0.1))(effect@4.0.1)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
+      effect:
+        specifier: 4.0.1
+        version: 4.0.1
       execa:
         specifier: ^10.0.1
         version: 10.0.1
@@ -470,9 +476,6 @@ importers:
       '@rivus/agent':
         specifier: 0.17.0
         version: 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
-      '@rivus/agent-orchestration':
-        specifier: workspace:*
-        version: link:../agent-orchestration
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.0
@@ -3166,6 +3169,16 @@ packages:
     resolution: {integrity: sha512-xBaJish5OeGmniDj9cW5PRa/PtmuVU3ziqrbr5xJj901ZDN4TosrVaNZpEiLZAxdfnhAe7uQ7QFWfjPe9d9K2Q==}
     engines: {node: '>= 10'}
 
+  '@rivus/agent-kit-collab@0.11.0':
+    resolution: {integrity: sha512-X8aZryCMH3XFd51GhkctXdRaG4LKKHExtmeYq2XqL9IsMkmoggbo1t2Pz1fz1AUUCVhR3nhnDGqIFOZzEls3SA==}
+    engines: {node: '>=22.13'}
+    peerDependencies:
+      '@rivus/agent-kit': ^0.11.0
+      effect: 4.0.1
+    peerDependenciesMeta:
+      effect:
+        optional: true
+
   '@rivus/agent-kit@0.11.0':
     resolution: {integrity: sha512-IAff/z1WSJevyT515mbWlf6YJmnynxSm853JUr2arOzN5X4+Cb9o22EtOZUhcuDRLOpAUMc4Cd5EykYqRgNJgw==}
     engines: {node: '>=22.13'}
@@ -4261,6 +4274,9 @@ packages:
 
   effect@3.22.2:
     resolution: {integrity: sha512-fm1CQXCs7GTMwpadZxwU5rnAb2bN6mbQpknq/pXBGCzSKkosNYb9k0wsoL0TfB10rSa5xOEZJjo77u/KLXSANg==}
+
+  effect@4.0.1:
+    resolution: {integrity: sha512-b1VlQG9g8fwxE5QnIZuPoOP/0MsqHJSRKxUijjoM80E5q95FXrX5yWtY5XI8G+GJsBQAVSDbLS458z9a++uVvw==}
 
   electron-to-chromium@1.5.416:
     resolution: {integrity: sha512-K6bvB2BjnNrugtIih6ewlbBI9DXa976jIdiIlRLHhBoEI9a4JaQjjHyF+A1IQI543aQYR4LnmOrT/K5fZj0aPA==}
@@ -8303,13 +8319,22 @@ snapshots:
       '@resvg/resvg-js-win32-ia32-msvc': 2.6.2
       '@resvg/resvg-js-win32-x64-msvc': 2.6.2
 
-  '@rivus/agent-kit@0.11.0':
+  '@rivus/agent-kit-collab@0.11.0(@rivus/agent-kit@0.11.0(effect@4.0.1))(effect@4.0.1)':
+    dependencies:
+      '@rivus/agent-kit': 0.11.0(effect@4.0.1)
+      zod: 4.6.5
+    optionalDependencies:
+      effect: 4.0.1
+
+  '@rivus/agent-kit@0.11.0(effect@4.0.1)':
     dependencies:
       '@agentclientprotocol/sdk': 1.7.0(zod@4.6.5)
       '@decimalturn/toml-patch': 3.3.0
       es-toolkit: 1.52.0
       jsonc-parser: 3.3.1
       zod: 4.6.5
+    optionalDependencies:
+      effect: 4.0.1
 
   '@rivus/agent@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
     dependencies:
@@ -9438,6 +9463,8 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
+
+  effect@4.0.1: {}
 
   electron-to-chromium@1.5.416: {}
 

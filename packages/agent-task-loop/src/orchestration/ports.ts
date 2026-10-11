@@ -1,9 +1,9 @@
 import type { RunSnapshot } from './types';
 
 /**
- * Run-state persistence for the Task pipeline's own orchestration. The lease
- * half of the old coupled interface is the control plane's `LeaseStore`,
- * reached through `LeaseManager` (control-plane split).
+ * Run-state persistence for the Task pipeline's own orchestration. The
+ * occupancy lease itself is the kit's `/lease`, reached through
+ * `orchestration/lease.ts`.
  */
 export interface RunStateStore {
   writeState(snapshot: RunSnapshot): void;

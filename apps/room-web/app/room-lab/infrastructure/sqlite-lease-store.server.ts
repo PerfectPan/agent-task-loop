@@ -1,6 +1,15 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { FencedResult, FencingToken, LeaseRecord, LeaseStore } from '@rivus/agent-orchestration';
 
+function toRecord(row: LeaseRow): LeaseRecord {
+  return {
+    key: row.key,
+    holderPid: Number(row.holder_pid),
+    holderId: row.holder_id,
+    heartbeatAt: row.heartbeat_at,
+  };
+}
+
 /**
  * `member_leases` implementing the control plane's `LeaseStore` port
  * (docs/architecture/agent-collaboration.md): one row per running activation, and every method a
@@ -13,15 +22,6 @@ import type { FencedResult, FencingToken, LeaseRecord, LeaseStore } from '@rivus
  * holder that lost its lease while awaiting its prompt gets
  * `{ executed: false }` and its write never lands.
  */
-function toRecord(row: LeaseRow): LeaseRecord {
-  return {
-    key: row.key,
-    holderPid: Number(row.holder_pid),
-    holderId: row.holder_id,
-    heartbeatAt: row.heartbeat_at,
-  };
-}
-
 export class SqliteLeaseStore implements LeaseStore {
   private readonly fenceTails = new Map<string, Promise<void>>();
 

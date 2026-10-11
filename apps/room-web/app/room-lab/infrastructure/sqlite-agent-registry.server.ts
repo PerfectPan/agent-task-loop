@@ -3,18 +3,6 @@ import type { Agent, AgentId, AgentRegistry } from '@rivus/agent-orchestration';
 import { INHERITED_AGENT_ROLE, randomAgentColor } from './agent-seed.server';
 import { nowIso } from './room-home.server';
 
-/**
- * The `agents` table implementing the control plane's `AgentRegistry` port
- * (docs/architecture/agent-collaboration.md): the one roster, read and written through the port. The endpoint's
- * own columns — `role`, `color`, `position` — ride along in the same row and
- * stay invisible to the port: `save` updates only what the port sees and leaves
- * them standing, and a row created through the port starts on the generic role
- * and the next seat at the end of the desk.
- *
- * The port's binding carries optional `args` and `env`; this table stores one
- * command line run through the person's login shell, so `save` persists
- * `command` alone and a read hands back a binding with just that command.
- */
 interface AgentRow {
   id: string;
   label: string;
@@ -36,6 +24,18 @@ function toAgent(row: AgentRow): Agent {
   };
 }
 
+/**
+ * The `agents` table implementing the control plane's `AgentRegistry` port
+ * (docs/architecture/agent-collaboration.md): the one roster, read and written through the port. The endpoint's
+ * own columns — `role`, `color`, `position` — ride along in the same row and
+ * stay invisible to the port: `save` updates only what the port sees and leaves
+ * them standing, and a row created through the port starts on the generic role
+ * and the next seat at the end of the desk.
+ *
+ * The port's binding carries optional `args` and `env`; this table stores one
+ * command line run through the person's login shell, so `save` persists
+ * `command` alone and a read hands back a binding with just that command.
+ */
 export class SqliteAgentRegistry implements AgentRegistry {
   constructor(private readonly db: DatabaseSync) {}
 

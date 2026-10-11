@@ -22,16 +22,6 @@ import {
   type SpeakResult,
 } from '@rivus/agent-room';
 
-/**
- * One room's record and cursors over the sqlite tables. A unit of work is one
- * `BEGIN IMMEDIATE` around three steps — re-read the room's rows, run the
- * domain work, write back only what changed — so two instances of this class
- * on the same room (the service keeps one, the private-room gateway opens one
- * per post) cannot overwrite each other's events, and an append's HELD check
- * cannot race another writer: it runs inside the same write lock the append
- * commits under. Nothing is cached across units of work; every one starts
- * from the rows as committed.
- */
 interface EventRow {
   seq: number;
   message_id: string;
@@ -92,6 +82,16 @@ function cloneSession(session: AgentSession): AgentSession {
   };
 }
 
+/**
+ * One room's record and cursors over the sqlite tables. A unit of work is one
+ * `BEGIN IMMEDIATE` around three steps — re-read the room's rows, run the
+ * domain work, write back only what changed — so two instances of this class
+ * on the same room (the service keeps one, the private-room gateway opens one
+ * per post) cannot overwrite each other's events, and an append's HELD check
+ * cannot race another writer: it runs inside the same write lock the append
+ * commits under. Nothing is cached across units of work; every one starts
+ * from the rows as committed.
+ */
 export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
   private events: RoomEvent[];
   private readonly sessions = new Map<string, AgentSession>();

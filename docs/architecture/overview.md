@@ -7,15 +7,14 @@ package is a bounded context or a public delivery surface.
 
 ## Packages
 
-| Package                                                       | Question it answers                                                                       | Published         |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
-| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm               |
-| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm               |
-| `@rivus/agent-sessions` (`packages/agent-sessions`)           | Which agent sessions exist on disk and what they said                                     | internal, bundled |
-| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal          |
-| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal          |
-| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app      |
-| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app      |
+| Package                                                       | Question it answers                                                                       | Published    |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------ |
+| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm          |
+| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm          |
+| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal     |
+| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal     |
+| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app |
+| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app |
 
 Detailed pages:
 
@@ -52,7 +51,9 @@ Package-level rules, enforced by boundary tests:
 - `apps/room-web` is the only place that knows all three.
 - `agent-finder-cli` detects agents through `@rivus/agent-kit`'s `/catalog` and
   `/discovery` entries and ships its own probe recipes for agents the kit does
-  not cover.
+  not cover. Session listing and transcripts go through the kit's `/sessions`
+  and `/transcript` entries in both `agent-finder-cli` and `agent-task-loop`;
+  resume command tables stay application-side.
 
 ## Layout inside a package
 

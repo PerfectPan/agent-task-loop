@@ -72,7 +72,6 @@
   "devDependencies": {
     "@rivus/agent": "0.17.0",
     "@rivus/agent-orchestration": "workspace:*",
-    "@rivus/agent-sessions": "workspace:*",
     "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "@typescript/typescript6": "^6.0.2",

@@ -1,50 +1,54 @@
 # Agent Sessions
 
-`@rivus/agent-sessions` (`packages/agent-sessions`) discovers coding-agent
-sessions on disk and parses their transcripts. It is internal: bundled into
-`@rivus/agent-finder-cli` by `vp pack` and consumed as `workspace:*` by
-`@rivus/agent-task-loop`. It has no dependency on `TaskRecord`, citty, or Ink.
+Session discovery and transcript reading come from `@rivus/agent-kit`'s
+`/sessions` and `/transcript` entries (`@rivus/agent-kit` 0.11.0). The kit owns
+the per-agent adapters; this repository holds the application-side wiring and
+the resume command table. The former `@rivus/agent-sessions` package was
+deleted when the kit replaced it.
 
 ## Model
 
-- `Session` is tool-agnostic: `id`, `agent` (attributed from the source root),
-  optional `title`, `cwd`, `path`, `createdAt`, `messageCount`, and `updatedAt`
-  (metadata, else file mtime). There is no resumability flag on `Session`: a
-  session is resumable when `SessionProvider.resumeCommand(id)` returns a
-  command, and `null` means it cannot be resumed (unknown id, or a provider
-  without a configured resume).
-- `TranscriptEntry` is one turn: `role` (`user`, `assistant`, `reasoning`,
-  `tool`), preview `text`, optional `toolName` and `timestamp`.
-  `parseTranscript` reads Codex rollout JSONL (`{type, payload}`) and Claude
-  session JSONL (`{message: {role, content}}`). Token-count payloads are
-  dropped.
-- `toLines` renders entries back to the legacy `role: text` strings the
-  agent-task-loop TUI uses.
+- `listSessions(platform)` yields one `SessionHead` per session file across
+  every built-in session adapter (claude-code, codex, grok), plus a
+  `SessionListFailure` for each root or file that could not be listed. A head
+  carries `ref` (agent id, path, session id), `title`, `cwd`, `startedAt`,
+  `lastActiveAt` (epoch ms), `sizeBytes` and `firstPrompt`;
+  `isSessionHead` converges the failures. `@rivus/agent-kit/testing` has a
+  `sessionAdapterConformance` suite for adapters.
+- `loadTranscript(platform, ref)` reads a session into a `Transcript`:
+  ordered `TranscriptEvent`s (`user`, `assistant`, `reasoning`, `tool_call`,
+  `tool_result`, `request`, `system`, `compaction`, `hook`, `unknown`) across
+  lanes, with the session's meta. Expected failures are `Result` values, not
+  exceptions.
+- `summarizeSession` reads a bounded summary (turns, requests, usage,
+  durations, failed tools) without holding the transcript; `readOriginal`
+  reads one event's source record back.
+- Resume is not a kit concept. Each application keeps one resume table:
+  `packages/agent-task-loop/src/session/resume.ts` and
+  `packages/agent-finder-cli/src/sessions/resume.ts` print
+  `codex resume <id>` / `claude --resume <id>`; agents without a verified
+  resume form resolve to `null`.
 
 ## Discovery
 
-- `defaultSessionRoots` are `~/.codex/sessions` and `~/.claude/projects`,
-  derived from the home directory. `CLAUDE_CONFIG_DIR` and Codex
-  `archived_sessions` are not consulted, so Claude sessions under a custom
-  config directory and archived Codex sessions are not listed.
-  [Plan 0008](../plans/0008-shared-agent-infrastructure.md) Task 2 owns
-  adding both roots.
-- `buildFsIndex` walks the roots under a scan budget and depth cap, matches
-  UUID-named `.jsonl` files, never throws, and takes injectable `readdir` and
-  `stat` for tests.
-- `SessionProvider` (`list`, `getTranscript`, `resumeCommand`) is implemented by
-  `FsSessionProvider`; `codexProvider` and `claudeProvider` configure it.
-  `SessionRegistry` merges providers newest-first and delegates per id;
-  `defaultRegistry()` wires Codex and Claude.
+Kit home rules, with environment variables winning over defaults: Codex
+`CODEX_HOME` (else `~/.codex`) lists both `sessions/` and `archived_sessions/`;
+Claude Code `CLAUDE_CONFIG_DIR` (else `~/.claude`) lists `projects/`, skipping
+each session's `subagents/` directory; grok `GROK_HOME` (else `~/.grok`) lists
+`sessions/`. Node hosts pass `createNodePlatform()`; every read goes through
+the platform.
 
 ## Consumers
 
 - `agent-finder-cli sessions` opens an Ink browser: a list pane, a trace
   preview, keyboard navigation, and a printed resume command.
   `sessions list` and `sessions inspect <id>` (both with `--json`) and
-  `sessions resume <id>` are the scripting forms.
-- The agent-task-loop TUI reads task-linked transcripts through the same core
-  (`packages/agent-task-loop/src/tui/data/fs-session-provider.ts`); the
+  `sessions resume <id>` are the scripting forms. Listing and resolution live
+  in `packages/agent-finder-cli/src/sessions/`.
+- The agent-task-loop TUI reads task-linked transcripts through
+  `packages/agent-task-loop/src/tui/data/fs-session-provider.ts`: the tail of
+  the task's log file first, then the transcript resolved from the task's
+  session id, rendered as `role: text` / `⚙ tool` preview lines. The
   task-to-session link stays in agent-task-loop.
 - CLI output (`scan`, `provider`, `doctor`, `sessions`) renders through one
   presentation layer in `packages/agent-finder-cli/src/formatters/`: column
@@ -52,12 +56,16 @@ sessions on disk and parses their transcripts. It is internal: bundled into
 
 ## Limits
 
-- Resume prints a command; it does not start the agent. Codex
-  (`codex resume <id>`) and Claude (`claude --resume <id>`) are supported.
-- OpenCode stores sessions in SQLite with `ses_…` ids, so it has no provider:
-  its sessions are not listed and `resumeCommand` returns `null` for them.
+- Resume prints a command; it does not start the agent.
+- `loadTranscript` loads a complete session and is not a live file-following
+  API. Views that only need numbers use `summarizeSession`.
 - Traces are preview-grade: no `tool_result` bodies, diffs, or code-block
   rendering, and no in-trace search.
+- The TUI preview renders the transcript's message, reasoning and tool-call
+  events. A Codex rollout records each turn twice (the CLI's `event_msg` copy
+  and the model's `response_item` copy); the kit attributes the message to the
+  `response_item` only, so each turn renders once — the
+  `fs-session-provider` regression test pins this.
 
-Remaining work is tracked in
+OpenCode sessions and trace fidelity remain tracked in
 [`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../specs/0016-opencode-sessions-and-trace-fidelity.md).

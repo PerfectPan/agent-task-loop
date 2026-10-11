@@ -28,7 +28,6 @@ The core package provides a local CLI that drives tasks from assignment through 
 GPL-3.0-only (see [LICENSE](./LICENSE)), except these library and tool packages, which are MIT and ship their own `LICENSE`:
 
 - `@rivus/agent-finder-cli`: [`packages/agent-finder-cli/`](./packages/agent-finder-cli/)
-- `@rivus/agent-sessions`: [`packages/agent-sessions/`](./packages/agent-sessions/)
 
 Tools and libraries use MIT; applications use GPL-3.0-only. See [CONTRIBUTING.md](./CONTRIBUTING.md#license).
 

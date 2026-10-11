@@ -1,6 +1,10 @@
 import { defineCommand } from 'citty';
 import { render } from 'ink';
-import { defaultRegistry } from '@rivus/agent-sessions';
+import { loadTranscript } from '@rivus/agent-kit/transcript';
+import { createNodePlatform } from '@rivus/agent-kit/node';
+import { findSession, listLocalSessions, sessionIdOf } from '../sessions/list.js';
+import { resumeCommandFor } from '../sessions/resume.js';
+import { transcriptLines } from '../sessions/view.js';
 import { SessionsBrowser } from '../tui/sessions-browser.js';
 
 const ENTER_ALT_SCREEN = '[?1049h';
@@ -20,8 +24,10 @@ export const sessionsBrowseCommand = defineCommand({
       return;
     }
 
-    const registry = defaultRegistry();
-    const sessions = await registry.list();
+    const sessions = await listLocalSessions();
+    // Newest first, so the browser opens on the most recent session.
+    sessions.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+    const platform = createNodePlatform();
 
     // Take over the alternate screen buffer; restore scrollback on exit.
     process.stdout.write(ENTER_ALT_SCREEN);
@@ -31,8 +37,18 @@ export const sessionsBrowseCommand = defineCommand({
     const instance = render(
       <SessionsBrowser
         sessions={sessions}
-        loadTranscript={(id) => registry.getTranscript(id)}
-        loadResume={(id) => registry.resumeCommand(id)}
+        loadTranscript={async (id) => {
+          const session = findSession(sessions, id);
+          if (!session) {
+            return [];
+          }
+          const loaded = await loadTranscript(platform, session.ref);
+          return loaded.ok ? transcriptLines(loaded.value.events) : [];
+        }}
+        loadResume={async (id) => {
+          const session = findSession(sessions, id);
+          return resumeCommandFor(session?.ref.agent, session ? sessionIdOf(session) : id);
+        }}
         nowMs={Date.now()}
       />,
     );

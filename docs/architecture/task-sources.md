@@ -97,8 +97,8 @@ Limits:
 ## Task run lease
 
 `start` occupies the key `task:<taskId>` before claiming the Task
-(`task-manager/task-occupancy-service.ts`, `orchestration/task-orchestration.ts`).
-Two concurrent starts race for the lease: one wins, the other never claims the
+(`task-manager/task-occupancy-service.ts`, `orchestration/lease.ts`). Two
+concurrent starts race for the lease: one wins, the other never claims the
 backend record. Every Task lifecycle write in an occupied run runs inside the
 lease fence: a stale holder cannot begin a write, and a successor waits for an
 already-started predecessor write before writing newer state.
@@ -106,5 +106,8 @@ already-started predecessor write before writing newer state.
 The run baton (`Run`, the `classic-delivery` template with seats `impl` and
 `review`, and the process runner) belongs to `agent-task-loop`
 (`src/orchestration/`). Only the lease itself comes from
-`@rivus/agent-orchestration`'s `LeaseManager` with a file lease store, shared by
-the CLI and TUI processes.
+`@rivus/agent-kit-collab`'s `/lease`: `createLeaseManager` with a file lease
+repository over the shared per-key directory, renewed by the manager's own
+heartbeat fiber and released when the occupancy scope closes, shared by the CLI
+and TUI processes. The room's in-process runtime uses the kit's memory lease
+repository instead.

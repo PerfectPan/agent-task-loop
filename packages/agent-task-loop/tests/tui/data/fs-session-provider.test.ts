@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
+import { createMemoryPlatform } from '@rivus/agent-kit/testing';
 import type { TaskRecord } from '../../../src/types/task';
 import type { SessionPreview } from '../../../src/tui/types';
 import { fixedNow } from '../helpers';
@@ -19,7 +20,35 @@ vi.mock('../../../src/tui/data/session-provider', () => ({
   }),
 }));
 
-import { FsSessionProvider } from '../../../src/tui/data/fs-session-provider';
+import { FsSessionProvider, type FsSessionHost } from '../../../src/tui/data/fs-session-provider';
+
+const HOME = '/fixture-home';
+const CODEX_ID = '11111111-1111-7111-8111-111111111111';
+const ROLLOUT_PATH = `${HOME}/.codex/sessions/2026/10/12/rollout-2026-10-12T10-00-00-${CODEX_ID}.jsonl`;
+
+/** A platform whose `fs.read`/`fs.list` record the paths they were asked for. */
+function spyOn(platform: FsSessionHost): { platform: FsSessionHost; reads: string[]; lists: string[] } {
+  const reads: string[] = [];
+  const lists: string[] = [];
+  return {
+    platform: {
+      ...platform,
+      fs: {
+        ...platform.fs,
+        read: (path, range) => {
+          reads.push(path);
+          return platform.fs.read(path, range);
+        },
+        list: (dir) => {
+          lists.push(dir);
+          return platform.fs.list(dir);
+        },
+      },
+    },
+    reads,
+    lists,
+  };
+}
 
 function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   return {
@@ -34,46 +63,77 @@ function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   };
 }
 
+/** A Codex rollout: session meta, then one turn's records as the modern CLI writes them. */
+function rollout(...records: Record<string, unknown>[]): string {
+  return `${[
+    JSON.stringify({
+      timestamp: '2026-10-12T10:00:00.000Z',
+      type: 'session_meta',
+      payload: { id: CODEX_ID, cwd: '/work/fixture-repo', cli_version: '0.55.0' },
+    }),
+    ...records.map((record, i) =>
+      JSON.stringify({ timestamp: `2026-10-12T10:00:${String(i + 1).padStart(2, '0')}.000Z`, ...record }),
+    ),
+  ].join('\n')}\n`;
+}
+
+const turn = (userText: string, assistantText: string): Record<string, unknown>[] => [
+  // The CLI's event_msg copy of the turn's messages…
+  { type: 'event_msg', payload: { type: 'user_message', message: userText, kind: 'plain' } },
+  // …and the model's response_item copy of the same messages.
+  {
+    type: 'response_item',
+    payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: userText }] },
+  },
+  { type: 'event_msg', payload: { type: 'agent_message', message: assistantText } },
+  {
+    type: 'response_item',
+    payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: assistantText }] },
+  },
+];
+
 describe('FsSessionProvider', () => {
   it('tails the last N lines of the log and sets hasLog true', async () => {
     const lines = Array.from({ length: 10 }, (_, i) => `line ${i + 1}`);
-    const readFile = vi.fn(async () => `${lines.join('\n')}\n`);
-    const provider = new FsSessionProvider({ maxLines: 3, readFile });
+    const { platform, reads } = spyOn(createMemoryPlatform({ files: { '/log/exec.log': `${lines.join('\n')}\n` } }));
+    const provider = new FsSessionProvider({ maxLines: 3, platform });
 
     const preview = await provider.getPreview(makeTask({ logPath: '/log/exec.log' }), fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith('/log/exec.log');
+    expect(reads).toContain('/log/exec.log');
     expect(preview.logTail).toEqual(['line 8', 'line 9', 'line 10']);
     expect(preview.hasLog).toBe(true);
   });
 
   it('returns hasLog false without reading when no log path exists', async () => {
-    const readFile = vi.fn(async () => 'unused');
-    const provider = new FsSessionProvider({ readFile });
+    const { platform, reads } = spyOn(createMemoryPlatform({ files: {} }));
+    const provider = new FsSessionProvider({ platform });
 
     const preview = await provider.getPreview(makeTask(), fixedNow());
 
-    expect(readFile).not.toHaveBeenCalled();
+    expect(reads).toEqual([]);
     expect(preview.logTail).toEqual([]);
     expect(preview.hasLog).toBe(false);
   });
 
-  it('degrades gracefully to an empty tail when readFile rejects', async () => {
-    const readFile = vi.fn(async () => {
-      throw new Error('ENOENT');
-    });
-    const provider = new FsSessionProvider({ readFile });
+  it('degrades gracefully to an empty tail when the log file is missing', async () => {
+    const { platform, reads } = spyOn(createMemoryPlatform({ files: {} }));
+    const provider = new FsSessionProvider({ platform });
 
     const preview = await provider.getPreview(makeTask({ logPath: '/missing.log' }), fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith('/missing.log');
+    expect(reads).toContain('/missing.log');
     expect(preview.logTail).toEqual([]);
     expect(preview.hasLog).toBe(false);
   });
 
   it('reads reviewLogPath for a review runner', async () => {
-    const readFile = vi.fn(async () => 'review line a\nreview line b\n');
-    const provider = new FsSessionProvider({ readFile });
+    const { platform, reads } = spyOn(
+      createMemoryPlatform({
+        files: { '/log/exec.log': 'exec only\n', '/log/review.log': 'review line a\nreview line b\n' },
+      }),
+    );
+    const provider = new FsSessionProvider({ platform });
 
     const task = makeTask({
       runnerKind: 'review',
@@ -82,15 +142,19 @@ describe('FsSessionProvider', () => {
     });
     const preview = await provider.getPreview(task, fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith('/log/review.log');
-    expect(readFile).not.toHaveBeenCalledWith('/log/exec.log');
+    expect(reads).toContain('/log/review.log');
+    expect(reads).not.toContain('/log/exec.log');
     expect(preview.logTail).toEqual(['review line a', 'review line b']);
     expect(preview.hasLog).toBe(true);
   });
 
   it('uses logPath for an execute runner', async () => {
-    const readFile = vi.fn(async () => 'exec only\n');
-    const provider = new FsSessionProvider({ readFile });
+    const { platform } = spyOn(
+      createMemoryPlatform({
+        files: { '/log/exec.log': 'exec only\n', '/log/review.log': 'review line a\nreview line b\n' },
+      }),
+    );
+    const provider = new FsSessionProvider({ platform });
 
     const task = makeTask({
       runnerKind: 'execute',
@@ -99,61 +163,109 @@ describe('FsSessionProvider', () => {
     });
     const preview = await provider.getPreview(task, fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith('/log/exec.log');
     expect(preview.logTail).toEqual(['exec only']);
   });
 
-  const dir = (name: string): { name: string; isDirectory(): boolean } => ({
-    name,
-    isDirectory: () => true,
-  });
-  const file = (name: string): { name: string; isDirectory(): boolean } => ({
-    name,
-    isDirectory: () => false,
-  });
-
   it('falls back to the session transcript when no log file exists', async () => {
-    const sid = '019dae6d-6faa-7383-8010-11f907e4beb9';
-    const tree: Record<string, ReturnType<typeof dir>[]> = {
-      '/root': [dir('2026')],
-      '/root/2026': [file('other.jsonl'), file(`rollout-2026-${sid}.jsonl`)],
-    };
-    const readdir = vi.fn(async (path: string) => tree[path] ?? []);
-    const readFile = vi.fn(
-      async () =>
-        '{"payload":{"type":"user_message","message":"hi"}}\n{"payload":{"type":"agent_message","message":"done"}}\n',
+    const { platform } = spyOn(
+      createMemoryPlatform({
+        home: HOME,
+        files: {
+          [ROLLOUT_PATH]: rollout(
+            {
+              type: 'response_item',
+              payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hi' }] },
+            },
+            {
+              type: 'response_item',
+              payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'done' }] },
+            },
+          ),
+        },
+      }),
     );
-    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+    const provider = new FsSessionProvider({ platform });
 
-    const task = makeTask({ executionSessionId: sid });
-    const preview = await provider.getPreview(task, fixedNow());
+    const preview = await provider.getPreview(makeTask({ executionSessionId: CODEX_ID }), fixedNow());
 
-    expect(readFile).toHaveBeenCalledWith(`/root/2026/rollout-2026-${sid}.jsonl`);
     expect(preview.logTail).toEqual(['user: hi', 'assistant: done']);
     expect(preview.hasLog).toBe(true);
   });
 
-  it('caches the transcript index across calls', async () => {
-    const sid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    const readdir = vi.fn(async (path: string) => (path === '/root' ? [file(`${sid}.jsonl`)] : []));
-    const readFile = vi.fn(async () => '{"payload":{"type":"agent_message","message":"x"}}\n');
-    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+  // Regression: a Codex rollout records each turn twice — the CLI's `event_msg`
+  // copy (user_message/agent_message) and the model's `response_item` copy.
+  // The preview must render each turn once; the previous parser read both
+  // copies and every turn appeared twice.
+  it('renders a mixed event_msg/response_item rollout once per turn', async () => {
+    const { platform } = spyOn(
+      createMemoryPlatform({
+        home: HOME,
+        files: {
+          [ROLLOUT_PATH]: rollout(
+            ...turn('fix the widget', 'Working on it.'),
+            {
+              type: 'response_item',
+              payload: { type: 'reasoning', summary: [{ type: 'summary_text', text: 'thinking hard' }] },
+            },
+            {
+              type: 'response_item',
+              payload: { type: 'function_call', name: 'shell', arguments: '{"cmd":["ls"]}', call_id: 'call_1' },
+            },
+            ...turn('also add tests', 'Done.'),
+          ),
+        },
+      }),
+    );
+    const provider = new FsSessionProvider({ platform });
 
-    await provider.getPreview(makeTask({ executionSessionId: sid }), fixedNow());
-    await provider.getPreview(makeTask({ executionSessionId: sid }), fixedNow());
+    const preview = await provider.getPreview(makeTask({ executionSessionId: CODEX_ID }), fixedNow());
 
-    // Directory walked only once thanks to the per-id cache.
-    expect(readdir).toHaveBeenCalledTimes(1);
+    expect(preview.logTail).toEqual([
+      'user: fix the widget',
+      'assistant: Working on it.',
+      'reasoning: thinking hard',
+      '⚙ shell',
+      'user: also add tests',
+      'assistant: Done.',
+    ]);
+  });
+
+  it('lists the session ids that have a resolvable transcript', async () => {
+    const provider = new FsSessionProvider({
+      platform: createMemoryPlatform({
+        home: HOME,
+        files: { [ROLLOUT_PATH]: rollout() },
+      }),
+    });
+
+    expect(await provider.listAvailableSessionIds()).toEqual([CODEX_ID]);
+  });
+
+  it('caches the session listing across calls', async () => {
+    const { platform, lists } = spyOn(
+      createMemoryPlatform({
+        home: HOME,
+        files: { [ROLLOUT_PATH]: rollout() },
+      }),
+    );
+    const provider = new FsSessionProvider({ platform });
+
+    await provider.getPreview(makeTask({ executionSessionId: CODEX_ID }), fixedNow());
+    await provider.getPreview(makeTask({ executionSessionId: CODEX_ID }), fixedNow());
+
+    // The rollout's directory was listed only once across both calls, thanks
+    // to the listing cache.
+    const leaf = `${HOME}/.codex/sessions/2026/10/12`;
+    expect(lists.filter((dir) => dir === leaf)).toHaveLength(1);
   });
 
   it('returns hasLog false when the transcript cannot be found', async () => {
-    const readdir = vi.fn(async () => []);
-    const readFile = vi.fn(async () => 'unused');
-    const provider = new FsSessionProvider({ readFile, readdir, sessionRoots: ['/root'] });
+    const provider = new FsSessionProvider({
+      platform: createMemoryPlatform({ home: HOME, files: {} }),
+    });
 
     const preview = await provider.getPreview(makeTask({ executionSessionId: 'missing' }), fixedNow());
 
-    expect(readFile).not.toHaveBeenCalled();
     expect(preview.hasLog).toBe(false);
   });
 });

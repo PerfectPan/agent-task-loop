@@ -12,6 +12,11 @@ import type { DatabaseSync } from 'node:sqlite';
 export const DEFAULT_AGENT_SYSTEM_PROMPT =
   '你在一个多人房间里发言。回答前先读完所有公开消息，然后用中文给出具体、简洁的回答，只讲你自己视角下的判断。';
 
+function hasTable(db: DatabaseSync, name: string): boolean {
+  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get(name);
+  return row !== undefined;
+}
+
 /**
  * The data half of migration 3. Order matters: copy prompts from
  * `agent_system_prompts` onto their rows, give rows still without one the
@@ -19,11 +24,6 @@ export const DEFAULT_AGENT_SYSTEM_PROMPT =
  *
  * A whitespace-only stored prompt counts as none and takes the default.
  */
-function hasTable(db: DatabaseSync, name: string): boolean {
-  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get(name);
-  return row !== undefined;
-}
-
 export function adoptSystemPrompts(db: DatabaseSync, fallback: string = DEFAULT_AGENT_SYSTEM_PROMPT): void {
   if (hasTable(db, 'agent_system_prompts')) {
     db.exec(`

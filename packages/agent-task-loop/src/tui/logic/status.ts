@@ -38,7 +38,11 @@ const FALLBACK: StatusConfig = { glyph: '?', color: 'white', label: '待处理',
 
 /** Safe lookup — never throws on an unexpected status string. */
 export function statusConfig(status: TaskStatus): StatusConfig {
-  return STATUS_CONFIG[status] ?? FALLBACK;
+  // The TUI renders tasks owned by external backends (feishu, github), so a
+  // status string outside this table can reach this lookup at runtime (the
+  // fallback test exercises one). noUncheckedIndexedAccess is off, so the
+  // lookup is locally widened to express the possible miss.
+  return (STATUS_CONFIG[status] as StatusConfig | undefined) ?? FALLBACK;
 }
 
 export function bucketOf(status: TaskStatus): StatusBucket {
@@ -67,7 +71,9 @@ export const STATUS_ORDER: Record<TaskStatus, number> = {
 };
 
 export function statusWeight(status: TaskStatus): number {
-  return STATUS_ORDER[status] ?? 99;
+  // Locally widened like STATUS_CONFIG above: an external status may miss the
+  // table, in which case the task sorts after every known one.
+  return (STATUS_ORDER[status] as number | undefined) ?? 99;
 }
 
 export type TabKey = 'active' | 'needs-input' | 'done' | 'all';

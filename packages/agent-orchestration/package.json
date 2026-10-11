@@ -27,7 +27,7 @@
     "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "prepack": "pnpm build",
-    "test": "vp test run",
+    "test": "vp pack && vp test run",
     "test:watch": "vp test"
   },
   "dependencies": {

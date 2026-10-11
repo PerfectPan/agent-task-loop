@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "pnpm build",
-    "test": "vp test",
+    "test": "vp pack && vp test",
     "test:watch": "vp test"
   },
   "devDependencies": {

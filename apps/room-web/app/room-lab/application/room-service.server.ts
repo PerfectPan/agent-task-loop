@@ -1,28 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { lstatSync, mkdirSync, readlinkSync, realpathSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AgentSessionId, RoomEvent, RoomId, RoomSeq } from '@rivus/agent-room';
 import { shouldWake } from '@rivus/agent-room';
-import {
-  isLockFresh,
-  nodeLiveness,
-  runtimeKey,
-  type AgentRegistry,
-  type Harness,
-  type PermissionPolicy,
-  type SessionUpdate,
-  type ToolDefinition,
-} from '@rivus/agent-orchestration';
-import type { HostedTools } from '@rivus/agent-orchestration/acp';
-import type { ContentBlock } from '@agentclientprotocol/sdk';
-import path from 'node:path';
+import type { PromptBlock } from '@rivus/agent-kit/acp';
 import { copy } from '../copy';
 import type { RoomLabEventView, RoomLabAgentId, RoomSeatView, RoomTurnView, RoomView } from '../read-model';
 import { deriveMemberStatus } from '../read-model';
 import { ROOM_MESSAGE_LIMIT, parseRoomMessage } from '../domain/room-message';
 import {
+  runtimeKey,
   TURN_BUDGET,
   type AgentDescriptors,
+  type AgentRegistry,
   type RoomDmGateway,
   type RoomLeases,
   type RoomMemberRuntime,
@@ -32,10 +22,15 @@ import {
   type RoomRoundLedger,
   type RoomSettingsReader,
   type RoomToolHost,
+  type TurnHarness,
   type TurnLog,
+  type ToolDefinition,
+  type TurnResult,
 } from './ports';
+import type { HostedTools } from './tool-server.server';
 import { roomSpeakTool, roomReadTool, roomDmTool, type RoomTurnHandle } from './room-tools.server';
 import { dmRoundOf } from './room-dm.server';
+import { cwdPermissionPolicy } from './permission-policy.server';
 import { defaultRoomHome } from '../infrastructure/room-home.server';
 
 /** Every ACP session this endpoint opens belongs to one runtime generation. */
@@ -166,7 +161,7 @@ function turnBlocks(input: {
   trigger: RoomEvent;
   /** Set in a private room: the title of the room it was opened from. */
   parent?: string;
-}): ContentBlock[] {
+}): PromptBlock[] {
   const facts =
     `You are @${input.agentId} (${input.label}), member ${input.seatIndex} of ${input.seatCount}` +
     ` in room "${input.roomTitle}".` +
@@ -191,109 +186,6 @@ function turnBlocks(input: {
     { type: 'text', text: transcript },
     { type: 'text', text: instruction },
   ];
-}
-
-function isInside(root: string, target: string): boolean {
-  const within = path.relative(root, target);
-  // `..` and `..`-prefixed components only: a name that merely starts with
-  // two dots (`..foo`) is an ordinary in-root name.
-  return within === '' || (within !== '..' && !within.startsWith(`..${path.sep}`) && !path.isAbsolute(within));
-}
-
-function realPathOf(target: string): string | undefined {
-  try {
-    return realpathSync(target);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Where a call's path really points, symlinks included: every component is
- * walked and each link followed, so a link that lives inside the root but
- * points out is judged by where it points. Past the first component that
- * does not exist nothing below can exist either — there is no link left to
- * hide in — so the rest hangs off the last real directory as written.
- * Returns undefined when the walk gives up: an unreadable link, or a chain
- * long enough to be a loop — the caller denies, because handing such a path
- * to the OS is exactly how it would follow the rest of the way out.
- */
-function resolvedTarget(target: string): string | undefined {
-  let current = path.resolve(target);
-  for (let hops = 0; hops < 40; hops += 1) {
-    const parts = current.split(path.sep);
-    let walked: string = path.sep;
-    let followed = false;
-    for (let index = 1; index < parts.length; index += 1) {
-      const part = parts[index]!;
-      if (!part) {
-        continue;
-      }
-      const next = path.join(walked, part);
-      let stat: { isSymbolicLink(): boolean };
-      try {
-        stat = lstatSync(next);
-      } catch {
-        return path.join(walked, ...parts.slice(index).filter(Boolean));
-      }
-      if (!stat.isSymbolicLink()) {
-        walked = next;
-        continue;
-      }
-      let linkTarget: string;
-      try {
-        linkTarget = readlinkSync(next);
-      } catch {
-        return undefined;
-      }
-      // The link's own target may hold links of its own: walk it next pass,
-      // with the rest of the original path hanging off it.
-      const rest = parts.slice(index + 1).filter(Boolean);
-      current = path.join(path.isAbsolute(linkTarget) ? linkTarget : path.resolve(walked, linkTarget), ...rest);
-      followed = true;
-      break;
-    }
-    if (!followed) {
-      return walked;
-    }
-  }
-  return undefined;
-}
-
-/**
- * The default policy for a Room turn: writes inside `cwd` are allowed, writes
- * outside it are denied. Paths are resolved before the comparison — a symlink
- * pointing out of `cwd` is out of `cwd` — and a write-kind call that names no
- * location is denied rather than assumed harmless.
- */
-function cwdPermissionPolicy(cwd: string): PermissionPolicy {
-  const root = realPathOf(cwd) ?? cwd;
-  return (request) => {
-    const call = request.toolCall;
-    const paths = (call.locations ?? [])
-      .map((location) => location.path)
-      .filter((value): value is string => typeof value === 'string');
-    const writeKind = call.kind === 'edit' || call.kind === 'delete' || call.kind === 'move';
-    // A relative path would resolve against this server's cwd — a place the
-    // room never named — and a chain the walker gives up on is exactly where
-    // the OS would follow it out of the root; both are denied.
-    const outside = paths.some((candidate) => {
-      if (!path.isAbsolute(candidate)) {
-        return true;
-      }
-      const resolved = resolvedTarget(candidate);
-      return resolved === undefined || !isInside(root, resolved);
-    });
-    const wanted =
-      outside || (writeKind && paths.length === 0) ? ['reject_once', 'reject_always'] : ['allow_once', 'allow_always'];
-    for (const kind of wanted) {
-      const option = request.options.find((candidate) => candidate.kind === kind);
-      if (option) {
-        return { outcome: 'selected', optionId: option.optionId };
-      }
-    }
-    return { outcome: 'cancelled' };
-  };
 }
 
 function defaultWorkRoot(): string {
@@ -411,7 +303,7 @@ export class RoomService {
    * The runtime asks for the input when a wake becomes an activation: the
    * inbox after the member's cursor, bounded, and the Harness around it.
    */
-  async activate(agentId: RoomLabAgentId): Promise<Harness> {
+  async activate(agentId: RoomLabAgentId): Promise<TurnHarness> {
     const roomId = this.options.roomId;
     const session = this.sessionId(agentId);
     this.options.store.ensureSession(session);
@@ -530,7 +422,7 @@ export class RoomService {
 
     this.openTurns.set(agentId, turn);
     this.wakeInFlight = false;
-    const harness: Harness = {
+    const harness: TurnHarness = {
       cwd,
       ...(agent.systemPrompt.trim() ? { systemPrompt: agent.systemPrompt } : {}),
       blocks: turnBlocks({
@@ -545,11 +437,11 @@ export class RoomService {
         trigger,
         ...(this.options.parentTitle ? { parent: this.options.parentTitle() } : {}),
       }),
-      tools: hosted ? [hosted.endpoint] : [],
+      mcpServers: hosted ? [hosted.endpoint] : [],
       permissions: cwdPermissionPolicy(cwd),
       hooks: {
-        onUpdate: (update) => this.onUpdate(agentId, update),
-        // The promise comes back: the runtime awaits it before it releases
+        onToolCall: () => this.toolCallSeen.add(agentId),
+        // The promise comes back: the driver awaits it before it releases
         // the lease, so the pass's fenced cursor write lands inside the held
         // window (docs/architecture/agent-collaboration.md: prompt, afterTurn, release).
         afterTurn: (result) => this.afterTurn(turn, result),
@@ -558,11 +450,8 @@ export class RoomService {
     return harness;
   }
 
-  /** One member's turn ended; the runtime hands the outcome over here. */
-  private async afterTurn(
-    turn: OpenTurn,
-    result: { stopReason: string | null; timedOut: boolean; error?: string },
-  ): Promise<void> {
+  /** One member's turn ended; the driver hands the outcome over here. */
+  private async afterTurn(turn: OpenTurn, result: TurnResult): Promise<void> {
     const handle = turn.handle;
     this.openTurns.delete(handle.agentId);
 
@@ -661,24 +550,26 @@ export class RoomService {
     });
     const turns = this.options.turnLog.listByRoom(roomId.conversationId);
     const seats = new Set(this.options.members());
-    const agents: RoomSeatView[] = this.options.agents().map((definition) => {
-      const leaseHeld = this.leaseHeld(definition.id);
-      const last = lastTurnFor(turns, definition.id);
-      return {
-        id: definition.id,
-        label: definition.label,
-        role: definition.role,
-        color: definition.color,
-        active: seats.has(definition.id),
-        seenSeq: this.options.store.inspectSession(this.sessionId(definition.id))?.seenSeq ?? 0,
-        status: deriveMemberStatus({
-          leaseHeld,
-          toolCallSeen: this.toolCallSeen.has(definition.id),
-          lastOutcome: last?.outcome,
-        }),
-        ...(last?.error ? { error: last.error } : {}),
-      };
-    });
+    const agents: RoomSeatView[] = await Promise.all(
+      this.options.agents().map(async (definition) => {
+        const leaseHeld = await this.leaseHeld(definition.id);
+        const last = lastTurnFor(turns, definition.id);
+        return {
+          id: definition.id,
+          label: definition.label,
+          role: definition.role,
+          color: definition.color,
+          active: seats.has(definition.id),
+          seenSeq: this.options.store.inspectSession(this.sessionId(definition.id))?.seenSeq ?? 0,
+          status: deriveMemberStatus({
+            leaseHeld,
+            toolCallSeen: this.toolCallSeen.has(definition.id),
+            lastOutcome: last?.outcome,
+          }),
+          ...(last?.error ? { error: last.error } : {}),
+        };
+      }),
+    );
     return {
       roomId: roomId.conversationId,
       epoch: this.epoch,
@@ -954,18 +845,17 @@ export class RoomService {
     };
   }
 
-  private leaseHeld(agentId: RoomLabAgentId): boolean {
-    const record = this.options.lease.read(runtimeKey(this.options.roomId.conversationId, agentId));
-    if (!record) {
+  /**
+   * Whether this member's lease reads held: a holder on the record, renewed
+   * within the staleness window (the heartbeat renews every 15 s; the
+   * holder-liveness half of the old freshness check lives in the kit lease).
+   */
+  private async leaseHeld(agentId: RoomLabAgentId): Promise<boolean> {
+    const record = await this.options.lease.read(runtimeKey(this.options.roomId.conversationId, agentId));
+    if (!record || !record.holder) {
       return false;
     }
-    return isLockFresh(record, Date.now(), LEASE_STALE_MS, (pid) => nodeLiveness.isAlive(pid));
-  }
-
-  private onUpdate(agentId: RoomLabAgentId, update: SessionUpdate): void {
-    if (update.sessionUpdate === 'tool_call_update') {
-      this.toolCallSeen.add(agentId);
-    }
+    return Date.now() - record.renewedAt < LEASE_STALE_MS;
   }
 
   private eventView(event: RoomEvent): RoomLabEventView {

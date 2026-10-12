@@ -56,7 +56,7 @@ describe('sqlite Room persistence', () => {
     const root = mkdtempSync(join(tmpdir(), 'rivus-room-web-'));
     const host = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     const created = await host.create({ title: '串行房', memberIds: ['codex'] });
-    void host.act(created.roomId, {
+    await host.act(created.roomId, {
       action: 'settings',
       wake: 'addressed',
       serial: true,
@@ -96,16 +96,16 @@ describe('sqlite Room persistence', () => {
     const store = SqliteRoomStore.open(root);
     const host = new RoomLabHost(store, probeReadyBinding);
     const created = await host.create({ title: 'Q3 定价方案', memberIds: ['codex'] });
-    host.saveSystemPrompt('codex', '  SENTINEL_SYS_PROMPT  ');
+    await host.saveSystemPrompt('codex', '  SENTINEL_SYS_PROMPT  ');
     const restored = new RoomLabHost(SqliteRoomStore.open(root), probeReadyBinding);
     expect(restored.agents.get('codex')?.systemPrompt).toBe('SENTINEL_SYS_PROMPT');
-    restored.saveSystemPrompt('codex', '   ');
+    await restored.saveSystemPrompt('codex', '   ');
     // The row stays; it just carries nothing to prepend.
     expect(restored.agents.get('codex')?.systemPrompt).toBe('');
 
     // The prompt is the member's own metadata: the harness takes it onto the
     // native channel, and an empty row leaves the slot unset.
-    restored.saveSystemPrompt('codex', 'SENTINEL_SYS_PROMPT');
+    await restored.saveSystemPrompt('codex', 'SENTINEL_SYS_PROMPT');
     await admitHuman(store, created.roomId, 'web:sys-1', '比较三档价格');
     const workHome = mkdtempSync(join(tmpdir(), 'rivus-room-work-'));
     process.env.RIVUS_ROOM_HOME = workHome;

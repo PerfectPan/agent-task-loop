@@ -31,7 +31,7 @@ describe('package boundary', () => {
 
   it('does not import occupancy, task-loop, or Feishu types', () => {
     const banned = [
-      '@rivus/agent-orchestration',
+      '@rivus/agent-kit',
       '@rivus/agent-task-loop',
       'TaskRecord',
       '待处理',

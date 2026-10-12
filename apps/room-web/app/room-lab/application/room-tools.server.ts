@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { RoomEvent, RoomId, RoomSeq, SpeakResult } from '@rivus/agent-room';
 import type { AgentSessionId } from '@rivus/agent-room';
-import type { ToolDefinition } from '@rivus/agent-orchestration';
+import type { ToolDefinition } from './turn';
 import type { RoomLabAgentId } from '../read-model';
 import { ROOM_MESSAGE_LIMIT } from '../domain/room-message';
 import { HELD_LIMIT } from './ports';

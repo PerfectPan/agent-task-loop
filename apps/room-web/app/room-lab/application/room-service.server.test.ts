@@ -3,33 +3,32 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { MemoryRoomStreamStore, type AgentSessionId, type RoomEvent, type RoomId } from '@rivus/agent-room';
-import {
-  LeaseManager,
-  nodeClock,
-  nodeLiveness,
-  OrchestrationConflictError,
-  runtimeKey,
-  type Agent,
-  type AgentRegistry,
-  type FencingToken,
-  type Harness,
-  type LeaseRecord,
-  type ToolDefinition,
-} from '@rivus/agent-orchestration';
-import type { McpServer } from '@agentclientprotocol/sdk';
+import type { LeaseSnapshot } from '@rivus/agent-kit-collab/lease';
+import { createLeaseManager, memoryLeaseRepository } from '@rivus/agent-kit-collab/lease';
+import { NodePlatformLive } from '@rivus/agent-kit/node/effect';
+import * as Effect from 'effect/Effect';
+import * as Exit from 'effect/Exit';
+import * as Layer from 'effect/Layer';
+import { make as makeManagedRuntime } from 'effect/ManagedRuntime';
+import * as Scope from 'effect/Scope';
 import { RoomCatalog } from '../domain/room-catalog';
 import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
-import { SqliteLeaseStore } from '../infrastructure/sqlite-lease-store.server';
+import { ActiveRoomLeases } from '../infrastructure/room-leases.server';
 import { SqliteTurnLog } from '../infrastructure/sqlite-turn-log.server';
 import { RoomService } from './room-service.server';
 import {
   HELD_LIMIT,
+  runtimeKey,
+  type Agent,
   type AgentDescriptor,
+  type AgentRegistry,
   type RoomDmGateway,
   type RoomLeases,
   type RoomMemberRuntime,
   type RoomRecordStore,
   type RoomSettings,
+  type ToolDefinition,
+  type TurnHarness,
   type TurnLog,
   type RoomToolHost,
 } from './ports';
@@ -38,7 +37,6 @@ import { copy } from '../copy';
 
 const ROOM: RoomId = { tenantId: 'local', conversationId: 'r_testcase' };
 const SEATED = ['claude', 'codex', 'opencode'];
-const TOKEN: FencingToken = { key: 'room:r_testcase:member:x', holderPid: 1, holderId: 'test' };
 const LABELS: Record<string, string> = { claude: 'Claude', codex: 'Codex', opencode: 'OpenCode' };
 
 interface BuildOptions {
@@ -73,7 +71,7 @@ interface Built {
 }
 
 function agentOf(id: string, systemPrompt: string): Agent {
-  return { id, label: LABELS[id] ?? id, binding: { command: `${id}-acp` }, systemPrompt };
+  return { id, label: LABELS[id] ?? id, command: `${id}-acp`, systemPrompt };
 }
 
 /** Records wakes; in auto mode runs each one to a silent end immediately. */
@@ -110,11 +108,10 @@ class FakeRuntime implements RoomMemberRuntime {
         // The real runtime awaits the hook's promise before it releases the
         // lease; the fake has no lease, so it just waits the turn out.
         await harness.hooks?.afterTurn?.({
-          stopReason: (result && result.stopReason !== undefined ? result.stopReason : 'end_turn') as 'end_turn',
+          stopReason: result && result.stopReason !== undefined ? result.stopReason : 'end_turn',
           // `null` with no error defaults to the watchdog — the only way a
           // turn ends as timeout; a test can say otherwise explicitly.
           timedOut: result?.timedOut ?? (result?.stopReason === null && !result.error),
-          token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
         await log.drain();
@@ -221,7 +218,7 @@ function build(options: BuildOptions = {}): Built {
     // The real endpoint outlives the turn; these tests call the tool
     // definitions directly, so re-serving is a no-op here.
     return {
-      endpoint: {} as unknown as McpServer,
+      endpoint: { type: 'http', name: 'room-tools', url: 'http://127.0.0.1:0/mcp', headers: [] },
       url: 'http://127.0.0.1:0/mcp',
       serveTurn: () => undefined,
       close: async () => {},
@@ -240,7 +237,7 @@ function build(options: BuildOptions = {}): Built {
     role: '成员',
     color: 1,
   }));
-  const lease = options.lease ?? { fence: (_key, op) => op(), read: () => undefined };
+  const lease = options.lease ?? { fence: (_key, op) => op(), read: async () => undefined };
   const service = new RoomService({
     roomId: ROOM,
     // The memory store has no clear — reset is the sqlite store's business and
@@ -293,7 +290,7 @@ async function eventsOf(store: MemoryRoomStreamStore): Promise<RoomEvent[]> {
 
 /** One started activation: the harness, its end, and its room_speak tool. */
 interface Activation {
-  harness: Harness;
+  harness: TurnHarness;
   /** Ends the turn; resolves once the log row has landed. */
   end(result?: { stopReason?: string | null; error?: string; timedOut?: boolean }): Promise<void>;
   speakTool(): ToolDefinition;
@@ -325,7 +322,7 @@ function countOffDecision(bodies: string[], seat: number): string | undefined {
 }
 
 /** The member's own seat, read out of the facts block the service assembled. */
-function seatOf(harness: Harness): number {
+function seatOf(harness: TurnHarness): number {
   const facts = harness.blocks.map((block) => ('text' in block ? block.text : '')).join('\n');
   const match = facts.match(/member (\d+) of/);
   if (!match) {
@@ -335,7 +332,7 @@ function seatOf(harness: Harness): number {
 }
 
 /** The bodies on the transcript the activation carried in. */
-function transcriptBodies(harness: Harness): string[] {
+function transcriptBodies(harness: TurnHarness): string[] {
   const text = harness.blocks.map((block) => ('text' in block ? block.text : '')).join('\n');
   return [...text.matchAll(/\[seq \d+\] @[^:]*: (.*)$/gm)].map((match) => match[1]!);
 }
@@ -363,7 +360,7 @@ class ChainRuntime implements RoomMemberRuntime {
   constructor(
     private readonly decide: (
       agentId: RoomLabAgentId,
-      harness: Harness,
+      harness: TurnHarness,
       read: string[],
     ) => { body: string; addressedTo?: string[] } | undefined,
   ) {}
@@ -424,7 +421,7 @@ class ChainRuntime implements RoomMemberRuntime {
       }
       // The real runtime awaits the hook's promise before it releases the
       // lease; the drain below waits out the wake-followed activations.
-      await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+      await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
       await this.turnLog!.drain();
     } finally {
       this.running.delete(agentId);
@@ -842,7 +839,7 @@ describe('RoomService turns', () => {
     expect(rootRoom.tools.at(-1)!.map((tool) => tool.name)).toContain('room_dm');
   });
 
-  it('denies writes outside cwd, writes that name no location, and symlinks out of cwd', async () => {
+  it('denies writes outside cwd, writes that name no path, and symlinks out of cwd', async () => {
     const h = build({ manual: true });
     await h.service.sendMessage('写点什么');
     const claude = await h.runtime.activated(keyOf('claude'));
@@ -851,60 +848,62 @@ describe('RoomService turns', () => {
       { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' as const },
       { optionId: 'reject-once', name: 'Reject once', kind: 'reject_once' as const },
     ];
-    const ask = (toolCall: Record<string, unknown>) =>
+    const ask = (toolCall: { callId: string; kind?: string; rawInput?: unknown }) =>
       decide({
         sessionId: 'session-1',
-        toolCall: toolCall as never,
+        toolCall,
         options,
       });
 
     // Inside cwd — resolved through symlinks, so a /tmp aliasing /private/tmp
-    // on this machine is no obstacle — a write is allowed.
+    // on this machine is no obstacle — a write is allowed. The candidate path
+    // comes from the agent's raw tool input.
     const inside = await ask({
-      toolCallId: 'c1',
+      callId: 'c1',
       kind: 'edit',
-      locations: [{ path: join(claude.harness.cwd, 'note.md') }],
+      rawInput: { file_path: join(claude.harness.cwd, 'note.md') },
     });
-    expect(inside).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+    expect(inside).toEqual({ optionId: 'allow-once' });
 
     // Outside cwd, denied — and a symlink that lives inside but points out
     // is judged by where it points.
     const outside = await ask({
-      toolCallId: 'c2',
+      callId: 'c2',
       kind: 'edit',
-      locations: [{ path: join(tmpdir(), 'rivus-elsewhere', 'note.md') }],
+      rawInput: { file_path: join(tmpdir(), 'rivus-elsewhere', 'note.md') },
     });
-    expect(outside).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    expect(outside).toEqual({ optionId: 'reject-once' });
     const escape = mkdtempSync(join(tmpdir(), 'rivus-escape-'));
     const link = join(claude.harness.cwd, 'escape.md');
     symlinkSync(join(escape, 'target.md'), link);
-    const viaLink = await ask({ toolCallId: 'c3', kind: 'edit', locations: [{ path: link }] });
-    expect(viaLink).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    const viaLink = await ask({ callId: 'c3', kind: 'edit', rawInput: { file_path: link } });
+    expect(viaLink).toEqual({ optionId: 'reject-once' });
 
-    // A write-kind call that names no location is denied by default, not
-    // waved through as harmless; a location-less execute still runs.
-    const noLocations = await ask({ toolCallId: 'c4', kind: 'edit' });
-    expect(noLocations).toEqual({ outcome: 'selected', optionId: 'reject-once' });
-    const bareExecute = await ask({ toolCallId: 'c5', kind: 'execute' });
-    expect(bareExecute).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+    // A write-kind call whose input names no path is denied by default, not
+    // waved through as harmless; a path-less execute still runs.
+    const noLocations = await ask({ callId: 'c4', kind: 'edit', rawInput: {} });
+    expect(noLocations).toEqual({ optionId: 'reject-once' });
+    const bareExecute = await ask({ callId: 'c5', kind: 'execute' });
+    expect(bareExecute).toEqual({ optionId: 'allow-once' });
 
     // A name that starts with two dots is an ordinary in-root name, not a
-    // parent hop; a relative path names no place the room gave; a chain of
-    // links longer than the walker follows is denied rather than handed to
+    // parent hop; a relative path is not judged a location, so a write-kind
+    // call naming only one is denied with the rest of the path-less; a chain
+    // of links longer than the walker follows is denied rather than handed to
     // the OS to finish.
     writeFileSync(join(claude.harness.cwd, '..dots.md'), 'x', 'utf8');
     const dotDots = await ask({
-      toolCallId: 'c6',
+      callId: 'c6',
       kind: 'edit',
-      locations: [{ path: join(claude.harness.cwd, '..dots.md') }],
+      rawInput: { file_path: join(claude.harness.cwd, '..dots.md') },
     });
-    expect(dotDots).toEqual({ outcome: 'selected', optionId: 'allow-once' });
+    expect(dotDots).toEqual({ optionId: 'allow-once' });
     const relative = await ask({
-      toolCallId: 'c7',
+      callId: 'c7',
       kind: 'edit',
-      locations: [{ path: 'note.md' }],
+      rawInput: { file_path: 'note.md' },
     });
-    expect(relative).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    expect(relative).toEqual({ optionId: 'reject-once' });
     const chainEnd = mkdtempSync(join(tmpdir(), 'rivus-chain-end-'));
     let chainLink: string = join(chainEnd, 'far.md');
     for (let index = 0; index < 45; index += 1) {
@@ -913,11 +912,11 @@ describe('RoomService turns', () => {
       chainLink = next;
     }
     const viaChain = await ask({
-      toolCallId: 'c8',
+      callId: 'c8',
       kind: 'edit',
-      locations: [{ path: chainLink }],
+      rawInput: { file_path: chainLink },
     });
-    expect(viaChain).toEqual({ outcome: 'selected', optionId: 'reject-once' });
+    expect(viaChain).toEqual({ optionId: 'reject-once' });
 
     await claude.end();
   });
@@ -936,14 +935,23 @@ describe('RoomService pass cursor', () => {
 
     fence<T>(key: string, op: () => Promise<T>): Promise<T> {
       if (!this.held.has(key)) {
-        return Promise.reject(new OrchestrationConflictError(key));
+        return Promise.reject(new Error(`member lease ${key} was lost (released)`));
       }
       this.events.push(`write:${key}`);
       return op();
     }
 
-    read(key: string): LeaseRecord | undefined {
-      return this.held.has(key) ? { key, holderPid: 1, holderId: 'test', heartbeatAt: '' } : undefined;
+    async read(key: string): Promise<LeaseSnapshot | undefined> {
+      return this.held.has(key)
+        ? {
+            key,
+            generation: 1,
+            revision: 1,
+            holder: { host: 'test', bootId: 'test', pid: 1, startTime: 1 },
+            holderId: 'test',
+            renewedAt: Date.now(),
+          }
+        : undefined;
     }
 
     acquire(key: string): void {
@@ -973,9 +981,8 @@ describe('RoomService pass cursor', () => {
     lease.acquire(key);
     const harness = await h.service.activate(agentId as RoomLabAgentId);
     await harness.hooks?.afterTurn?.({
-      stopReason: (result?.stopReason ?? 'end_turn') as 'end_turn',
+      stopReason: result?.stopReason ?? 'end_turn',
       timedOut: result?.stopReason === null && !result.error,
-      token: TOKEN,
       ...(result?.error ? { error: result.error } : {}),
     });
     lease.release(key);
@@ -1008,13 +1015,13 @@ describe('RoomService pass cursor', () => {
     lease.acquire(keyOf('claude'));
     const harness = await h.service.activate('claude');
     lease.release(keyOf('claude'));
-    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('pass lost for @claude'));
     errorSpy.mockRestore();
 
     expect(h.store.inspectSession(sessionId('claude'))?.seenSeq).toBe(0);
     expect(h.turnLog.rows[0]).toMatchObject({ agentId: 'claude', outcome: 'failed' });
-    expect(h.turnLog.rows[0]?.error).toMatch(/already occupied/);
+    expect(h.turnLog.rows[0]?.error).toMatch(/was lost/);
   });
 });
 
@@ -1031,13 +1038,11 @@ describe('RoomService pass cursor on sqlite', () => {
     });
     store.saveRoom(catalog.get('r_5e1ec0de5a'));
     const stream = store.stream('r_5e1ec0de5a');
-    const lease = new LeaseManager({
-      store: new SqliteLeaseStore(store.db),
-      clock: nodeClock,
-      identity: { pid: process.pid },
-      holderId: 'test-holder',
-      liveness: nodeLiveness,
-    });
+    // The real kit lease over a process-local repository, and the endpoint's
+    // adapter over it — the same assembly the host runs.
+    const rt = makeManagedRuntime(Layer.mergeAll(memoryLeaseRepository(), NodePlatformLive));
+    const manager = rt.runSync(createLeaseManager({ ttlMs: 120_000, heartbeatMs: 15_000 }));
+    const lease = new ActiveRoomLeases(rt, manager);
     const service = new RoomService({
       roomId: { tenantId: 'local', conversationId: 'r_5e1ec0de5a' },
       store: stream,
@@ -1061,10 +1066,13 @@ describe('RoomService pass cursor on sqlite', () => {
     // One activation, the way the runtime runs it: lease in, the afterTurn
     // hook's promise awaited, lease out.
     const key = runtimeKey('r_5e1ec0de5a', 'claude');
-    lease.acquire(key);
+    const leaseScope = Scope.makeUnsafe();
+    const handle = await rt.runPromise(Effect.provideService(manager.acquire(key), Scope.Scope, leaseScope));
+    lease.admit(key, handle);
     const harness = await service.activate('claude');
-    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
-    lease.release(key);
+    await harness.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
+    await rt.runPromise(Scope.close(leaseScope, Exit.void));
+    lease.withdraw(key);
 
     // The rows the E2E cross-check compared: the turn row's read_up_to_seq
     // and the session's seen_seq. The defect left them apart; they agree now.
@@ -1082,8 +1090,9 @@ describe('RoomService pass cursor on sqlite', () => {
     expect(Number(cursor.seen_seq)).toBe(1);
     expect(turn.outcome).toBe('passed');
     expect(turn.error).toBeNull();
-    // The lease row is gone: the release followed the fenced write.
-    expect(lease.read(key)).toBeUndefined();
+    // The lease is a released tombstone: the release followed the fenced write.
+    expect((await lease.read(key))?.holder).toBeNull();
+    await rt.dispose();
   });
 });
 
@@ -1189,7 +1198,7 @@ describe('RoomService reset', () => {
         remove: async () => {},
       },
       runtime: { wake: (key) => wakes.push(key) },
-      lease: { fence: (_key, op) => op(), read: () => undefined },
+      lease: { fence: (_key, op) => op(), read: async () => undefined },
       turnLog,
       members: () => ['claude', 'codex'],
       agents: () => [
@@ -1203,7 +1212,7 @@ describe('RoomService reset', () => {
         tools.push(definitions);
         toolsByAgent.set(agentId, definitions);
         return {
-          endpoint: {} as unknown as McpServer,
+          endpoint: { type: 'http', name: 'room-tools', url: 'http://127.0.0.1:0/mcp', headers: [] },
           url: 'http://127.0.0.1:0/mcp',
           serveTurn: () => undefined,
           close: async () => {},
@@ -1235,7 +1244,7 @@ describe('RoomService reset', () => {
 
     // Claude's turn passes; codex's stays open — the case a reset interrupts.
     const claude = await service.activate('claude');
-    await claude.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    await claude.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
     const codex = await service.activate('codex');
     expect(turnLog.listByRoom(RESET_ROOM)).toHaveLength(1);
 
@@ -1250,7 +1259,7 @@ describe('RoomService reset', () => {
 
     // The interrupted turn ends as a failure of the reset, and its pass marks
     // nothing read in the record that replaced the one it ran against.
-    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
     const rows = turnLog.listByRoom(RESET_ROOM);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -1290,7 +1299,7 @@ describe('RoomService reset', () => {
       .stream(RESET_ROOM)
       .readSlice({ tenantId: 'local', conversationId: RESET_ROOM }, 0, { maxEvents: 10 });
     expect(events.events.map((event) => event.kind)).toEqual(['human']);
-    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false, token: TOKEN });
+    await codex.hooks?.afterTurn?.({ stopReason: 'end_turn', timedOut: false });
   });
 
   it('resets child rooms whole when the host wires them, and falls back to clearing their rows', async () => {

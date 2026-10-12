@@ -49,7 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
       if (!host.agents.has(agentId)) {
         throw new RoomInputError('Unknown agent');
       }
-      host.saveSystemPrompt(agentId, formText(form, 'systemPrompt'));
+      await host.saveSystemPrompt(agentId, formText(form, 'systemPrompt'));
       return data<AgentDeskView>(await host.agentDesk(), { headers: noStoreHeaders });
     }
     if (intent === 'add-agent') {

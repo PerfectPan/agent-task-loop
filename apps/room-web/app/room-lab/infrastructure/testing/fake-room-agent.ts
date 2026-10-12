@@ -38,6 +38,9 @@ const remember = (sessionId: string, cwd: string, meta: unknown, mcpServers: unk
 const textOf = (prompt: readonly acp.ContentBlock[]) =>
   prompt.map((block) => (block.type === 'text' ? block.text : `[${block.type}]`)).join('\n');
 
+/** The commands the first word of a prompt's text picks. */
+const COMMANDS = new Set(['hang', 'fs', 'permission', 'env', 'toolcall']);
+
 const say = (client: acp.AgentSideConnection, sessionId: string, text: string) =>
   client.sessionUpdate({
     sessionId,
@@ -122,7 +125,11 @@ class FakeRoomAgent implements acp.Agent {
   async prompt(params: acp.PromptRequest): Promise<acp.PromptResponse> {
     const session = sessions.get(params.sessionId);
     const words = textOf(params.prompt).split(/\s+/);
-    const tagged = words.find((word) => /^[a-z]+:/i.test(word));
+    // A room's turn prompt names the seat order (`order:`) ahead of the
+    // transcript, so a tagged word that names a command wins over the first
+    // tagged word: the record's line carries the command a turn is asked for.
+    const taggedWords = words.filter((word) => /^[a-z]+:/i.test(word));
+    const tagged = taggedWords.find((word) => COMMANDS.has(word.slice(0, -1).toLowerCase())) ?? taggedWords.at(0);
     const command = tagged !== undefined ? tagged : (words[0] ?? 'idle');
     if (session) {
       session.turns += 1;
@@ -152,14 +159,41 @@ class FakeRoomAgent implements acp.Agent {
       return { stopReason: 'end_turn' };
     }
     if (command === 'permission:') {
+      // `kind=<kind>` and `path=<absolute path>` words shape the tool call the
+      // request carries, so a test can ask for a write outside the room's cwd;
+      // without them the call names no kind and no input, which the room's
+      // policy allows. A word that is not a tool kind is dropped.
+      const TOOL_KINDS: readonly string[] = [
+        'read',
+        'edit',
+        'delete',
+        'move',
+        'search',
+        'execute',
+        'think',
+        'fetch',
+        'switch_mode',
+        'other',
+      ];
+      const kindWord = words.find((word) => word.startsWith('kind='))?.slice(5);
+      const kind = kindWord !== undefined && TOOL_KINDS.includes(kindWord) ? (kindWord as acp.ToolKind) : undefined;
+      const path = words.find((word) => word.startsWith('path='))?.slice(5);
       const outcome = await this.client.requestPermission({
         sessionId: params.sessionId,
-        toolCall: { toolCallId: 'call-1', title: 'room_speak' },
+        toolCall: {
+          toolCallId: 'call-1',
+          title: 'room_speak',
+          ...(kind === undefined ? {} : { kind }),
+          ...(path === undefined ? {} : { rawInput: { file_path: path } }),
+        },
         options: [
           { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' },
           { optionId: 'reject-once', name: 'Reject once', kind: 'reject_once' },
         ],
       });
+      if (env.CLAUDE_FAKE_PERMISSION_REPORT) {
+        writeFileSync(env.CLAUDE_FAKE_PERMISSION_REPORT, JSON.stringify(outcome.outcome), 'utf8');
+      }
       void say(this.client, params.sessionId, `permission ${JSON.stringify(outcome.outcome)}`);
       return { stopReason: 'end_turn' };
     }

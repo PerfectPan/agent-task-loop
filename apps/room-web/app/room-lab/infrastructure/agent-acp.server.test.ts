@@ -25,6 +25,7 @@ import {
   runTurnStream,
   type RoomAgentProbe,
   type RoomAgentSpec,
+  type RoomConnectOverrides,
 } from './agent-acp.server';
 
 /**
@@ -78,7 +79,7 @@ interface Hosting {
   connection: AcpConnection;
 }
 
-async function connect(bindingStore?: Layer.Layer<never>, overrides?: { cancelTimeoutMs?: number }): Promise<Hosting> {
+async function connect(bindingStore?: Layer.Layer<never>, overrides?: RoomConnectOverrides): Promise<Hosting> {
   const rt = makeManagedRuntime<PlatformService, never>(
     Layer.mergeAll(NodePlatformLive, bindingStore ?? MemorySessionBindingStoreLive),
   );
@@ -130,6 +131,34 @@ describe('agent-acp against a fake stdio agent', () => {
       expect(denied.texts.join('')).toContain('"reject-once"');
     } finally {
       await closeAll(hosting);
+    }
+  });
+
+  it('forwards the connected policy and keeps a failing policy a denial', async () => {
+    // The endpoint's adapter: the policy's decision rides to the kit as the
+    // connection's own callback.
+    const allowing = await connect(undefined, { onPermission: () => ({ optionId: 'allow-once' }) });
+    try {
+      const session = await allowing.rt.runPromise(allowing.connection.newSession());
+      const allowed = await runTurn(allowing.rt, session, 'permission: now');
+      expect(allowed.texts.join('')).toContain('"allow-once"');
+    } finally {
+      await closeAll(allowing);
+    }
+
+    // A policy that throws is a denial, not a crash and not an allow: the
+    // fail-closed rule covers the callback itself.
+    const broken = await connect(undefined, {
+      onPermission: () => {
+        throw new Error('the policy is broken');
+      },
+    });
+    try {
+      const session = await broken.rt.runPromise(broken.connection.newSession());
+      const denied = await runTurn(broken.rt, session, 'permission: now');
+      expect(denied.texts.join('')).toContain('"reject-once"');
+    } finally {
+      await closeAll(broken);
     }
   });
 

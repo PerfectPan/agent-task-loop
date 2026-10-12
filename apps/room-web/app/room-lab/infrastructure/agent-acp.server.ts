@@ -9,6 +9,7 @@ import {
   type AcpSessionHandle,
   type ConnectError,
   type NewSessionError,
+  type PermissionCallback,
   type PromptBlock,
   type PromptError,
   type TranscriptStreamPart,
@@ -20,6 +21,7 @@ import * as Exit from 'effect/Exit';
 import * as Option from 'effect/Option';
 import type * as Scope from 'effect/Scope';
 import * as Stream from 'effect/Stream';
+import type { TurnPermissionPolicy } from '../application/turn';
 
 /**
  * The ACP half of the endpoint, adopted from `@rivus/agent-kit`'s `/acp`
@@ -155,8 +157,22 @@ export type RoomAgentProbe =
   | { status: 'needs-login'; authMethods: readonly { id: string; name: string; description?: string }[] }
   | { status: 'ready' };
 
+/**
+ * The endpoint's permission policy as the kit's callback: the policy's
+ * decision goes to the kit as is, and a policy that throws or rejects is a
+ * denial (`undefined`) — the kit's own fail-closed rule, which it applies to a
+ * missing callback and an unanswerable decision alike.
+ */
+function permissionCallbackOf(policy: TurnPermissionPolicy): PermissionCallback {
+  return (request) =>
+    Effect.tryPromise({
+      try: () => Promise.resolve(policy(request)),
+      catch: (cause) => cause,
+    }).pipe(Effect.orElseSucceed(() => undefined));
+}
+
 /** Probe options for the kit call, built from the row. */
-function connectOptions(agent: RoomAgentSpec, cwd: string) {
+function connectOptions(agent: RoomAgentSpec, cwd: string, onPermission?: TurnPermissionPolicy) {
   const profile = roomAcpProfile(agent);
   return {
     profile,
@@ -168,6 +184,9 @@ function connectOptions(agent: RoomAgentSpec, cwd: string) {
       // The endpoint answers the client file calls: reads and writes, fenced
       // by the kit to the session's directory, links resolved.
       fileSystem: { read: true, write: true },
+      // The room's permission policy: without it every request the agent
+      // makes during a turn is denied, however harmless.
+      ...(onPermission ? { onPermission: permissionCallbackOf(onPermission) } : {}),
       handshakeTimeoutMs: ROOM_ACP_HANDSHAKE_TIMEOUT_MS,
       requestTimeoutMs: ROOM_ACP_REQUEST_TIMEOUT_MS,
       cancelTimeoutMs: ROOM_ACP_CANCEL_TIMEOUT_MS,
@@ -201,11 +220,10 @@ function errorText(error: unknown): string {
 }
 
 /**
- * The desk's probe: start the agent, answer `initialize`, try one trial
- * session in a scratch directory, close both. Opening a session is where
- * agents report a missing login.
+ * One line a probe row or a failed activation keeps about a connect or a
+ * session error: what the agent could not do, in the order the caller met it.
  */
-function describeConnectError(error: ConnectError | OpenSessionError): string {
+export function describeConnectError(error: ConnectError | OpenSessionError): string {
   if (error._tag === 'AgentUnavailable') {
     return `${error.command} could not start: ${error.message}`;
   }
@@ -242,6 +260,17 @@ export function probeRoomAgent(agent: RoomAgentSpec): Effect.Effect<RoomAgentPro
   );
 }
 
+/** What a connection may run differently from its defaults, in tests or across keys. */
+export interface RoomConnectOverrides {
+  cancelTimeoutMs?: number;
+  /**
+   * The permission policy the connection's turns are answered with. The
+   * connection lives across activations, so the caller hands a delegate that
+   * reads the live turn's policy rather than one turn's answer.
+   */
+  onPermission?: TurnPermissionPolicy;
+}
+
 /**
  * Starts the row's ACP program with exactly its profile's environment. The
  * connection belongs to the caller's Scope — the endpoint keeps one Scope per
@@ -251,10 +280,13 @@ export function probeRoomAgent(agent: RoomAgentSpec): Effect.Effect<RoomAgentPro
 export function connectRoomAgent(
   agent: RoomAgentSpec,
   cwd: string,
-  overrides?: { cancelTimeoutMs?: number },
+  overrides?: RoomConnectOverrides,
 ): Effect.Effect<AcpConnection, ConnectError, PlatformService | Scope.Scope> {
-  const { options } = connectOptions(agent, cwd);
-  return connectAgent(agent.id, { ...options, ...overrides });
+  // The policy rides through `connectOptions`, which wraps it into the kit's
+  // Effect-shaped callback; the rest of the overrides spread as they are.
+  const { onPermission, ...rest } = overrides ?? {};
+  const { options } = connectOptions(agent, cwd, onPermission);
+  return connectAgent(agent.id, { ...options, ...rest });
 }
 
 export type OpenSessionError = NewSessionError;

@@ -5,6 +5,7 @@ import {
   FileSessionBindingStoreLive,
   type AcpConnection,
   type AcpSessionHandle,
+  type ConnectError,
   type SessionBindingStore,
 } from '@rivus/agent-kit/acp';
 import { NodePlatformLive } from '@rivus/agent-kit/node/effect';
@@ -22,15 +23,17 @@ import * as Ref from 'effect/Ref';
 import * as Scope from 'effect/Scope';
 import { RoomService, RoomInputError } from './room-service.server';
 import { RoomDm } from './room-dm.server';
-import type { RoomMemberRuntime, ToolDefinition, TurnHarness, TurnResult } from './ports';
+import type { RoomMemberRuntime, ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult } from './ports';
 import { runtimeKey } from './ports';
 import { ToolServer, type HostedTools } from './tool-server.server';
 import { createRoomRecordInput, defaultWorkRoot, nowIso } from '../infrastructure/room-home.server';
 import {
   connectRoomAgent,
+  describeConnectError,
   openRoomSession,
   probeRoomAgent,
   runTurnStream,
+  type OpenSessionError,
   type RoomAgentProbe,
   type RoomAgentSpec,
   type TurnStreamOutcome,
@@ -98,9 +101,11 @@ const LANES_MAX_CONCURRENT = 16;
 const LANES_MAX_QUEUED = 64;
 
 /**
- * An activation that failed after its turn had ended — the turn row was
- * written by afterTurn, so the failure only tells the host to discard the
- * process the turn ran on, not to report a failed activation.
+ * An activation whose failure afterTurn has reported: a turn that ended into
+ * a timeout or a lost lease, and a death in the window before the turn — the
+ * connect or the session open — whose failed row afterTurn writes with the
+ * error. The failure only tells the host to discard the process the turn ran
+ * on, not to report a failed activation a second time.
  */
 class ActivationAfterTurnError extends Error {
   constructor(message: string) {
@@ -169,6 +174,14 @@ export class RoomLabHost {
    * released when the session's process is discarded.
    */
   private readonly sessionTools = new Map<string, HostedTools>();
+  /**
+   * The permission policy of each key's live turn, by runtime key. The ACP
+   * connection outlives a turn, and the kit answers requests only through the
+   * callback it was connected with, so the callback reads whichever policy the
+   * key's current activation assembled — a policy that answers nothing (no
+   * live turn) denies, which is the kit's own rule.
+   */
+  private readonly turnPolicies = new Map<string, TurnPermissionPolicy>();
 
   /** The one roster the desk, the routes and the views read members from. */
   readonly agents: AgentRegistry;
@@ -278,20 +291,26 @@ export class RoomLabHost {
       });
 
       // The turn's outcome so far; afterTurn reads it once the turn is over,
-      // whatever way it ended.
+      // whatever way it ended. A death in the window before the turn — the
+      // connect or the session open — is remembered apart: its afterTurn runs
+      // with that error instead of a timeout the turn never lived to reach.
       const recorded = yield* Ref.make<TurnStreamOutcome | undefined>(undefined);
       const timedOut = yield* Ref.make(false);
       const lost = yield* Ref.make<LeaseLost | undefined>(undefined);
+      const beforeTurn = yield* Ref.make<string | undefined>(undefined);
       const turnEnded = yield* Deferred.make<void>();
       yield* Effect.addFinalizer(() =>
         Effect.gen({ self: this }, function* () {
           const outcome = yield* Ref.get(recorded);
-          const result = turnResultOf({
-            outcome,
-            timedOut: yield* Ref.get(timedOut),
-            lost: yield* Ref.get(lost),
-            closing: this.closing,
-          });
+          const preTurn = yield* Ref.get(beforeTurn);
+          const result = preTurn
+            ? { stopReason: null, timedOut: false, error: preTurn }
+            : turnResultOf({
+                outcome,
+                timedOut: yield* Ref.get(timedOut),
+                lost: yield* Ref.get(lost),
+                closing: this.closing,
+              });
           yield* Effect.tryPromise({
             try: () => harness.hooks?.afterTurn?.(result) ?? Promise.resolve(),
             catch: (cause) => cause,
@@ -301,36 +320,58 @@ export class RoomLabHost {
 
       // The process is long-lived: reuse it, and the session it holds, across
       // activations of this key. A session the process no longer holds is
-      // reopened from the key's binding, so it also survives a restart.
-      let member = this.connections.get(key);
-      if (!member) {
-        const scope = Scope.makeUnsafe();
-        const connection = yield* connectRoomAgent(agent, harness.cwd).pipe(Effect.provideService(Scope.Scope, scope));
-        // When the process ends for any reason — exit, a cancel that never
-        // settled — the key starts fresh next time, and the tools its session
-        // hosted go with it.
-        yield* connection.ended.pipe(
-          Effect.andThen(
-            Effect.sync(() => {
-              this.connections.delete(key);
-              void this.discardKey(key).catch(() => undefined);
-            }),
-          ),
-          Effect.provideService(Scope.Scope, scope),
-          Effect.forkIn(scope),
+      // reopened from the key's binding, so it also survives a restart. A
+      // failure here is a death before the turn: its error goes to afterTurn,
+      // which writes the one failed row this death deserves, and the exit
+      // below may not report it a second time.
+      this.turnPolicies.set(key, harness.permissions);
+      yield* Effect.addFinalizer(() => Effect.sync(() => this.turnPolicies.delete(key)));
+      const session = yield* Effect.gen({ self: this }, function* () {
+        let member = this.connections.get(key);
+        if (!member) {
+          const scope = Scope.makeUnsafe();
+          // The connection keeps the callback it was connected with for its
+          // whole life, so it reads the key's live policy rather than this
+          // turn's: every activation re-registers its own harness's policy
+          // above, the way the runtime used to rewire each turn.
+          const connection = yield* connectRoomAgent(agent, harness.cwd, {
+            onPermission: (request) => this.turnPolicies.get(key)?.(request),
+          }).pipe(Effect.provideService(Scope.Scope, scope));
+          // When the process ends for any reason — exit, a cancel that never
+          // settled — the key starts fresh next time, and the tools its
+          // session hosted go with it.
+          yield* connection.ended.pipe(
+            Effect.andThen(
+              Effect.sync(() => {
+                this.connections.delete(key);
+                void this.discardKey(key).catch(() => undefined);
+              }),
+            ),
+            Effect.provideService(Scope.Scope, scope),
+            Effect.forkIn(scope),
+          );
+          member = { scope, connection };
+          this.connections.set(key, member);
+        }
+        const live = member;
+        return (
+          live.session ??
+          (yield* openRoomSession(live.connection, {
+            sessionKey: key,
+            cwd: harness.cwd,
+            mcpServers: harness.mcpServers,
+            ...(harness.systemPrompt ? { systemPrompt: harness.systemPrompt } : {}),
+          }).pipe(Effect.tap((opened) => Effect.sync(() => (live.session = opened)))))
         );
-        member = { scope, connection };
-        this.connections.set(key, member);
-      }
-      const live = member;
-      const session =
-        live.session ??
-        (yield* openRoomSession(live.connection, {
-          sessionKey: key,
-          cwd: harness.cwd,
-          mcpServers: harness.mcpServers,
-          ...(harness.systemPrompt ? { systemPrompt: harness.systemPrompt } : {}),
-        }).pipe(Effect.tap((opened) => Effect.sync(() => (live.session = opened)))));
+      }).pipe(
+        // Every failure here is a death before the turn: remember its one
+        // line for afterTurn, and hand the exit a death it already knows was
+        // reported — so it discards the process and writes no second row.
+        Effect.tapError((cause: ConnectError | OpenSessionError) => Ref.set(beforeTurn, describeConnectError(cause))),
+        Effect.mapError(
+          (cause: ConnectError | OpenSessionError) => new ActivationAfterTurnError(describeConnectError(cause)),
+        ),
+      );
 
       // The turn: one stream, interrupted only from outside — the kit's own
       // cancel deadline bounds every interruption — but watched by the
@@ -370,10 +411,11 @@ export class RoomLabHost {
     });
 
   /**
-   * How each activation ended. A failure before it was a turn is reported to
-   * the room (the failed row the UI reads, and the serial queue moving on);
-   * any other ending only decides whether the process the key holds is
-   * discarded. `close` needs neither: the host is shutting down.
+   * How each activation ended. A failure before there was a turn to report —
+   * no agent, no harness — is reported to the room (the failed row the UI
+   * reads, and the serial queue moving on); a death afterTurn already
+   * reported arrives as a marker and only discards the process the key
+   * holds. `close` needs neither: the host is shutting down.
    */
   private activationExited(exit: ActivationExit<unknown>): void {
     if (this.closing) {

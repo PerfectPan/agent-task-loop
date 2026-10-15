@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { collectHostProbe, discover } from '@rivus/agent-finder-core';
+import { detectLocalAgents } from '../discovery/agents.js';
 import { renderAgentTable, renderScanSummary } from '../formatters/agent-table.js';
 
 export const scanCommand = defineCommand({
@@ -14,18 +14,18 @@ export const scanCommand = defineCommand({
       description: 'Print stable JSON',
     },
   },
-  run({ args }) {
-    const report = discover(collectHostProbe());
+  async run({ args }) {
+    const installations = await detectLocalAgents();
     if (args.json) {
-      console.log(JSON.stringify(report, null, 2));
+      console.log(JSON.stringify(installations, null, 2));
       return;
     }
 
-    for (const line of renderAgentTable(report.agents)) {
+    for (const line of renderAgentTable(installations)) {
       console.log(line);
     }
     console.log('');
-    for (const line of renderScanSummary(report.agents)) {
+    for (const line of renderScanSummary(installations)) {
       console.log(line);
     }
   },

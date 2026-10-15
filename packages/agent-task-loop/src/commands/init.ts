@@ -2,13 +2,15 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { detectAgents } from '@rivus/agent-kit/discovery';
+import { createNodePlatform } from '@rivus/agent-kit/node';
 import { defineCommand } from 'citty';
 import { globalConfigPath } from '../config/load-config';
 import { ensureGitHubExecutionEntries, type EditableConfig } from '../config/source-config';
 
 export { globalConfigPath };
 
-// The keys cover only known agent ids; a probe report can name one outside the table.
+// The keys cover only the agents this tool drives; detection reports more.
 const AGENT_MAP: Record<string, { name: string; command: string } | undefined> = {
   'claude-code': { name: 'claude', command: 'claude' },
   codex: { name: 'codex', command: 'codex' },
@@ -16,26 +18,47 @@ const AGENT_MAP: Record<string, { name: string; command: string } | undefined> =
 
 type AgentEntry = { name: string; command: string; args: string[]; env: Record<string, string> };
 
-export async function isLarkCliAvailable(): Promise<boolean> {
-  const { resolveCommand } = await import('@rivus/agent-finder-core');
-  return (
-    resolveCommand('lark-cli', {
-      path: process.env.PATH ?? '',
-      pathExt: process.env.PATHEXT,
-      delimiter: process.platform === 'win32' ? ';' : ':',
-      fileExists: existsSync,
-    }) !== null
-  );
+/**
+ * Looks `command` up in the directories of `PATH`, in order, without running a shell; on Windows names are tried
+ * with each `PATHEXT` extension unless the command already has one. Replaces the helper the deleted
+ * `@rivus/agent-finder-core` exported; `lark-cli` is not a coding agent, so the kit does not cover it.
+ */
+function resolveCommandOnPath(command: string): string | null {
+  const windows = process.platform === 'win32';
+  const pathExt = windows ? (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD') : '';
+  const extensions = pathExt ? pathExt.split(';').filter(Boolean) : [''];
+  const hasKnownExtension = extensions.some((ext) => command.toLowerCase().endsWith(ext.toLowerCase()));
+  const commandNames = hasKnownExtension ? [command] : extensions.map((ext) => `${command}${ext}`);
+
+  for (const dir of (process.env.PATH ?? '').split(windows ? ';' : ':').filter(Boolean)) {
+    for (const name of commandNames) {
+      const candidate = path.join(dir, name);
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return null;
 }
 
+export async function isLarkCliAvailable(): Promise<boolean> {
+  return resolveCommandOnPath('lark-cli') !== null;
+}
+
+/**
+ * The agents init can configure. `versionProbe: false` keeps detection from executing any agent command: init
+ * decides from files and `PATH` lookups alone, so an agent is listed when its command is found, without the
+ * `--version` run the previous discovery used to require for `runnable`.
+ */
 export async function discoverRunnableAgents(): Promise<Record<string, AgentEntry>> {
-  const { collectHostProbe, discover } = await import('@rivus/agent-finder-core');
-  const probe = collectHostProbe();
-  const report = discover(probe);
+  const installations = await detectAgents(createNodePlatform(), {
+    agents: ['claude-code', 'codex'],
+    versionProbe: false,
+  });
   const agents: Record<string, AgentEntry> = {};
-  for (const agent of report.agents) {
-    const mapped = AGENT_MAP[agent.id];
-    if (agent.status === 'runnable' && mapped) {
+  for (const installation of installations) {
+    const mapped = AGENT_MAP[installation.agent];
+    if ((installation.status === 'runnable' || installation.status === 'found') && mapped) {
       agents[mapped.name] = { name: mapped.name, command: mapped.command, args: [], env: {} };
     }
   }

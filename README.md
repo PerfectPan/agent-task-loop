@@ -27,7 +27,6 @@ The core package provides a local CLI that drives tasks from assignment through 
 
 GPL-3.0-only (see [LICENSE](./LICENSE)), except these library and tool packages, which are MIT and ship their own `LICENSE`:
 
-- `@rivus/agent-finder-core` and the MoonBit module `PerfectPan/agent-finder`: [`packages/agent-finder/`](./packages/agent-finder/)
 - `@rivus/agent-finder-cli`: [`packages/agent-finder-cli/`](./packages/agent-finder-cli/)
 - `@rivus/agent-sessions`: [`packages/agent-sessions/`](./packages/agent-sessions/)
 

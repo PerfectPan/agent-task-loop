@@ -3,8 +3,7 @@
 `@rivus/agent-sessions` (`packages/agent-sessions`) discovers coding-agent
 sessions on disk and parses their transcripts. It is internal: bundled into
 `@rivus/agent-finder-cli` by `vp pack` and consumed as `workspace:*` by
-`@rivus/agent-task-loop`. It has no dependency on `TaskRecord`, citty, Ink, or
-MoonBit.
+`@rivus/agent-task-loop`. It has no dependency on `TaskRecord`, citty, or Ink.
 
 ## Model
 

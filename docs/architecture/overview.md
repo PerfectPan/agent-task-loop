@@ -7,21 +7,20 @@ package is a bounded context or a public delivery surface.
 
 ## Packages
 
-| Package                                                       | Question it answers                                                                       | Published                                              |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm                                                    |
-| `@rivus/agent-finder-core` (`packages/agent-finder`)          | Which coding agents are installed on this host                                            | npm, plus the MoonBit module `PerfectPan/agent-finder` |
-| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm                                                    |
-| `@rivus/agent-sessions` (`packages/agent-sessions`)           | Which agent sessions exist on disk and what they said                                     | internal, bundled                                      |
-| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal                                               |
-| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal                                               |
-| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app                                           |
-| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app                                           |
+| Package                                                       | Question it answers                                                                       | Published         |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
+| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm               |
+| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm               |
+| `@rivus/agent-sessions` (`packages/agent-sessions`)           | Which agent sessions exist on disk and what they said                                     | internal, bundled |
+| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal          |
+| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal          |
+| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app      |
+| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app      |
 
 Detailed pages:
 
 - [Task sources and run-time state](task-sources.md)
-- [Agent discovery and the MoonBit build](agent-finder.md)
+- [Agent discovery](agent-finder.md)
 - [Agent sessions](agent-sessions.md)
 - [Agent collaboration: rooms, control plane, room-web](agent-collaboration.md)
 - The Rivus Task Manager Plugin: [`packages/agent-task-loop/docs/rivus-plugin.md`](../../packages/agent-task-loop/docs/rivus-plugin.md)
@@ -51,9 +50,9 @@ Package-level rules, enforced by boundary tests:
   not import `agent-room`, and its Rivus Plugin neither reads nor writes Room
   state (`packages/agent-task-loop/tests/room-isolation.test.ts`).
 - `apps/room-web` is the only place that knows all three.
-- `agent-finder-cli` uses only `@rivus/agent-finder-core`'s public API and does
-  not call MoonBit directly; the core package does not depend on CLI framework
-  packages (`packages/agent-finder/tests/package-boundary.test.ts`).
+- `agent-finder-cli` detects agents through `@rivus/agent-kit`'s `/catalog` and
+  `/discovery` entries and ships its own probe recipes for agents the kit does
+  not cover.
 
 ## Layout inside a package
 

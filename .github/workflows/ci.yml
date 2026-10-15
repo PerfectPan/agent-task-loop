@@ -23,15 +23,7 @@ jobs:
           cache: true
           require-lockfile: true
 
-      - name: Install MoonBit
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-          "$HOME/.moon/bin/moon" version --all
-
       - run: pnpm format:check
-
-      - run: pnpm check:moonbit-version
 
       - run: pnpm test
 

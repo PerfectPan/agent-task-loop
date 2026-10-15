@@ -1,52 +1,56 @@
-# Agent Discovery and the MoonBit Build
+# Agent Discovery
 
-`packages/agent-finder` is a read-only inventory of the coding agents installed
-on the current host. It is not a scheduler, runner, terminal multiplexer, API
-proxy, or credential reader. Package-level usage is in
-[`packages/agent-finder/README.md`](../../packages/agent-finder/README.md);
-publishing is in [`../moonbit-publish.md`](../moonbit-publish.md) and
-[`../npm-publish.md`](../npm-publish.md).
+Agent discovery is the read-only inventory of the coding agents installed on
+the current host. It is not a scheduler, runner, terminal multiplexer, API
+proxy, or credential reader. The CLI surface is
+[`packages/agent-finder-cli/README.md`](../../packages/agent-finder-cli/README.md);
+publishing is in [`../npm-publish.md`](../npm-publish.md).
 
 ## Layers
 
-| Layer                                  | Where                       | Owns                                                                                                                                                 |
-| -------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MoonBit core `PerfectPan/agent-finder` | `agent_discovery_core/`     | Provider catalog, status derivation, evidence, diagnostics, versioned JSON                                                                           |
-| npm wrapper `@rivus/agent-finder-core` | `src/`                      | Host probes (PATH lookup, executable and path checks, bounded version probes), type mapping, JS exports                                              |
-| CLI `@rivus/agent-finder-cli`          | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser |
+| Layer                             | Where                       | Owns                                                                                                                                                                                                                         |
+| --------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kit detection `@rivus/agent-kit`  | npm                         | `builtinProbeRecipes` and `detectAgents` for its 7 agents (claude-code, codex, cursor, gemini-cli, grok, opencode, pi): PATH lookup, path checks, version probes, file-based login state, evidence and status classification |
+| Legacy recipes `agent-finder-cli` | `src/discovery/`            | One probe recipe per MoonBit-catalog agent the kit does not cover (20 agents): the ported command, app, config and MCP paths, `--version` probes, and the original warnings                                                  |
+| CLI `@rivus/agent-finder-cli`     | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser                                                                         |
 
-The core scanner never touches the host. It receives a `Probe` of facts
-collected by the wrapper, which keeps it deterministic and testable across
-macOS, Linux, and Windows fixtures. The catalog is data-driven:
-`known_provider_specs()`, `known_command_candidates()`, and
-`known_path_candidates()` are the single source the wrapper probes from.
+`detectAgents` checks paths through a platform port, so fixtures run against an
+in-memory platform (`@rivus/agent-kit/testing`'s `createMemoryPlatform`) and
+CI needs no toolchain beyond Node. `agent-task-loop init` calls the same
+`detectAgents` with `versionProbe: false` for claude-code and codex, so
+configuration never executes an agent command.
 
 ## Status and evidence
 
-| Status     | Meaning                                                                                                                                                        |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `runnable` | A command exists and is executable; where a provider needs an extension subcommand (for example GitHub Copilot through `gh`), its version probe also succeeded |
-| `found`    | An app, command, config, or MCP config path exists, but runnable CLI execution is not proven                                                                   |
-| `missing`  | No known command, app, config, or MCP path was found                                                                                                           |
-| `unknown`  | Reserved for probe failures that cannot be classified safely                                                                                                   |
+| Status     | Meaning                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `runnable` | A version probe ran the agent's command and it printed a version                            |
+| `found`    | A command, app, config, or MCP config path exists, but runnable CLI execution is not proven |
+| `missing`  | Every check completed and found nothing                                                     |
+| `unknown`  | A check failed (reported in `problems`), so absence is not proven                           |
 
-Every agent record carries an `evidence` array explaining its status, so a
-consumer can tell "runnable because command and version probe succeeded" from
-"found because a config directory exists". JSON output carries
-`schema_version: "0.1"` and serializes absent optional strings as `null`.
+Every installation carries an `evidence` array explaining its status, so a
+consumer can tell "runnable because the version probe succeeded" from "found
+because a config directory exists". `scan --json` prints that installation
+array; `auth` reports the file-based login state and `problems` the checks that
+could not complete.
 
 ## Privacy boundary
 
-A scan is local and read-only: no uploads, no API calls, no token or config
-content parsing, no agent sessions, no prompts. It checks only whether known
-paths exist and runs conventional read-only `--version` probes with fixed
-argument arrays and short timeouts.
+A scan is local: no uploads, no API calls, no agent sessions, no prompts. It
+checks whether known paths exist and runs conventional read-only `--version`
+probes with fixed argument arrays and a time limit. Unlike the MoonBit scanner
+it replaced, file-based login detection reads credential files the recipes
+name (for example `~/.codex/auth.json`) and keeps only non-secret facts such as
+whether a credential is stored. Callers that must not execute agent commands
+pass `versionProbe: false`, as `agent-task-loop init` does; no detection mode
+starts a login.
 
 ## Consumers
 
-- `agent-task-loop init` runs discovery and pre-fills `claude` and `codex`
-  agent entries from `runnable` results.
-- `apps/room-web` does not use this package; it asks each agent binding
+- `agent-task-loop init` runs detection and pre-fills `claude` and `codex`
+  agent entries from commands found on `PATH`.
+- `apps/room-web` does not use the CLI; it asks each agent binding
   directly through an ACP probe (see [agent-collaboration.md](agent-collaboration.md)).
 - Task assignment does not consult discovery yet; see
   [`docs/specs/0002-discovery-before-assignment.md`](../specs/0002-discovery-before-assignment.md).
@@ -58,11 +62,3 @@ owns its `vite.config.ts`; there is no shared build-config package. The
 configs pin plain `.js`/`.d.ts` output names (`fixedExtension: false` or
 `outExtensions`) so the `exports` and `bin` paths in `package.json` keep
 resolving.
-
-`@rivus/agent-finder-core` adds a `build:prepare` hook: before each build it
-runs `moon build --target js` and syncs the MoonBit JavaScript backend output
-into `src/moonbit/` (gitignored), so TypeScript imports stay stable and no
-separate sync script exists.
-
-`pnpm test` runs the MoonBit tests (`moon -C packages/agent-finder test`)
-alongside the JavaScript suites.

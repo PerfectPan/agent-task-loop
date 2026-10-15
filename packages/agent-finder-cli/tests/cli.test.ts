@@ -72,19 +72,22 @@ describe('@rivus/agent-finder-cli', () => {
     const result = runCli(['scan', '--json']);
 
     expect(result.status).toBe(0);
-    const json = JSON.parse(result.stdout) as {
-      schema_version: string;
-      agents: unknown[];
-    };
-    expect(json.schema_version).toBe('0.1');
-    expect(json.agents).toHaveLength(26);
+    const json = JSON.parse(result.stdout) as { agent: string; status: string }[];
+    // The kit's 7 built-in agents plus the 20 the CLI carries as its own probe recipes.
+    expect(json).toHaveLength(27);
+    expect(json.map((installation) => installation.agent)).toContain('codex');
+    expect(json.map((installation) => installation.agent)).toContain('grok');
+    expect(json.map((installation) => installation.agent)).toContain('amp');
+    for (const installation of json) {
+      expect(['runnable', 'found', 'missing', 'unknown']).toContain(installation.status);
+    }
   });
 
   test('prints doctor summary', () => {
     const result = runCli(['doctor']);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('Total providers: 26');
+    expect(result.stdout).toContain('Total providers: 27');
     expect(result.stdout).toContain('Runnable:');
   });
 });

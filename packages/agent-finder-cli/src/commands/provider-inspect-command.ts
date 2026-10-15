@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { inspectProvider } from '@rivus/agent-finder-core';
+import { inspectProvider } from '../discovery/agents.js';
 import { formatProviderLines } from '../formatters/provider-lines.js';
 
 export const providerInspectCommand = defineCommand({

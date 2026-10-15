@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { listProviders, type ProviderSpec } from '@rivus/agent-finder-core';
+import { listProviders, type ProviderSpec } from '../discovery/agents.js';
 import { renderTable, style, type Column } from '../formatters/render.js';
 
 const COLUMNS: Column<ProviderSpec>[] = [

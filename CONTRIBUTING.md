@@ -14,8 +14,6 @@ pnpm build
 
 Use the pnpm version pinned in `packageManager` (pnpm 12). pnpm runs dependency build scripts only for packages listed in `allowBuilds` in `pnpm-workspace.yaml`; when an install fails with `ERR_PNPM_IGNORED_BUILDS`, add the package there with `true` or `false` and a comment saying why. The same file keeps `minimumReleaseAge: 1440` and exempts only `@rivus/*` through `minimumReleaseAgeExclude`, so owned packages can be validated immediately after publication. Other dependencies, including transitive packages outside that scope, retain the one-day delay; if an install fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, pick an older version instead of lowering the setting.
 
-`pnpm test` also runs `moon -C packages/agent-finder test`, so the MoonBit toolchain must be on `PATH`; CI installs it with the official `cli.moonbitlang.com` installer.
-
 Run the local CLI from the repository root:
 
 ```bash
@@ -52,7 +50,6 @@ gh repo-checks pr-body pr-body.md
 # Install and CI gates:
 pnpm install --frozen-lockfile
 pnpm format:check
-pnpm check:moonbit-version
 pnpm test
 pnpm build
 pnpm typecheck
@@ -87,9 +84,9 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 ### Releasing
 
-1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs, then the MoonBit module version sync). Later changesets fold into the same PR.
+1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
 2. The release PR is opened with the workflow's `GITHUB_TOKEN`, and GitHub does not start workflows for events that token causes, so CI does not run on it by itself. Before merging, a person closes and reopens it (`gh pr close <n> && gh pr reopen <n>`) or pushes an empty commit to its branch. `gh workflow run ci.yml` does not count: a dispatched run is not attached to the PR and does not satisfy required checks.
-3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance, then the MoonBit publish workflow runs. See [`docs/npm-publish.md`](docs/npm-publish.md).
+3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
 ## SDD Workflow And Document Lifecycle
 
@@ -168,21 +165,20 @@ npm pack --dry-run --registry=https://registry.npmjs.org
 
 ## Release Notes
 
-Release notes come from Changesets. Each user-facing change to a published package adds a change file (`pnpm changeset`, see [Changesets](#changesets)) in the same PR, and `pnpm version-packages` writes that package's `CHANGELOG.md` at release time: [`@rivus/agent-task-loop`](packages/agent-task-loop/CHANGELOG.md), [`@rivus/agent-finder-cli`](packages/agent-finder-cli/CHANGELOG.md), [`@rivus/agent-finder-core`](packages/agent-finder/CHANGELOG.md). Do not edit generated changelogs or keep a hand-written root `CHANGELOG.md` beside them.
+Release notes come from Changesets. Each user-facing change to a published package adds a change file (`pnpm changeset`, see [Changesets](#changesets)) in the same PR, and `pnpm version-packages` writes that package's `CHANGELOG.md` at release time: [`@rivus/agent-task-loop`](packages/agent-task-loop/CHANGELOG.md), [`@rivus/agent-finder-cli`](packages/agent-finder-cli/CHANGELOG.md). Do not edit generated changelogs or keep a hand-written root `CHANGELOG.md` beside them.
 
 ## License
 
 Tools and libraries use MIT; applications use GPL-3.0-only. The repository is licensed under GPL-3.0-only (`LICENSE`), except these packages, which are MIT and ship their own `LICENSE`:
 
-| Package                                                                     | Directory                    |
-| --------------------------------------------------------------------------- | ---------------------------- |
-| `@rivus/agent-finder-core` and the MoonBit module `PerfectPan/agent-finder` | `packages/agent-finder/`     |
-| `@rivus/agent-finder-cli`                                                   | `packages/agent-finder-cli/` |
-| `@rivus/agent-sessions` (private)                                           | `packages/agent-sessions/`   |
+| Package                           | Directory                    |
+| --------------------------------- | ---------------------------- |
+| `@rivus/agent-finder-cli`         | `packages/agent-finder-cli/` |
+| `@rivus/agent-sessions` (private) | `packages/agent-sessions/`   |
 
 Everything else, including `@rivus/agent-task-loop`, `@rivus/agent-room`, `@rivus/agent-orchestration` and `apps/`, is GPL-3.0-only. Distributing a GPL-3.0-only package or a modified version requires releasing its source under the same license.
 
-Package metadata (`package.json`, and `moon.mod.json` for the MoonBit module) uses the SPDX identifier of the package's license, and an MIT package lists `LICENSE` in its published files. An MIT package must not import or bundle code from a GPL-3.0-only workspace package: `@rivus/agent-finder-cli` bundles `@rivus/agent-sessions` into its `dist/`, so both stay MIT together. GPL-3.0-only packages may use the MIT ones. `pnpm test` enforces the rule from the metadata: [`tests/license/license-boundary.test.mjs`](tests/license/license-boundary.test.mjs) fails when a workspace package has no `license` field or an MIT package lists a GPL-3.0-only workspace package in any dependency field. Change a license only as a deliberate project decision, and keep third-party notices for code or data copied from other projects.
+Package metadata (`package.json`) uses the SPDX identifier of the package's license, and an MIT package lists `LICENSE` in its published files. An MIT package must not import or bundle code from a GPL-3.0-only workspace package: `@rivus/agent-finder-cli` bundles `@rivus/agent-sessions` into its `dist/`, so both stay MIT together. GPL-3.0-only packages may use the MIT ones. `pnpm test` enforces the rule from the metadata: [`tests/license/license-boundary.test.mjs`](tests/license/license-boundary.test.mjs) fails when a workspace package has no `license` field or an MIT package lists a GPL-3.0-only workspace package in any dependency field. Change a license only as a deliberate project decision, and keep third-party notices for code or data copied from other projects.
 
 ## Repository Checks
 

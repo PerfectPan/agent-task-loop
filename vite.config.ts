@@ -22,7 +22,6 @@ export default defineConfig({
     ignorePatterns: [
       '**/dist/**',
       '**/_build/**',
-      'packages/agent-finder/src/moonbit/**',
       'apps/web/.next/**',
       'apps/web/next-env.d.ts',
       'apps/room-web/build/**',

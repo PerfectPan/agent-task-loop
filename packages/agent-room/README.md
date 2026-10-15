@@ -46,4 +46,4 @@ Internal package (`private: true`). Not published yet.
 ## Non-mixing
 
 Occupancy `allow(seat)` is not a chat reservation. Room HELD is not `task-start`
-exclusion. Do not import `@rivus/agent-orchestration` or `@rivus/agent-task-loop`.
+exclusion. Do not import `@rivus/agent-kit`, `@rivus/agent-task-loop`, or anything of the endpoint's.

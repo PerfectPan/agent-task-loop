@@ -3,19 +3,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 import type { AgentSessionId, RoomEvent, RoomId } from '@rivus/agent-room';
+import { RoomService } from './room-service.server';
+import { RoomDm } from './room-dm.server';
 import {
   runtimeKey,
   type Agent,
+  type AgentDescriptor,
   type AgentRegistry,
-  type FencingToken,
-  type Harness,
+  type RoomDmGateway,
+  type RoomMemberRuntime,
+  type RoomSettings,
   type ToolDefinition,
-} from '@rivus/agent-orchestration';
-import type { McpServer } from '@agentclientprotocol/sdk';
-import { RoomService } from './room-service.server';
-import { RoomDm } from './room-dm.server';
-import type { RoomDmGateway } from './ports';
-import type { AgentDescriptor, RoomMemberRuntime, RoomSettings, TurnLog } from './ports';
+  type TurnHarness,
+  type TurnLog,
+} from './ports';
 import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
 import { SqliteTurnLog } from '../infrastructure/sqlite-turn-log.server';
 import { RoomCatalog } from '../domain/room-catalog';
@@ -32,7 +33,6 @@ import { copy } from '../copy';
 const PARENT = 'r_ababababab';
 const TENANT = 'local';
 const SEATED = ['claude', 'codex', 'opencode'];
-const TOKEN: FencingToken = { key: 'room:x:member:x', holderPid: 1, holderId: 'test' };
 const LABELS: Record<string, string> = { claude: 'Claude', codex: 'Codex', opencode: 'OpenCode' };
 
 interface BuildOptions {
@@ -54,7 +54,7 @@ interface Built {
 }
 
 function agentOf(id: string): Agent {
-  return { id, label: LABELS[id] ?? id, binding: { command: `${id}-acp` }, systemPrompt: '' };
+  return { id, label: LABELS[id] ?? id, command: `${id}-acp`, systemPrompt: '' };
 }
 
 function roomIdOf(id: string): RoomId {
@@ -67,7 +67,7 @@ function now(): string {
 
 /** One started activation: the harness, its end, and its Room tools. */
 interface Activation {
-  harness: Harness;
+  harness: TurnHarness;
   /** Ends the turn; resolves once the log row has landed. */
   end(result?: { stopReason?: string | null; error?: string }): Promise<void>;
   speakTool(): ToolDefinition;
@@ -103,7 +103,6 @@ class FakeRuntime implements RoomMemberRuntime {
           // `null` with no error is the runtime's watchdog, the only way a
           // turn ends as timeout; anything else ended as itself.
           timedOut: result?.stopReason === null && !result.error,
-          token: TOKEN,
           ...(result?.error ? { error: result.error } : {}),
         });
         await this.turnDrain();
@@ -223,7 +222,7 @@ function buildLinked(options: BuildOptions = {}): Built {
       store: store.stream(roomId),
       registry,
       runtime,
-      lease: { fence: (_key, op) => op(), read: () => undefined },
+      lease: { fence: (_key, op) => op(), read: async () => undefined },
       turnLog,
       members: () => catalog.get(roomId).memberIds,
       agents: (): AgentDescriptor[] =>
@@ -239,7 +238,7 @@ function buildLinked(options: BuildOptions = {}): Built {
       toolHost: async ({ tools }) => {
         runtime.tools.push(tools);
         return {
-          endpoint: {} as unknown as McpServer,
+          endpoint: { type: 'http', name: 'room-tools', url: 'http://127.0.0.1:0/mcp', headers: [] },
           url: 'http://127.0.0.1:0/mcp',
           serveTurn: () => undefined,
           close: async () => {},

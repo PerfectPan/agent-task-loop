@@ -1,18 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { fileURLToPath } from 'node:url';
-import type { McpServer as AcpMcpServer } from '@agentclientprotocol/sdk';
+import type { McpServerConfig } from '@rivus/agent-kit/acp';
 import { McpServer, type RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import type { ToolDefinition } from '../contracts/harness';
+import type { ToolDefinition } from './turn';
 
 export interface ToolServerOptions {
   host?: string;
   /** 0 binds an ephemeral loopback port. */
   port?: number;
-  /** Where the stdio shim lives; derived from this build when omitted. */
-  shimPath?: string;
 }
 
 /**
@@ -33,13 +30,11 @@ export interface TurnTools {
 export interface HostToolsInput extends TurnTools {
   /** Secret in the URL path; requests without it are refused. Stable for the session. */
   token: string;
-  /** `stdio` wraps the same URL behind bin/acp-tool-shim.js for agents without `mcpCapabilities.http`. */
-  transport?: 'http' | 'stdio';
 }
 
 export interface HostedTools {
   /** The `session/new` MCP server entry; stable for the session's life. */
-  endpoint: AcpMcpServer;
+  endpoint: McpServerConfig;
   /** The streamable-HTTP endpoint the tools are hosted on. */
   url: string;
   /**
@@ -82,21 +77,19 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
 /**
  * Hosts the endpoint's tool definitions as one streamable-HTTP MCP endpoint
  * per (room, agent) session, on the loopback address, behind the session's
- * token, and hands back the `session/new` entry (control-plane split). ACP carries
- * `mcpServers` only on `session/new`, so the endpoint is hosted once at the
- * first session and each turn re-serves its tools on it; the per-call gate
- * keeps the turn-scoped authorization. Built on the official MCP server SDK;
- * no hand-written JSON-RPC.
+ * token, and hands back the `session/new` entry. ACP carries `mcpServers`
+ * only on `session/new`, so the endpoint is hosted once at the first session
+ * and each turn re-serves its tools on it; the per-call gate keeps the
+ * turn-scoped authorization. Built on the official MCP server SDK; no
+ * hand-written JSON-RPC.
  */
 export class ToolServer {
   private readonly host: string;
   private readonly port: number;
-  private readonly shimPath: string | undefined;
 
   constructor(options: ToolServerOptions = {}) {
     this.host = options.host ?? '127.0.0.1';
     this.port = options.port ?? 0;
-    this.shimPath = options.shimPath;
   }
 
   async hostTools(input: HostToolsInput): Promise<HostedTools> {
@@ -154,16 +147,7 @@ export class ToolServer {
       });
     });
     return {
-      endpoint:
-        input.transport === 'stdio'
-          ? // The ACP stdio entry carries no `type` field.
-            {
-              name: TOOL_SERVER_NAME,
-              command: process.execPath,
-              args: [this.resolveShimPath(), '--url', url],
-              env: [],
-            }
-          : { type: 'http', name: TOOL_SERVER_NAME, url, headers: [] },
+      endpoint: { type: 'http', name: TOOL_SERVER_NAME, url, headers: [] },
       url,
       serveTurn: (next) => {
         turn = { tools: next.tools, authorize: next.authorize };
@@ -262,16 +246,5 @@ export class ToolServer {
       return;
     }
     await transport.handleRequest(request, response, body);
-  }
-
-  private resolveShimPath(): string {
-    if (this.shimPath) {
-      return this.shimPath;
-    }
-    // src/application/tool-server.ts in the workspace tree; dist/*.js once
-    // built. Both end two levels above the package's bin/ directory.
-    const here = import.meta.url;
-    const relative = here.endsWith('.ts') ? '../../bin/acp-tool-shim.js' : '../bin/acp-tool-shim.js';
-    return fileURLToPath(new URL(relative, here));
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import type { Agent } from '@rivus/agent-orchestration';
+import type { Agent } from '../application/ports';
 import { SqliteAgentRegistry } from './sqlite-agent-registry.server';
 import { SqliteRoomStore } from './sqlite-room-store.server';
 
@@ -13,7 +13,7 @@ function agent(input: {
   return {
     id: input.id,
     label: input.label,
-    binding: { command: input.command },
+    command: input.command,
     systemPrompt: input.systemPrompt ?? '',
     ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
   };
@@ -41,11 +41,11 @@ describe('SqliteAgentRegistry', () => {
 
     expect(agents.map((row) => row.id)).toEqual(['claude', 'codex', 'opencode']);
     // The port's shape and nothing else: no role, colour or position on it.
-    expect(Object.keys(agents[0]!).sort()).toEqual(['binding', 'id', 'label', 'systemPrompt']);
+    expect(Object.keys(agents[0]!).sort()).toEqual(['command', 'id', 'label', 'systemPrompt']);
     expect(agents[0]).toMatchObject({
       id: 'claude',
       label: 'Claude',
-      binding: { command: 'claude-agent-acp' },
+      command: 'claude-agent-acp',
       systemPrompt: expect.any(String),
     });
   });
@@ -78,7 +78,7 @@ describe('SqliteAgentRegistry', () => {
     expect(saved).toEqual({
       id: 'codex',
       label: 'Codex 改',
-      binding: { command: 'codex-acp' },
+      command: 'codex-acp',
       systemPrompt: '先给结论。',
       timeoutMs: 600_000,
     });
@@ -105,7 +105,7 @@ describe('SqliteAgentRegistry', () => {
     expect(saved).toEqual({
       id: 'gemini',
       label: 'Gemini',
-      binding: { command: 'gemini-acp' },
+      command: 'gemini-acp',
       systemPrompt: '',
     });
   });

@@ -7,8 +7,9 @@ record is the only shared context. The runtime guarantees one thing: a member
 runs one session at a time.
 
 Three pieces implement this: `@rivus/agent-room` (the protocol),
-`@rivus/agent-orchestration` (the control plane), and `apps/room-web` (the
-endpoint). How to run room-web is in
+`@rivus/agent-kit` + `@rivus/agent-kit-collab` (the ACP driving, the
+scheduling and the leases), and `apps/room-web` (the endpoint, which owns the
+control plane's policy). How to run room-web is in
 [`apps/room-web/README.md`](../../apps/room-web/README.md).
 
 ## Principles and the rules they fix
@@ -19,7 +20,7 @@ endpoint). How to run room-web is in
 | Members are peers                   | The write point is the same for a person's message and an agent's; only the caller differs                                                              |
 | Seeing is not speaking              | A wake produces a turn; a turn ends in `speak` or `pass`; both advance the member's cursor                                                              |
 | Work is private, results are public | An agent speaks only by calling a Room tool. Printed text is never posted; there is no stdout fallback. Progress is not a message                       |
-| A member is single-threaded         | One Inbox and one lease per (room, member). A wake for a busy member collapses into one pending flag                                                    |
+| A member is single-threaded         | One lane and one lease per (room, member). A wake for a busy member coalesces into one more activation                                                  |
 | Order is derived, not scheduled     | `shouldWake` is a broadcast. The room's `serial` switch runs the woken set one at a time in seat order without changing the protocol                    |
 | Attention is bounded                | Every event carries a wake depth; a depth ceiling and a per-round turn budget bound the work                                                            |
 | Mechanism below, policy above       | The packages know nothing about count-offs, roles, tasks, or products; those live in the endpoint                                                       |
@@ -54,48 +55,44 @@ addressees of an event with a non-empty `addressedTo`; an unaddressed event
 still wakes everyone. `@` is otherwise content: the prompt shows it as
 `→ @codex`.
 
-## `@rivus/agent-orchestration`: the control plane
+## `@rivus/agent-kit`: the driving, the scheduling, the leases
 
-Its noun is the Agent; it never hears about rooms and owns no database.
+The kit's entries own the mechanics; the endpoint owns the policy.
 
-- `Agent` (`id`, which is also the word after `@`; `label`; `binding` =
-  command, args, env; `systemPrompt`; optional `timeoutMs`) and the
-  `AgentRegistry` port.
-- `AgentConnector.probe(binding)` answers `missing` (the process did not
-  start), `needs-login` (`initialize` worked, `session/new` refused), or `ready`
-  with capabilities. Discovery for rooms is this handshake, not a filesystem
-  scan.
-- `LeaseStore` and `LeaseManager`: a lease is fresh while the holder pid is
-  alive and the heartbeat is within `staleAfterMs`. `runFenced` runs a write
-  only while the caller still holds the lease, so a turn that lost its lease
-  across a long `prompt` never lands its result. Room keys are
-  `room:<roomId>:member:<agentId>`.
-- `Harness`: the per-turn injection slots (`cwd`, `systemPrompt`, input blocks,
-  MCP tools, permission policy, hooks, workspace files). The control plane owns
-  the slots and plumbing; the endpoint fills them. A Harness is assembled per
-  turn and never stored.
-- `AcpConnector` (`./acp` entry) on `@agentclientprotocol/sdk`, with profiles
-  for `claude-agent-acp`, `codex-acp`, and `opencode acp`. The claude profile
-  passes the system prompt through `_meta.systemPrompt`; agents without such a
-  channel get it as the first block. The connector has no permission policy
-  of its own: without a `permissionHandler` it answers every permission
-  request `cancelled` (`acp-connector.ts`). The client file system it
-  advertises (`fs/read_text_file`, `fs/write_text_file`) resolves every path
-  against the session's `cwd` and refuses anything outside it, symlinks
-  included.
-- `ToolServer` hosts the endpoint's tool definitions as one streamable-HTTP
-  MCP endpoint on `127.0.0.1` per (room, agent) session, created at the first
-  `session/new` (ACP carries `mcpServers` only there) and re-served on every
-  later activation. A call is answered only while that member has an
-  activation running. Adapters without `mcpCapabilities.http` use the stdio
-  shim `bin/acp-tool-shim.js`.
-- `AgentRuntime`: one Inbox per key, at most one activation at a time, wakes
-  while running collapse into one pending flag. An activation acquires the
-  lease, connects or reuses the process, reuses or creates the long-lived ACP
-  session, asks the endpoint for the Harness, prompts, runs `afterTurn`, and
-  only then releases the lease, so the fenced pass lands inside the held
-  window. The default turn timeout is 10 minutes; an agent row may override
-  it.
+- `/acp` (`connectAgent`, `probeAgent`): one ACP process per member, started
+  with exactly the environment the member's profile picks from this machine
+  (`agentEnv` — nothing is inherited wholesale), one `initialize`, sessions
+  created per (room, member). Without a permission callback, or without an
+  answer, every permission request is denied: the kit selects the request's
+  reject option, or answers `cancelled` when it offers none. The client file
+  system is off unless the caller turns it on; room-web turns on both reads
+  and writes, and the kit confines them to the session's directory with
+  links resolved (a link that points out is judged by where it points).
+  `session/cancel` is bounded by a 5 s deadline: a turn that ignores it gets
+  its session binding removed and its connection closed.
+- The endpoint maps an `agents` row — one command line — onto a kit profile
+  (`application/infrastructure/agent-acp.server.ts`): the claude profile
+  passes the system prompt through `_meta.systemPrompt`; agents without such
+  a channel get it as the first prompt block, once per session. A row no
+  profile names gets the generic channels and a fallback environment (the
+  PATH/HOME/locale base plus the provider variable families).
+- Session bindings: one `FileSessionBindingStoreLive` file next to the rooms
+  library, keyed `room:<roomId>:member:<agentId>`. A restart loads the
+  session instead of starting a new conversation (`session/load`, falling
+  back to a new session when the agent supports no loading).
+- `/lanes` (`createLanes`): activations run under a global cap of 16 at
+  once, with at most 64 keys queued and one queue entry per key. A wake for
+  a running or queued lane coalesces into one pending activation. The turn
+  timeout is 10 minutes (an agent row's `timeoutMs` bounds its member
+  shorter); the lease, connection and prompt lifecycle live inside the
+  endpoint's `activate` Effect. The host assembly root owns one
+  `ManagedRuntime`; the wake/cancel callbacks run their Effects on it and
+  observe their failures.
+- `/lease`: one member lease per key over the kit's SQLite repository (its
+  own `member-leases.sqlite` next to the rooms library), renewed every 15 s
+  and judged stale after 120 s. A turn's external writes — the pass and the
+  speak — run under the kit's per-key fence, so a turn that lost its lease
+  lands nothing and a successor's write starts only after the loser settled.
 
 ## `apps/room-web`: the endpoint
 
@@ -104,14 +101,15 @@ Local-only React Router app bound to `127.0.0.1`. One database,
 directory), with a forward-only migration chain in
 `app/room-lab/infrastructure/migrations/`.
 
-- The `agents` table implements `AgentRegistry`; endpoint-only columns
-  (`color`, `position`, `role`) ride along. The first open seeds the candidate
-  catalog: `claude-agent-acp`, `codex-acp` (package dependencies), and
-  `opencode acp` (the person's own install). The agents page runs `probe` on
-  every row and shows 缺失, 待登录, 可入座, or 已入座.
-- `member_leases` implements `LeaseStore` for one process: `runFenced` is a
-  per-key promise chain plus a re-read of the holder. A second room-web process
-  against the same library is not supported.
+- The `agents` table implements the endpoint's roster port; endpoint-only
+  columns (`color`, `position`, `role`) ride along. The first open seeds the
+  candidate catalog: `claude-agent-acp`, `codex-acp` (package dependencies),
+  and `opencode acp` (the person's own install). The agents page runs the
+  kit's probe on every row and shows 缺失, 待登录, 可入座, or 已入座.
+- Member leases live in the kit's own SQLite store (see `/lease` above);
+  migration 0008 dropped the old `member_leases` table from the rooms
+  library. A second room-web process against the same library is still not
+  supported.
 - Room settings: `wake` (`broadcast` default, or `addressed`), `serial` (off by
   default), `depth_ceiling` (default `2n`), `round_budget` (default `n(n+1)`),
   and `cwd` (default `~/.rivus/room-web/v1/work/<roomId>`), where `n` is the
@@ -126,13 +124,14 @@ directory), with a forward-only migration chain in
   seat order, what woke you), the inbox one line per event, and the
   instruction to call `room_speak` once or end the turn silently.
 - Permission policy: each turn's Harness carries `cwdPermissionPolicy(cwd)`
-  (`room-service.server.ts`). It picks a reject option when the tool call
-  reports a location outside the room's `cwd` (paths resolved through
-  symlinks; relative or unresolvable paths count as outside), or when an
-  `edit`, `delete`, or `move` call reports no location at all. Every other
-  request gets an allow option. An `execute` call that reports no locations
-  is therefore allowed, so a shell command can still write outside `cwd`; the
-  policy only sees the locations the adapter reports.
+  (`room-service.server.ts`). It reads the paths the agent's raw tool input
+  names (absolute strings only, resolved through symlinks) and picks a reject
+  option when a write-kind call names one outside the room's `cwd`, or names
+  none at all; a judged-inside request gets an allow option. Anything the
+  policy cannot judge is left undefined, which the kit answers as a denial.
+  An `execute` call that reports no path is therefore allowed, so a shell
+  command can still write outside `cwd`; the policy only sees the paths the
+  input carries.
 - Room tools: `room_speak({ body, addressedTo? })` returns `posted`, `held`
   with the newer events, or `turn-closed`, `already-spoke`, `held-limit`;
   `room_read({ afterSeq?, limit? })`; `room_dm({ to, body })` finds or opens
@@ -160,15 +159,22 @@ directory), with a forward-only migration chain in
   grammar test.
 - `passed`, `timeout`, and `failed` must stay distinct in the UI: silence and
   failure look alike from outside, and each has its own status label
-  (`presentation/agent-status.ts`). The runtime reports `stopReason: null` both
-  when its watchdog ends a turn and when a prompt dies another way; the
+  (`presentation/agent-status.ts`). The driver reports `stopReason: null` both
+  when the turn timeout ends a turn and when a prompt dies another way; the
   `timedOut` flag on the turn result separates them. A null stop reason with an
   error and no `timedOut` is recorded as `failed`, not `timeout`
   (`room-service.server.ts`).
+- Room tools travel as one streamable-HTTP MCP endpoint per (room, member)
+  session, hosted on the loopback address behind the session's token by the
+  endpoint's `ToolServer` (`application/tool-server.server.ts`). ACP carries
+  `mcpServers` only on `session/new`, so the first activation hosts the
+  endpoint and every later one re-serves its tools on it; a call is answered
+  only while that member has an open turn.
 
-A turn is never replayed on restart. A session lost to a restart is recreated
-on the next activation, which carries the member's unread events; only the
-member's private memory is lost.
+A session lost to a restart is loaded from its binding on the next
+activation (see `/acp` above), so the member keeps its conversation and
+reads the events it missed; only what the agent kept outside the room
+record is lost.
 
 ### Task board
 

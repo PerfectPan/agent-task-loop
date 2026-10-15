@@ -6,10 +6,11 @@ import type {
   RoomStreamStore,
   SliceBudget,
 } from '@rivus/agent-room';
-import type { AgentRegistry, LeaseRecord, ToolDefinition } from '@rivus/agent-orchestration';
-import type { HostedTools } from '@rivus/agent-orchestration/acp';
+import type { LeaseSnapshot } from '@rivus/agent-kit-collab/lease';
 import type { RoomLabAgentId } from '../domain/agent-registry';
 import type { RoomTurnView } from '../read-model';
+import type { HostedTools } from './tool-server.server';
+import type { ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult } from './turn';
 
 /** How a turn may carry the record: 50 events, up to 48k characters. */
 export const TURN_BUDGET: SliceBudget = { maxEvents: 50, maxChars: 48_000 };
@@ -18,14 +19,44 @@ export const TURN_BUDGET: SliceBudget = { maxEvents: 50, maxChars: 48_000 };
 export const HELD_LIMIT = 3;
 
 /**
- * The scheduler half of the control plane, as the dispatcher sees it: wakes
- * coalesce into one pending flag per key and never block the caller (docs/architecture/agent-collaboration.md).
+ * One key per (room, member), shared by the scheduler and the lease:
+ * `room:<roomId>:member:<agentId>`.
+ */
+export function runtimeKey(roomId: string, agentId: RoomLabAgentId): string {
+  return `room:${roomId}:member:${agentId}`;
+}
+
+/** One member's row, as the control plane reads it from the `agents` table. */
+export interface Agent {
+  id: RoomLabAgentId;
+  label: string;
+  /** The ACP command line the agent's profile starts. */
+  command: string;
+  systemPrompt: string;
+  /** The turn watchdog's own bound for this member; the design default otherwise. */
+  timeoutMs?: number;
+}
+
+/** The control plane's roster port: the `agents` table read and written through it. */
+export interface AgentRegistry {
+  list(): Promise<Agent[]>;
+  get(id: string): Promise<Agent | undefined>;
+  save(agent: Agent): Promise<void>;
+  remove(id: string): Promise<void>;
+}
+
+/**
+ * The scheduler half, as the dispatcher sees it. Implemented over
+ * `createLanes` (`@rivus/agent-kit-collab` `/lanes`): a wake asks for one
+ * activation of the key, and while one runs or waits, further wakes coalesce
+ * into at most one more activation. It never blocks the caller; a failure to
+ * ask is observed by the host, not thrown here.
  */
 export interface RoomMemberRuntime {
   wake(key: string): void;
   /**
-   * Stops a running activation (a reset cancels the turns it invalidates);
-   * a scheduler without a cancel simply lets them run out.
+   * Stops a running activation and drops the wakes it owes (a reset cancels
+   * the turns it invalidates); a scheduler without a cancel lets them run out.
    */
   cancel?(key: string): void | Promise<void>;
 }
@@ -110,9 +141,9 @@ export type RoomSettingsReader = () => RoomSettings;
 /**
  * The port surface one RoomService is built on. The record and the write
  * points are `RoomStreamStore` (admit, speak, pass, readSlice); the registry is
- * the control plane's roster port.
+ * the control plane's roster port; the turn contract lives in `./turn`.
  */
-export type { RoomStreamStore, AgentRegistry };
+export type { RoomStreamStore, ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult };
 
 /**
  * The record plus the session side-channels the turn reads it with: the
@@ -134,10 +165,16 @@ export interface RoomRecordStore extends RoomStreamStore {
   }): Promise<RoomEvent>;
 }
 
-/** The lease half the dispatcher's writes run under. */
+/** The lease half the dispatcher's writes run under (the kit's `/lease`). */
 export interface RoomLeases {
+  /**
+   * Linearizes one external write against every holder of this key: the write
+   * runs only while the caller still holds the member lease, and a successor's
+   * write starts only after it settled.
+   */
   fence<T>(key: string, op: () => Promise<T>): Promise<T>;
-  read(key: string): LeaseRecord | undefined;
+  /** The key's lease record, for the member status display. */
+  read(key: string): Promise<LeaseSnapshot | undefined>;
 }
 
 /**

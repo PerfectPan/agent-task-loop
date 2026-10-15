@@ -30,6 +30,7 @@ const WAKE_DEPTH_SQL = readFileSync(new URL('./0004_wake_depth.sql', import.meta
 const ROOM_SETTINGS_SQL = readFileSync(new URL('./0005_room_settings.sql', import.meta.url), 'utf8');
 const CONTROL_PLANE_SQL = readFileSync(new URL('./0006_control_plane.sql', import.meta.url), 'utf8');
 const DROP_WORKSPACE_SQL = readFileSync(new URL('./0007_drop_workspace.sql', import.meta.url), 'utf8');
+const DROP_MEMBER_LEASES_SQL = readFileSync(new URL('./0008_drop_member_leases.sql', import.meta.url), 'utf8');
 
 export const MIGRATIONS: readonly Migration[] = [
   {
@@ -72,6 +73,11 @@ export const MIGRATIONS: readonly Migration[] = [
     version: 7,
     name: 'drop_workspace',
     up: (db) => db.exec(DROP_WORKSPACE_SQL),
+  },
+  {
+    version: 8,
+    name: 'drop_member_leases',
+    up: (db) => db.exec(DROP_MEMBER_LEASES_SQL),
   },
 ];
 

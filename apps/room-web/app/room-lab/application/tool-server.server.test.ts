@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { describe, expect, it } from 'vite-plus/test';
-import { ToolServer, type TurnTools } from '../src/application/tool-server';
+import { ToolServer, type TurnTools } from './tool-server.server';
 
 function echoTool(
   handler: (input: Record<string, unknown>) => Promise<unknown> = (input) => Promise.resolve({ echo: input.text }),

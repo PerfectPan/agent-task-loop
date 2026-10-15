@@ -42,16 +42,16 @@ describe('runMigrations', () => {
   it('applies every version to a fresh library, in order', () => {
     const db = new DatabaseSync(':memory:');
 
-    expect(runMigrations(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     // agent_system_prompts is created by version 1 and retired by version 3,
-    // room_workspace by version 1 and retired by version 7, so a library that
-    // runs the whole chain never ends up holding them.
+    // room_workspace by version 1 and retired by version 7, member_leases by
+    // version 6 and retired by version 8, so a library that runs the whole
+    // chain never ends up holding them.
     expect(tables(db)).toEqual([
       'agent_sessions',
       'agents',
       'app_meta',
-      'member_leases',
       'room_events',
       'room_members',
       'rooms',
@@ -66,6 +66,7 @@ describe('runMigrations', () => {
       '0005_room_settings',
       '0006_control_plane',
       '0007_drop_workspace',
+      '0008_drop_member_leases',
     ]);
   });
 
@@ -85,9 +86,9 @@ describe('runMigrations', () => {
 
     // Version 1 is not re-run — its CREATE TABLE would fail against the tables
     // that are already there, which is the whole point of recording versions.
-    expect(runMigrations(db)).toEqual([2, 3, 4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([2, 3, 4, 5, 6, 7, 8]);
 
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(tables(db)).toContain('agents');
     const seeded = db.prepare('SELECT id, role FROM agents ORDER BY position').all() as unknown as Array<{
       id: string;
@@ -113,7 +114,7 @@ describe('runMigrations', () => {
     const db = new DatabaseSync(file);
     expect(versions(db)).toEqual([1, 2]);
 
-    expect(runMigrations(db)).toEqual([3, 4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([3, 4, 5, 6, 7, 8]);
 
     const rows = db.prepare('SELECT id, system_prompt FROM agents ORDER BY position').all() as unknown as Array<{
       id: string;
@@ -133,7 +134,7 @@ describe('runMigrations', () => {
     const file = createVersionTwoLibrary(root());
     const db = new DatabaseSync(file);
 
-    expect(runMigrations(db)).toEqual([3, 4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([3, 4, 5, 6, 7, 8]);
 
     const rows = db.prepare('SELECT system_prompt FROM agents').all() as unknown as Array<{
       system_prompt: string;
@@ -155,7 +156,7 @@ describe('runMigrations', () => {
 
     expect(runMigrations(db)).toEqual([]);
 
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(db.prepare('SELECT applied_at FROM schema_migrations WHERE version = 7').get()).toEqual(appliedAt);
     // An edited row is not re-seeded, and an edited prompt is not overwritten.
     expect(db.prepare('SELECT command, system_prompt FROM agents WHERE id = ?').get('claude')).toEqual({
@@ -172,7 +173,7 @@ describe('runMigrations', () => {
     const migrations = [
       ...MIGRATIONS,
       {
-        version: 8,
+        version: 9,
         name: 'broken',
         up: (database: DatabaseSync) => {
           database.exec('CREATE TABLE half_applied (id TEXT PRIMARY KEY)');
@@ -181,9 +182,9 @@ describe('runMigrations', () => {
       },
     ];
 
-    expect(() => runMigrations(db, { migrations })).toThrow('0008_broken failed and was rolled back');
+    expect(() => runMigrations(db, { migrations })).toThrow('0009_broken failed and was rolled back');
 
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(tables(db)).not.toContain('half_applied');
   });
 
@@ -206,9 +207,9 @@ describe('runMigrations', () => {
     const db = new DatabaseSync(file);
     expect(versions(db)).toEqual([1, 2, 3]);
 
-    expect(runMigrations(db)).toEqual([4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([4, 5, 6, 7, 8]);
 
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     // 0004: every event carries a depth, and the ones already stored stand at 0.
     expect(columns(db, 'room_events')).toContain('wake_depth');
     expect(db.prepare('SELECT wake_depth FROM room_events WHERE room_id = ?').get('r_bbbbbbbbbb')).toEqual({
@@ -249,8 +250,8 @@ describe('runMigrations', () => {
     expect(db.prepare('SELECT timeout_ms FROM agents WHERE id = ?').get('codex')).toEqual({
       timeout_ms: null,
     });
-    // 0006: the control plane's table and the endpoint's turn log, with the index.
-    expect(tables(db)).toContain('member_leases');
+    // 0006: the endpoint's turn log, with the index. (member_leases, which
+    // 0006 also created, is dropped again by 0008.)
     expect(tables(db)).toContain('turns');
     expect(columns(db, 'turns')).toEqual(
       expect.arrayContaining([
@@ -316,9 +317,8 @@ describe('runMigrations', () => {
 
     // Once the conflict is out of the way the same chain finishes the job.
     db.exec('DROP TABLE turns');
-    expect(runMigrations(db)).toEqual([6, 7]);
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(tables(db)).toContain('member_leases');
+    expect(runMigrations(db)).toEqual([6, 7, 8]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(tables(db)).toContain('turns');
   });
 
@@ -346,9 +346,9 @@ describe('runMigrations', () => {
     const db = new DatabaseSync(file);
     expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6]);
 
-    expect(runMigrations(db)).toEqual([7]);
+    expect(runMigrations(db)).toEqual([7, 8]);
 
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     // The snapshot table goes; the record, the seating and the cursor stay.
     expect(tables(db)).not.toContain('room_workspace');
     expect(columns(db, 'agent_sessions')).not.toContain('held_up_to_seq');
@@ -385,8 +385,8 @@ describe('runMigrations', () => {
 
     // Once the index is out of the way the same chain finishes the job.
     db.exec('DROP INDEX agent_sessions_held');
-    expect(runMigrations(db)).toEqual([7]);
-    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(runMigrations(db)).toEqual([7, 8]);
+    expect(versions(db)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(tables(db)).not.toContain('room_workspace');
     expect(columns(db, 'agent_sessions')).not.toContain('held_up_to_seq');
   });

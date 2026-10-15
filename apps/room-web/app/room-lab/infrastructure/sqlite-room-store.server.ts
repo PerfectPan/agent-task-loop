@@ -36,7 +36,8 @@ export class SqliteRoomStore {
 
   private constructor(
     readonly db: DatabaseSync,
-    private readonly root: string,
+    /** The directory this library lives in; the kit lease store and the ACP binding store sit beside it. */
+    readonly home: string,
   ) {}
 
   static open(root = defaultRoomHome()): SqliteRoomStore {
@@ -308,8 +309,8 @@ export class SqliteRoomStore {
     if (this.meta('legacy_imported') === '1') {
       return;
     }
-    const catalogFile = join(this.root, 'catalog.json');
-    if (this.root === ':memory:' || !existsSync(catalogFile)) {
+    const catalogFile = join(this.home, 'catalog.json');
+    if (this.home === ':memory:' || !existsSync(catalogFile)) {
       this.setMeta('legacy_imported', '1');
       return;
     }
@@ -324,7 +325,7 @@ export class SqliteRoomStore {
     };
     this.saveCatalog(new RoomCatalog(catalog.rooms ?? [], catalog.lastOpenedId, this.agents));
     for (const room of catalog.rooms ?? []) {
-      this.importLegacyRoom(room.id, join(this.root, 'rooms', room.id));
+      this.importLegacyRoom(room.id, join(this.home, 'rooms', room.id));
     }
     this.setMeta('legacy_imported', '1');
   }

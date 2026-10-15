@@ -7,14 +7,13 @@ package is a bounded context or a public delivery surface.
 
 ## Packages
 
-| Package                                                       | Question it answers                                                                       | Published    |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------ |
-| `@rivus/agent-task-loop` (`packages/agent-task-loop`)         | Where is this task in its delivery pipeline                                               | npm          |
-| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`)       | Discovery and session browsing from a terminal                                            | npm          |
-| `@rivus/agent-room` (`packages/agent-room`)                   | What was said in a room, who has read up to where, who should look next                   | internal     |
-| `@rivus/agent-orchestration` (`packages/agent-orchestration`) | Which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal     |
-| `@rivus/room-web` (`apps/room-web`)                           | The local collaboration endpoint: everything with a product name                          | internal app |
-| `@rivus/web` (`apps/web`)                                     | The landing site                                                                          | internal app |
+| Package                                                 | Question it answers                                                                                                         | Published    |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `@rivus/agent-task-loop` (`packages/agent-task-loop`)   | Where is this task in its delivery pipeline                                                                                 | npm          |
+| `@rivus/agent-finder-cli` (`packages/agent-finder-cli`) | Discovery and session browsing from a terminal                                                                              | npm          |
+| `@rivus/agent-room` (`packages/agent-room`)             | What was said in a room, who has read up to where, who should look next                                                     | internal     |
+| `@rivus/room-web` (`apps/room-web`)                     | The local collaboration endpoint: which agents exist, whether each can be reached, who may run now, how a turn is delivered | internal app |
+| `@rivus/web` (`apps/web`)                               | The landing site                                                                                                            | internal app |
 
 Detailed pages:
 
@@ -42,12 +41,15 @@ Detailed pages:
 
 Package-level rules, enforced by boundary tests:
 
-- `agent-room` and `agent-orchestration` do not import each other
-  (`packages/agent-orchestration/tests/package-boundary.test.ts`,
-  `packages/agent-room/tests/package-boundary.test.ts`).
+- `agent-room` is protocol only: it imports no kit entry, no task-loop, and
+  nothing of the endpoint (`packages/agent-room/tests/package-boundary.test.ts`).
+- `apps/room-web` drives agents through `@rivus/agent-kit`'s `/acp`, schedules
+  turns through `@rivus/agent-kit-collab`'s `/lanes`, and leases members
+  through its `/lease`; the control-plane package that used to own these,
+  `@rivus/agent-orchestration`, is deleted.
 - `agent-task-loop` takes the task-run lease from `@rivus/agent-kit-collab`'s
-  `/lease` entry, not from `agent-orchestration`. It does not import
-  `agent-room`, and its Rivus Plugin neither reads nor writes Room state
+  `/lease` entry. It does not import `agent-room`, and its Rivus Plugin
+  neither reads nor writes Room state
   (`packages/agent-task-loop/tests/room-isolation.test.ts`).
 - `apps/room-web` is the only place that knows all three.
 - `agent-finder-cli` detects agents through `@rivus/agent-kit`'s `/catalog` and
@@ -81,7 +83,7 @@ done. `src/task-delivery/` is the first capability moved this way.
 | Mechanism                                 | Owns                                                                                     | Must not be used for    |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------- |
 | Lease on `task:<taskId>` (task run baton) | Exclusive task run: one `start` wins, lifecycle writes run fenced under the holder token | Room order, chat turns  |
-| Lease on `room:<roomId>:member:<agentId>` | One activation per room member at a time                                                 | Task start exclusion    |
+| Lease on `room:<roomId>:member:<agentId>` | One activation per room member at a time (the kit's `/lease`)                            | Task start exclusion    |
 | Room record `seq`                         | Events already posted in a room                                                          | Task status, worker pid |
 | Room HELD                                 | A stale `speak` at the write point                                                       | Task start exclusion    |
 | Rivus Plugin tools                        | The Task Backend through the Task Manager                                                | Room membership or seq  |

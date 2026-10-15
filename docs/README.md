@@ -23,7 +23,6 @@ Architecture ([`architecture/`](architecture/)), the current system shape:
 Operations:
 
 - [`npm-publish.md`](npm-publish.md): npm release runbook.
-- [`moonbit-publish.md`](moonbit-publish.md): MoonBit module release runbook.
 
 Add `development/`, `reference/`, `operations/`, or `tutorials/` sections when the project has real documentation for that reader need. Do not create empty directories to match a list.
 

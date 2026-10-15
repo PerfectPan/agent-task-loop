@@ -1,15 +1,29 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { OrchestrationConflictError } from '@rivus/agent-orchestration';
+import { TaskLeaseLostError } from '../../src/orchestration/lease';
 import { TaskStartService } from '../../src/task-manager/task-start-service';
+import type { TaskOccupancy } from '../../src/task-manager/task-occupancy-service';
 import type { TaskRecord } from '../../src/types/task';
 
-function mockOrchestration() {
-  return {
-    open: vi.fn().mockResolvedValue({ occupied: true }),
-    heartbeat: vi.fn(),
-    release: vi.fn(),
-    fence: <T>(_key: string, operation: () => Promise<T>) => operation(),
+/** Stands in for the real lease-backed occupancy: runs the workflow, keeps the context it was given. */
+function mockOccupancy() {
+  const occupancy: {
+    run: ReturnType<typeof vi.fn>;
+    lastContext?: { signal: AbortSignal; mutationFence: { run: (m: () => Promise<unknown>) => Promise<unknown> } };
+  } = {
+    run: vi.fn(async (_input: { taskId: string }, workflow: (context: never) => Promise<unknown>) => {
+      const context = {
+        signal: new AbortController().signal,
+        mutationFence: { run: (mutation: () => Promise<unknown>) => mutation() },
+      };
+      occupancy.lastContext = context;
+      return workflow(context as never);
+    }),
   };
+  return occupancy;
+}
+
+function occupancyOf(occupancy: unknown): TaskOccupancy {
+  return occupancy as TaskOccupancy;
 }
 
 function task(overrides: Partial<TaskRecord>): TaskRecord {
@@ -27,27 +41,27 @@ function task(overrides: Partial<TaskRecord>): TaskRecord {
 
 describe('TaskStartService', () => {
   it('preserves the CLI missing-task error message', async () => {
-    const orchestration = mockOrchestration();
+    const occupancy = mockOccupancy();
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(undefined) },
       runner: { run: vi.fn(), resumeReview: vi.fn() },
       livenessService: { inspect: vi.fn() },
-      orchestration,
+      occupancy: occupancyOf(occupancy),
     });
 
     await expect(service.startTask({ taskId: 'TASK-404', maxRounds: 4 })).rejects.toThrow('Task TASK-404 not found');
-    expect(orchestration.open).not.toHaveBeenCalled();
+    expect(occupancy.run).not.toHaveBeenCalled();
   });
 
   it('starts an idle Task with the existing review-loop workflow', async () => {
     const existingTask = task({ taskId: 'TASK-20' });
     const run = vi.fn().mockResolvedValue(undefined);
-    const orchestration = mockOrchestration();
+    const occupancy = mockOccupancy();
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
-      orchestration,
+      occupancy: occupancyOf(occupancy),
     });
 
     const result = await service.startTask({
@@ -65,48 +79,40 @@ describe('TaskStartService', () => {
     });
     expect(existingTask).toMatchObject({ targetAgent: 'claude', currentOwner: 'claude' });
     expect(result).toBe(existingTask);
-    expect(orchestration.open).toHaveBeenCalledWith({
-      key: 'task:TASK-20',
-      template: 'classic-delivery',
-      context: { goal: 'Task', ref: { taskId: 'TASK-20' } },
-    });
-    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-20');
+    expect(occupancy.run).toHaveBeenCalledWith({ taskId: 'TASK-20', goal: 'Task' }, expect.any(Function));
   });
 
   it('refuses to start a Task that already has an active runner', async () => {
     const run = vi.fn();
-    const orchestration = mockOrchestration();
+    const occupancy = mockOccupancy();
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-21' })) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: {
         inspect: vi.fn().mockResolvedValue({ state: 'active', mode: 'execute', round: 2 }),
       },
-      orchestration,
+      occupancy: occupancyOf(occupancy),
     });
 
     await expect(service.startTask({ taskId: 'TASK-21', maxRounds: 5 })).rejects.toThrow(
       'Task TASK-21 already has an active execute runner',
     );
     expect(run).not.toHaveBeenCalled();
-    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-21');
+    expect(occupancy.run).toHaveBeenCalledTimes(1);
   });
 
-  it('refuses to start when orchestration occupy loses', async () => {
+  it('refuses to start when occupancy is already held elsewhere', async () => {
     const existingTask = task({ taskId: 'TASK-25' });
     const run = vi.fn();
     const inspect = vi.fn();
-    const orchestration = {
-      open: vi.fn().mockRejectedValue(new OrchestrationConflictError('task:TASK-25', 99)),
-      heartbeat: vi.fn(),
-      release: vi.fn(),
-      fence: <T>(_key: string, operation: () => Promise<T>) => operation(),
+    const occupancy = {
+      run: vi.fn().mockRejectedValue(new Error('Task TASK-25 already has an active orchestration (pid 99)')),
     };
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect },
-      orchestration,
+      occupancy: occupancyOf(occupancy as never),
     });
 
     await expect(service.startTask({ taskId: 'TASK-25', maxRounds: 5, targetAgent: 'claude' })).rejects.toThrow(
@@ -116,11 +122,10 @@ describe('TaskStartService', () => {
     expect(existingTask.currentOwner).toBeUndefined();
     expect(run).not.toHaveBeenCalled();
     expect(inspect).not.toHaveBeenCalled();
-    expect(orchestration.release).not.toHaveBeenCalled();
   });
 
-  it('heartbeats occupancy while the review loop is running', async () => {
-    const orchestration = mockOrchestration();
+  it('holds occupancy until the review loop finishes', async () => {
+    const occupancy = mockOccupancy();
     let finish: () => void = () => undefined;
     const run = vi.fn().mockImplementation(
       () =>
@@ -132,23 +137,36 @@ describe('TaskStartService', () => {
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-27' })) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
-      orchestration,
-      occupancyHeartbeatMs: 10,
+      occupancy: occupancyOf(occupancy),
     });
 
     const started = service.startTask({ taskId: 'TASK-27', maxRounds: 4 });
-    await vi.waitFor(() => expect(orchestration.heartbeat).toHaveBeenCalledWith('task:TASK-27'));
+    await vi.waitFor(() =>
+      expect(occupancy.run).toHaveBeenCalledWith({ taskId: 'TASK-27', goal: 'Task' }, expect.any(Function)),
+    );
     finish();
     await started;
-    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-27');
+    expect(run).toHaveBeenCalledTimes(1);
   });
 
   it('aborts the review loop and surfaces a lost occupancy lease', async () => {
-    const leaseError = new OrchestrationConflictError('task:TASK-28', 99);
-    const orchestration = mockOrchestration();
-    orchestration.heartbeat.mockImplementation(() => {
-      throw leaseError;
+    const leaseError = new TaskLeaseLostError({
+      _tag: 'LeaseLost',
+      key: 'task:TASK-28',
+      generation: 1,
+      reason: 'taken-over',
     });
+    const occupancy = mockOccupancy();
+    occupancy.run.mockImplementation(
+      async (_input: { taskId: string }, workflow: (context: { signal: AbortSignal }) => Promise<unknown>) => {
+        const controller = new AbortController();
+        const started = workflow({ signal: controller.signal } as never);
+        await Promise.resolve();
+        controller.abort(leaseError);
+        await started.catch(() => undefined);
+        throw leaseError;
+      },
+    );
     let runnerSignal: AbortSignal | undefined;
     const run = vi.fn().mockImplementation(
       (input: { signal?: AbortSignal }) =>
@@ -163,17 +181,15 @@ describe('TaskStartService', () => {
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-28' })) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
-      orchestration,
-      occupancyHeartbeatMs: 5,
+      occupancy: occupancyOf(occupancy),
     });
 
     await expect(service.startTask({ taskId: 'TASK-28', maxRounds: 4 })).rejects.toBe(leaseError);
     expect(runnerSignal?.aborted).toBe(true);
-    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-28');
   });
 
   it('releases occupancy when the review-loop runner throws', async () => {
-    const orchestration = mockOrchestration();
+    const occupancy = mockOccupancy();
     const service = new TaskStartService({
       taskService: { getTaskById: vi.fn().mockResolvedValue(task({ taskId: 'TASK-26' })) },
       runner: {
@@ -181,11 +197,11 @@ describe('TaskStartService', () => {
         resumeReview: vi.fn(),
       },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
-      orchestration,
+      occupancy: occupancyOf(occupancy),
     });
 
     await expect(service.startTask({ taskId: 'TASK-26', maxRounds: 4 })).rejects.toThrow('runner exploded');
-    expect(orchestration.release).toHaveBeenCalledWith('task:TASK-26');
+    expect(occupancy.run).toHaveBeenCalledTimes(1);
   });
 
   it('resumes a stale review round with the remaining round budget', async () => {
@@ -207,7 +223,7 @@ describe('TaskStartService', () => {
       taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
       runner: { run: vi.fn(), resumeReview },
       livenessService: { inspect: vi.fn().mockResolvedValue(inspection) },
-      orchestration: mockOrchestration(),
+      occupancy: occupancyOf(mockOccupancy()),
       onRecovery,
     });
 
@@ -239,7 +255,7 @@ describe('TaskStartService', () => {
           promptOverride: 'Recover from the last durable state.',
         }),
       },
-      orchestration: mockOrchestration(),
+      occupancy: occupancyOf(mockOccupancy()),
     });
 
     await service.startTask({ taskId: 'TASK-23', maxRounds: 4 });
@@ -268,7 +284,7 @@ describe('TaskStartService', () => {
       taskService: { getTaskById: vi.fn().mockResolvedValue(existingTask) },
       runner: { run, resumeReview: vi.fn() },
       livenessService: { inspect: vi.fn().mockResolvedValue({ state: 'idle' }) },
-      orchestration: mockOrchestration(),
+      occupancy: occupancyOf(mockOccupancy()),
     });
 
     await service.startTask({ taskId: 'TASK-24', maxRounds: 4 });

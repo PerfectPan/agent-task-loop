@@ -1,33 +1,50 @@
-import { OrchestrationConflictError } from '@rivus/agent-orchestration';
-import { createTaskOrchestration, taskOrchestrationKey } from '../orchestration/task-orchestration';
+import { createLeaseManager } from '@rivus/agent-kit-collab/lease';
+import * as Cause from 'effect/Cause';
+import * as Effect from 'effect/Effect';
+import * as Exit from 'effect/Exit';
+import {
+  fileTaskLeaseRepository,
+  TASK_LEASE_HEARTBEAT_MS,
+  TASK_LEASE_TTL_MS,
+  taskOrchestrationKey,
+  toLeaseError,
+  type TaskLeaseEnvironment,
+} from '../orchestration/lease';
+import { OrchestrationConflictError } from '../orchestration/errors';
 import type { TaskMutationFence } from '../services/task-service';
-
-export interface TaskOrchestration {
-  open(input: {
-    key: string;
-    template: string;
-    bind?: Record<string, { cmd: string }>;
-    context?: { goal?: string; ref?: Record<string, string> };
-  }): Promise<unknown>;
-  heartbeat(key: string): void;
-  release(key: string): void;
-  fence<T>(key: string, operation: () => Promise<T>, signal?: AbortSignal): Promise<T>;
-}
 
 export interface TaskOccupancyContext {
   signal: AbortSignal;
   mutationFence: TaskMutationFence;
 }
 
-/** Owns the lifecycle and external-write fence for one occupied Task run. */
-export class TaskOccupancyService {
-  private readonly orchestration: TaskOrchestration;
+/** One occupied Task run, from taking the lease to releasing it. */
+export interface TaskOccupancy {
+  run<T>(input: { taskId: string; goal?: string }, workflow: (context: TaskOccupancyContext) => Promise<T>): Promise<T>;
+}
 
-  constructor(
-    orchestration?: TaskOrchestration,
-    private readonly heartbeatMs = 15_000,
-  ) {
-    this.orchestration = orchestration ?? createTaskOrchestration();
+export interface TaskOccupancyOptions {
+  /** Where lease records live; defaults to the file repository under the default per-key directory. */
+  repository?: TaskLeaseEnvironment;
+  /** How often the lease renews. Two renewals must fit in the TTL, so one late heartbeat does not lose it. */
+  heartbeatMs?: number;
+}
+
+/**
+ * Owns the lifecycle and external-write fence for one occupied Task run.
+ *
+ * The lease itself is `@rivus/agent-kit-collab`'s `/lease`: a scoped
+ * `manager.acquire` keeps the heartbeat fiber alive for the workflow and
+ * releases the lease when the scope closes, and `handle.lost` replaces the old
+ * heartbeat-error abort. Task policy stays in the application.
+ */
+export class TaskOccupancyService implements TaskOccupancy {
+  private readonly repository: TaskLeaseEnvironment;
+  private readonly heartbeatMs: number;
+
+  constructor(options: TaskOccupancyOptions = {}) {
+    this.repository = options.repository ?? fileTaskLeaseRepository();
+    this.heartbeatMs = options.heartbeatMs ?? TASK_LEASE_HEARTBEAT_MS;
   }
 
   async run<T>(
@@ -35,49 +52,57 @@ export class TaskOccupancyService {
     workflow: (context: TaskOccupancyContext) => Promise<T>,
   ): Promise<T> {
     const key = taskOrchestrationKey(input.taskId);
-    try {
-      await this.orchestration.open({
-        key,
-        template: 'classic-delivery',
-        context: {
-          goal: input.goal,
-          ref: { taskId: input.taskId },
-        },
+    const heartbeatMs = this.heartbeatMs;
+    const program = Effect.gen(function* () {
+      const manager = yield* createLeaseManager({
+        ttlMs: TASK_LEASE_TTL_MS,
+        heartbeatMs,
       });
-    } catch (error) {
-      if (error instanceof OrchestrationConflictError) {
-        throw new Error(
-          `Task ${input.taskId} already has an active orchestration` +
-            (error.holderPid !== undefined ? ` (pid ${error.holderPid})` : ''),
-        );
-      }
-      throw error;
-    }
+      const handle = yield* manager.acquire(key).pipe(
+        Effect.mapError((error) => {
+          const mapped = toLeaseError(error, key);
+          if (mapped instanceof OrchestrationConflictError) {
+            return new Error(
+              `Task ${input.taskId} already has an active orchestration` +
+                (mapped.holderPid !== undefined ? ` (pid ${mapped.holderPid})` : ''),
+            );
+          }
+          return mapped;
+        }),
+      );
+      const mutationFence: TaskMutationFence = {
+        // An in-flight write settles before the fence opens for a successor, so
+        // a successor can never start newer state that the old write could
+        // later overwrite; the write itself observes the abort signal.
+        run: (mutation) =>
+          Effect.runPromise(
+            handle.runFenced(() =>
+              Effect.uninterruptible(
+                Effect.tryPromise({
+                  try: () => mutation(),
+                  catch: (cause) => cause,
+                }),
+              ),
+            ),
+          ).catch((error: unknown) => {
+            throw toLeaseError(error, key);
+          }),
+      };
+      // The lease is lost while the workflow runs: the workflow's signal aborts
+      // (interruption) and the run fails with the loss instead of its result.
+      return yield* Effect.raceFirst(
+        Effect.tryPromise({
+          try: (signal) => workflow({ signal, mutationFence }),
+          catch: (cause) => cause,
+        }),
+        handle.lost,
+      );
+    });
 
-    const controller = new AbortController();
-    let leaseError: unknown;
-    const timer = setInterval(() => {
-      try {
-        this.orchestration.heartbeat(key);
-      } catch (error) {
-        leaseError ??= error;
-        controller.abort(error);
-      }
-    }, this.heartbeatMs);
-    timer.unref();
-    const mutationFence: TaskMutationFence = {
-      run: (mutation) => this.orchestration.fence(key, mutation, controller.signal),
-    };
-
-    try {
-      const result = await workflow({ signal: controller.signal, mutationFence });
-      if (leaseError) {
-        throw leaseError;
-      }
-      return result;
-    } finally {
-      clearInterval(timer);
-      this.orchestration.release(key);
+    const exit = await Effect.runPromiseExit(Effect.scoped(Effect.provide(program, this.repository)));
+    if (Exit.isFailure(exit)) {
+      throw toLeaseError(Cause.squash(exit.cause), key);
     }
+    return exit.value;
   }
 }

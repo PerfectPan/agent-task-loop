@@ -1,7 +1,7 @@
 import type { RunStateStore } from './ports';
 import type { RunSnapshot } from './types';
 
-/** In-memory run state. The lease lives in the control plane's LeaseStore. */
+/** In-memory run state. The occupancy lease lives in the kit's lease repository (`orchestration/lease.ts`). */
 export class MemoryOrchestrationStore implements RunStateStore {
   private readonly states = new Map<string, RunSnapshot>();
 

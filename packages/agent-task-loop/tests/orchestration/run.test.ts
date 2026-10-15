@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { OrchestrationSeatError } from '@rivus/agent-orchestration';
 import { Run } from '../../src/orchestration/run';
+import { OrchestrationSeatError } from '../../src/orchestration/errors';
 
 function openRun(): Run {
   return Run.open({

@@ -6,7 +6,7 @@ import type { TaskMutationFence } from '../services/task-service';
 import type { TaskRecord } from '../types/task';
 import type { StartTaskInput } from './task-manager-application';
 import { TaskManagerInputError } from './task-manager-error';
-import { TaskOccupancyService, type TaskOrchestration } from './task-occupancy-service';
+import { TaskOccupancyService, type TaskOccupancy } from './task-occupancy-service';
 
 type TaskRunInput = Parameters<ReviewLoopRunner['run']>[0];
 type TaskResumeInput = Parameters<ReviewLoopRunner['resumeReview']>[0];
@@ -20,7 +20,7 @@ export interface TaskStartServiceDependencies {
   taskService: TaskReader;
   runner: TaskRunWorkflow;
   livenessService: TaskRunnerLiveness;
-  orchestration?: TaskOrchestration;
+  occupancy?: TaskOccupancy;
   occupancyHeartbeatMs?: number;
   onRecovery?: (inspection: TaskRunnerInspection) => void;
 }
@@ -30,10 +30,11 @@ function maxRoundsForStartRound(configuredMaxRounds: number, startRound?: number
 }
 
 export class TaskStartService {
-  private readonly occupancy: TaskOccupancyService;
+  private readonly occupancy: TaskOccupancy;
 
   constructor(private readonly dependencies: TaskStartServiceDependencies) {
-    this.occupancy = new TaskOccupancyService(dependencies.orchestration, dependencies.occupancyHeartbeatMs);
+    this.occupancy =
+      dependencies.occupancy ?? new TaskOccupancyService({ heartbeatMs: dependencies.occupancyHeartbeatMs });
   }
 
   async startTask(input: StartTaskInput): Promise<TaskRecord> {

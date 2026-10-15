@@ -1,4 +1,4 @@
-import { OrchestrationRunError, OrchestrationSeatError } from '@rivus/agent-orchestration';
+import { OrchestrationRunError, OrchestrationSeatError } from './errors';
 import type { ObservedRun, OpenRunInput, RunSnapshot, SeatBinding, SeatState, TemplateSpec } from './types';
 
 function validateSnapshot(snapshot: RunSnapshot): void {

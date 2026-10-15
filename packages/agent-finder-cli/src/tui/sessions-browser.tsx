@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
-import type { Session, TranscriptEntry } from '@rivus/agent-sessions';
+import type { SessionHead } from '@rivus/agent-kit/sessions';
 import { relativeAge } from '../sessions/view.js';
+import { sessionIdOf } from '../sessions/list.js';
 
 export interface SessionsBrowserProps {
-  sessions: Session[];
-  loadTranscript: (id: string) => Promise<TranscriptEntry[]>;
+  sessions: SessionHead[];
+  /** The selected session's transcript, as readable preview lines. */
+  loadTranscript: (id: string) => Promise<string[]>;
   nowMs: number;
   /** Resolve the resume command for a session, or null when unsupported. */
   loadResume?: (id: string) => Promise<string | null>;
@@ -27,11 +29,12 @@ export function SessionsBrowser({
 }: SessionsBrowserProps) {
   const { exit } = useApp();
   const [selected, setSelected] = useState(0);
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [lines, setLines] = useState<string[]>([]);
   const [resume, setResume] = useState<string | null>(null);
   // Indexing can miss at runtime (empty list, or `selected` past a shrunk list),
   // but noUncheckedIndexedAccess is off — widen locally to keep the guards honest.
-  const current = sessions[selected] as Session | undefined;
+  const current = sessions[selected] as SessionHead | undefined;
+  const currentId = current ? sessionIdOf(current) : null;
 
   useInput((input, key) => {
     if (input === 'q' || key.escape) {
@@ -48,20 +51,20 @@ export function SessionsBrowser({
 
   useEffect(() => {
     let active = true;
-    setTranscript([]);
+    setLines([]);
     setResume(null);
-    if (current) {
-      loadTranscript(current.id).then(
-        (t) => {
+    if (currentId) {
+      loadTranscript(currentId).then(
+        (result) => {
           if (active) {
-            setTranscript(t);
+            setLines(result);
           }
         },
         () => {
           /* ignore — preview stays empty */
         },
       );
-      loadResume?.(current.id).then(
+      loadResume?.(currentId).then(
         (cmd) => {
           if (active) {
             setResume(cmd);
@@ -75,7 +78,7 @@ export function SessionsBrowser({
     return () => {
       active = false;
     };
-  }, [current?.id, loadTranscript, loadResume]);
+  }, [currentId, loadTranscript, loadResume]);
 
   if (sessions.length === 0) {
     return <Text dimColor>No sessions found.</Text>;
@@ -87,26 +90,27 @@ export function SessionsBrowser({
       <Box>
         <Box flexDirection="column" width={42} marginRight={2}>
           {sessions.map((session, i) => (
-            <Text key={session.id} inverse={i === selected} wrap="truncate">
-              {session.agent.padEnd(8)} {session.id.slice(0, 8)} {relativeAge(session.updatedAt, nowMs)}
+            <Text key={session.ref.path} inverse={i === selected} wrap="truncate">
+              {session.ref.agent.padEnd(12)} {sessionIdOf(session).slice(0, 8)}{' '}
+              {relativeAge(session.lastActiveAt, nowMs)}
             </Text>
           ))}
         </Box>
         <Box flexDirection="column" flexGrow={1}>
           <Text dimColor wrap="truncate">
-            {current?.path ?? current?.id ?? ''}
+            {current?.ref.path ?? ''}
           </Text>
           {resume ? (
             <Text color="green" wrap="truncate">
               resume: {resume}
             </Text>
           ) : null}
-          {transcript.length === 0 ? (
+          {lines.length === 0 ? (
             <Text dimColor>(no transcript)</Text>
           ) : (
-            transcript.slice(-previewLines).map((entry, i) => (
+            lines.slice(-previewLines).map((line, i) => (
               <Text key={i} wrap="truncate">
-                {entry.role === 'tool' ? `⚙ ${entry.toolName ?? entry.text}` : `${entry.role}: ${entry.text}`}
+                {line}
               </Text>
             ))
           )}

@@ -1,5 +1,8 @@
 import { defineCommand } from 'citty';
-import { defaultRegistry } from '@rivus/agent-sessions';
+import { loadTranscript } from '@rivus/agent-kit/transcript';
+import { createNodePlatform } from '@rivus/agent-kit/node';
+import { findSession, listLocalSessions } from '../sessions/list.js';
+import { resumeCommandFor } from '../sessions/resume.js';
 import { renderInspect } from '../sessions/view.js';
 
 export const sessionsInspectCommand = defineCommand({
@@ -13,22 +16,23 @@ export const sessionsInspectCommand = defineCommand({
   },
   async run({ args }) {
     const id = String(args.id);
-    const registry = defaultRegistry();
-    const session = (await registry.list()).find((s) => s.id === id);
+    const session = findSession(await listLocalSessions(), id);
     if (!session) {
       console.error(`Unknown session: ${id}`);
       process.exitCode = 1;
       return;
     }
 
-    const transcript = await registry.getTranscript(id);
-    const resumeCommand = await registry.resumeCommand(id);
+    const platform = createNodePlatform();
+    const loaded = await loadTranscript(platform, session.ref);
+    const events = loaded.ok ? loaded.value.events : [];
+    const resumeCommand = resumeCommandFor(session.ref.agent, session.ref.sessionId);
     if (args.json) {
-      console.log(JSON.stringify({ schema_version: '0.1', session, transcript, resumeCommand }, null, 2));
+      console.log(JSON.stringify({ schema_version: '0.1', session, transcript: events, resumeCommand }, null, 2));
       return;
     }
 
-    for (const line of renderInspect(session, transcript, Date.now(), resumeCommand)) {
+    for (const line of renderInspect(session, events, Date.now(), resumeCommand)) {
       console.log(line);
     }
   },

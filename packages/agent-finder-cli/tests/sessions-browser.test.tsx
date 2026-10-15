@@ -1,34 +1,40 @@
 import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import type { Session } from '@rivus/agent-sessions';
+import type { SessionHead } from '@rivus/agent-kit/sessions';
 import { SessionsBrowser } from '../src/tui/sessions-browser.js';
 
 const NOW = Date.parse('2026-06-15T12:00:00Z');
-const SESSIONS: Session[] = [
+const SESSIONS: SessionHead[] = [
   {
-    id: 'aaaaaaaa-1111-4111-8111-111111111111',
-    agent: 'codex',
-    path: '/c/a.jsonl',
-    updatedAt: '2026-06-15T11:00:00Z',
+    ref: {
+      agent: 'codex',
+      path: '/c/aaaaaaaa-1111-4111-8111-111111111111.jsonl',
+      sessionId: 'aaaaaaaa-1111-4111-8111-111111111111',
+    },
+    lastActiveAt: Date.parse('2026-06-15T11:00:00Z'),
+    sizeBytes: 100,
   },
   {
-    id: 'bbbbbbbb-2222-4222-8222-222222222222',
-    agent: 'claude',
-    path: '/cl/b.jsonl',
-    updatedAt: '2026-06-15T10:00:00Z',
+    ref: {
+      agent: 'claude-code',
+      path: '/cl/bbbbbbbb-2222-4222-8222-222222222222.jsonl',
+      sessionId: 'bbbbbbbb-2222-4222-8222-222222222222',
+    },
+    lastActiveAt: Date.parse('2026-06-15T10:00:00Z'),
+    sizeBytes: 100,
   },
 ];
 
 describe('SessionsBrowser', () => {
   it('renders the list and loads the selected transcript', async () => {
-    const loadTranscript = vi.fn(async () => [{ role: 'assistant', text: 'hello from transcript' }]);
+    const loadTranscript = vi.fn(async () => ['assistant: hello from transcript']);
     const { lastFrame } = render(<SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} nowMs={NOW} />);
 
     expect(lastFrame()).toContain('codex');
-    expect(lastFrame()).toContain('claude');
+    expect(lastFrame()).toContain('claude-code');
     expect(lastFrame()).toContain('Sessions (2)');
 
-    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[0].id));
+    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[0].ref.sessionId));
     await vi.waitFor(() => expect(lastFrame()).toContain('hello from transcript'));
   });
 
@@ -38,16 +44,16 @@ describe('SessionsBrowser', () => {
     const { lastFrame } = render(
       <SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} loadResume={loadResume} nowMs={NOW} />,
     );
-    await vi.waitFor(() => expect(lastFrame()).toContain(`resume: codex resume ${SESSIONS[0].id}`));
+    await vi.waitFor(() => expect(lastFrame()).toContain(`resume: codex resume ${SESSIONS[0].ref.sessionId}`));
   });
 
   it('navigates to the next session on down-arrow', async () => {
     const loadTranscript = vi.fn(async () => []);
     const { stdin } = render(<SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} nowMs={NOW} />);
 
-    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[0].id));
+    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[0].ref.sessionId));
     stdin.write('[B'); // down arrow
-    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[1].id));
+    await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[1].ref.sessionId));
   });
 
   it('renders an empty state with no sessions', () => {

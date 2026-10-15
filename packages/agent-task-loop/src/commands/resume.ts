@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config/load-config';
 import { assertRuntimeConfig } from '../config/runtime-guard';
+import { resumeCommandFor } from '../session/resume';
 import { TaskService } from '../services/task-service';
 
 export const resumeCommand = defineCommand({
@@ -34,8 +35,9 @@ export const resumeCommand = defineCommand({
     if (task.executionSessionId) {
       console.log(`ExecutionSessionId: ${task.executionSessionId}`);
     }
-    if (task.targetAgent === 'claude' && task.executionSessionId) {
-      console.log(`ExecutionResume: claude --resume ${task.executionSessionId}`);
+    const executionResume = resumeCommandFor(task.targetAgent, task.executionSessionId);
+    if (executionResume) {
+      console.log(`ExecutionResume: ${executionResume}`);
     }
     if (task.reviewSessionName) {
       console.log(`ReviewSessionName: ${task.reviewSessionName}`);
@@ -43,8 +45,10 @@ export const resumeCommand = defineCommand({
     if (task.reviewSessionId) {
       console.log(`ReviewSessionId: ${task.reviewSessionId}`);
     }
-    if (task.reviewSessionId) {
-      console.log(`ReviewResume: codex resume ${task.reviewSessionId}`);
+    // Review rounds run on codex, so the review session resumes with the codex form.
+    const reviewResume = resumeCommandFor('codex', task.reviewSessionId);
+    if (reviewResume) {
+      console.log(`ReviewResume: ${reviewResume}`);
     }
     if (task.acceptanceRound !== undefined) {
       console.log(`AcceptanceRound: ${task.acceptanceRound}`);

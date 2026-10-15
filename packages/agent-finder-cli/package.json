@@ -56,7 +56,6 @@
     "react": "^19.3.0"
   },
   "devDependencies": {
-    "@rivus/agent-sessions": "workspace:*",
     "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "ink-testing-library": "^4.0.0",

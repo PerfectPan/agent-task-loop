@@ -6,8 +6,8 @@ P5 that did not ship. P1–P4 and P5's print-only resume command for Codex and
 Claude are delivered and documented in
 [`docs/architecture/agent-sessions.md`](../architecture/agent-sessions.md).
 P5 also planned a `Session.resumable` capability flag; it does not exist, and
-callers can only learn resumability by calling `resumeCommand(id)` and getting
-`null`.
+callers can only learn resumability by asking the application-side resume table
+(`sessions/resume.ts` in each app) and getting `null`.
 
 ## Status
 
@@ -21,17 +21,19 @@ The session browser covers Codex and Claude. OpenCode sessions do not appear,
 traces are preview-grade, the trace pane cannot be searched, and resume only
 prints a command.
 
-In scope: a `Session.resumable` capability flag that list, inspect, and the
-browser expose; OpenCode sessions in list, inspect, browse, and resume; richer
+In scope: a resumability flag that list, inspect, and the browser expose;
+OpenCode sessions in list, inspect, browse, and resume; richer
 trace entries (`tool_result` bodies, code blocks); in-trace scroll and search;
 an explicit opt-in to execute the resume command.
 
-Known discovery gaps outside this Spec: the Claude root ignores
-`CLAUDE_CONFIG_DIR`, and Codex `archived_sessions` is not scanned.
-[Plan 0008](../plans/0008-shared-agent-infrastructure.md) Task 2 owns both.
+The former discovery gaps (the Claude root ignoring `CLAUDE_CONFIG_DIR`, and
+Codex `archived_sessions` not scanned) closed when session discovery moved to
+`@rivus/agent-kit`'s `/sessions` entry; see
+[`docs/architecture/agent-sessions.md`](../architecture/agent-sessions.md).
 
-Out of scope: publishing `@rivus/agent-sessions`, moving session discovery into
-the MoonBit core, and token-usage accounting.
+Out of scope: token-usage accounting. OpenCode sessions stay out until this
+Spec's behavioral requirements ship; the kit's session adapters cover
+claude-code, codex and grok today.
 
 ## Behavioral Requirements
 

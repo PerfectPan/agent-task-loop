@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
-import { defaultRegistry } from '@rivus/agent-sessions';
+import { findSession, listLocalSessions, sessionIdOf } from '../sessions/list.js';
+import { resumeCommandFor } from '../sessions/resume.js';
 
 export const sessionsResumeCommand = defineCommand({
   meta: {
@@ -11,7 +12,9 @@ export const sessionsResumeCommand = defineCommand({
   },
   async run({ args }) {
     const id = String(args.id);
-    const command = await defaultRegistry().resumeCommand(id);
+    const session = findSession(await listLocalSessions(), id);
+    // The id the session's own records name resumes; the file stem is the fallback.
+    const command = resumeCommandFor(session?.ref.agent, session ? sessionIdOf(session) : id);
     if (!command) {
       console.error(`No resume command available for session: ${id}`);
       process.exitCode = 1;

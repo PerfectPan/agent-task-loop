@@ -52,8 +52,10 @@ starts a login.
   agent entries from commands found on `PATH`.
 - `apps/room-web` does not use the CLI; it asks each agent binding
   directly through an ACP probe (see [agent-collaboration.md](agent-collaboration.md)).
-- Task assignment does not consult discovery yet; see
-  [`docs/specs/0002-discovery-before-assignment.md`](../specs/0002-discovery-before-assignment.md).
+- Task start does not consult discovery: a missing or broken target agent
+  command fails only when its process starts, after the Task was claimed and
+  moved to 执行中. A pre-claim check is tracked in
+  [#156](https://github.com/PerfectPan/agent-task-loop/issues/156).
 
 ## Build pipeline
 

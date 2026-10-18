@@ -103,6 +103,13 @@ backend record. Every Task lifecycle write in an occupied run runs inside the
 lease fence: a stale holder cannot begin a write, and a successor waits for an
 already-started predecessor write before writing newer state.
 
+The lease directory is under the home directory (`~/.agent-orchestration/runs`),
+so it excludes concurrent starts only among processes that share one home
+directory: two system users on one machine do not exclude each other. A
+backend claim is a plain write (a Feishu record upsert, a GitHub comment) with
+no compare-and-set, so starts under two home directories, on one machine or
+two, can both claim the same Task.
+
 The run baton (`Run`, the `classic-delivery` template with seats `impl` and
 `review`, and the process runner) belongs to `agent-task-loop`
 (`src/orchestration/`). Only the lease itself comes from

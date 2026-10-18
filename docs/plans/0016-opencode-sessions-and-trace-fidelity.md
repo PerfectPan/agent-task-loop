@@ -3,7 +3,7 @@
 - Status: blocked
 - Owner: unconfirmed
 - Reviewer: unconfirmed
-- Last updated: 2026-10-01
+- Last updated: 2026-10-18
 - Paired Spec: [`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../specs/0016-opencode-sessions-and-trace-fidelity.md)
 
 ## Contents
@@ -17,16 +17,19 @@
 
 ### 1.1 Current behavior and constraints
 
-- `@rivus/agent-sessions` indexes UUID-named `.jsonl` files under
-  `~/.codex/sessions` and `~/.claude/projects` (`src/session/fs-index.ts`).
-  `AgentKind` already includes `opencode`, but no provider produces it.
+- `@rivus/agent-kit/sessions` lists session files through
+  `builtinSessionAdapters` (claude-code, codex, grok). The kit's
+  `CodingAgentId` already includes `opencode`, but no adapter produces it.
 - OpenCode keeps sessions in SQLite (`~/.local/share/opencode/opencode.db`,
   tables `session` / `message` / `part`, ids `ses_…`), not JSONL. This was
   observed when the original plan was written and has not been re-verified.
-- `Session` has no `resumable` field (`src/session/types.ts`); resumability is
-  only visible as `resumeCommand(id)` returning a command or `null`
-  (`src/session/provider.ts`).
-- `parseTranscript` drops tool results and other non-message payloads.
+- The kit's `SessionHead` has no `resumable` field, and resume is not a kit
+  concept; resumability is only visible as `resumeCommandFor(agent, id)`
+  returning a command or `null`
+  (`packages/agent-finder-cli/src/sessions/resume.ts`).
+- The kit's `loadTranscript` keeps `tool_result` events, but the CLI's preview
+  turns (`turnOf` in `packages/agent-finder-cli/src/sessions/view.ts`) drop
+  them and other non-message payloads.
 - The browser (`packages/agent-finder-cli/src/commands/sessions-browse-command.tsx`)
   has no viewport scrolling or search.
 
@@ -46,9 +49,10 @@ As in the Spec.
 
 ### 2.1 Boundaries and responsibilities
 
-An `OpenCodeProvider` implements `SessionProvider` on a separate code path from
-the fs index. The CLI keeps injecting resume binaries; the core stays free of
-MoonBit.
+An OpenCode `SessionAdapter` in the kit (`@rivus/agent-kit/sessions`) reads
+the SQLite store on a separate code path from the file-based adapters. Resume
+commands stay in each application's resume table; the kit stays free of resume
+knowledge.
 
 ### 2.2 Design decisions
 
@@ -56,7 +60,7 @@ MoonBit.
 | ------------------------------------------------------------------------------------- | -------------------------- |
 | SQLite reader: `node:sqlite` vs `better-sqlite3` (native dependency in a bundled CLI) | unresolved, needs SPIKE-OC |
 | Does `opencode` expose a resume command keyed by `ses_…`                              | unresolved, needs SPIKE-OC |
-| `TranscriptEntry` extension shape for tool results and code blocks                    | unresolved                 |
+| Preview rendering of `tool_result` output and code blocks                             | unresolved                 |
 
 ## 6. Execution plan
 
@@ -71,14 +75,18 @@ does not depend on SPIKE-OC.
 
 #### Task 1: OpenCode provider
 
-- Files: `packages/agent-sessions/src/session/` (new provider), `registry.ts`.
+- Files: the kit's `/sessions` entry (a new OpenCode `SessionAdapter` in
+  `builtinSessionAdapters`), then a `@rivus/agent-kit` bump here.
 - Tests: S1, S2 with a fixture database.
 - Exit condition: `sessions list --json` shows OpenCode sessions.
 
 #### Task 2: Richer trace entries
 
-- Files: `packages/agent-sessions/src/transcript/`, CLI formatters.
-- Tests: S3; `toLines` output for the agent-task-loop TUI stays unchanged.
+- Files: `packages/agent-finder-cli/src/sessions/view.ts` (the kit's
+  `TranscriptEvent` already carries `tool_result` output), CLI formatters.
+- Tests: S3; `previewLines` output in
+  `packages/agent-task-loop/src/tui/data/fs-session-provider.ts` stays
+  unchanged.
 - Exit condition: tool results render in `sessions inspect`.
 
 #### Task 3: Scroll, search, and opt-in execute
@@ -89,12 +97,13 @@ does not depend on SPIKE-OC.
 
 #### Task 4: `Session.resumable`
 
-- Files: `packages/agent-sessions/src/session/types.ts`, `provider.ts`,
-  `registry.ts`; `sessions-list-command.ts`, `sessions-inspect-command.ts`,
-  `sessions-browse-command.tsx` and formatters in `packages/agent-finder-cli`.
-- Change: providers set `resumable` from whether a resume command is
-  configured for the session; the CLI prints it in JSON and gates the resume
-  hint in the browser on it.
+- Files: `src/sessions/resume.ts`, `sessions-list-command.ts`,
+  `sessions-inspect-command.ts`, `sessions-browse-command.tsx` and formatters
+  in `packages/agent-finder-cli`. Resume is not a kit concept, so the flag is
+  not added to the kit's `SessionHead`.
+- Change: the CLI sets `resumable` from whether `resumeCommandFor` returns a
+  command for the session, prints it in JSON and gates the resume hint in the
+  browser on it.
 - Tests: S5; existing `resumeCommand` tests stay green.
 - Exit condition: `sessions list --json` shows `resumable` for every session.
 

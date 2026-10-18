@@ -147,6 +147,9 @@ directory), with a forward-only migration chain in
   status is derived, never stored: 在场 (no lease), 阅读中 / 工作中 (lease
   held, before and after a tool call update), then the last outcome. HELD is
   not shown to the person.
+- The room page has no push channel: while a request is pending or a member
+  is 阅读中 or 工作中, it revalidates its loader every 900 ms
+  (`presentation/room-lab.tsx`).
 - Room mutations (`routes/room.$roomId.tsx`) require `Content-Type:
   application/json` and an `Origin` of `http://127.0.0.1` or
   `http://localhost` (`assertSameOriginJson`). The form actions for creating a
@@ -193,8 +196,10 @@ five lanes (`app/board/domain/lanes.ts`):
 
 A model review PASS stays in 待你决定 until a person acts; the task detail
 page says so. Board and rooms are not linked to each other, and the board
-cannot write. The remaining board and room-to-task work is in
-[`docs/specs/0014-task-board-actions.md`](../specs/0014-task-board-actions.md).
+cannot write. Task agents (`TARGET_AGENTS` in agent-task-loop) and the
+room-web `agents` table are separate lists. Board actions, one agent roster
+and Room-to-Task links are tracked in
+[#157](https://github.com/PerfectPan/agent-task-loop/issues/157).
 
 ## Measured behavior
 

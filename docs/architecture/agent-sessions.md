@@ -56,16 +56,22 @@ the platform.
 
 ## Limits
 
-- Resume prints a command; it does not start the agent.
+- OpenCode sessions are not listed: the kit has no OpenCode session adapter.
+- Resume prints a command; it does not start the agent. `sessions list --json`
+  carries no resumability field; `sessions inspect --json` carries
+  `resumeCommand` (`null` without a verified resume form), and the browser
+  shows a resume line only when one exists.
 - `loadTranscript` loads a complete session and is not a live file-following
   API. Views that only need numbers use `summarizeSession`.
-- Traces are preview-grade: no `tool_result` bodies, diffs, or code-block
-  rendering, and no in-trace search.
+- Traces are preview-grade: the CLI preview (`sessions/view.ts`) keeps
+  message, reasoning and tool-call events and drops `tool_result` and the
+  rest, with no diff or code-block rendering. The browser shows only the last
+  lines of a trace, with no scrolling or search.
 - The TUI preview renders the transcript's message, reasoning and tool-call
   events. A Codex rollout records each turn twice (the CLI's `event_msg` copy
   and the model's `response_item` copy); the kit attributes the message to the
   `response_item` only, so each turn renders once — the
   `fs-session-provider` regression test pins this.
 
-OpenCode sessions and trace fidelity remain tracked in
-[`docs/specs/0016-opencode-sessions-and-trace-fidelity.md`](../specs/0016-opencode-sessions-and-trace-fidelity.md).
+OpenCode sessions, fuller traces and a resumable flag are tracked in
+[#158](https://github.com/PerfectPan/agent-task-loop/issues/158).

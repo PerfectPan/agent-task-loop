@@ -12,9 +12,10 @@ Paired Plan: [`docs/plans/0002-discovery-before-assignment.md`](../plans/0002-di
 
 ## Problem And Scope
 
-Today only `agent-task-loop init` consults `@rivus/agent-finder-core`. `start`,
-`run`, `resume`, the TUI, and the Rivus `task-start` tool hand a Task to its
-`targetAgent` without checking that the agent is runnable on this host. A
+Today only `agent-task-loop init` consults discovery, through the kit's
+`detectAgents` (`@rivus/agent-kit/discovery`). `start`, `run`, `resume`, the
+TUI, and the Rivus `task-start` tool hand a Task to its `targetAgent` without
+checking that the agent is runnable on this host. A
 missing or broken agent command fails late, after the Task has been claimed.
 
 In scope: checking the target agent's discovery status before a Task is

@@ -3,7 +3,7 @@
 - Status: blocked
 - Owner: unconfirmed
 - Reviewer: unconfirmed
-- Last updated: 2026-10-01
+- Last updated: 2026-10-18
 - Paired Spec: [`docs/specs/0014-task-board-actions.md`](../specs/0014-task-board-actions.md)
 
 ## Contents
@@ -24,8 +24,8 @@
   gone; room-web has no task action.
 - `TARGET_AGENTS` (`packages/agent-task-loop/src/types/task.ts`) and
   `AGENT_LABEL` (`task-management/github-issues-task-provider.ts`) hardcode
-  `claude|codex|coco|glm`. room-web's `agents` table implements
-  `AgentRegistry` from `@rivus/agent-orchestration`.
+  `claude|codex|coco|glm`. room-web's `agents` table implements the
+  `AgentRegistry` port in `apps/room-web/app/room-lab/application/ports.ts`.
 - The shared draft (工作稿) that RFC 0013 wanted to promote into a Task was
   rejected by the collaboration design: rooms are the only shared context and
   there is no shared draft. What a Room promotes is therefore undecided.

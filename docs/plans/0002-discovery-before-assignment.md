@@ -3,7 +3,7 @@
 - Status: blocked
 - Owner: unconfirmed
 - Reviewer: unconfirmed
-- Last updated: 2026-10-01
+- Last updated: 2026-10-18
 - Paired Spec: [`docs/specs/0002-discovery-before-assignment.md`](../specs/0002-discovery-before-assignment.md)
 
 ## Contents
@@ -18,7 +18,9 @@
 ### 1.1 Current behavior and constraints
 
 - `discoverRunnableAgents` in `packages/agent-task-loop/src/commands/init.ts`
-  is the only caller of `collectHostProbe()` and `discover()`.
+  is the only caller of the kit's `detectAgents`
+  (`@rivus/agent-kit/discovery`). It passes `versionProbe: false`, so it sees
+  at most `found`, never `runnable`.
 - Task start goes through `TaskStartService`
   (`packages/agent-task-loop/src/task-manager/task-start-service.ts`), shared
   by the CLI and the Rivus `task-start` tool, after the `task:<taskId>` lease
@@ -39,7 +41,7 @@ Task was claimed and moved to 执行中.
 ### 1.4 Non-goals
 
 - Automatic agent substitution.
-- Changes to the MoonBit catalog.
+- Changes to the kit's agent catalog (`@rivus/agent-kit/catalog`).
 
 ## 2. Outline
 
@@ -47,7 +49,7 @@ Task was claimed and moved to 执行中.
 
 The check belongs to the task-manager application layer, before the claim, as
 a port (`AgentAvailability`) with a discovery-backed adapter in
-infrastructure. The agent-finder package is unchanged.
+infrastructure. `@rivus/agent-kit/discovery` is unchanged.
 
 ### 2.2 Design decisions
 
@@ -81,7 +83,7 @@ Blocked until the freshness decision in section 7 is made.
   `src/task-management/` or `src/services/` (unconfirmed placement).
 - Change: move the discovery-id map out of `init.ts`; add the port and the
   adapter.
-- Tests: adapter unit test with a fake `discover` result.
+- Tests: adapter unit test with a fake `detectAgents` result.
 - Exit condition: `init` tests unchanged and passing.
 
 #### Task 2: Check in `TaskStartService`

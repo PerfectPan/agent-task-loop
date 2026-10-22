@@ -8,11 +8,11 @@ publishing is in [`../npm-publish.md`](../npm-publish.md).
 
 ## Layers
 
-| Layer                             | Where                       | Owns                                                                                                                                                                                                                         |
-| --------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kit detection `@rivus/agent-kit`  | npm                         | `builtinProbeRecipes` and `detectAgents` for its 7 agents (claude-code, codex, cursor, gemini-cli, grok, opencode, pi): PATH lookup, path checks, version probes, file-based login state, evidence and status classification |
-| Legacy recipes `agent-finder-cli` | `src/discovery/`            | One probe recipe per MoonBit-catalog agent the kit does not cover (20 agents): the ported command, app, config and MCP paths, `--version` probes, and the original warnings                                                  |
-| CLI `@rivus/agent-finder-cli`     | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser                                                                         |
+| Layer                             | Where                       | Owns                                                                                                                                                                                                                                         |
+| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kit detection `@rivus/agent-kit`  | npm                         | `builtinProviders` discovery services and `detectAgents` for its 7 agents (claude-code, codex, cursor, gemini-cli, grok, opencode, pi): PATH lookup, path checks, version probes, file-based login state, evidence and status classification |
+| Legacy recipes `agent-finder-cli` | `src/discovery/`            | One probe recipe per MoonBit-catalog agent the kit does not cover (20 agents): the ported command, app, config and MCP paths, `--version` probes, and the original warnings                                                                  |
+| CLI `@rivus/agent-finder-cli`     | `packages/agent-finder-cli` | Argument parsing and human output: `scan`, `scan --json`, `provider -h`, `provider list`, `provider inspect <id>`, `doctor`, and the session browser                                                                                         |
 
 `detectAgents` checks paths through a platform port, so fixtures run against an
 in-memory platform (`@rivus/agent-kit/testing`'s `createMemoryPlatform`) and

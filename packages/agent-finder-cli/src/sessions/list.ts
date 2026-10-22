@@ -1,4 +1,5 @@
-import { builtinCodingAgents, type CodingAgentId } from '@rivus/agent-kit/catalog';
+import type { CodingAgentId } from '@rivus/agent-kit/catalog';
+import { builtinProviders } from '@rivus/agent-kit/providers';
 import { isSessionHead, listSessions, type SessionHead } from '@rivus/agent-kit/sessions';
 import { createNodePlatform } from '@rivus/agent-kit/node';
 
@@ -41,7 +42,9 @@ export function matchesFilter(head: SessionHead, filter: string): boolean {
 
 /** Accepts the kit's agent ids and their catalog aliases (`claude` → `claude-code`). */
 export function parseAgentFilter(input: string): CodingAgentId | null {
-  const agent = Object.values(builtinCodingAgents).find((entry) => entry.id === input || entry.aliases.includes(input));
+  const agent = builtinProviders.find(
+    ({ identity }) => identity && (identity.id === input || identity.aliases.includes(input)),
+  )?.identity;
   return agent ? agent.id : null;
 }
 

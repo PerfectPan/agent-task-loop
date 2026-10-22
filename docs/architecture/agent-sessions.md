@@ -1,7 +1,7 @@
 # Agent Sessions
 
 Session discovery and transcript reading come from `@rivus/agent-kit`'s
-`/sessions` and `/transcript` entries (`@rivus/agent-kit` 0.11.0). The kit owns
+`/sessions` and `/transcript` entries (`@rivus/agent-kit`). The kit owns
 the per-agent adapters; this repository holds the application-side wiring and
 the resume command table. The former `@rivus/agent-sessions` package was
 deleted when the kit replaced it.

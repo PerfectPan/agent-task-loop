@@ -1,6 +1,5 @@
-import { builtinCodingAgents, isBuiltinCodingAgentId } from '@rivus/agent-kit/catalog';
+import { isBuiltinCodingAgentId } from '@rivus/agent-kit/catalog';
 import {
-  builtinProbeRecipes,
   detectAgents,
   type DetectAgentsOptions,
   type Installation,
@@ -9,17 +8,24 @@ import {
   type ProbeRecipes,
 } from '@rivus/agent-kit/discovery';
 import { createNodePlatform } from '@rivus/agent-kit/node';
+import { builtinProviders } from '@rivus/agent-kit/providers';
 import { legacyProbeRecipes } from './legacy-probe-recipes.js';
 
 /**
  * The kit's built-in recipes plus the MoonBit catalog's remaining agents. `detectAgents` reports the built-ins in
  * their table order first, then the legacy ones; the MoonBit scanner used the catalog file order instead.
  */
-export const allProbeRecipes: ProbeRecipes = { ...builtinProbeRecipes, ...legacyProbeRecipes };
+export const allProbeRecipes: ProbeRecipes = {
+  ...Object.fromEntries(builtinProviders.flatMap(({ id, discovery }) => (discovery ? [[id, discovery]] : []))),
+  ...legacyProbeRecipes,
+};
 
 /** Runs `detectAgents` against this machine with the full recipe table. */
 export async function detectLocalAgents(options: DetectAgentsOptions = {}): Promise<Installation[]> {
-  return detectAgents(createNodePlatform(), { recipes: allProbeRecipes, ...options });
+  return detectAgents(createNodePlatform(), {
+    providers: Object.entries(allProbeRecipes).flatMap(([id, discovery]) => (discovery ? [{ id, discovery }] : [])),
+    ...options,
+  });
 }
 
 /** Provider metadata as the `provider` commands display it; the shape the MoonBit catalog used to export. */
@@ -54,7 +60,9 @@ function describeProbePath(path: ProbePath): string {
   if (typeof path === 'string') {
     return path;
   }
-  const agent = isBuiltinCodingAgentId(path.agentHome) ? builtinCodingAgents[path.agentHome] : undefined;
+  const agent = isBuiltinCodingAgentId(path.agentHome)
+    ? builtinProviders.find(({ id }) => id === path.agentHome)?.identity
+    : undefined;
   const home = agent && 'home' in agent ? agent.home : undefined;
   const base = home ? `~/${home.defaultPath.join('/')}` : '~';
   return path.path === undefined ? base : `${base}/${path.path}`;

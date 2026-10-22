@@ -1,7 +1,6 @@
 import os from 'node:os';
 import {
   agentEnv,
-  builtinAcpProfiles,
   connectAgent,
   probeAgent,
   type AcpConnection,
@@ -14,6 +13,7 @@ import {
   type PromptError,
   type TranscriptStreamPart,
 } from '@rivus/agent-kit/acp';
+import { builtinProviders } from '@rivus/agent-kit/providers';
 import type { PlatformService } from '@rivus/agent-kit/platform/effect';
 import * as Cause from 'effect/Cause';
 import * as Effect from 'effect/Effect';
@@ -25,7 +25,7 @@ import type { TurnPermissionPolicy } from '../application/turn';
 
 /**
  * The ACP half of the endpoint, adopted from `@rivus/agent-kit`'s `/acp`
- * (`connectAgent`, `probeAgent`, `builtinAcpProfiles`, `agentEnv`). The kit
+ * (`connectAgent`, `probeAgent`, `agentEnv`) and `/providers`. The kit
  * starts an agent with the exact environment the caller passes and one of its
  * profiles; the endpoint owns the mapping from an `agents` row — one command
  * line — to a profile, and never lets the agent inherit this process's
@@ -96,22 +96,26 @@ const FALLBACK_AGENT_ENV: readonly string[] = [
   'AWS_*',
 ];
 
+const acpProfiles: Record<string, AcpProfile | undefined> = Object.fromEntries(
+  builtinProviders.flatMap(({ id, acp }) => (acp ? [[id, acp]] : [])),
+);
+
 /** The kit profile whose channels a row's adapter is known to speak. */
 function builtinBaseFor(agent: RoomAgentSpec): AcpProfile | undefined {
   const byId: Record<string, AcpProfile | undefined> = {
-    claude: builtinAcpProfiles['claude-code'],
-    codex: builtinAcpProfiles['codex'],
-    opencode: builtinAcpProfiles['opencode'],
-    gemini: builtinAcpProfiles['gemini-cli'],
-    grok: builtinAcpProfiles['grok'],
+    claude: acpProfiles['claude-code'],
+    codex: acpProfiles['codex'],
+    opencode: acpProfiles['opencode'],
+    gemini: acpProfiles['gemini-cli'],
+    grok: acpProfiles['grok'],
   };
   const head = agent.command.trim().split(/\s+/)[0] ?? '';
   const byCommand: Record<string, AcpProfile | undefined> = {
-    'claude-agent-acp': builtinAcpProfiles['claude-code'],
-    'codex-acp': builtinAcpProfiles['codex'],
-    opencode: builtinAcpProfiles['opencode'],
-    gemini: builtinAcpProfiles['gemini-cli'],
-    grok: builtinAcpProfiles['grok'],
+    'claude-agent-acp': acpProfiles['claude-code'],
+    'codex-acp': acpProfiles['codex'],
+    opencode: acpProfiles['opencode'],
+    gemini: acpProfiles['gemini-cli'],
+    grok: acpProfiles['grok'],
   };
   return byId[agent.id] ?? byCommand[head];
 }
@@ -179,7 +183,7 @@ function connectOptions(agent: RoomAgentSpec, cwd: string, onPermission?: TurnPe
     options: {
       cwd,
       env: roomAgentEnv(profile),
-      profiles: { [agent.id]: profile } as Record<string, AcpProfile>,
+      providers: [{ id: agent.id, acp: profile }],
       clientInfo: CLIENT_INFO,
       // The endpoint answers the client file calls: reads and writes, fenced
       // by the kit to the session's directory, links resolved.

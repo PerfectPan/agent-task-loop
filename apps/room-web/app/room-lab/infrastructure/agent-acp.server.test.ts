@@ -79,13 +79,17 @@ interface Hosting {
   connection: AcpConnection;
 }
 
-async function connect(bindingStore?: Layer.Layer<never>, overrides?: RoomConnectOverrides): Promise<Hosting> {
+async function connect(
+  bindingStore?: Layer.Layer<never>,
+  overrides?: RoomConnectOverrides,
+  agent: RoomAgentSpec = fakeSpec(),
+): Promise<Hosting> {
   const rt = makeManagedRuntime<PlatformService, never>(
     Layer.mergeAll(NodePlatformLive, bindingStore ?? MemorySessionBindingStoreLive),
   );
   const scope = Scope.makeUnsafe();
   const connection = await rt.runPromise(
-    Effect.provideService(connectRoomAgent(fakeSpec(), workDir(), overrides), Scope.Scope, scope),
+    Effect.provideService(connectRoomAgent(agent, workDir(), overrides), Scope.Scope, scope),
   );
   return { rt, scope, connection };
 }
@@ -120,6 +124,20 @@ async function runTurn(
 }
 
 describe('agent-acp against a fake stdio agent', () => {
+  it('uses the row command override for a built-in agent id when connecting and probing', async () => {
+    const agent = { ...fakeSpec(), id: 'opencode' };
+    const hosting = await connect(undefined, undefined, agent);
+    try {
+      const probe = await hosting.rt.runPromise(probeRoomAgent(agent));
+      expect(probe.status).toBe('ready');
+      const session = await hosting.rt.runPromise(hosting.connection.newSession());
+      const said = await runTurn(hosting.rt, session, 'row-override');
+      expect(said.texts.join('')).toContain('turn 1: row-override');
+    } finally {
+      await closeAll(hosting);
+    }
+  });
+
   it('denies a permission request without a callback and forwards a policy decision (fail-closed)', async () => {
     const hosting = await connect();
     try {

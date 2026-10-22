@@ -194,7 +194,7 @@ function connectOptions(agent: RoomAgentSpec, cwd: string, onPermission?: TurnPe
       handshakeTimeoutMs: ROOM_ACP_HANDSHAKE_TIMEOUT_MS,
       requestTimeoutMs: ROOM_ACP_REQUEST_TIMEOUT_MS,
       cancelTimeoutMs: ROOM_ACP_CANCEL_TIMEOUT_MS,
-    },
+    } satisfies Parameters<typeof connectAgent>[1] satisfies Parameters<typeof probeAgent>[1],
   };
 }
 

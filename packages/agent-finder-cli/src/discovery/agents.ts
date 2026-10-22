@@ -23,7 +23,7 @@ export const allProbeRecipes: ProbeRecipes = {
 /** Runs `detectAgents` against this machine with the full recipe table. */
 export async function detectLocalAgents(options: DetectAgentsOptions = {}): Promise<Installation[]> {
   return detectAgents(createNodePlatform(), {
-    providers: Object.entries(allProbeRecipes).flatMap(([id, discovery]) => (discovery ? [{ id, discovery }] : [])),
+    providers: Object.entries(legacyProbeRecipes).map(([id, discovery]) => ({ id, discovery })),
     ...options,
   });
 }

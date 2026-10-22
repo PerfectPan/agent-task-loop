@@ -1,11 +1,11 @@
 ---
 ---
 
-Room-web drives its agents over `@rivus/agent-kit` 0.11.0 and schedules its turns with `@rivus/agent-kit-collab` 0.11.0. The private `@rivus/agent-orchestration` control-plane package — already application-only since the orchestration code moved into the endpoint — is deleted together with its tests. It was `"private": true`, so there is no npm action: no release, no deprecation flag, no dependents.
+Room-web drives its agents over `@rivus/agent-kit` 0.20.0 and schedules its turns with `@rivus/agent-kit-collab` 0.20.0. The private `@rivus/agent-orchestration` control-plane package — already application-only since the orchestration code moved into the endpoint — is deleted together with its tests. It was `"private": true`, so there is no npm action: no release, no deprecation flag, no dependents.
 
 What replaced what, inside `apps/room-web`:
 
-- `AcpConnector` is replaced by the kit's `/acp` entry (`connectAgent`, `probeAgent`, `builtinAcpProfiles`, `agentEnv`, `optionOfKind`) plus the endpoint's own mapping from an `agents` row to a profile (`infrastructure/agent-acp.server.ts`). Agents start with exactly the environment the profile picks — nothing is inherited wholesale as before — and the connection, not the endpoint, bounds the cancel at 5 s: a turn that ignores `session/cancel` gets its session binding removed and its connection closed.
+- `AcpConnector` is replaced by the kit's `/acp` entry (`connectAgent`, `probeAgent`, `agentEnv`) with ACP profiles from `/providers`, plus the endpoint's own mapping from an `agents` row to a profile (`infrastructure/agent-acp.server.ts`). Agents start with exactly the environment the profile picks — nothing is inherited wholesale as before — and the connection, not the endpoint, bounds the cancel at 5 s: a turn that ignores `session/cancel` gets its session binding removed and its connection closed.
 - Sessions are bound per `room:<roomId>:member:<agentId>` key through `FileSessionBindingStoreLive` (next to the rooms library), so a session survives a server restart via `session/load` instead of being recreated with a fresh conversation.
 - The handwritten wake-coalescing `AgentRuntime` is replaced by `createLanes` (`/lanes`; `maxConcurrent` 16, `maxQueued` 64, `turnTimeoutMs` 600 s). The lease, connection and prompt lifecycle live in the caller's `activate`; the host assembly root owns one `ManagedRuntime`, and wake/cancel run their Effects in callbacks with failures observed.
 - The member lease runs on the kit's `/lease` (`createLeaseManager` over `sqliteLeaseRepository`, own `member-leases.sqlite` next to the rooms library), with the old timing: heartbeat 15 s, stale after 120 s. `member_leases` in the rooms database is dropped by migration 0008.

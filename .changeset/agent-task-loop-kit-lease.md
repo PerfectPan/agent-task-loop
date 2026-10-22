@@ -2,7 +2,7 @@
 '@rivus/agent-task-loop': minor
 ---
 
-Occupy Tasks with `@rivus/agent-kit-collab` 0.11.0's `/lease` (`createLeaseManager` + a scoped `manager.acquire`) instead of `@rivus/agent-orchestration`'s `LeaseManager` and `FileLeaseStore`. `effect@4.0.1` is an exact dependency. The old orchestration facade (`src/orchestration/orchestration.ts`, `node-factory.ts`, `task-orchestration.ts`) is deleted; the run baton (`Run`, the `classic-delivery` template, the run-state stores, the seat policy) stays application-side and the seat lifecycle is wired to the kit lease handle. The occupancy key stays `task:<taskId>`.
+Occupy Tasks with `@rivus/agent-kit-collab` 0.20.0's `/lease` (`createLeaseManager` + a scoped `manager.acquire`) instead of `@rivus/agent-orchestration`'s `LeaseManager` and `FileLeaseStore`. `effect@4.0.4` is an exact dependency. The old orchestration facade (`src/orchestration/orchestration.ts`, `node-factory.ts`, `task-orchestration.ts`) is deleted; the run baton (`Run`, the `classic-delivery` template, the run-state stores, the seat policy) stays application-side and the seat lifecycle is wired to the kit lease handle. The occupancy key stays `task:<taskId>`.
 
 Differences accepted in the old/new comparison, recorded in the lease tests:
 

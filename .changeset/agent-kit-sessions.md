@@ -3,7 +3,7 @@
 '@rivus/agent-task-loop': minor
 ---
 
-Discover sessions and read transcripts with `@rivus/agent-kit` 0.11.0 (`/sessions` + `/transcript`) instead of the deleted internal `@rivus/agent-sessions` package. Resume command strings stay application-side: `packages/agent-finder-cli/src/sessions/resume.ts` and `packages/agent-task-loop/src/session/resume.ts` are the single sources (`codex resume <id>`, `claude --resume <id>`).
+Discover sessions and read transcripts with `@rivus/agent-kit` 0.20.0 (`/sessions` + `/transcript`) instead of the deleted internal `@rivus/agent-sessions` package. Resume command strings stay application-side: `packages/agent-finder-cli/src/sessions/resume.ts` and `packages/agent-task-loop/src/session/resume.ts` are the single sources (`codex resume <id>`, `claude --resume <id>`).
 
 Differences accepted in the parity comparison against the old package, for the same on-disk fixtures:
 

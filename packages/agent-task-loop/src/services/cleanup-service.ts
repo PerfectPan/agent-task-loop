@@ -75,7 +75,7 @@ export class CleanupService {
     await exec('git', ['-C', repository.localPath, 'worktree', 'prune'], { reject: true });
 
     await this.deps.taskService.updateCleanupState(task, {
-      currentOwner: '董事长',
+      currentOwner: '用户',
       progressSummary: force ? '已强制清理任务工作区' : '已清理任务工作区',
     });
 

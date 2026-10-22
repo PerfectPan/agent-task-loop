@@ -259,7 +259,7 @@ export class CompleteService {
     });
     await this.deps.taskService.updateReviewState(task, {
       status: '已完成',
-      currentOwner: '董事长',
+      currentOwner: '用户',
       acceptanceRound: task.acceptanceRound ?? 1,
       acceptanceVerdict: '通过',
       progressSummary: 'Pull Request 已创建，任务完成',

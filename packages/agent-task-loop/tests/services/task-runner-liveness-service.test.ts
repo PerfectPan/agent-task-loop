@@ -29,7 +29,7 @@ describe('TaskRunnerLivenessService', () => {
     expect(inspection.state).toBe('stale');
     expect(inspection.mode).toBe('execute');
     expect(inspection.round).toBe(2);
-    expect(inspection.promptOverride).toContain('董事长最新验收意见');
+    expect(inspection.promptOverride).toContain('用户最新验收意见');
   });
 
   it('falls back to a stale review task when the log has stopped moving', async () => {

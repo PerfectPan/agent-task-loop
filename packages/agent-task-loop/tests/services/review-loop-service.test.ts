@@ -77,7 +77,7 @@ describe('ReviewLoopService', () => {
       expect.objectContaining({
         status: '待发布',
         reviewVerdict: '通过',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         sessionHistory: expect.stringContaining('kind=review'),
       }),
     );
@@ -127,8 +127,8 @@ describe('ReviewLoopService', () => {
       expect.objectContaining({
         status: '待决策',
         reviewVerdict: '通过',
-        currentOwner: '董事长',
-        progressSummary: '诊断已完成，等待董事长确定修复方向',
+        currentOwner: '用户',
+        progressSummary: '诊断已完成，等待用户确定修复方向',
         sessionHistory: expect.stringContaining('kind=review'),
       }),
     );
@@ -196,7 +196,7 @@ describe('ReviewLoopService', () => {
       expect.objectContaining({
         status: '待发布',
         reviewVerdict: '通过',
-        currentOwner: '董事长',
+        currentOwner: '用户',
       }),
     );
   });
@@ -245,7 +245,7 @@ describe('ReviewLoopService', () => {
       expect.objectContaining({ taskId: 'TASK-205' }),
       expect.objectContaining({
         status: '待发布',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         lastError: 'push failed',
         progressSummary: '自动推送远端分支失败，请先处理发布问题',
       }),
@@ -254,7 +254,7 @@ describe('ReviewLoopService', () => {
 
   it('passes chairman rejection feedback into later review rounds as hard constraints', async () => {
     const executeRound = vi.fn().mockResolvedValue({
-      resultSummary: '按董事长要求删掉测试',
+      resultSummary: '按用户要求删掉测试',
       sessionId: 'exec-7',
       sessionName: 'task-207-claude',
       workspacePath: '/tmp/TASK-207-claude',
@@ -459,7 +459,7 @@ describe('ReviewLoopService', () => {
       expect.objectContaining({ taskId: 'TASK-206' }),
       expect.objectContaining({
         status: '已失败',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         progressSummary: 'codex 复核执行失败，请处理',
         lastError: 'review output did not contain a valid verdict JSON',
       }),

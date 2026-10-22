@@ -324,7 +324,7 @@ describe('TaskService', () => {
         status: '待决策',
         reviewVerdict: '通过',
         acceptanceVerdict: '打回',
-        progressSummary: '诊断已完成，等待董事长确定修复方向',
+        progressSummary: '诊断已完成，等待用户确定修复方向',
       },
     );
 
@@ -384,7 +384,7 @@ describe('TaskService', () => {
         recordId: 'rec-205',
       },
       {
-        currentOwner: '董事长',
+        currentOwner: '用户',
         progressSummary: '已强制清理任务工作区',
       },
     );

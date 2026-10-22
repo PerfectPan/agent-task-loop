@@ -95,7 +95,7 @@ describe('ReviewService', () => {
 
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('董事长最新验收意见（硬约束）'),
+        prompt: expect.stringContaining('用户最新验收意见（硬约束）'),
       }),
     );
     expect(execute).toHaveBeenCalledWith(

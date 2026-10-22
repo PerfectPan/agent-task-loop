@@ -58,7 +58,7 @@ export class RejectService {
       resultSummary: task.resultSummary,
       workspacePath: task.workspacePath,
       logPath: task.logPath,
-      progressSummary: `董事长验收未通过，正在回到 ${task.targetAgent} 修复`,
+      progressSummary: `用户验收未通过，正在回到 ${task.targetAgent} 修复`,
     });
 
     await this.deps.runLoop({

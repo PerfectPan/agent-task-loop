@@ -89,7 +89,7 @@ export class ReviewLoopService {
     await this.persist(() =>
       this.deps.updateReviewState(input.task, {
         status: '已失败',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         reviewRound: this.deps.maxRounds,
         lastError: `Review loop exceeded ${this.deps.maxRounds} rounds`,
         sessionHistory: input.task.sessionHistory,
@@ -149,7 +149,7 @@ export class ReviewLoopService {
       await this.persist(() =>
         this.deps.updateReviewState(input.task, {
           status: '已失败',
-          currentOwner: '董事长',
+          currentOwner: '用户',
           reviewRound: input.round,
           executionSessionId: input.task.executionSessionId,
           executionSessionName: input.task.executionSessionName,
@@ -210,7 +210,7 @@ export class ReviewLoopService {
           await this.persist(() =>
             this.deps.updateReviewState(input.task, {
               status: '待发布',
-              currentOwner: '董事长',
+              currentOwner: '用户',
               reviewRound: input.round,
               reviewVerdict: '通过',
               reviewFindings: '',
@@ -233,7 +233,7 @@ export class ReviewLoopService {
       await this.persist(() =>
         this.deps.updateReviewState(input.task, {
           status: isDeliverable ? '待发布' : '待决策',
-          currentOwner: '董事长',
+          currentOwner: '用户',
           reviewRound: input.round,
           reviewVerdict: '通过',
           reviewFindings: '',
@@ -242,7 +242,7 @@ export class ReviewLoopService {
           reviewSessionId: review.sessionId,
           reviewSessionName: review.sessionName,
           sessionHistory: input.task.sessionHistory,
-          progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待董事长确定修复方向',
+          progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待用户确定修复方向',
           runnerKind: '',
           runnerAgent: '',
         }),

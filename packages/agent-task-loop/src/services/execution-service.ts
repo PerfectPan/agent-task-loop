@@ -255,7 +255,7 @@ export class ExecutionService {
       await this.persist(() =>
         this.deps.taskService.updateReviewState(task, {
           status: '已失败',
-          currentOwner: '董事长',
+          currentOwner: '用户',
           lastError: formatFailureMessage(
             this.deps.formatFailure,
             result.error ?? 'unknown error',
@@ -288,7 +288,7 @@ export class ExecutionService {
       await this.persist(() =>
         this.deps.taskService.updateReviewState(task, {
           status: '已失败',
-          currentOwner: '董事长',
+          currentOwner: '用户',
           lastError: message,
           workspacePath,
           logPath,

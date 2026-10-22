@@ -41,7 +41,7 @@ describe('RejectService', () => {
         acceptanceRound: 1,
         acceptanceVerdict: '打回',
         acceptanceFeedback: '单测没有证明真实业务行为；注释统一改中文；Pull Request 标题重写',
-        progressSummary: '董事长验收未通过，正在回到 claude 修复',
+        progressSummary: '用户验收未通过，正在回到 claude 修复',
       }),
     );
     expect(runLoop).toHaveBeenCalledWith({
@@ -52,7 +52,7 @@ describe('RejectService', () => {
         acceptanceFeedback: '单测没有证明真实业务行为；注释统一改中文；Pull Request 标题重写',
         status: '修复中',
       }),
-      promptOverride: expect.stringContaining('董事长最新验收意见'),
+      promptOverride: expect.stringContaining('用户最新验收意见'),
       startRound: 4,
     });
   });

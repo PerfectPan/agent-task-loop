@@ -85,7 +85,7 @@ export class ReviewService {
     ];
     if (input.acceptanceFeedback) {
       promptLines.push(
-        '董事长最新验收意见（硬约束）：',
+        '用户最新验收意见（硬约束）：',
         input.acceptanceFeedback,
         '复核时必须以这些硬约束为准；如果实现已经满足这些要求，就不能再用个人工程偏好、通用最佳实践或“最好再补一个测试”之类的理由驳回。',
         '只有在以下情况才允许驳回：功能仍错误、硬约束未落实、验证失败、或改动引入新的明确回归。',

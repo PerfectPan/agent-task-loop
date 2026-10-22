@@ -156,7 +156,7 @@ describe('ExecutionService', () => {
       }),
       expect.objectContaining({
         status: '已失败',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         lastError: 'boom',
         logPath: expect.stringContaining('.agent-task-loop/logs/'),
         progressSummary: '执行失败，请查看 LastError 和日志',
@@ -265,7 +265,7 @@ describe('ExecutionService', () => {
       }),
       expect.objectContaining({
         status: '已失败',
-        currentOwner: '董事长',
+        currentOwner: '用户',
         lastError: 'adapter crashed',
         progressSummary: '执行异常中断，请查看 LastError 和日志',
       }),

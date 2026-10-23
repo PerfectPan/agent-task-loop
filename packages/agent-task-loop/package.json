@@ -62,10 +62,10 @@
     "test:watch": "vp test watch"
   },
   "dependencies": {
-    "@rivus/agent-kit": "0.20.0",
-    "@rivus/agent-kit-collab": "0.20.0",
+    "@rivus/agent-kit": "0.21.1",
+    "@rivus/agent-kit-collab": "0.21.1",
     "citty": "^0.2.2",
-    "effect": "4.0.4",
+    "effect": "4.0.5",
     "execa": "^10.0.1",
     "ink": "^7.1.1",
     "react": "^19.3.0",

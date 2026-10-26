@@ -10,6 +10,7 @@ This repository is intended to be public. Treat every change as if it may be rea
 - Do not add internal company domains, private repository names, private tokens, or personal filesystem paths.
 - Use `rg` for searches when available.
 - Update tests and documentation when behavior changes.
+- Put unit tests next to the code they test (for TypeScript, `foo.test.ts` beside `foo.ts`; other languages follow their own convention). Integration tests, which cross modules, run a built artifact, or go through an external boundary such as HTTP or a database, live in the package's `test/` directory, with shared fixtures under `test/fixtures/`.
 - Lint, format, and TypeScript rules come from `@perfectpan/lint-config` (a git dependency pinned to a tag). Keep only repository-specific settings in the `lint` and `fmt` blocks of the root `vite.config.ts` and in `tsconfig.base.json`; extend the shared configs instead of copying them.
 
 ## Project Commands

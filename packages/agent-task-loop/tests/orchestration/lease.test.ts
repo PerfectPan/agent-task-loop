@@ -105,6 +105,18 @@ async function waitForHolder(dir: string, key: string): Promise<LeaseSnapshot> {
   throw new Error(`nobody acquired ${key}`);
 }
 
+/** Waits until a heartbeat advances the stored revision, so timing assertions do not race the scheduler. */
+async function waitForRevisionAbove(dir: string, key: string, revision: number): Promise<LeaseSnapshot> {
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const record = await readRecord(dir, key);
+    if (record !== undefined && record.revision > revision) {
+      return record;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`the lease ${key} did not renew past revision ${revision}`);
+}
+
 describe('TaskOccupancyService on /lease', () => {
   it('runs the workflow with a mutation fence and releases the lease afterwards', async () => {
     const dir = tempDir();
@@ -132,10 +144,9 @@ describe('TaskOccupancyService on /lease', () => {
     const result = await service.run({ taskId: 'T-1' }, async ({ signal }) => {
       await waitForHolder(dir, KEY);
       const first = await readRecord(dir, KEY);
-      await new Promise((resolve) => setTimeout(resolve, 70));
-      const second = await readRecord(dir, KEY);
-      expect(second?.revision ?? 0).toBeGreaterThan(first?.revision ?? 0);
-      expect(second?.generation).toBe(first?.generation);
+      // Wait for the heartbeat to write instead of assuming a fixed delay is enough on a loaded runner.
+      const second = await waitForRevisionAbove(dir, KEY, first?.revision ?? 0);
+      expect(second.generation).toBe(first?.generation);
       signal.throwIfAborted();
       return 'held';
     });
@@ -146,9 +157,15 @@ describe('TaskOccupancyService on /lease', () => {
   it('refuses a second concurrent run of the same Task while the first keeps renewing', async () => {
     const dir = tempDir();
     const service = new TaskOccupancyService({ repository: fileTaskLeaseRepository(dir), heartbeatMs: 20 });
+    let started: () => void = () => undefined;
+    const startedRun = new Promise<void>((resolve) => (started = resolve));
     let finishFirst: () => void = () => undefined;
-    const first = service.run({ taskId: 'T-1' }, () => new Promise<void>((resolve) => (finishFirst = resolve)));
-    await waitForHolder(dir, KEY);
+    const first = service.run({ taskId: 'T-1' }, () => {
+      started();
+      return new Promise<void>((resolve) => (finishFirst = resolve));
+    });
+    // Wait until the workflow is running, so finishFirst is assigned before it is called.
+    await startedRun;
 
     await expect(service.run({ taskId: 'T-1' }, async () => 'never')).rejects.toThrow(
       `Task T-1 already has an active orchestration (pid ${process.pid})`,

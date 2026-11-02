@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vite-plus/test';
+import type { TaskRecord } from '../types/task';
+import { overlayRuntimeState, pickRuntimeState } from './runtime-state';
+
+describe('pickRuntimeState', () => {
+  it('keeps run-time keys (incl. status), dropping task-definition fields', () => {
+    const picked = pickRuntimeState({
+      taskId: 'T-1',
+      title: 'def',
+      targetAgent: 'claude',
+      project: 'p',
+      // run-time (incl. lifecycle status):
+      status: '待发布',
+      executionSessionId: 'sess-1',
+      runnerPid: 4242,
+      workspacePath: '/ws/x',
+    });
+    expect(picked).toEqual({
+      status: '待发布',
+      executionSessionId: 'sess-1',
+      runnerPid: 4242,
+      workspacePath: '/ws/x',
+    });
+  });
+
+  it('records cleared values (empty string / 0 / null), not just truthy ones', () => {
+    const picked = pickRuntimeState({ progressSummary: '', runnerPid: 0, runnerKind: '' });
+    expect(picked).toHaveProperty('progressSummary', '');
+    expect(picked).toHaveProperty('runnerPid', 0);
+    expect(picked).toHaveProperty('runnerKind', '');
+  });
+
+  it('ignores undefined values', () => {
+    const picked = pickRuntimeState({ executionSessionId: undefined, prLink: 'http://x' });
+    expect(picked).not.toHaveProperty('executionSessionId');
+    expect(picked).toEqual({ prLink: 'http://x' });
+  });
+});
+
+describe('overlayRuntimeState', () => {
+  const base = {
+    taskId: 'T-1',
+    title: 't',
+    description: '',
+    project: 'p',
+    targetAgent: 'claude',
+    priority: 0,
+    status: '待处理',
+  } as TaskRecord;
+
+  it('returns the record unchanged when there is no stored state', () => {
+    expect(overlayRuntimeState(base, undefined)).toEqual(base);
+  });
+
+  it('fills run-time fields the backend record lacks', () => {
+    const out = overlayRuntimeState(base, { executionSessionId: 'sess-9', runnerPid: 7 });
+    expect(out.executionSessionId).toBe('sess-9');
+    expect(out.runnerPid).toBe(7);
+    expect(out.title).toBe('t'); // definition untouched
+  });
+
+  it('local wins for present keys, including cleared values (no resurrection)', () => {
+    const record = { ...base, progressSummary: 'stale' } as TaskRecord;
+    const out = overlayRuntimeState(record, { progressSummary: '' });
+    expect(out.progressSummary).toBe(''); // cleared, not "stale"
+  });
+
+  it('overlays lifecycle status (the github 待处理→待发布 case)', () => {
+    const githubOpen = { ...base, status: '待处理' } as TaskRecord; // github open issue
+    const out = overlayRuntimeState(githubOpen, { status: '待发布' });
+    expect(out.status).toBe('待发布'); // complete's guard can now pass
+  });
+});

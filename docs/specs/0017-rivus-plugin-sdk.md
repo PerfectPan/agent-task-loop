@@ -87,7 +87,7 @@ behavior.
 
 ## Acceptance Evidence
 
-- S1: `packages/agent-task-loop/tests/rivus-tool-execution.test.ts` and the
+- S1: `packages/agent-task-loop/test/rivus-tool-execution.test.ts` and the
   existing plugin conformance and tool input suites.
 - S2/S3: `packages/agent-task-loop/scripts/check-package.mjs`; archive source
   regressions in `tests/scripts/rivus-core-archives.test.mjs`.

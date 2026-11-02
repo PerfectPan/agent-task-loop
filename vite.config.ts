@@ -26,7 +26,7 @@ export default defineConfig({
       'apps/web/next-env.d.ts',
       'apps/room-web/build/**',
       'apps/room-web/.react-router/**',
-      '**/tests/fixtures/**',
+      '**/test/fixtures/**',
     ],
     rules: {
       ...lint.rules,

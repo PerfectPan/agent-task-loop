@@ -36,11 +36,9 @@ jobs:
 
       - run: pnpm typecheck
 
-      # The release PR is opened with GITHUB_TOKEN, and GitHub does not start
-      # workflows for events that token causes, so CI does not run on it by
-      # itself. Before merging, close and reopen the PR (or push an empty commit
-      # to its branch) as a person: `gh pr close <n> && gh pr reopen <n>`.
-      # A `gh workflow run` dispatch is not attached to the PR and does not count.
+      # GITHUB_TOKEN-created PR events can require a maintainer to approve workflow runs.
+      # This release flow does not force Draft. If the PR is Draft, mark it Ready
+      # before expecting full CI; verify that test actually ran and passed, not skipped.
       - name: Create release pull request
         id: changesets
         uses: changesets/action@v2

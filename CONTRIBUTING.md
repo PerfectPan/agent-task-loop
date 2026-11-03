@@ -37,7 +37,7 @@ Small fixes, typo corrections, dependency metadata updates, and narrow documenta
 
 ## Required Checks
 
-CI (`.github/workflows/ci.yml` and `.github/workflows/review.yml`) runs these on every pull request; run them locally before opening review:
+Run these checks locally before requesting review. The full CI and lightweight Review workflows follow the [CI Execution Policy](#ci-execution-policy) below:
 
 ```bash
 # Repository checks:
@@ -70,6 +70,28 @@ Upgrade the shared rules by bumping the tag in `package.json`, then fix or expli
 
 For package-facing changes, also run `pnpm changeset status` and the `npm pack --dry-run` check in [Pull Request Expectations](#pull-request-expectations).
 
+## CI Execution Policy
+
+The full `test` job in `.github/workflows/ci.yml` runs for Ready PRs when they are opened, updated with new
+commits (`synchronize`), reopened, or changed from Draft to Ready. The job skips Draft PR events. The existing
+push-to-`main` trigger is preserved; the Draft condition applies only to pull requests. No manual CI trigger is
+added.
+
+Keep work in Draft until local checks are finished. GitHub reports a skipped job as successful, even when it is
+required by branch protection; this is not evidence that tests ran. After marking a PR Ready, confirm the full
+`test` job actually executed and passed for the current head and merge result before merging. A base-only
+change needs a refreshed branch or another Draft-to-Ready transition to validate the new comparison.
+
+The separate `Review` workflow stays active on Draft PRs and metadata edits. Its repository hygiene, title and
+description checks do not install dependencies or run the full test suite, so authors get early feedback while
+Drafts save full-CI usage. Bot authors remain exempt only from the description check. Metadata-only edits run
+Review without repeating full CI.
+
+Release PRs keep their existing creation behavior; this change does not force them into Draft or change
+publishing. Follow [Releasing](#releasing) if GitHub requires workflow approval. Repository settings are separate:
+preserve check names and inspect the actual merge requirements in [Repository Setup](#repository-setup), and
+never use a skipped full-CI check as proof that a Ready PR is safe to merge.
+
 ## Changesets
 
 Use Changesets for package version and changelog entries:
@@ -85,7 +107,7 @@ Only published packages get changesets. Private workspace packages (`private: tr
 ### Releasing
 
 1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
-2. The release PR is opened with the workflow's `GITHUB_TOKEN`, and GitHub does not start workflows for events that token causes, so CI does not run on it by itself. Before merging, a person closes and reopens it (`gh pr close <n> && gh pr reopen <n>`) or pushes an empty commit to its branch. `gh workflow run ci.yml` does not count: a dispatched run is not attached to the PR and does not satisfy required checks.
+2. The release PR is opened with the workflow's `GITHUB_TOKEN`. GitHub can require an authorized maintainer to select **Approve workflows to run** for its PR events; see [GitHub's trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow). The release workflow does not force the PR into Draft. If it is Draft, mark it Ready after reviewing the changes; reopening or pushing to a Draft PR does not execute full CI. Confirm that the current PR's `test` job actually ran and passed alongside Review before merging. This CI has no manual dispatch trigger.
 3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
 ### Bot Pull Requests

@@ -8,7 +8,7 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@rivus/*'
   # Renovate security update: @modelcontextprotocol/sdk@1.32.0
-  - "@modelcontextprotocol/sdk@1.32.0"
+  - '@modelcontextprotocol/sdk@1.32.0'
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:

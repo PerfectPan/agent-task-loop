@@ -95,4 +95,4 @@ npx --no-install @rivus/agent-task-loop create --task TASK-101 --title "Fix logi
 
 Open a GitHub issue for bugs and ideas.
 
-For design proposals, see rfcs/.
+For design proposals, see the [Change Design Gate](../CONTRIBUTING.md#change-design-gate).

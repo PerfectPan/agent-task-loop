@@ -88,6 +88,47 @@ Only published packages get changesets. Private workspace packages (`private: tr
 2. The release PR is opened with the workflow's `GITHUB_TOKEN`, and GitHub does not start workflows for events that token causes, so CI does not run on it by itself. Before merging, a person closes and reopens it (`gh pr close <n> && gh pr reopen <n>`) or pushes an empty commit to its branch. `gh workflow run ci.yml` does not count: a dispatched run is not attached to the PR and does not satisfy required checks.
 3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
+### Bot Pull Requests
+
+- **Renovate npm PRs**: [`renovate.json`](renovate.json) enables only the npm manager; GitHub Actions stay with Dependabot.
+  Renovate checks on Mondays from 00:00 to 06:59 in Asia/Shanghai, waits seven days after a release, and opens at
+  most five concurrent version-update PRs. The waiting period stays above the workspace's one-day install policy
+  in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Other `@rivus/*` packages are exempt from the Renovate wait,
+  matching `minimumReleaseAgeExclude`; the kit/Effect group below overrides that exemption. `rangeStrategy: "bump"`
+  updates declared ranges and regenerates the pnpm lockfile through `pnpm install`.
+
+  The catch-all groups separate minor/patch updates from majors. Later rules give the `packages:vitePlus`
+  toolchain its own group, and `@rivus/agent-kit`, `@rivus/agent-kit-collab` and `effect` a shared group with
+  `minimumReleaseAge: "7 days"` and `separateMajorMinor: false`. The group rule follows the owned-package exemption
+  so all three retain the seven-day wait, including third-party Effect.
+
+  Grouping reduces split updates; it does not solve peer compatibility. Even with the same waiting period,
+  different publication times can make releases eligible in separate runs. Renovate can also select an Effect
+  version that differs from a kit package's exact optional peer. Review the selected versions across
+  `packages/agent-task-loop` and `apps/room-web`; defer or adjust an incompatible update until a compatible set is
+  available. Before merging, require a successful `pnpm install --frozen-lockfile` and the full CI gates.
+  `pnpm test` starts with `pnpm peers check --lockfile-only` to reject incompatible peers in the resolved lockfile.
+  A frozen install alone can skip peer resolution, even with `--strict-peer-dependencies`. The offline regression
+  fixture in `tests/dependencies/peer-check.test.mjs` verifies that the explicit peer check rejects a mismatched
+  exact optional peer. A token-free Renovate local lookup validates extraction/lookup only; it does not regenerate
+  or install the proposed lockfile, and cannot establish that a future bot update is compatible.
+
+  Node upgrades remain deliberate: `engines`, `devEngines.runtime` and major `@types/node` updates are disabled.
+  `@perfectpan/lint-config` stays disabled because it is a Git dependency whose upgrades need accompanying code fixes.
+
+  Lock-file maintenance runs on the first day of each month from 00:00 to 06:59 in Asia/Shanghai.
+
+  Renovate opens a **Dependency Dashboard** issue through `config:recommended`; use its checkboxes to retry or
+  recreate an update. npm security findings come from Renovate's OSV checks (`osvVulnerabilityAlerts`), and
+  `vulnerabilityAlerts.rangeStrategy: "bump"` keeps security fixes on the tested `pnpm install` path. Security PRs
+  can bypass release-age and schedule limits.
+
+- **Dependabot actions PRs**: `.github/dependabot.yml` updates GitHub Actions weekly with the `chore(deps)` prefix.
+
+- **Changesets**: bot PRs carry none. Dependency updates that do not change a published package's behavior need no
+  changeset. If a bot PR changes published behavior (for example a bundled dependency changed), the reviewer adds a
+  patch changeset before merging, per the section above.
+
 ## SDD Workflow And Document Lifecycle
 
 1. Record the problem, affected users or maintainers, in-scope behavior, non-goals, and acceptance conditions.

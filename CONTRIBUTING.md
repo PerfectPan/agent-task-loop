@@ -93,14 +93,25 @@ Only published packages get changesets. Private workspace packages (`private: tr
 - **Renovate npm PRs**: [`renovate.json`](renovate.json) enables only the npm manager; GitHub Actions stay with Dependabot.
   Renovate checks on Mondays from 00:00 to 06:59 in Asia/Shanghai, waits seven days after a release, and opens at
   most five concurrent version-update PRs. The waiting period stays above the workspace's one-day install policy
-  in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). `@rivus/*` packages are exempt from the wait, matching
-  `minimumReleaseAgeExclude`, so a kit release reaches this repository in the next run. `rangeStrategy: "bump"`
+  in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Other `@rivus/*` packages are exempt from the Renovate wait,
+  matching `minimumReleaseAgeExclude`; the kit/Effect group below overrides that exemption. `rangeStrategy: "bump"`
   updates declared ranges and regenerates the pnpm lockfile through `pnpm install`.
 
   The catch-all groups separate minor/patch updates from majors. Later rules give the `packages:vitePlus`
-  toolchain its own group, and `@rivus/agent-kit`, `@rivus/agent-kit-collab` and `effect` a shared group: agent-kit
-  declares the exact optional peer `effect`, so the kit packages and `effect` must move in one PR across
-  `packages/agent-task-loop` and `apps/room-web`.
+  toolchain its own group, and `@rivus/agent-kit`, `@rivus/agent-kit-collab` and `effect` a shared group with
+  `minimumReleaseAge: "7 days"` and `separateMajorMinor: false`. The group rule follows the owned-package exemption
+  so all three retain the seven-day wait, including third-party Effect.
+
+  Grouping reduces split updates; it does not solve peer compatibility. Even with the same waiting period,
+  different publication times can make releases eligible in separate runs. Renovate can also select an Effect
+  version that differs from a kit package's exact optional peer. Review the selected versions across
+  `packages/agent-task-loop` and `apps/room-web`; defer or adjust an incompatible update until a compatible set is
+  available. Before merging, require a successful `pnpm install --frozen-lockfile` and the full CI gates.
+  `pnpm test` starts with `pnpm peers check --lockfile-only` to reject incompatible peers in the resolved lockfile.
+  A frozen install alone can skip peer resolution, even with `--strict-peer-dependencies`. The offline regression
+  fixture in `tests/dependencies/peer-check.test.mjs` verifies that the explicit peer check rejects a mismatched
+  exact optional peer. A token-free Renovate local lookup validates extraction/lookup only; it does not regenerate
+  or install the proposed lockfile, and cannot establish that a future bot update is compatible.
 
   Node upgrades remain deliberate: `engines`, `devEngines.runtime` and major `@types/node` updates are disabled.
   `@perfectpan/lint-config` stays disabled because it is a Git dependency whose upgrades need accompanying code fixes.

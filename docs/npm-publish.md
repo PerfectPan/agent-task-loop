@@ -80,13 +80,16 @@ pnpm build
 
 After the pull request lands on `main`, GitHub Actions opens or updates the release pull request `chore(release): version packages` on the branch `changeset-release/main`. It runs `pnpm version-packages`: Changesets bumps published packages and writes changelog entries through `@changesets/changelog-github`. Private workspace packages are not versioned.
 
-The release pull request is opened with the workflow's `GITHUB_TOKEN`. GitHub does not start workflows for events caused by that token, so CI does not run on the release pull request by itself. Before merging, close and reopen it as a person, or push an empty commit to its branch:
+The release pull request is opened with the workflow's `GITHUB_TOKEN`. GitHub can require an authorized
+maintainer to select **Approve workflows to run** for PR events created by that token; see
+[GitHub's trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
+This release workflow does not force Draft. If the PR is Draft, mark it Ready after reviewing the changes;
+reopening or pushing to a PR that is still Draft does not execute the full CI job.
 
-```bash
-gh pr close <n> && gh pr reopen <n>
-```
-
-That is a normal `pull_request` event, so `CI` and `Review` run. `gh workflow run ci.yml` does not help: a dispatched run is not attached to the pull request and does not satisfy required checks.
+Confirm that the full `test` job actually ran and passed for the current head and merge result, alongside the
+lightweight Review checks, before merging. A skipped Draft job is not test evidence. The CI workflow has no
+manual dispatch trigger. See [CI Execution Policy](../CONTRIBUTING.md#ci-execution-policy) for the shared
+Ready/Draft behavior; the existing publishing process is unchanged.
 
 Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public.
 

@@ -212,13 +212,13 @@ importers:
     dependencies:
       '@agentclientprotocol/claude-agent-acp':
         specifier: 0.84.0
-        version: 0.84.0(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.5))
+        version: 0.84.0(@anthropic-ai/sdk@0.128.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7))
       '@agentclientprotocol/codex-acp':
         specifier: 2.0.1
         version: 2.0.1
       '@agentclientprotocol/sdk':
         specifier: 1.5.1
-        version: 1.5.1(zod@4.6.5)
+        version: 1.5.1(zod@4.6.7)
       '@fontsource/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -227,7 +227,7 @@ importers:
         version: 5.3.0
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.0
-        version: 1.32.2(supports-color@8.1.1)(zod@4.6.5)
+        version: 1.32.2(supports-color@8.1.1)(zod@4.6.7)
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -313,8 +313,8 @@ importers:
         specifier: ^3.7.0
         version: 3.7.0
       zod:
-        specifier: ^4.6.5
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.7
     devDependencies:
       '@react-router/dev':
         specifier: ^8.4.0
@@ -454,12 +454,12 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0
       zod:
-        specifier: ^4.6.5
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.7
     devDependencies:
       '@rivus/agent':
         specifier: 0.17.0
-        version: 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+        version: 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.0
@@ -5852,10 +5852,10 @@ packages:
 
 snapshots:
 
-  '@agentclientprotocol/claude-agent-acp@0.84.0(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.5))':
+  '@agentclientprotocol/claude-agent-acp@0.84.0(@anthropic-ai/sdk@0.128.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7))':
     dependencies:
       '@agentclientprotocol/sdk': 1.5.1(zod@4.6.5)
-      '@anthropic-ai/claude-agent-sdk': 0.3.284(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.5))(zod@4.6.5)
+      '@anthropic-ai/claude-agent-sdk': 0.3.284(@anthropic-ai/sdk@0.128.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7))(zod@4.6.5)
       diff: 9.0.0
       zod: 4.6.5
     transitivePeerDependencies:
@@ -5864,16 +5864,20 @@ snapshots:
 
   '@agentclientprotocol/codex-acp@2.0.1':
     dependencies:
-      '@agentclientprotocol/sdk': 1.5.1(zod@4.6.5)
+      '@agentclientprotocol/sdk': 1.5.1(zod@4.6.7)
       '@openai/codex': 0.159.2
       diff: 9.0.0
       open: 11.0.4
       vscode-jsonrpc: 9.0.3
-      zod: 4.6.5
+      zod: 4.6.7
 
   '@agentclientprotocol/sdk@1.5.1(zod@4.6.5)':
     dependencies:
       zod: 4.6.5
+
+  '@agentclientprotocol/sdk@1.5.1(zod@4.6.7)':
+    dependencies:
+      zod: 4.6.7
 
   '@agentclientprotocol/sdk@1.8.0(zod@4.6.7)':
     dependencies:
@@ -5910,10 +5914,10 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.284':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk@0.3.284(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.5))(zod@4.6.5)':
+  '@anthropic-ai/claude-agent-sdk@0.3.284(@anthropic-ai/sdk@0.128.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7))(zod@4.6.5)':
     dependencies:
-      '@anthropic-ai/sdk': 0.128.0(zod@4.6.5)
-      '@modelcontextprotocol/sdk': 1.32.2(supports-color@8.1.1)(zod@4.6.5)
+      '@anthropic-ai/sdk': 0.128.0(zod@4.6.7)
+      '@modelcontextprotocol/sdk': 1.32.2(supports-color@8.1.1)(zod@4.6.7)
       zod: 4.6.5
     optionalDependencies:
       '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.284
@@ -5925,18 +5929,18 @@ snapshots:
       '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.284
       '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.284
 
-  '@anthropic-ai/sdk@0.128.0(zod@4.6.5)':
+  '@anthropic-ai/sdk@0.128.0(zod@4.6.7)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
     optionalDependencies:
-      zod: 4.6.5
+      zod: 4.6.7
 
-  '@anthropic-ai/sdk@0.91.1(zod@4.6.5)':
+  '@anthropic-ai/sdk@0.91.1(zod@4.6.7)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 4.6.5
+      zod: 4.6.7
 
   '@asamuzakjp/css-color@6.0.7':
     dependencies:
@@ -6443,9 +6447,9 @@ snapshots:
 
   '@decimalturn/toml-patch@3.3.0': {}
 
-  '@earendil-works/pi-agent-core@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@earendil-works/pi-agent-core@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       '@earendil-works/pi-telemetry': 0.84.4
       diff: 8.0.4
       ignore: 7.0.5
@@ -6459,16 +6463,16 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
-      '@anthropic-ai/sdk': 0.91.1(zod@4.6.5)
+      '@anthropic-ai/sdk': 0.91.1(zod@4.6.7)
       '@aws-sdk/client-bedrock-runtime': 3.1048.0
       '@earendil-works/pi-telemetry': 0.84.4
-      '@google/genai': 1.52.0(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)
+      '@google/genai': 1.52.0(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)
       '@smithy/node-http-handler': 4.7.3
       http-proxy-agent: 7.0.2(supports-color@8.1.1)
       https-proxy-agent: 7.0.6(supports-color@8.1.1)
-      openai: 6.40.0(ws@8.20.0)(zod@4.6.5)
+      openai: 6.40.0(ws@8.20.0)(zod@4.6.7)
       partial-json: 0.1.7
       typebox: 1.3.7
     transitivePeerDependencies:
@@ -6483,10 +6487,10 @@ snapshots:
     dependencies:
       '@earendil-works/pi-protocol': 0.84.4
 
-  '@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-agent-core': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
-      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+      '@earendil-works/pi-agent-core': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       '@earendil-works/pi-client': 0.84.4
       '@earendil-works/pi-protocol': 0.84.4
       '@earendil-works/pi-tui': 0.84.4
@@ -6710,14 +6714,14 @@ snapshots:
 
   '@fontsource/noto-serif-sc@5.3.0': {}
 
-  '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)':
+  '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)':
     dependencies:
       google-auth-library: 10.9.1(supports-color@8.1.1)
       p-retry: 4.6.2
       protobufjs: 7.6.6
       ws: 8.20.0
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.31.0(supports-color@8.1.1)(zod@4.6.5)
+      '@modelcontextprotocol/sdk': 1.31.0(supports-color@8.1.1)(zod@4.6.7)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -6927,7 +6931,7 @@ snapshots:
       '@mariozechner/clipboard-win32-x64-msvc': 0.3.9
     optional: true
 
-  '@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5)':
+  '@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.10)
       ajv: 8.20.0
@@ -6944,13 +6948,13 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.6.5
-      zod-to-json-schema: 3.25.2(zod@4.6.5)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.2(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
     optional: true
 
-  '@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.5)':
+  '@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.10)
       ajv: 8.20.0
@@ -6967,8 +6971,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.6.5
-      zod-to-json-schema: 3.25.2(zod@4.6.5)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.2(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -8286,10 +8290,10 @@ snapshots:
     optionalDependencies:
       effect: 4.0.5
 
-  '@rivus/agent@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@rivus/agent@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
-      '@rivus/gateway': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
-      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+      '@rivus/gateway': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       effect: 3.22.2
     transitivePeerDependencies:
       - '@agentclientprotocol/sdk'
@@ -8301,12 +8305,12 @@ snapshots:
       - ws
       - zod
 
-  '@rivus/gateway@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@rivus/gateway@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
       '@larksuiteoapi/node-sdk': 1.74.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       '@resvg/resvg-js': 2.6.2
       '@rivus/platform': 0.17.0
-      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       axios: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       effect: 3.22.2
       marked: 18.0.14
@@ -8324,9 +8328,9 @@ snapshots:
     dependencies:
       effect: 3.22.2
 
-  '@rivus/runtime@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.5))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)':
+  '@rivus/runtime@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.5))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.5)
+      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/exporter-trace-otlp-proto': 0.222.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.11.0(@opentelemetry/api@1.9.1)
@@ -8336,7 +8340,7 @@ snapshots:
       effect: 3.22.2
       typebox: 1.3.34
     optionalDependencies:
-      '@agentclientprotocol/sdk': 1.5.1(zod@4.6.5)
+      '@agentclientprotocol/sdk': 1.5.1(zod@4.6.7)
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
       - bufferutil
@@ -10198,10 +10202,10 @@ snapshots:
       powershell-utils: 0.2.1
       wsl-utils: 1.0.0
 
-  openai@6.40.0(ws@8.20.0)(zod@4.6.5):
+  openai@6.40.0(ws@8.20.0)(zod@4.6.7):
     optionalDependencies:
       ws: 8.20.0
-      zod: 4.6.5
+      zod: 4.6.7
 
   orderedmap@2.1.1: {}
 
@@ -11227,9 +11231,9 @@ snapshots:
       '@yuku-toolchain/types': 0.19.0
       yuku-core: 0.19.0
 
-  zod-to-json-schema@3.25.2(zod@4.6.5):
+  zod-to-json-schema@3.25.2(zod@4.6.7):
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.7
 
   zod@4.6.5: {}
 

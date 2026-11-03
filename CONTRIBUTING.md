@@ -90,9 +90,13 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 ### Bot Pull Requests
 
-- **Renovate npm PRs**: [`renovate.json`](renovate.json) enables only the npm manager; GitHub Actions stay with Dependabot.
+- **Renovate version PRs**: [`renovate.json`](renovate.json) enables routine npm/pnpm and GitHub Actions updates
+  through the `npm` and `github-actions` managers. Renovate is the target owner for both ecosystems. During the
+  handoff below, the existing Dependabot Actions job remains active; do not add a Dependabot npm job.
   Renovate checks on Mondays from 00:00 to 06:59 in Asia/Shanghai, waits seven days after a release, and opens at
-  most five concurrent version-update PRs. The waiting period stays above the workspace's one-day install policy
+  most five concurrent version-update PRs. Automerge is disabled; require the CI and Review checks before merging.
+  GitHub Actions minor/patch updates share a group; Actions majors get separate PRs for deliberate review.
+  The waiting period stays above the workspace's one-day install policy
   in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Other `@rivus/*` packages are exempt from the Renovate wait,
   matching `minimumReleaseAgeExclude`; the kit/Effect group below overrides that exemption. `rangeStrategy: "bump"`
   updates declared ranges and regenerates the pnpm lockfile through `pnpm install`.
@@ -113,17 +117,41 @@ Only published packages get changesets. Private workspace packages (`private: tr
   exact optional peer. A token-free Renovate local lookup validates extraction/lookup only; it does not regenerate
   or install the proposed lockfile, and cannot establish that a future bot update is compatible.
 
-  Node upgrades remain deliberate: `engines`, `devEngines.runtime` and major `@types/node` updates are disabled.
+  Node upgrades remain deliberate: `engines`, `devEngines.runtime`, GitHub Actions `node-version` dependencies
+  (including `pnpm/setup`'s `runtime`) and major `@types/node` updates are disabled.
   `@perfectpan/lint-config` stays disabled because it is a Git dependency whose upgrades need accompanying code fixes.
 
   Lock-file maintenance runs on the first day of each month from 00:00 to 06:59 in Asia/Shanghai.
 
-  Renovate opens a **Dependency Dashboard** issue through `config:recommended`; use its checkboxes to retry or
-  recreate an update. npm security findings come from Renovate's OSV checks (`osvVulnerabilityAlerts`), and
-  `vulnerabilityAlerts.rangeStrategy: "bump"` keeps security fixes on the tested `pnpm install` path. Security PRs
-  can bypass release-age and schedule limits.
+  `config:recommended` requests a **Dependency Dashboard** issue; once the hosted app has created it, use its
+  checkboxes to retry or recreate an update. Configuration validation and a token-free local extraction/lookup
+  are not evidence that the hosted app is authorized or has run successfully.
 
-- **Dependabot actions PRs**: `.github/dependabot.yml` updates GitHub Actions weekly with the `chore(deps)` prefix.
+- **Routine-update handoff**: use two separate PRs to avoid a coverage gap. The first PR enables Renovate's
+  `github-actions` manager and preserves the existing [Dependabot Actions job](.github/dependabot.yml) unchanged.
+  This activation PR can be reviewed on its configuration checks and CI without first requiring a hosted run
+  of configuration that has not reached the default branch. Once both bots run, duplicate Actions version PRs
+  are possible; reconcile overlapping PRs before merging updates during this temporary transition.
+  Before a second, independent PR removes the Dependabot Actions job, verify that the Renovate installation
+  includes this repository and has permission to update workflow files. Record a successful hosted run that
+  extracts npm/pnpm and GitHub Actions, its Dependency Dashboard, and an actual Actions update PR with passing
+  CI. Configuration validation and local extraction alone do not satisfy this handoff. Keep Dependabot active
+  while any of these checks remain unverified, and resolve remaining Dependabot version PRs when the verified
+  removal takes effect. The final state has Renovate as the sole routine-update owner.
+
+- **Security updates are a separate handoff**: keep the GitHub dependency graph and Dependabot alerts enabled;
+  removing `.github/dependabot.yml` only changes routine version updates. Repository security settings and GitHub
+  App permissions are managed separately, and this configuration does not enable either of them. If alerts or
+  the graph are disabled, the owner must enable them in a separately confirmed step before claiming coverage.
+  The 2026-11-03 rollout audit found dependency graph, Dependabot alerts, and Dependabot security updates disabled
+  in [repository security settings](https://github.com/PerfectPan/agent-task-loop/settings/security_analysis).
+  Recheck these settings before handoff; this migration does not change them.
+  Existing `osvVulnerabilityAlerts` and `vulnerabilityAlerts.rangeStrategy: "bump"` request Renovate security
+  fixes, which can bypass release-age and schedule limits, but OSV checks do not prove access to GitHub alerts.
+  Before selecting Renovate as the sole security-PR owner, verify the installation's Dependabot alerts read
+  permission and record a hosted run that reads repository alerts and produces the applicable fix with passing
+  CI. Keep any enabled Dependabot security updates in place until that evidence exists, then change the separate
+  security-update setting only with owner confirmation. An empty alert list alone does not prove fix coverage.
 
 - **Changesets**: bot PRs carry none. Dependency updates that do not change a published package's behavior need no
   changeset. If a bot PR changes published behavior (for example a bundled dependency changed), the reviewer adds a
@@ -226,11 +254,11 @@ Do not commit private tokens, local config, generated workspaces, internal hostn
 
 The project intentionally keeps package contents narrow. If a file should ship to npm, it must be included through the package's `package.json#files`; verify it appears in the `npm pack --dry-run` output.
 
-The review checks come from [`PerfectPan/gh-repo-checks`](https://github.com/PerfectPan/gh-repo-checks): CI runs them through its GitHub Action (`uses: PerfectPan/gh-repo-checks@v1`), and locally they run as a GitHub CLI extension (`gh extension install PerfectPan/gh-repo-checks`). Do not copy the check scripts into this repository; change them upstream. Repository-specific additions, such as extra required files or forbidden patterns, go in [`.github/repo-checks.conf`](.github/repo-checks.conf), and repository-specific scripts run as extra steps after the shared check. `.github/workflows/review.yml`, `.githooks/pre-commit`, `.github/repo-checks.conf` and `scripts/install-git-hooks.sh` are copied verbatim from the shared project template; change them upstream so later syncs stay a plain diff.
+The review checks come from [`PerfectPan/gh-repo-checks`](https://github.com/PerfectPan/gh-repo-checks): CI runs them through its GitHub Action (`uses: PerfectPan/gh-repo-checks@v1`), and locally they run as a GitHub CLI extension (`gh extension install PerfectPan/gh-repo-checks`). Do not copy the check scripts into this repository; change them upstream. Repository-specific additions, such as extra required files or forbidden patterns, go in [`.github/repo-checks.conf`](.github/repo-checks.conf), and repository-specific scripts run as extra steps after the shared check. `.github/workflows/review.yml`, `.githooks/pre-commit`, `.github/repo-checks.conf` and `scripts/install-git-hooks.sh` follow the shared project template; change their structure upstream so later syncs stay a plain diff. Action version updates in the copied workflow follow the Renovate policy below.
 
 Run `gh repo-checks repository` locally before opening review. It does not replace the pnpm gates, but it catches missing template files, tracked local artifacts, obvious secrets, private paths, and drift between the GitHub PR and GitLab MR templates.
 
-Workflows reference actions by their latest major version tag, such as `actions/checkout@v7`, not by commit SHA. Workflow files copied from the project template take action upgrades from the template rather than local edits.
+Workflows reference actions by their latest major version tag, such as `actions/checkout@v7`, not by commit SHA. Renovate proposes action version updates in all workflows, including files copied from the project template. Review majors separately and reconcile template syncs with those accepted versions.
 
 ## Local Git Hooks
 

@@ -7,6 +7,8 @@ packages:
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@rivus/*'
+  # Renovate security update: next@16.4.1
+  - next@16.4.1
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:

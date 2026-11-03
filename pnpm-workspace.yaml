@@ -9,6 +9,8 @@ minimumReleaseAgeExclude:
   - '@rivus/*'
   # Renovate security update: next@16.4.1
   - next@16.4.1
+  # Renovate security update: zod@4.6.6
+  - zod@4.6.6
 
 # pnpm runs no dependency build scripts unless listed here.
 allowBuilds:

@@ -50,7 +50,7 @@ Package-level rules, enforced by boundary tests:
 - `agent-task-loop` takes the task-run lease from `@rivus/agent-kit-collab`'s
   `/lease` entry. It does not import `agent-room`, and its Rivus Plugin
   neither reads nor writes Room state
-  (`packages/agent-task-loop/tests/room-isolation.test.ts`).
+  (`packages/agent-task-loop/test/room-isolation.test.ts`).
 - `apps/room-web` is the only place that knows all three.
 - `agent-finder-cli` detects agents through `@rivus/agent-kit`'s `/catalog` and
   `/discovery` entries and ships its own probe recipes for agents the kit does

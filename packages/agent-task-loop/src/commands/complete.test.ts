@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+const completeSpy = vi.fn();
+
+vi.mock('../config/load-config', () => ({
+  loadConfig: vi.fn().mockResolvedValue({
+    feishu: { baseToken: 'base', tableId: 'table' },
+    projects: {},
+    repositories: {},
+    agents: {
+      claude: { command: 'claude', args: [], env: {} },
+      codex: { command: 'codex', args: [], env: {} },
+    },
+  }),
+}));
+
+vi.mock('../config/runtime-guard', () => ({
+  assertRuntimeConfig: vi.fn(),
+}));
+
+vi.mock('../services/task-service', () => ({
+  TaskService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+}));
+
+vi.mock('../services/publish-context-service', () => ({
+  PublishContextService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+}));
+
+vi.mock('../services/git-publish-service', () => ({
+  GitPublishService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+}));
+
+vi.mock('../services/github-pull-request-service', () => ({
+  GitHubPullRequestService: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+}));
+
+vi.mock('../services/complete-service', () => ({
+  CompleteService: vi.fn().mockImplementation(function () {
+    return {
+      complete: completeSpy,
+    };
+  }),
+}));
+
+describe('completeCommand', () => {
+  beforeEach(() => {
+    completeSpy.mockReset();
+    completeSpy.mockResolvedValue({
+      branch: 'task/task-101-claude',
+      commit: 'abc123',
+      pullRequestUrl: 'https://github.com/acme/demo/pull/12',
+    });
+  });
+
+  it('prints publish result after completion', async () => {
+    const { completeCommand } = await import('./complete');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await completeCommand.run?.({
+      args: {
+        task: 'TASK-101',
+        config: 'task.config.ts',
+      },
+    } as never);
+
+    expect(completeSpy).toHaveBeenCalledWith({ taskId: 'TASK-101' });
+    expect(logSpy).toHaveBeenCalledWith('Status: 已完成');
+    logSpy.mockRestore();
+  });
+
+  it('prints publish result as json when requested', async () => {
+    const { completeCommand } = await import('./complete');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await completeCommand.run?.({
+      args: {
+        task: 'TASK-101',
+        config: 'task.config.ts',
+        json: true,
+      },
+    } as never);
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual({
+      taskId: 'TASK-101',
+      branch: 'task/task-101-claude',
+      commit: 'abc123',
+      pullRequestUrl: 'https://github.com/acme/demo/pull/12',
+      status: '已完成',
+    });
+    logSpy.mockRestore();
+  });
+});

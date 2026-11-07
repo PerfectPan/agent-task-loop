@@ -12,15 +12,19 @@ const tsxLoader = path.join(packageRoot, 'node_modules', 'tsx', 'dist', 'loader.
 
 const forceSource = process.env.AGENT_TASK_LOOP_FORCE_SOURCE === '1';
 const canRunFromSource = existsSync(sourceEntrypoint) && existsSync(tsxLoader);
+const fromSource = forceSource || canRunFromSource;
 const command = process.execPath;
-const args =
-  forceSource || canRunFromSource
-    ? ['--import', tsxLoader, sourceEntrypoint, ...process.argv.slice(2)]
-    : [distEntrypoint, ...process.argv.slice(2)];
+const args = fromSource
+  ? ['--import', tsxLoader, sourceEntrypoint, ...process.argv.slice(2)]
+  : [distEntrypoint, ...process.argv.slice(2)];
 
 const result = spawnSync(command, args, {
   cwd: process.cwd(),
-  env: process.env,
+  // tsx discovers tsconfig.json from the working directory. Invoked from a
+  // checkout root without a root tsconfig, it falls back to the classic JSX
+  // transform and the TUI dies with "React is not defined". Pin the package's
+  // own tsconfig for the source run (#141); the dist run needs no tsx.
+  env: fromSource ? { ...process.env, TSX_TSCONFIG_PATH: path.join(packageRoot, 'tsconfig.json') } : process.env,
   stdio: 'inherit',
 });
 

@@ -6,6 +6,7 @@ export const execaProcessRunner: ProcessRunner = async (input) => {
     cwd: input.cwd,
     env: { ...process.env, ...input.env },
     cancelSignal: input.signal,
+    killDescendants: true,
     reject: false,
     stdin: 'ignore',
   });

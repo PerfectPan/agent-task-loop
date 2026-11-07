@@ -44,6 +44,7 @@ export async function runAgentCommand(
     reject: false,
     all: true,
     cancelSignal: signal,
+    killDescendants: true,
     stdin: 'ignore',
   });
   onSpawn?.({ pid: subprocess.pid });

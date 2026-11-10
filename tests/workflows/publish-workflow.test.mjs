@@ -15,10 +15,12 @@ test('npm publish workflow no longer builds or publishes the MoonBit module', as
 test('release PR passes the conventional PR title check and npm publish uses trusted publishing', async () => {
   const workflow = await readFile(publishWorkflowPath, 'utf8');
 
-  assert.match(workflow, /uses:\s+changesets\/action@v2\s*$/m);
+  // The job holds write and OIDC permissions, so the action is pinned to an exact release tag.
+  assert.match(workflow, /uses:\s+changesets\/action@v\d+\.\d+\.\d+\s*$/m);
   assert.match(workflow, /pr-title:\s+["']chore\(release\): version packages["']/);
   assert.match(workflow, /commit-message:\s+["']chore\(release\): version packages["']/);
-  assert.match(workflow, /if:\s+steps\.changesets\.outputs\.has-changesets\s*==\s*'false'/);
+  // The action publishes the merged version PR through the repository's own release script.
+  assert.match(workflow, /publish-script:\s+pnpm release/);
   // pnpm publish gets its npm token and provenance from the OIDC exchange.
   assert.match(workflow, /id-token:\s+write/);
 });

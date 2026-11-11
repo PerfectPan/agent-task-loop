@@ -15,6 +15,9 @@ test('npm publish workflow no longer builds or publishes the MoonBit module', as
 test('release PR passes the conventional PR title check and npm publish uses trusted publishing', async () => {
   const workflow = await readFile(publishWorkflowPath, 'utf8');
 
+  // A manual dispatch can select any branch. Only main may enter the publishing job.
+  assert.match(workflow, /publish:\s+if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /pr-draft:\s+always/);
   // The job holds write and OIDC permissions, so the action is pinned to an exact release tag.
   assert.match(workflow, /uses:\s+changesets\/action@v\d+\.\d+\.\d+\s*$/m);
   assert.match(workflow, /pr-title:\s+["']chore\(release\): version packages["']/);

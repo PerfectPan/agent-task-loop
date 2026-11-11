@@ -83,15 +83,14 @@ After the pull request lands on `main`, GitHub Actions opens or updates the rele
 The release pull request is opened with the workflow's `GITHUB_TOKEN`. GitHub can require an authorized
 maintainer to select **Approve workflows to run** for PR events created by that token; see
 [GitHub's trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
-This release workflow does not force Draft. If the PR is Draft, mark it Ready after reviewing the changes;
-reopening or pushing to a PR that is still Draft does not execute the full CI job.
+Changesets returns the release PR to Draft whenever it updates the version commit. Mark the reviewed head Ready for review to start full CI. To retry a failed release, dispatch the publish workflow on `main`.
 
 Confirm that the full `test` job actually ran and passed for the current head and merge result, alongside the
 lightweight Review checks, before merging. A skipped Draft job is not test evidence. The CI workflow has no
 manual dispatch trigger. See [CI Execution Policy](../CONTRIBUTING.md#ci-execution-policy) for the shared
 Ready/Draft behavior; the existing publishing process is unchanged.
 
-Merging the release pull request runs `pnpm release`, which builds the packages and publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public.
+Merging the release pull request runs `pnpm release`, which runs the workspace tests, build and typecheck, then publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public.
 
 Preview a release locally without committing the result:
 

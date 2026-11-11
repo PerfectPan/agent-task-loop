@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,31 +33,18 @@ jobs:
           runtime: node@24
           require-lockfile: true
 
-      - run: pnpm test
+      - uses: changesets/action/select-mode@v2.1.2
+        id: mode
 
-      - run: pnpm build
-
-      - run: pnpm typecheck
-
-      # GITHUB_TOKEN-created PR events can require a maintainer to approve workflow runs.
-      # This release flow does not force Draft. If the PR is Draft, mark it Ready
-      # before expecting full CI; verify that test actually ran and passed, not skipped.
-      #
-      # With pending changesets, opens or updates the release PR. Without them, `pnpm release`
-      # runs `changeset publish`, which runs `pnpm publish` for each unpublished version: pnpm
-      # sends it to publishConfig.registry with an npm trusted-publishing (OIDC) token from
-      # `id-token: write` and attaches provenance itself because this repository and the
-      # packages are public. No .npmrc or token is needed. The action then pushes one tag per
-      # published package and creates its GitHub Release after the publish succeeded; commits
-      # and tags go through the GitHub API, so they are signed.
       - name: Create release pull request or publish
-        id: changesets
+        if: steps.mode.outputs.mode != 'none'
         uses: changesets/action@v2.1.2
         with:
           version-script: pnpm version-packages
           publish-script: pnpm release
           commit-message: 'chore(release): version packages'
           pr-title: 'chore(release): version packages'
+          pr-draft: always
         env:
           # changelog-github reads PR titles and authors through the API
           GITHUB_TOKEN: ${{ github.token }}

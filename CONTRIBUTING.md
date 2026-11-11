@@ -87,10 +87,7 @@ description checks do not install dependencies or run the full test suite, so au
 Drafts save full-CI usage. Bot authors remain exempt only from the description check. Metadata-only edits run
 Review without repeating full CI.
 
-Release PRs keep their existing creation behavior; this change does not force them into Draft or change
-publishing. Follow [Releasing](#releasing) if GitHub requires workflow approval. Repository settings are separate:
-preserve check names and inspect the actual merge requirements in [Repository Setup](#repository-setup), and
-never use a skipped full-CI check as proof that a Ready PR is safe to merge.
+Release PRs return to Draft when Changesets updates them. Mark the reviewed head Ready and verify that its full CI job ran before merging. See [Releasing](#releasing) and [Repository Setup](#repository-setup).
 
 ## Changesets
 
@@ -106,8 +103,8 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 ### Releasing
 
-1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
-2. The release PR is opened with the workflow's `GITHUB_TOKEN`. GitHub can require an authorized maintainer to select **Approve workflows to run** for its PR events; see [GitHub's trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow). The release workflow does not force the PR into Draft. If it is Draft, mark it Ready after reviewing the changes; reopening or pushing to a Draft PR does not execute full CI. Confirm that the current PR's `test` job actually ran and passed alongside Review before merging. This CI has no manual dispatch trigger.
+1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the draft release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
+2. Each update returns the release PR to Draft. Review the version changes, mark it Ready for review, and approve workflow runs if GitHub requests approval. Verify that `test` and Review passed for the current head before merging. Manual publish retries run only from `main`.
 3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
 ### Bot Pull Requests

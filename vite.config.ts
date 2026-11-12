@@ -7,8 +7,10 @@ export default defineConfig({
     // Keep the quote and trailing-comma style most of the existing code uses.
     singleQuote: true,
     trailingComma: 'all',
-    // Copied verbatim from the project template; keep them byte-identical so syncs stay a plain diff.
     ignorePatterns: [
+      // The shared list skips the CHANGELOG.md files that Changesets generates.
+      ...fmt.ignorePatterns,
+      // Copied verbatim from the project template; keep them byte-identical so syncs stay a plain diff.
       '.github/ISSUE_TEMPLATE/**',
       '.github/workflows/review.yml',
       'docs/specs/0000-template.md',

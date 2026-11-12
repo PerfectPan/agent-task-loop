@@ -12,18 +12,16 @@ test('npm publish workflow no longer builds or publishes the MoonBit module', as
   assert.doesNotMatch(workflow, /Install MoonBit/);
 });
 
-test('release PR passes the conventional PR title check and npm publish uses trusted publishing', async () => {
+test('npm publish goes through the shared release workflow with trusted publishing', async () => {
   const workflow = await readFile(publishWorkflowPath, 'utf8');
 
-  // A manual dispatch can select any branch. Only main may enter the publishing job.
-  assert.match(workflow, /publish:\s+if: github\.ref == 'refs\/heads\/main'/);
-  assert.match(workflow, /pr-draft:\s+always/);
-  // The job holds write and OIDC permissions, so the action is pinned to an exact release tag.
-  assert.match(workflow, /uses:\s+changesets\/action@v\d+\.\d+\.\d+\s*$/m);
-  assert.match(workflow, /pr-title:\s+["']chore\(release\): version packages["']/);
-  assert.match(workflow, /commit-message:\s+["']chore\(release\): version packages["']/);
-  // The action publishes the merged version PR through the repository's own release script.
-  assert.match(workflow, /publish-script:\s+pnpm release/);
-  // pnpm publish gets its npm token and provenance from the OIDC exchange.
-  assert.match(workflow, /id-token:\s+write/);
+  assert.match(workflow, /uses:\s+PerfectPan\/gh-repo-checks\/\.github\/workflows\/npm-release\.yml@v\d+/);
+  // A called workflow's jobs cannot exceed the caller's grant, so the calling job grants what the shared version
+  // and publish jobs narrow down to: contents and pull requests for the version PR, the OIDC token for publishing.
+  assert.match(
+    workflow,
+    /\n    permissions:\n      contents: write\n      pull-requests: write\n      id-token: write\n/,
+  );
+  // The release gates this repository runs before packing: tests, build and typecheck.
+  assert.match(workflow, /check-command:\s+pnpm test && pnpm build && pnpm typecheck/);
 });

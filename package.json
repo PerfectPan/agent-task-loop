@@ -17,7 +17,7 @@
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "lint": "vp lint",
-    "release": "pnpm build && changeset publish",
+    "release": "pnpm test && pnpm build && pnpm typecheck && changeset publish",
     "test": "pnpm peers check --lockfile-only && node --test tests/**/*.test.mjs && pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "version-packages": "changeset version"

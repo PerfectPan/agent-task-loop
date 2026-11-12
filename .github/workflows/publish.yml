@@ -15,13 +15,16 @@ permissions:
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      published: ${{ steps.npm-publish.outputs.published || 'false' }}
     steps:
       - uses: actions/checkout@v7
         with:
+          # changelog-github reads PR titles and authors through the API, so the version PR links every change.
           fetch-depth: 0
+          # Keeps the write token out of .git/config while repository code runs; the action pushes commits, tags
+          # and Releases through the GitHub API with its own token.
+          persist-credentials: false
 
       # Installs the pnpm from `packageManager` and the Node.js range in `devEngines.runtime` and runs
       # `pnpm install --frozen-lockfile`. The release job skips the store cache.
@@ -30,34 +33,18 @@ jobs:
           runtime: node
           require-lockfile: true
 
-      - run: pnpm test
+      - uses: changesets/action/select-mode@v2.1.2
+        id: mode
 
-      - run: pnpm build
-
-      - run: pnpm typecheck
-
-      # GITHUB_TOKEN-created PR events can require a maintainer to approve workflow runs.
-      # This release flow does not force Draft. If the PR is Draft, mark it Ready
-      # before expecting full CI; verify that test actually ran and passed, not skipped.
-      - name: Create release pull request
-        id: changesets
-        uses: changesets/action@v2
+      - name: Create release pull request or publish
+        if: steps.mode.outputs.mode != 'none'
+        uses: changesets/action@v2.1.2
         with:
           version-script: pnpm version-packages
+          publish-script: pnpm release
           commit-message: 'chore(release): version packages'
           pr-title: 'chore(release): version packages'
-          create-github-releases: false
+          pr-draft: always
         env:
           # changelog-github reads PR titles and authors through the API
           GITHUB_TOKEN: ${{ github.token }}
-
-      # `changeset publish` runs `pnpm publish`, which sends each package to its
-      # publishConfig.registry with an npm trusted-publishing (OIDC) token from
-      # `id-token: write`, and attaches provenance itself because this
-      # repository and the packages are public. No .npmrc or token is needed.
-      - name: Publish to npm
-        id: npm-publish
-        if: steps.changesets.outputs.has-changesets == 'false'
-        run: |
-          pnpm release
-          echo "published=true" >> "$GITHUB_OUTPUT"

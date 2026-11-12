@@ -12,6 +12,8 @@ pnpm test
 pnpm build
 ```
 
+Use Node.js `^26.13.1`: Node 26.13.1 or a newer 26.x release, with the [November 2026 security release](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases) as the minimum. `.node-version` selects the 26 major for version managers; the private root enforces the floor and excludes Node 27 through `engines.node` and `devEngines.runtime`. CI and release builds resolve the range in `devEngines.runtime` through `pnpm/setup`. Published packages retain their Node.js 22.13 minimum and existing Node type baseline.
+
 Use the pnpm version pinned in `packageManager` (pnpm 12). pnpm runs dependency build scripts only for packages listed in `allowBuilds` in `pnpm-workspace.yaml`; when an install fails with `ERR_PNPM_IGNORED_BUILDS`, add the package there with `true` or `false` and a comment saying why. The same file keeps `minimumReleaseAge: 1440` and exempts only `@rivus/*` through `minimumReleaseAgeExclude`, so owned packages can be validated immediately after publication. Other dependencies, including transitive packages outside that scope, retain the one-day delay; if an install fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, pick an older version instead of lowering the setting.
 
 Run the local CLI from the repository root:

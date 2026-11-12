@@ -23,11 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Installs the pnpm from `packageManager` and Node.js 24 and runs
+      # Installs the pnpm from `packageManager` and the Node.js version in `.node-version` and runs
       # `pnpm install --frozen-lockfile`. The release job skips the store cache.
       - uses: pnpm/setup@v3
         with:
-          runtime: node@24
+          node-version-file: .node-version
           require-lockfile: true
 
       - run: pnpm test

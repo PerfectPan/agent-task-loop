@@ -17,11 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Installs the pnpm from `packageManager` and Node.js 24, restores the pnpm
+      # Installs the pnpm from `packageManager` and the Node.js version in `.node-version`, restores the pnpm
       # store cache, and runs `pnpm install --frozen-lockfile`.
       - uses: pnpm/setup@v3
         with:
-          runtime: node@24
+          node-version-file: .node-version
           cache: true
           require-lockfile: true
 

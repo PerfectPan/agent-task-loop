@@ -5,10 +5,10 @@ This runbook describes how to publish `@rivus/agent-task-loop`.
 ## Preconditions
 
 - GitHub repository: `PerfectPan/agent-task-loop`
-- npm package: `@rivus/agent-task-loop`
+- npm packages: `@rivus/agent-task-loop`, `@rivus/agent-finder-cli`
 - workflow file: `.github/workflows/publish.yml`
 - public npm registry: `https://registry.npmjs.org`
-- release manager: Changesets
+- release manager: Changesets, through the shared workflow `PerfectPan/gh-repo-checks/.github/workflows/npm-release.yml@v1`; its [runbook](https://github.com/PerfectPan/gh-repo-checks/blob/v1/docs/npm-release.md) describes the jobs and their recovery
 
 ## Scope Check
 
@@ -44,29 +44,23 @@ The tarball should contain only:
 
 ## First Publish
 
-Use a temporary npm token only for the first publish. The package starts at `0.0.0` in source and uses `.changeset/initial-release.md` to create the `0.1.0` release pull request.
-
-1. Create a granular npm token with publish access.
-2. Add it to the GitHub Actions environment `NPM_TOKEN` as a secret named `NPM_TOKEN`.
-3. Merge the setup pull request to `main`.
-4. Wait for GitHub Actions to open the Changesets release pull request.
-5. Review that the release pull request bumps `@rivus/agent-task-loop` to `0.1.0` and creates a changelog entry.
-6. Merge the release pull request.
-7. Confirm the package exists on npm.
-8. Delete the environment `NPM_TOKEN` secret after Trusted Publishing is configured.
+`@rivus/agent-task-loop` and `@rivus/agent-finder-cli` are both on npm. A new public package name needs a placeholder
+publish before its first release, because Trusted Publishing cannot create a name; the shared workflow's
+first-publish check stops before a version pull request names it. Follow First publish in the
+[shared runbook](https://github.com/PerfectPan/gh-repo-checks/blob/v1/docs/npm-release.md).
 
 ## Trusted Publishing Setup
 
-After the package exists, configure npm Trusted Publishing:
+Each published package has its own trusted publisher:
 
 - Provider: GitHub Actions
 - Owner: `PerfectPan`
 - Repository: `agent-task-loop`
 - Workflow filename: `publish.yml`
+- Direct publishing ("Allow npm publish") enabled
 
-The owner above is the GitHub owner, not the npm scope.
-
-Then remove the environment `NPM_TOKEN` secret. The workflow keeps the bootstrap-token step conditional and publishes through OIDC when no token secret is present.
+The owner above is the GitHub owner, not the npm scope. npm validates this calling workflow's file name, not the
+shared workflow it calls.
 
 ## Normal Release
 
@@ -90,7 +84,7 @@ lightweight Review checks, before merging. A skipped Draft job is not test evide
 manual dispatch trigger. See [CI Execution Policy](../CONTRIBUTING.md#ci-execution-policy) for the shared
 Ready/Draft behavior; the existing publishing process is unchanged.
 
-Merging the release pull request runs `pnpm release`, which runs the workspace tests, build and typecheck, then publishes unpublished package versions through Changesets. Changesets runs `pnpm publish`, which authenticates through npm trusted publishing (OIDC) and attaches provenance itself because the repository and the packages are public.
+Merging the release pull request runs the shared workflow in `publish` mode. A read-only job runs the gates this repository passes as `check-command` (`pnpm test && pnpm build && pnpm typecheck`) and `pnpm --filter '!./apps/**' audit --prod --audit-level=high` (the private apps never reach npm), then packs each unpublished version. The publish job, the only one with the OIDC permission, installs without lifecycle scripts and publishes the packed tarballs through Changesets: npm trusted publishing (OIDC) authenticates and attaches provenance because the repository and the packages are public.
 
 Preview a release locally without committing the result:
 
@@ -101,8 +95,8 @@ pnpm exec changeset publish-plan
 
 ## Failure Handling
 
-- If CI fails before npm upload, fix the workflow or code and re-run the publish workflow.
-- If npm accepted the version, do not publish the same version again. Bump the patch version.
+- If CI fails before npm upload, fix the workflow or code and re-run the publish workflow. The shared runbook lists the recovery for each job.
+- If npm accepted the version, do not publish it again and do not bump the version to retry: re-run the failed run, which skips versions already on npm, or fix forward through the next version pull request.
 - If a bad version is published, prefer `npm deprecate` and publish a fixed version.
 
 ## Safety Checks

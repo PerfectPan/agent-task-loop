@@ -105,9 +105,9 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 ### Releasing
 
-1. When changesets land on `main`, `.github/workflows/publish.yml` opens or updates the draft release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
+1. When changesets land on `main`, `.github/workflows/publish.yml` calls the shared npm release workflow of PerfectPan/gh-repo-checks, which opens or updates the draft release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
 2. Each update returns the release PR to Draft. Review the version changes, mark it Ready for review, and approve workflow runs if GitHub requests approval. Verify that `test` and Review passed for the current head before merging. Manual publish retries run only from `main`.
-3. Merging the release PR runs `publish.yml` again: gates, then `pnpm release` publishes unpublished versions to npm through OIDC trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
+3. Merging the release PR runs `publish.yml` again: a read-only job runs the gates (`pnpm test`, `pnpm build`, `pnpm typecheck`), the production audit and `pnpm pack`, then the only job with the OIDC permission publishes the packed versions to npm through trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
 
 ### Bot Pull Requests
 

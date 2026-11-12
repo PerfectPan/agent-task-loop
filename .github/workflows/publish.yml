@@ -1,50 +1,31 @@
+# npm Trusted Publishing is registered against this file name; renaming it requires changing the package's trusted
+# publisher on npmjs.com first. The release jobs come from the shared workflow in PerfectPan/gh-repo-checks;
+# docs/npm-publish.md describes how this repository uses it.
 name: Publish Package
 
 on:
   push:
     branches:
       - main
+  # Rebuilds the version pull request from the current main, or retries a failed publish.
   workflow_dispatch:
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+permissions: {}
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          # changelog-github reads PR titles and authors through the API, so the version PR links every change.
-          fetch-depth: 0
-          # Keeps the write token out of .git/config while repository code runs; the action pushes commits, tags
-          # and Releases through the GitHub API with its own token.
-          persist-credentials: false
-
-      # Installs the pnpm from `packageManager` and the Node.js range in `devEngines.runtime` and runs
-      # `pnpm install --frozen-lockfile`. The release job skips the store cache.
-      - uses: pnpm/setup@v3
-        with:
-          runtime: node
-          require-lockfile: true
-
-      - uses: changesets/action/select-mode@v2.1.2
-        id: mode
-
-      - name: Create release pull request or publish
-        if: steps.mode.outputs.mode != 'none'
-        uses: changesets/action@v2.1.2
-        with:
-          version-script: pnpm version-packages
-          publish-script: pnpm release
-          commit-message: 'chore(release): version packages'
-          pr-title: 'chore(release): version packages'
-          pr-draft: always
-        env:
-          # changelog-github reads PR titles and authors through the API
-          GITHUB_TOKEN: ${{ github.token }}
+    uses: PerfectPan/gh-repo-checks/.github/workflows/npm-release.yml@v1
+    # The shared workflow narrows these per job; only its publish job can request an OIDC token.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    with:
+      # The repository has no `check` script; these are the release gates its publish ran before.
+      check-command: pnpm test && pnpm build && pnpm typecheck
+      # The private apps under apps/ never reach npm, so their advisories do not block a package release.
+      audit-command: pnpm --filter '!./apps/**' audit --prod --audit-level=high

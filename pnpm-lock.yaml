@@ -238,11 +238,11 @@ importers:
         specifier: ^8.5.1
         version: 8.5.1(react-router@8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@rivus/agent-kit':
-        specifier: 0.21.1
-        version: 0.21.1(effect@4.0.5)
+        specifier: 0.23.0
+        version: 0.23.0(effect@4.1.2)
       '@rivus/agent-kit-collab':
-        specifier: 0.21.1
-        version: 0.21.1(@rivus/agent-kit@0.21.1(effect@4.0.5))(effect@4.0.5)
+        specifier: 0.23.0
+        version: 0.23.0(@rivus/agent-kit@0.23.0(effect@4.1.2))(effect@4.1.2)
       '@rivus/agent-room':
         specifier: workspace:*
         version: link:../../packages/agent-room
@@ -292,8 +292,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.2
+        version: 4.1.2
       isbot:
         specifier: ^5.2.2
         version: 5.2.2
@@ -384,8 +384,8 @@ importers:
   packages/agent-finder-cli:
     dependencies:
       '@rivus/agent-kit':
-        specifier: 0.21.1
-        version: 0.21.1(effect@4.0.5)
+        specifier: 0.23.0
+        version: 0.23.0(effect@4.0.5)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
@@ -433,17 +433,17 @@ importers:
   packages/agent-task-loop:
     dependencies:
       '@rivus/agent-kit':
-        specifier: 0.21.1
-        version: 0.21.1(effect@4.0.5)
+        specifier: 0.23.0
+        version: 0.23.0(effect@4.1.2)
       '@rivus/agent-kit-collab':
-        specifier: 0.21.1
-        version: 0.21.1(@rivus/agent-kit@0.21.1(effect@4.0.5))(effect@4.0.5)
+        specifier: 0.23.0
+        version: 0.23.0(@rivus/agent-kit@0.23.0(effect@4.1.2))(effect@4.1.2)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
       effect:
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.2
+        version: 4.1.2
       execa:
         specifier: ^10.2.1
         version: 10.2.1
@@ -899,10 +899,6 @@ packages:
   '@csstools/css-tokenizer@4.0.2':
     resolution: {integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==}
     engines: {node: '>=20.19.0'}
-
-  '@decimalturn/toml-patch@3.3.0':
-    resolution: {integrity: sha512-xyamcHl5Jlm+KfI9Vn7k6Je+kqQ8bAmJtoWleQ7yNqUL9fwwc66+Q3bRO326U/ZLYjrVzB3irvJz8nuG+JwFdA==}
-    engines: {node: '>=16'}
 
   '@decimalturn/toml-patch@3.3.2':
     resolution: {integrity: sha512-UUsjKkIJWC4JwhAK7IUMZeN4TjjtCWapAkdIuvllT3/fYcNooDQ0HtwgGDV77ew+arh/15hazN9M9/oSNV+PDg==}
@@ -2762,11 +2758,11 @@ packages:
     resolution: {integrity: sha512-xBaJish5OeGmniDj9cW5PRa/PtmuVU3ziqrbr5xJj901ZDN4TosrVaNZpEiLZAxdfnhAe7uQ7QFWfjPe9d9K2Q==}
     engines: {node: '>= 10'}
 
-  '@rivus/agent-kit-collab@0.21.1':
-    resolution: {integrity: sha512-BYvWL9EERHJRQxDPV4vHirPHspPW8sD27k2zF8DrcvGXT1AoPFJKknkWQXm9Z5K/jQZNTZETCgeml1XRdByLCw==}
+  '@rivus/agent-kit-collab@0.23.0':
+    resolution: {integrity: sha512-lvhzi1oGH0ET4wkVrk4iT5PSwDIqR3UhDBK+Vuw+gj2HQJWVuI8ifi3uAgqsTcKvOLRRmtUeQW1jhs06Oswwag==}
     engines: {node: '>=22.13'}
     peerDependencies:
-      '@rivus/agent-kit': ^0.21.1
+      '@rivus/agent-kit': ^0.23.0
       effect: 4.0.5
     peerDependenciesMeta:
       effect:
@@ -2782,8 +2778,8 @@ packages:
       effect:
         optional: true
 
-  '@rivus/agent-kit@0.21.1':
-    resolution: {integrity: sha512-/kAVVgKjykG8sgk4YqcPWQzT5LVDWDoggarUW+tHd211dthTSbVDIMbny+YrEHht6/WemgpRx1U1VYQ+sNhM7w==}
+  '@rivus/agent-kit@0.23.0':
+    resolution: {integrity: sha512-qb/TS3ZvRIKdDVzztF9V1R8Q+E/Fsu+c4Kt9PaK8R76Ibw/zOZQiaqTGJXkfEk+mKSoDW9T2TkJTDlsQw0Cv8A==}
     engines: {node: '>=22.13'}
     peerDependencies:
       effect: 4.0.5
@@ -3801,6 +3797,9 @@ packages:
   effect@4.1.1:
     resolution: {integrity: sha512-XYu65BrcmNqu5i7PPvP4dqL+R5ma37zIsfuSPjcn78mog+6e5PkilNg7Xo+pBpjXJYlWEIpH4j91tMrfW05CMw==}
 
+  effect@4.1.2:
+    resolution: {integrity: sha512-d3Oah1WyKxFLFh19yWheS5IXIVaITzxZ71JkE1rkUozq/6EcJSU5nPk5bF2QrSygZ3SQoiNQB8TsxFriyMeMaQ==}
+
   electron-to-chromium@1.5.416:
     resolution: {integrity: sha512-K6bvB2BjnNrugtIih6ewlbBI9DXa976jIdiIlRLHhBoEI9a4JaQjjHyF+A1IQI543aQYR4LnmOrT/K5fZj0aPA==}
 
@@ -3841,9 +3840,6 @@ packages:
 
   es-toolkit@1.45.1:
     resolution: {integrity: sha512-/jhoOj/Fx+A+IIyDNOvO3TItGmlMKhtX8ISAHKE90c4b/k1tqaqEZ+uUqfpU8DMnW5cgNJv606zS55jGvza0Xw==}
-
-  es-toolkit@1.52.0:
-    resolution: {integrity: sha512-XTNEJQh1tY1ZJVcf6ayP/2n4ZPyaHlW2FWs7xvw5ddPuhUVjLD3olQVQS7kf58JbAB48iL0uL/jerTrjtV3lDA==}
 
   es-toolkit@1.53.2:
     resolution: {integrity: sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g==}
@@ -5913,8 +5909,6 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@decimalturn/toml-patch@3.3.0': {}
-
   '@decimalturn/toml-patch@3.3.2': {}
 
   '@earendil-works/pi-agent-core@0.84.4(@modelcontextprotocol/sdk@1.32.2(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
@@ -7509,12 +7503,12 @@ snapshots:
       '@resvg/resvg-js-win32-ia32-msvc': 2.6.2
       '@resvg/resvg-js-win32-x64-msvc': 2.6.2
 
-  '@rivus/agent-kit-collab@0.21.1(@rivus/agent-kit@0.21.1(effect@4.0.5))(effect@4.0.5)':
+  '@rivus/agent-kit-collab@0.23.0(@rivus/agent-kit@0.23.0(effect@4.1.2))(effect@4.1.2)':
     dependencies:
-      '@rivus/agent-kit': 0.21.1(effect@4.0.5)
+      '@rivus/agent-kit': 0.23.0(effect@4.1.2)
       zod: 4.6.7
     optionalDependencies:
-      effect: 4.0.5
+      effect: 4.1.2
 
   '@rivus/agent-kit-collab@0.24.0(@rivus/agent-kit@0.24.0(effect@4.1.1))(effect@4.1.1)':
     dependencies:
@@ -7523,16 +7517,27 @@ snapshots:
     optionalDependencies:
       effect: 4.1.1
 
-  '@rivus/agent-kit@0.21.1(effect@4.0.5)':
+  '@rivus/agent-kit@0.23.0(effect@4.0.5)':
     dependencies:
       '@agentclientprotocol/sdk': 1.8.0(zod@4.6.7)
-      '@decimalturn/toml-patch': 3.3.0
-      es-toolkit: 1.52.0
+      '@decimalturn/toml-patch': 3.3.2
+      es-toolkit: 1.53.2
       jsonc-parser: 3.3.1
       shell-quote: 1.12.0
       zod: 4.6.7
     optionalDependencies:
       effect: 4.0.5
+
+  '@rivus/agent-kit@0.23.0(effect@4.1.2)':
+    dependencies:
+      '@agentclientprotocol/sdk': 1.8.0(zod@4.6.7)
+      '@decimalturn/toml-patch': 3.3.2
+      es-toolkit: 1.53.2
+      jsonc-parser: 3.3.1
+      shell-quote: 1.12.0
+      zod: 4.6.7
+    optionalDependencies:
+      effect: 4.1.2
 
   '@rivus/agent-kit@0.24.0(effect@4.1.1)':
     dependencies:
@@ -8405,9 +8410,12 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.5: {}
+  effect@4.0.5:
+    optional: true
 
   effect@4.1.1: {}
+
+  effect@4.1.2: {}
 
   electron-to-chromium@1.5.416: {}
 
@@ -8440,8 +8448,6 @@ snapshots:
       hasown: 2.0.4
 
   es-toolkit@1.45.1: {}
-
-  es-toolkit@1.52.0: {}
 
   es-toolkit@1.53.2: {}
 

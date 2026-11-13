@@ -40,7 +40,7 @@ describe('Tabs', () => {
     // The active chip carries ANSI styling the plain text does not.
     expect(raw).not.toEqual(plain);
     // The active chip's text is wrapped in escape codes within the raw frame.
-    expect(raw).toMatch(/\[[0-9;]*m[^]*Needs Input\(1\)/);
+    expect(raw).toMatch(/\u001b\[[0-9;]*m[^\u001b]*Needs Input\(1\)/);
   });
 
   it('renders zero counts without crashing', () => {

@@ -52,7 +52,7 @@ describe('SessionsBrowser', () => {
     const { stdin } = render(<SessionsBrowser sessions={SESSIONS} loadTranscript={loadTranscript} nowMs={NOW} />);
 
     await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[0].ref.sessionId));
-    stdin.write('[B'); // down arrow
+    stdin.write('\u001b[B'); // down arrow
     await vi.waitFor(() => expect(loadTranscript).toHaveBeenCalledWith(SESSIONS[1].ref.sessionId));
   });
 

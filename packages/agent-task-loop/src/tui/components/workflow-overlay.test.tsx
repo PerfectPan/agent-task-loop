@@ -33,6 +33,6 @@ describe('WorkflowOverlay', () => {
   it('highlights the current status with inverse styling (raw frame)', () => {
     const raw = render(<WorkflowOverlay visible currentStatus="待发布" />).lastFrame() ?? '';
     // inverse SGR (7) wraps the active chip
-    expect(/\[[0-9;]*7[0-9;]*m/.test(raw)).toBe(true);
+    expect(/\u001b\[[0-9;]*7[0-9;]*m/.test(raw)).toBe(true);
   });
 });

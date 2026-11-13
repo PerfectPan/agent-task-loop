@@ -11,8 +11,8 @@ import { refineDescription } from '../services/refine-description-service';
 import { App } from '../tui/components/app';
 import { FsSessionProvider } from '../tui/data/fs-session-provider';
 
-const ENTER_ALT_SCREEN = '[?1049h';
-const LEAVE_ALT_SCREEN = '[?1049l';
+const ENTER_ALT_SCREEN = '\u001b[?1049h';
+const LEAVE_ALT_SCREEN = '\u001b[?1049l';
 
 export const tuiCommand = defineCommand({
   meta: {

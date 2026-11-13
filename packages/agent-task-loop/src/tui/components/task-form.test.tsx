@@ -88,7 +88,7 @@ describe('TaskForm', () => {
     await tick();
     app.stdin.write('\t'); // → source
     await tick();
-    app.stdin.write('[C'); // right arrow → github
+    app.stdin.write('\u001b[C'); // right arrow → github
     await tick();
     app.stdin.write('\r'); // submit
     await tick();
@@ -105,7 +105,7 @@ describe('TaskForm', () => {
     const onCancel = vi.fn();
     const app = render(<TaskForm onSubmit={vi.fn()} onCancel={onCancel} />);
     await tick();
-    app.stdin.write(''); // Esc
+    app.stdin.write('\u001b'); // Esc
     await vi.waitFor(() => expect(onCancel).toHaveBeenCalled());
     app.unmount();
   });

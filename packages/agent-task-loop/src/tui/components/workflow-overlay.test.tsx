@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { WorkflowOverlay } from './workflow-overlay';
-import { stripAnsi } from '../../../test/helpers';
+import { ESC, stripAnsi } from '../../../test/helpers';
 
 describe('WorkflowOverlay', () => {
   it('renders nothing when not visible', () => {
@@ -33,6 +33,6 @@ describe('WorkflowOverlay', () => {
   it('highlights the current status with inverse styling (raw frame)', () => {
     const raw = render(<WorkflowOverlay visible currentStatus="待发布" />).lastFrame() ?? '';
     // inverse SGR (7) wraps the active chip
-    expect(/\[[0-9;]*7[0-9;]*m/.test(raw)).toBe(true);
+    expect(new RegExp(`${ESC}\\[[0-9;]*7[0-9;]*m`).test(raw)).toBe(true);
   });
 });

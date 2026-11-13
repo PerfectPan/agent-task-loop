@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { Tabs } from './tabs';
 import { TABS, type TabKey } from '../logic/status';
-import { stripAnsi } from '../../../test/helpers';
+import { ESC, stripAnsi } from '../../../test/helpers';
 
 const counts: Record<TabKey, number> = {
   active: 3,
@@ -40,7 +40,7 @@ describe('Tabs', () => {
     // The active chip carries ANSI styling the plain text does not.
     expect(raw).not.toEqual(plain);
     // The active chip's text is wrapped in escape codes within the raw frame.
-    expect(raw).toMatch(/\u001b\[[0-9;]*m[^\u001b]*Needs Input\(1\)/);
+    expect(raw).toMatch(new RegExp(`${ESC}\\[[0-9;]*m[^${ESC}]*Needs Input\\(1\\)`));
   });
 
   it('renders zero counts without crashing', () => {

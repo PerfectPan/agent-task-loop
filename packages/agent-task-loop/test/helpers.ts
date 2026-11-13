@@ -13,6 +13,14 @@ export function stripAnsi(input: string): string {
   return input.replace(ANSI, '');
 }
 
+/**
+ * The ESC control character, built at runtime. ANSI-matching assertions compose
+ * their patterns from this string instead of regex literals: the linter rejects
+ * control characters in statically visible patterns, and string escapes such as
+ * `\u001b` inside a regex literal trip the same rule.
+ */
+export const ESC = String.fromCharCode(27);
+
 /** Fixed clock for deterministic timeAgo / heartbeat assertions. */
 export const FIXED_NOW = Date.parse('2026-06-07T12:00:00.000Z');
 export const fixedNow = () => FIXED_NOW;

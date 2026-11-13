@@ -459,7 +459,7 @@ importers:
     devDependencies:
       '@rivus/agent':
         specifier: 0.17.0
-        version: 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+        version: 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.0
@@ -5784,20 +5784,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@8.20.0:
-    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.22.0:
-    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+  ws@8.22.2:
+    resolution: {integrity: sha512-/rEZ2ejown2N5gxVTHUu9bVVC7ttu0/Tgzf5hbTOixR3Fs7mbbXgn2DbdbcKgJOmpQMtrIUWivtYuVMnp/W/yA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -6450,9 +6438,9 @@ snapshots:
 
   '@decimalturn/toml-patch@3.3.0': {}
 
-  '@earendil-works/pi-agent-core@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@earendil-works/pi-agent-core@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       '@earendil-works/pi-telemetry': 0.84.4
       diff: 8.0.4
       ignore: 7.0.5
@@ -6466,7 +6454,7 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
       '@anthropic-ai/sdk': 0.91.1(zod@4.6.7)
       '@aws-sdk/client-bedrock-runtime': 3.1048.0
@@ -6475,7 +6463,7 @@ snapshots:
       '@smithy/node-http-handler': 4.7.3
       http-proxy-agent: 7.0.2(supports-color@8.1.1)
       https-proxy-agent: 7.0.6(supports-color@8.1.1)
-      openai: 6.40.0(ws@8.20.0)(zod@4.6.7)
+      openai: 6.40.0(ws@8.22.2)(zod@4.6.7)
       partial-json: 0.1.7
       typebox: 1.3.7
     transitivePeerDependencies:
@@ -6490,10 +6478,10 @@ snapshots:
     dependencies:
       '@earendil-works/pi-protocol': 0.84.4
 
-  '@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-agent-core': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
-      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@earendil-works/pi-agent-core': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
+      '@earendil-works/pi-ai': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       '@earendil-works/pi-client': 0.84.4
       '@earendil-works/pi-protocol': 0.84.4
       '@earendil-works/pi-tui': 0.84.4
@@ -6722,7 +6710,7 @@ snapshots:
       google-auth-library: 10.9.1(supports-color@8.1.1)
       p-retry: 4.6.2
       protobufjs: 7.6.6
-      ws: 8.20.0
+      ws: 8.22.2
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.31.0(supports-color@8.1.1)(zod@4.6.7)
     transitivePeerDependencies:
@@ -6868,7 +6856,7 @@ snapshots:
       lodash.pickby: 4.6.0
       protobufjs: 7.6.6
       qs: 6.15.3
-      ws: 8.20.0
+      ws: 8.22.2
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -8293,10 +8281,10 @@ snapshots:
     optionalDependencies:
       effect: 4.0.5
 
-  '@rivus/agent@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@rivus/agent@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
-      '@rivus/gateway': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
-      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@rivus/gateway': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
+      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       effect: 3.22.2
     transitivePeerDependencies:
       - '@agentclientprotocol/sdk'
@@ -8308,12 +8296,12 @@ snapshots:
       - ws
       - zod
 
-  '@rivus/gateway@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@rivus/gateway@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
       '@larksuiteoapi/node-sdk': 1.74.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       '@resvg/resvg-js': 2.6.2
       '@rivus/platform': 0.17.0
-      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@rivus/runtime': 0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       axios: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       effect: 3.22.2
       marked: 18.0.14
@@ -8331,9 +8319,9 @@ snapshots:
     dependencies:
       effect: 3.22.2
 
-  '@rivus/runtime@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)':
+  '@rivus/runtime@0.17.0(@agentclientprotocol/sdk@1.5.1(zod@4.6.7))(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)':
     dependencies:
-      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.20.0)(zod@4.6.7)
+      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.31.0(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)(ws@8.22.2)(zod@4.6.7)
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/exporter-trace-otlp-proto': 0.222.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.11.0(@opentelemetry/api@1.9.1)
@@ -8788,7 +8776,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.19.17)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.3.0(@types/node@22.19.17)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.1)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.0)
-      ws: 8.22.0
+      ws: 8.22.2
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
       - '@types/node'
@@ -8826,7 +8814,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.3.0(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.0.1)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.0)
-      ws: 8.22.0
+      ws: 8.22.2
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
       - '@types/node'
@@ -9309,7 +9297,7 @@ snapshots:
   css-tree@3.2.1:
     dependencies:
       mdn-data: 2.27.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   csstype@3.2.3: {}
 
@@ -9812,7 +9800,7 @@ snapshots:
       type-fest: 5.10.0
       widest-line: 6.0.0
       wrap-ansi: 10.0.2
-      ws: 8.20.0
+      ws: 8.22.2
       yoga-layout: 3.2.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -10205,9 +10193,9 @@ snapshots:
       powershell-utils: 0.2.1
       wsl-utils: 1.0.0
 
-  openai@6.40.0(ws@8.20.0)(zod@4.6.7):
+  openai@6.40.0(ws@8.22.2)(zod@4.6.7):
     optionalDependencies:
-      ws: 8.20.0
+      ws: 8.22.2
       zod: 4.6.7
 
   orderedmap@2.1.1: {}
@@ -11191,9 +11179,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.20.0: {}
-
-  ws@8.22.0: {}
+  ws@8.22.2: {}
 
   wsl-utils@1.0.0:
     dependencies:

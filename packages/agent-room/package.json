@@ -25,7 +25,7 @@
     "test:watch": "vp test watch"
   },
   "devDependencies": {
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "catalog:"

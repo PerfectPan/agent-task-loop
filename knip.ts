@@ -11,20 +11,20 @@ const config: KnipConfig = {
   workspaces: {
     '.': {
       entry: ['tests/**/*.test.mjs'],
-      project: ['tests/**/*.{mjs,ts}', 'scripts/**/*']
+      project: ['tests/**/*.{mjs,ts}', 'scripts/**/*'],
     },
     'packages/agent-task-loop': {
       // lark-cli is an external CLI spawned by the Lark service.
-      ignoreBinaries: ['lark-cli']
+      ignoreBinaries: ['lark-cli'],
     },
     'apps/room-web': {
       // shadcn/ui keeps a curated component set; entries so unused exports stay allowed there.
       entry: ['app/components/ui/**/*.tsx!'],
       // The ACP executables are spawned as child processes by the room host,
       // so the packages that ship them are never imported.
-      ignoreDependencies: ['@agentclientprotocol/claude-agent-acp', '@agentclientprotocol/codex-acp']
-    }
-  }
+      ignoreDependencies: ['@agentclientprotocol/claude-agent-acp', '@agentclientprotocol/codex-acp'],
+    },
+  },
 };
 
 export default config;

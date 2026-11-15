@@ -9,3 +9,4 @@ log/
 **/.workspaces/
 .agent-task-loop/
 .vitest/
+tmp/

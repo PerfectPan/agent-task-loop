@@ -6,16 +6,14 @@
   },
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@12.18.0",
-  "dependencies": {
-    "@rivus/agent-finder-cli": "workspace:*",
-    "@rivus/agent-task-loop": "workspace:*"
-  },
   "scripts": {
     "agent-finder": "pnpm --filter @rivus/agent-finder-cli dev",
     "build": "pnpm -r build",
     "changeset": "changeset",
+    "duplicates:audit": "jscpd --config node_modules/@perfectpan/lint-config/jscpd-audit.json packages apps scripts tests --absolute --output tmp/duplicates-audit --ignore '**/node_modules/**,**/dist/**,**/.next/**,**/build/**,**/.react-router/**' --format 'typescript,javascript'",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
+    "knip": "knip",
     "lint": "vp lint",
     "test": "pnpm peers check --lockfile-only && node --test tests/**/*.test.mjs && pnpm -r test",
     "typecheck": "pnpm -r typecheck",
@@ -24,10 +22,10 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.7.1",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "vite-plus": "catalog:"
+    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.8.0",
+    "vite-plus": "catalog:",
+    "jscpd": "5.4.2",
+    "knip": "6.45.1"
   },
   "devEngines": {
     "runtime": [

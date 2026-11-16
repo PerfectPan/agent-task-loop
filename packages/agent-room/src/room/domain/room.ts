@@ -41,13 +41,14 @@ function validateRoomState(id: RoomId, events: RoomEvent[]): void {
   }
 }
 
-function assertSeq(seq: RoomSeq, label: string): void {
+/** A non-negative safe integer, as every sequence argument must be. */
+export function assertSeq(seq: RoomSeq, label: string): void {
   if (!Number.isSafeInteger(seq) || seq < 0) {
     throw new RoomValidationError(`${label} must be a non-negative integer`);
   }
 }
 
-export function cloneRoomEvent(event: RoomEvent): RoomEvent {
+function cloneRoomEvent(event: RoomEvent): RoomEvent {
   return {
     ...event,
     roomId: { ...event.roomId },

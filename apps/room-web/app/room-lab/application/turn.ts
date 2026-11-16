@@ -1,14 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import type { McpServerConfig, PermissionDecision, PermissionRequest, PromptBlock } from '@rivus/agent-kit/acp';
-
-/**
- * The endpoint's own turn contract — the slots a turn carries and how it ends.
- * It was the control-plane package's `Harness`; with the ACP driving adopted
- * from `@rivus/agent-kit`'s `/acp`, the contract lives with the endpoint that
- * fills it, and the kit's own shapes (`PromptBlock`, `McpServerConfig`,
- * `PermissionRequest`) travel across the boundary unchanged.
- */
-export type { SessionUpdate };
 
 /**
  * One tool the endpoint contributes to a member's session. The endpoint's

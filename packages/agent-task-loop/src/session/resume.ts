@@ -1,3 +1,4 @@
+import { resumeCommandFrom } from './resume-form';
 import type { TargetAgent } from '../types/task';
 
 /**
@@ -19,9 +20,5 @@ const RESUME_COMMANDS: Partial<Record<TargetAgent, (sessionId: string) => string
  * the agent has no known resume form (coco, glm) or the session id is missing.
  */
 export function resumeCommandFor(agent: TargetAgent | undefined, sessionId: string | undefined | null): string | null {
-  if (!sessionId) {
-    return null;
-  }
-  const build = agent === undefined ? undefined : RESUME_COMMANDS[agent];
-  return build ? build(sessionId) : null;
+  return resumeCommandFrom(RESUME_COMMANDS, agent, sessionId);
 }

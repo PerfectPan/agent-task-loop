@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig } from './command-context';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ReviewLoopRunner } from '../services/review-loop-runner';
 import { TaskService } from '../services/task-service';
@@ -29,7 +29,7 @@ export const startCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     let targetAgent: TargetAgent | undefined;

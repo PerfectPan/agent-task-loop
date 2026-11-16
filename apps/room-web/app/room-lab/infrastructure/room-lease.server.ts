@@ -5,7 +5,6 @@ import {
   createLeaseManager,
   sqliteLeaseRepository,
   type LeaseConfigInvalid,
-  type LeaseHandle,
   type LeaseHeld,
   type LeaseLost,
   type LeaseRepositoryFailure,
@@ -22,8 +21,8 @@ import * as Layer from 'effect/Layer';
  * timing is the old one: renewed every 15 s, judged stale by an observer after
  * 120 s without a confirmed renewal.
  */
-export const ROOM_LEASE_TTL_MS = 120_000;
-export const ROOM_LEASE_HEARTBEAT_MS = 15_000;
+const ROOM_LEASE_TTL_MS = 120_000;
+const ROOM_LEASE_HEARTBEAT_MS = 15_000;
 
 /** The lease environment the host's assembly root provides to every lane activation. */
 export function roomLeaseRepositoryLayer(
@@ -33,7 +32,7 @@ export function roomLeaseRepositoryLayer(
 }
 
 /** The lease configuration is out of range, or the heartbeat does not fit twice into the TTL. */
-export class RoomLeaseConfigError extends Error {
+class RoomLeaseConfigError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'RoomLeaseConfigError';
@@ -41,7 +40,7 @@ export class RoomLeaseConfigError extends Error {
 }
 
 /** The lease repository could not read or write a record; the lease's state is unknown, not changed. */
-export class RoomLeaseStoreError extends Error {
+class RoomLeaseStoreError extends Error {
   readonly key: string;
   readonly reason: LeaseRepositoryFailure['reason'];
 
@@ -54,7 +53,7 @@ export class RoomLeaseStoreError extends Error {
 }
 
 /** Another live holder keeps the key. */
-export class RoomLeaseHeldError extends Error {
+class RoomLeaseHeldError extends Error {
   readonly key: string;
   readonly holderPid: number | undefined;
 
@@ -67,7 +66,7 @@ export class RoomLeaseHeldError extends Error {
 }
 
 /** This acquisition no longer holds the lease: taken over, released, vanished, or expired. */
-export class RoomLeaseLostError extends Error {
+class RoomLeaseLostError extends Error {
   readonly key: string;
   readonly reason: LeaseLost['reason'];
 
@@ -79,26 +78,37 @@ export class RoomLeaseLostError extends Error {
   }
 }
 
-function isTagged(error: unknown, tag: string): boolean {
-  return typeof error === 'object' && error !== null && '_tag' in error && error._tag === tag;
+/** The kit's lease failure tags this host maps onto its own Error surface. */
+const ROOM_LEASE_TAGS = [
+  'LeaseHeld',
+  'LeaseLost',
+  'FenceRejected',
+  'LeaseConfigInvalid',
+  'LeaseRepositoryFailure',
+] as const;
+
+type RoomLeaseTag = (typeof ROOM_LEASE_TAGS)[number];
+
+function leaseTag(error: unknown): RoomLeaseTag | undefined {
+  if (typeof error !== 'object' || error === null || !('_tag' in error)) {
+    return undefined;
+  }
+  return ROOM_LEASE_TAGS.find((tag) => error._tag === tag);
 }
 
 /** Translates the kit's tagged lease errors into the Error surface the Promise side rejects with. */
 export function toLeaseError(error: unknown, key: string): Error {
-  if (isTagged(error, 'LeaseHeld')) {
-    return new RoomLeaseHeldError(error as LeaseHeld);
-  }
-  if (isTagged(error, 'LeaseLost')) {
-    return new RoomLeaseLostError(error as LeaseLost);
-  }
-  if (isTagged(error, 'FenceRejected')) {
-    return new Error(`member lease ${key} fenced a write with an older generation`);
-  }
-  if (isTagged(error, 'LeaseConfigInvalid')) {
-    return new RoomLeaseConfigError((error as LeaseConfigInvalid).message);
-  }
-  if (isTagged(error, 'LeaseRepositoryFailure')) {
-    return new RoomLeaseStoreError(error as LeaseRepositoryFailure);
+  switch (leaseTag(error)) {
+    case 'LeaseHeld':
+      return new RoomLeaseHeldError(error as LeaseHeld);
+    case 'LeaseLost':
+      return new RoomLeaseLostError(error as LeaseLost);
+    case 'FenceRejected':
+      return new Error(`member lease ${key} fenced a write with an older generation`);
+    case 'LeaseConfigInvalid':
+      return new RoomLeaseConfigError((error as LeaseConfigInvalid).message);
+    case 'LeaseRepositoryFailure':
+      return new RoomLeaseStoreError(error as LeaseRepositoryFailure);
   }
   if (error instanceof Error) {
     return error;
@@ -119,6 +129,3 @@ export function createRoomLeaseManager(): Effect.Effect<
 export function roomLeasePath(roomHome: string): string {
   return join(roomHome, 'member-leases.sqlite');
 }
-
-/** One held member lease, as the lane activation keeps it for its turn's fenced writes. */
-export type HeldRoomLease = LeaseHandle;

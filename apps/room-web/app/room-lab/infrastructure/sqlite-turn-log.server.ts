@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { RoomTurnView } from '../read-model';
 
 /** How a turn ended: it spoke, it stayed silent, it ran out of time, or it failed. */
-export type TurnOutcome = 'posted' | 'passed' | 'timeout' | 'failed';
+type TurnOutcome = 'posted' | 'passed' | 'timeout' | 'failed';
 
 /**
  * One row of `turns` (docs/architecture/agent-collaboration.md): when a member's turn started, what woke it,

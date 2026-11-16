@@ -44,7 +44,7 @@ import { SqliteRoomStore } from '../infrastructure/sqlite-room-store.server';
 import { SqliteAgentRegistry } from '../infrastructure/sqlite-agent-registry.server';
 import { SqliteTurnLog } from '../infrastructure/sqlite-turn-log.server';
 import { INHERITED_AGENT_ROLE } from '../infrastructure/agent-seed.server';
-import { RoomCatalog, RoomCatalogInvariantError, type RoomWakeMode } from '../domain/room-catalog';
+import { RoomCatalog, type RoomWakeMode } from '../domain/room-catalog';
 import { isAgentId, type AgentRegistry, type RoomLabAgentId } from '../domain/agent-registry';
 import {
   deriveAgentAvailability,
@@ -835,6 +835,3 @@ export class RoomLabHost {
         ),
   };
 }
-
-export { RoomCatalogInvariantError };
-export { RoomInputError };

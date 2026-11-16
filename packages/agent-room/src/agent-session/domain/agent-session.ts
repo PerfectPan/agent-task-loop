@@ -35,6 +35,11 @@ function cloneSessionId(id: AgentSessionId): AgentSessionId {
 
 /** Aggregate root for one agent runtime generation's read cursor. */
 export class AgentSessionAggregate {
+  /** Rebuilds the aggregate from its stored snapshot, starting fresh when none was stored. */
+  static fromStored(id: AgentSessionId, stored?: { readonly seenSeq: number }): AgentSessionAggregate {
+    return new AgentSessionAggregate(id, stored);
+  }
+
   private seen: RoomSeq;
   private readonly sessionId: AgentSessionId;
 

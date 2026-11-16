@@ -1,37 +1,32 @@
 import type { AgentAdapter } from './base';
 import { runAgentCommand } from './base';
+import { claudeInnerEvent, claudeResultEvents, claudeStreamEvent } from './claude-lines';
 
 function formatClaudeEvent(line: string): string {
-  try {
-    const event = JSON.parse(line) as Record<string, any>;
+  const event = claudeStreamEvent(line);
+  if (event === undefined) {
+    return `${line}\n`;
+  }
 
-    if (event.type === 'stream_event') {
-      // event.event comes from an external JSON stream and may be missing at runtime.
-      const payload: Record<string, any> | undefined = event.event;
+  if (event.type === 'stream_event') {
+    const payload = claudeInnerEvent(event);
 
-      if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {
-        return `\n[claude] tool=${String(payload.content_block.name)}\n`;
-      }
-
-      if (payload?.type === 'content_block_delta' && payload.delta?.type === 'text_delta') {
-        return String(payload.delta.text ?? '');
-      }
-
-      return '';
+    if (payload?.type === 'content_block_start' && payload.content_block?.type === 'tool_use') {
+      return `\n[claude] tool=${String(payload.content_block.name)}\n`;
     }
 
-    if (event.type === 'result') {
-      if (event.subtype === 'success') {
-        return `\n[claude] completed\n`;
-      }
-
-      return `\n[claude] failed\n`;
+    if (payload?.type === 'content_block_delta' && payload.delta?.type === 'text_delta') {
+      return String(payload.delta.text ?? '');
     }
 
     return '';
-  } catch {
-    return `${line}\n`;
   }
+
+  if (event.type === 'result') {
+    return event.subtype === 'success' ? `\n[claude] completed\n` : `\n[claude] failed\n`;
+  }
+
+  return '';
 }
 
 function extractClaudeProgress(line: string): string | undefined {
@@ -78,42 +73,20 @@ function extractClaudeSession(line: string): { sessionId?: string } | undefined 
 }
 
 function extractClaudeSummary(output: string): string {
-  const lines = output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    try {
-      const event = JSON.parse(lines[index]!) as Record<string, any>;
-      if (event.type === 'result' && event.subtype === 'success' && typeof event.result === 'string') {
-        return event.result;
-      }
-    } catch {
-      continue;
-    }
+  const found = claudeResultEvents(output).find(
+    (event) => event.type === 'result' && event.subtype === 'success' && typeof event.result === 'string',
+  );
+  if (found && typeof found.result === 'string') {
+    return found.result;
   }
-
   return 'claude execution completed';
 }
 
 function extractClaudeError(output: string): string | undefined {
-  const lines = output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    try {
-      const event = JSON.parse(lines[index]!) as Record<string, any>;
-      if (event.type === 'result' && event.is_error) {
-        return typeof event.result === 'string' ? event.result : 'claude execution failed';
-      }
-    } catch {
-      continue;
-    }
+  const found = claudeResultEvents(output).find((event) => event.type === 'result' && event.is_error);
+  if (found) {
+    return typeof found.result === 'string' ? found.result : 'claude execution failed';
   }
-
   return undefined;
 }
 

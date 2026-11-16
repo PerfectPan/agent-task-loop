@@ -1,3 +1,4 @@
+import { detectGitHubRepo } from './gh-repo';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -104,20 +105,6 @@ async function confirmInstall(): Promise<boolean> {
   const answer = await prompt(rl, 'Install @larksuite/cli globally now? [y/N] ');
   rl.close();
   return answer.trim().toLowerCase() === 'y';
-}
-
-/** Best-effort `gh repo view` lookup to prefill owner/repo. Returns undefined on any failure. */
-function detectGitHubRepo(): { owner: string; repo: string } | undefined {
-  try {
-    const out = execFileSync('gh', ['repo', 'view', '--json', 'owner,name'], { encoding: 'utf8' });
-    const parsed = JSON.parse(out) as { owner?: { login?: string }; name?: string };
-    if (parsed.owner?.login && parsed.name) {
-      return { owner: parsed.owner.login, repo: parsed.name };
-    }
-  } catch {
-    // gh missing or not in a repo — fall through to manual entry.
-  }
-  return undefined;
 }
 
 async function ensureLarkCli(): Promise<boolean> {

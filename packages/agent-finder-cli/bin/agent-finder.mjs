@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const distEntrypoint = path.join(packageRoot, 'dist', 'cli.js');
 const sourceEntrypoint = path.join(packageRoot, 'src', 'cli.ts');
 const tsxLoader = path.join(packageRoot, 'node_modules', 'tsx', 'dist', 'loader.mjs');

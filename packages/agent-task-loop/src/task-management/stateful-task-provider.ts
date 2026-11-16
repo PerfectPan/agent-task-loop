@@ -1,5 +1,6 @@
 import type { TargetAgent, TaskRecord } from '../types/task';
 import { overlayRuntimeState, pickRuntimeState, type RuntimeTaskState } from './runtime-state';
+import { pendingTasksFrom } from './task-provider';
 
 /**
  * Run-time fields cleared on cleanup, mirroring Feishu's `updateCleanupState`.
@@ -99,7 +100,7 @@ export class StatefulTaskProvider implements TaskProvider {
     // 待处理 on its raw record; only after overlaying the run-time store does the
     // true status (执行中 / 已失败 / 已完成 / …) appear. Delegating the filter to
     // the inner provider would re-offer such a task as pending — re-claimable.
-    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
+    return pendingTasksFrom(() => this.listTasks(), agent);
   }
 
   async getTaskById(taskId: string): Promise<TaskRecord | undefined> {

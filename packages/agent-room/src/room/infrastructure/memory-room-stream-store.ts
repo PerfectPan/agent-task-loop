@@ -1,5 +1,11 @@
 import { AgentSessionAggregate } from '../../agent-session/domain/agent-session';
-import type { AgentSession, AgentSessionId } from '../../agent-session/domain/model';
+import {
+  cloneSession,
+  sessionForwarders,
+  sessionKey,
+  type AgentSession,
+  type AgentSessionId,
+} from '../../agent-session/domain/model';
 import type { RoomStreamStore } from '../application/room-stream-store';
 import { RoomStreamService } from '../application/room-stream-service';
 import type { RoomUnitOfWork } from '../application/room-unit-of-work';
@@ -15,26 +21,6 @@ export interface MemoryRoomStreamStoreOptions {
 
 function roomStorageKey(id: RoomId): string {
   return JSON.stringify([id.tenantId, id.conversationId]);
-}
-
-function sessionStorageKey(id: AgentSessionId): string {
-  return JSON.stringify([
-    id.tenantId,
-    id.agentId,
-    id.roomId.tenantId,
-    id.roomId.conversationId,
-    id.runtimeGenerationId,
-  ]);
-}
-
-function cloneSession(session: AgentSession): AgentSession {
-  return {
-    id: {
-      ...session.id,
-      roomId: { ...session.id.roomId },
-    },
-    seenSeq: session.seenSeq,
-  };
 }
 
 export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
@@ -63,19 +49,19 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
     const sessionSnapshot = session.snapshot();
     this.beforeCommit?.();
     this.rooms.set(roomStorageKey(id.roomId), roomSnapshot);
-    this.sessions.set(sessionStorageKey(id), sessionSnapshot);
+    this.sessions.set(sessionKey(id), sessionSnapshot);
     return result;
   }
 
   ensureSession(id: AgentSessionId): AgentSession {
     const session = this.loadSession(id);
     const snapshot = session.snapshot();
-    this.sessions.set(sessionStorageKey(id), snapshot);
+    this.sessions.set(sessionKey(id), snapshot);
     return snapshot;
   }
 
   inspectSession(id: AgentSessionId): AgentSession | undefined {
-    const snapshot = this.sessions.get(sessionStorageKey(id));
+    const snapshot = this.sessions.get(sessionKey(id));
     return snapshot ? cloneSession(snapshot) : undefined;
   }
 
@@ -88,15 +74,15 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
   }
 
   private loadSession(id: AgentSessionId): AgentSessionAggregate {
-    const existing = this.sessions.get(sessionStorageKey(id));
-    return new AgentSessionAggregate(id, existing ? { seenSeq: existing.seenSeq } : undefined);
+    // A stored snapshot already carries `seenSeq`; an absent one starts fresh.
+    return AgentSessionAggregate.fromStored(id, this.sessions.get(sessionKey(id)));
   }
 
   private changeSession(id: AgentSessionId, change: (session: AgentSessionAggregate) => void): AgentSession {
     const session = this.loadSession(id);
     change(session);
     const snapshot = session.snapshot();
-    this.sessions.set(sessionStorageKey(id), snapshot);
+    this.sessions.set(sessionKey(id), snapshot);
     return snapshot;
   }
 }
@@ -104,22 +90,27 @@ export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
 export class MemoryRoomStreamStore implements RoomStreamStore {
   private readonly unitOfWork: MemoryRoomUnitOfWork;
   private readonly service: RoomStreamService;
+  private sessionAccess: ReturnType<typeof sessionForwarders> | undefined;
 
   constructor(options: MemoryRoomStreamStoreOptions = {}) {
     this.unitOfWork = new MemoryRoomUnitOfWork(options.beforeCommit);
     this.service = new RoomStreamService(this.unitOfWork, options.now ?? Date.now);
   }
 
+  private forwarders(): ReturnType<typeof sessionForwarders> {
+    return (this.sessionAccess ??= sessionForwarders(this.unitOfWork));
+  }
+
   ensureSession(id: AgentSessionId): AgentSession {
-    return this.unitOfWork.ensureSession(id);
+    return this.forwarders().ensureSession(id);
   }
 
   inspectSession(id: AgentSessionId): AgentSession | undefined {
-    return this.unitOfWork.inspectSession(id);
+    return this.forwarders().inspectSession(id);
   }
 
   advanceSeen(id: AgentSessionId, seq: RoomSeq): AgentSession {
-    return this.unitOfWork.advanceSeen(id, seq);
+    return this.forwarders().advanceSeen(id, seq);
   }
 
   async admit(input: AdmitRoomEvent): Promise<AdmitResult> {

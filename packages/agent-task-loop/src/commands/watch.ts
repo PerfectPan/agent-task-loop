@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig } from './command-context';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { TaskService } from '../services/task-service';
 import { TaskRunnerLivenessService } from '../services/task-runner-liveness-service';
 import type { TaskRecord } from '../types/task';
 
 const TERMINAL_STATUSES = new Set(['待决策', '待发布', '待验收', '已完成', '已失败']);
-export const INITIAL_LOG_TAIL_BYTES = 64 * 1024;
+const INITIAL_LOG_TAIL_BYTES = 64 * 1024;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -148,7 +148,7 @@ export const watchCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const livenessService = new TaskRunnerLivenessService();

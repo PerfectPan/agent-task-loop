@@ -26,7 +26,7 @@ const CHIP =
 const DOT =
   'inline-flex size-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none font-semibold';
 
-export const ALL_MENTION_CHIP: MentionChip = {
+const ALL_MENTION_CHIP: MentionChip = {
   letters: '@',
   text: 'all',
   chipClass: `${CHIP} ${NEUTRAL_TILE}`,

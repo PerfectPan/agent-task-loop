@@ -1,8 +1,6 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
-import { assertRuntimeConfig } from '../config/runtime-guard';
+import { taskServiceFrom } from './command-context';
 import { resumeCommandFor } from '../session/resume';
-import { TaskService } from '../services/task-service';
 
 export const resumeCommand = defineCommand({
   meta: {
@@ -19,9 +17,7 @@ export const resumeCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
-    assertRuntimeConfig(config);
-    const taskService = new TaskService(config);
+    const taskService = await taskServiceFrom(args);
     const task = await taskService.getTaskById(String(args.task));
 
     if (!task) {

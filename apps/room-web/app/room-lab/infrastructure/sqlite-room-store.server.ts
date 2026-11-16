@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+
+import { prepareRoomEventInsert } from './room-event-insert.server';
 import type { AgentSession, RoomEvent, RoomId } from '@rivus/agent-room';
 import { RoomCatalog, type RoomRecord, type RoomWakeMode } from '../domain/room-catalog';
 import { AgentRegistry, type AgentDefinition, type RoomLabAgentId } from '../domain/agent-registry';
@@ -345,26 +347,9 @@ export class SqliteRoomStore {
     this.inTransaction(() => {
       this.db.prepare('DELETE FROM room_events WHERE room_id = ?').run(roomId);
       this.db.prepare('DELETE FROM agent_sessions WHERE room_id = ?').run(roomId);
-      const insertEvent = this.db.prepare(`
-        INSERT INTO room_events (
-          room_id, seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const insertEvent = prepareRoomEventInsert(this.db, roomId);
       for (const event of events) {
-        insertEvent.run(
-          roomId,
-          event.seq,
-          event.messageId,
-          event.transportMessageId ?? null,
-          event.author.kind,
-          event.author.id,
-          event.kind,
-          event.body,
-          JSON.stringify(event.addressedTo ?? []),
-          event.origin ?? 'endpoint',
-          event.wakeDepth ?? 0,
-          event.at,
-        );
+        insertEvent.run(event, event.seq);
       }
       const insertSession = this.db.prepare(`
         INSERT INTO agent_sessions (

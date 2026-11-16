@@ -1,13 +1,9 @@
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
+/** This package's version, read from its package.json at run time (source and dist both sit one level down). */
 export function getPackageVersion(): string {
-  const packageJson = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
     version: string;
   };
-
-  return packageJson.version;
+  return manifest.version;
 }

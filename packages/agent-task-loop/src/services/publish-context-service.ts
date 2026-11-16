@@ -1,5 +1,7 @@
 import { execa } from 'execa';
 
+import { runGit, type ExecLike } from './git-run';
+
 export interface PublishContext {
   workspacePath: string;
   branch: string;
@@ -9,8 +11,6 @@ export interface PublishContext {
   diff: string;
   status: string;
 }
-
-type ExecLike = typeof execa;
 
 export class PublishContextService {
   constructor(private readonly exec: ExecLike = execa) {}
@@ -51,7 +51,6 @@ export class PublishContextService {
   }
 
   private runGit(args: string[], signal?: AbortSignal) {
-    signal?.throwIfAborted();
-    return signal ? this.exec('git', args, { cancelSignal: signal }) : this.exec('git', args);
+    return runGit(this.exec, args, signal);
   }
 }

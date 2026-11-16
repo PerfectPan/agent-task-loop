@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig, taskCommandArgs } from './command-context';
 import { printCommandOutput } from './command-output';
 
 export const syncCommand = defineCommand({
@@ -8,16 +8,10 @@ export const syncCommand = defineCommand({
     description: 'Validate local config',
   },
   args: {
-    config: {
-      type: 'string',
-    },
-    json: {
-      type: 'boolean',
-      default: false,
-    },
+    ...taskCommandArgs,
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     const result = {
       projects: Object.keys(config.projects).length,
       repositories: Object.keys(config.repositories).length,

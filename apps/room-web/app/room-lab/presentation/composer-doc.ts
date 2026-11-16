@@ -14,7 +14,7 @@ import type { RoomLabAgentId } from '../read-model';
  * chip into loose text (or the reverse) the first time a send fails.
  */
 
-export const MENTION_NODE = 'mention';
+const MENTION_NODE = 'mention';
 
 /** Ids a rebuild is allowed to turn back into chips: the room's own agent ids plus `'all'`. */
 export type MentionId = RoomLabAgentId;

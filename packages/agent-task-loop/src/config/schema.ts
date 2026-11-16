@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-export const agentConfigSchema = z.object({
+const agentConfigSchema = z.object({
   name: z.enum(['claude', 'codex', 'coco', 'glm']),
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
   env: z.record(z.string(), z.string()).default({}),
 });
 
-export const repositoryConfigSchema = z.object({
+const repositoryConfigSchema = z.object({
   key: z.string().min(1),
   localPath: z.string().min(1),
   defaultBranch: z.string().min(1),
@@ -18,7 +18,7 @@ export const repositoryConfigSchema = z.object({
   workspaceStrategy: z.enum(['existing-repo', 'worktree']),
 });
 
-export const projectConfigSchema = z.object({
+const projectConfigSchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
   defaultRepository: z.string().min(1),
@@ -27,14 +27,14 @@ export const projectConfigSchema = z.object({
   taskTemplatePrompt: z.string().default(''),
 });
 
-export const githubRepoConfigSchema = z.object({
+const githubRepoConfigSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
   /** Per-repo override of the issues source's `defaultAgent`. */
   defaultAgent: z.enum(['claude', 'codex', 'coco', 'glm']).optional(),
 });
 
-export const githubIssuesConfigSchema = z
+const githubIssuesConfigSchema = z
   .object({
     /** Single-repo shorthand: `owner` + `repo`. Use `repositories` for several. */
     owner: z.string().min(1).optional(),
@@ -57,9 +57,7 @@ export const githubIssuesConfigSchema = z
     }
   });
 
-export type GitHubRepoConfig = z.infer<typeof githubRepoConfigSchema>;
-
-export const feishuConfigSchema = z.object({
+const feishuConfigSchema = z.object({
   baseToken: z.string().min(1),
   tableId: z.string().min(1),
   viewId: z.string().optional(),
@@ -83,8 +81,6 @@ export const appConfigSchema = z
       });
     }
   });
-
-export type FeishuConfig = z.infer<typeof feishuConfigSchema>;
 
 export type GitHubIssuesConfig = z.infer<typeof githubIssuesConfigSchema>;
 

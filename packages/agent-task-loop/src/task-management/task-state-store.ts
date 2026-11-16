@@ -22,7 +22,7 @@ export interface TaskStateStore {
  * ids never map to the same segment (e.g. `github:a_b/c` vs `github:a/b_c`, both
  * of which would otherwise sanitize to `github_a_b_c`).
  */
-export function safeSegment(id: string): string {
+function safeSegment(id: string): string {
   const readable = id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 60);
   const hash = createHash('sha1').update(id).digest('hex').slice(0, 8);
   return `${readable}-${hash}`;

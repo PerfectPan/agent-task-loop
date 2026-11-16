@@ -27,7 +27,7 @@ const DOT = [
 ] as const;
 
 export const NEUTRAL_TILE = 'bg-accent text-accent-foreground';
-export const NEUTRAL_INK = 'text-accent-foreground';
+const NEUTRAL_INK = 'text-accent-foreground';
 export const NEUTRAL_DOT = 'bg-accent-foreground text-accent';
 
 function pick(scale: readonly string[], color: number | undefined, fallback: string): string {

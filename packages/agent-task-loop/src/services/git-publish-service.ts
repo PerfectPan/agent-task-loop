@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execa } from 'execa';
 
-type ExecLike = typeof execa;
+import { runGit, type ExecLike } from './git-run';
 
 export class GitPublishService {
   constructor(private readonly exec: ExecLike = execa) {}
@@ -81,7 +81,6 @@ export class GitPublishService {
   }
 
   private runGit(args: string[], signal?: AbortSignal) {
-    signal?.throwIfAborted();
-    return signal ? this.exec('git', args, { cancelSignal: signal }) : this.exec('git', args);
+    return runGit(this.exec, args, signal);
   }
 }

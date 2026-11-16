@@ -3,7 +3,7 @@ import { claudeAdapter } from '../adapters/claude';
 import { cocoAdapter } from '../adapters/coco';
 import { codexAdapter } from '../adapters/codex';
 import { glmAdapter } from '../adapters/glm';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig } from './command-context';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { ExecutionService } from '../services/execution-service';
 import { resolveTaskExecutionContext } from '../services/task-context-service';
@@ -41,7 +41,7 @@ export const runCommand = defineCommand({
   },
   async run({ args }) {
     const agent = args.agent as TargetAgent;
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     assertRuntimeConfig(config);
     const taskService = new TaskService(config);
     const tasks = await taskService.listPendingTasks(agent);

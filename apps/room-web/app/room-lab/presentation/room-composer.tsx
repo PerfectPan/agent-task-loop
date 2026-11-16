@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { At } from '@phosphor-icons/react/dist/ssr/At';
 import { ArrowUp } from '@phosphor-icons/react/dist/ssr/ArrowUp';
 import { EditorContent, useEditor } from '@tiptap/react';
-import type { Editor } from '@tiptap/core';
 import { Document } from '@tiptap/extension-document';
 import { Paragraph } from '@tiptap/extension-paragraph';
 import { Text } from '@tiptap/extension-text';
@@ -228,5 +227,3 @@ export function RoomComposer({
     </form>
   );
 }
-
-export type { Editor };

@@ -19,7 +19,7 @@ export const BADGE_WIDTH = 2;
 export const PRIORITY_WIDTH = 3;
 
 /** Width of the selection marker cell ("❯ ") at the start of a list row. */
-export const MARKER_WIDTH = 2;
+const MARKER_WIDTH = 2;
 
 /** Width of the task-id cell in a list row. */
 export const TASK_ID_WIDTH = 9;

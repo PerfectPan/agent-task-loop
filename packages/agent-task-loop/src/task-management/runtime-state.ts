@@ -14,7 +14,7 @@ import type { TaskRecord } from '../types/task';
  * `project`, `priority`, `targetAgent`, `source`, `recordId`, `createdAt`,
  * `description`, `repository`, `updatedAt`) which stay owned by the backend.
  */
-export const RUNTIME_KEYS = [
+const RUNTIME_KEYS = [
   'status',
   'sessionId',
   'sessionName',
@@ -50,7 +50,7 @@ export const RUNTIME_KEYS = [
   'publishedAt',
 ] as const;
 
-export type RuntimeKey = (typeof RUNTIME_KEYS)[number];
+type RuntimeKey = (typeof RUNTIME_KEYS)[number];
 
 /** The mirrored run-time subset. Values may be cleared ('' / 0 / null) on purpose. */
 export type RuntimeTaskState = { [K in RuntimeKey]?: TaskRecord[K] };

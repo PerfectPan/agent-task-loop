@@ -1,7 +1,6 @@
 import { AgentSessionAggregate } from '../../agent-session/domain/agent-session';
 import type { AgentSessionId } from '../../agent-session/domain/model';
-import { RoomValidationError } from './errors';
-import { sameRoomId } from './model';
+import { assertSessionInRoom } from './session-guard';
 import { Room } from './room';
 import type { RoomSeq } from './model';
 
@@ -21,13 +20,7 @@ export type PassInput = Pick<PassCommand, 'readUpToSeq'>;
  * pending-wake rule brings the member back for anything it did not read.
  */
 export function pass(room: Room, session: AgentSessionAggregate, input: PassInput): PassResult {
-  const sessionId = session.id;
-  if (!sameRoomId(room.id, sessionId.roomId)) {
-    throw new RoomValidationError('agent session belongs to a different room');
-  }
-  if (sessionId.tenantId !== room.id.tenantId) {
-    throw new RoomValidationError('agent session tenant does not match the room tenant');
-  }
+  assertSessionInRoom(room, session);
   session.advanceSeen(input.readUpToSeq);
   return { outcome: 'passed' };
 }

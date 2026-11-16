@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { defineCommand } from 'citty';
 import { z } from 'zod';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig, taskCommandArgs } from './command-context';
 import { listSources } from '../config/source-config';
 import { TaskService } from '../services/task-service';
 import type { CreateTaskPayload } from '../task-management/task-provider';
@@ -203,13 +203,7 @@ export const createCommand = defineCommand({
       type: 'string',
       description: 'Task source id (feishu or github:<owner>/<repo>)',
     },
-    config: {
-      type: 'string',
-    },
-    json: {
-      type: 'boolean',
-      default: false,
-    },
+    ...taskCommandArgs,
   },
   async run({ args }) {
     const prompted = await promptForMissing({
@@ -223,7 +217,7 @@ export const createCommand = defineCommand({
     });
     const inputs = validateInputs(prompted);
 
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     const sourceSummaries = listSources(config);
     const sourceIds = sourceSummaries.map((source) => source.id);
     const defaultSource = sourceSummaries.find((source) => source.isDefault)?.id ?? sourceIds[0];

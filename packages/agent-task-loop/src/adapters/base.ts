@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import type { TaskRecord } from '../types/task';
 
-export interface AgentExecutionResult {
+interface AgentExecutionResult {
   status: 'success' | 'failure';
   summary: string;
   workspacePath?: string;

@@ -7,7 +7,6 @@ import type { KnipConfig } from 'knip';
 // policy's configuration and tag hints still fail the run.
 const config: KnipConfig = {
   ...knip,
-  exclude: ['exports', 'types'],
   workspaces: {
     '.': {
       entry: ['tests/**/*.test.mjs'],

@@ -7,6 +7,7 @@ import type { TaskMutationFence, TaskService } from './task-service';
 import { appendSessionHistory, formatSessionHistoryEntry } from './session-history';
 import { formatFailureMessage, type FailureMessageFormatter } from './failure-message';
 
+import { createHeartbeatWriter } from './heartbeat';
 function buildSessionName(task: TaskRecord): string {
   return `${task.taskId}-${task.targetAgent}`
     .toLowerCase()
@@ -67,40 +68,16 @@ export class ExecutionService {
     let latestProgressSummary = `已认领任务，正在准备工作区并启动 ${task.targetAgent}`;
     let latestSessionId = task.sessionId;
     let latestSessionHistory = task.sessionHistory;
-    let latestRunnerPid = task.runnerPid;
-    let latestHeartbeatAt = new Date().toISOString();
     let lastRecordedSessionKey: string | undefined;
-    let lastHeartbeatPersistedAt = 0;
-    const persistHeartbeat = async (force = false) => {
-      signal?.throwIfAborted();
-      const now = Date.now();
-      if (!force && now - lastHeartbeatPersistedAt < 15_000) {
-        return;
-      }
-
-      latestHeartbeatAt = new Date(now).toISOString();
-      lastHeartbeatPersistedAt = now;
-      try {
-        await this.persist(() =>
-          this.deps.taskService.updateRunnerState(task, {
-            runnerPid: latestRunnerPid,
-            runnerKind: 'execute',
-            runnerAgent: task.targetAgent,
-            runnerRound: round,
-            lastHeartbeatAt: latestHeartbeatAt,
-          }),
-        );
-      } catch (error) {
-        signal?.throwIfAborted();
-        if (this.deps.onHeartbeatError) {
-          this.deps.onHeartbeatError(error);
-        } else {
-          const message = error instanceof Error ? error.message : String(error);
-          writeLog(`\n[agent-task-loop] heartbeat update failed: ${message}\n`);
-        }
-      }
-      signal?.throwIfAborted();
-    };
+    const heartbeat = createHeartbeatWriter({
+      signal,
+      runner: { agent: task.targetAgent, round },
+      persist: async (update) => {
+        await this.persist(() => this.deps.taskService.updateRunnerState(task, update));
+      },
+      onHeartbeatError: this.deps.onHeartbeatError,
+    });
+    heartbeat.pid(task.runnerPid);
     const writeProgress = async (summary: string) => {
       if (!summary || summary === latestProgressSummary) {
         return;
@@ -110,17 +87,13 @@ export class ExecutionService {
       latestProgressSummary = summary;
       await this.persist(() =>
         this.deps.taskService.updateTaskProgress(task, {
+          ...heartbeat.payload(),
           progressSummary: summary,
           workspacePath,
           logPath,
           sessionId: latestSessionId,
           sessionName,
           sessionHistory: latestSessionHistory,
-          runnerPid: latestRunnerPid,
-          runnerKind: 'execute',
-          runnerAgent: task.targetAgent,
-          runnerRound: round,
-          lastHeartbeatAt: latestHeartbeatAt,
         }),
       );
       signal?.throwIfAborted();
@@ -154,17 +127,13 @@ export class ExecutionService {
       signal?.throwIfAborted();
       await this.persist(() =>
         this.deps.taskService.updateTaskProgress(task, {
+          ...heartbeat.payload(),
           progressSummary: latestProgressSummary,
           workspacePath,
           logPath,
           sessionId: nextSessionId,
           sessionName: nextSessionName,
           sessionHistory: latestSessionHistory,
-          runnerPid: latestRunnerPid,
-          runnerKind: 'execute',
-          runnerAgent: task.targetAgent,
-          runnerRound: round,
-          lastHeartbeatAt: latestHeartbeatAt,
         }),
       );
       signal?.throwIfAborted();
@@ -186,11 +155,7 @@ export class ExecutionService {
         sessionId: latestSessionId,
         sessionName,
         sessionHistory: latestSessionHistory,
-        runnerPid: latestRunnerPid,
-        runnerKind: 'execute',
-        runnerAgent: task.targetAgent,
-        runnerRound: round,
-        lastHeartbeatAt: latestHeartbeatAt,
+        ...heartbeat.payload(),
       }),
     );
     signal?.throwIfAborted();
@@ -207,13 +172,7 @@ export class ExecutionService {
         env: this.deps.adapterCommand.env,
         sessionName,
         signal,
-        onSpawn: async (payload) => {
-          latestRunnerPid = payload.pid;
-          await persistHeartbeat(true);
-        },
-        onHeartbeat: async () => {
-          await persistHeartbeat();
-        },
+        ...heartbeat.callbacks(),
         onOutput: writeLog,
         onProgress: writeProgress,
         onSession: writeSession,

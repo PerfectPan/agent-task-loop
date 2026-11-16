@@ -1,8 +1,8 @@
 import { AgentSessionAggregate } from '../../agent-session/domain/agent-session';
 import { sessionKey, type AgentSessionId } from '../../agent-session/domain/model';
 import { RoomValidationError } from './errors';
-import { sameRoomId } from './model';
-import { Room } from './room';
+import { assertSessionInRoom } from './session-guard';
+import { assertSeq, type Room } from './room';
 import type { AgentId, RoomEvent, RoomSeq } from './model';
 
 export interface SpeakCommand {
@@ -22,12 +22,6 @@ export type SpeakResult =
 
 export type SpeakInput = Pick<SpeakCommand, 'body' | 'addressedTo' | 'readUpToSeq' | 'triggerSeq'>;
 
-function assertSeq(seq: RoomSeq, label: string): void {
-  if (!Number.isSafeInteger(seq) || seq < 0) {
-    throw new RoomValidationError(`${label} must be a non-negative integer`);
-  }
-}
-
 function eventAt(room: Room, seq: RoomSeq): RoomEvent {
   assertSeq(seq, 'trigger sequence');
   // Restored streams are contiguous from 1, so the event at seq exists exactly
@@ -46,14 +40,9 @@ function eventAt(room: Room, seq: RoomSeq): RoomEvent {
  * the same turn.
  */
 export function speak(room: Room, session: AgentSessionAggregate, input: SpeakInput, at: string): SpeakResult {
-  const sessionId = session.id;
-  if (!sameRoomId(room.id, sessionId.roomId)) {
-    throw new RoomValidationError('agent session belongs to a different room');
-  }
-  if (sessionId.tenantId !== room.id.tenantId) {
-    throw new RoomValidationError('agent session tenant does not match the room tenant');
-  }
+  assertSessionInRoom(room, session);
   assertSeq(input.readUpToSeq, 'read up to sequence');
+  const sessionId = session.id;
 
   const newer = room.eventsAfter(input.readUpToSeq, sessionId.agentId);
   if (newer.length > 0) {

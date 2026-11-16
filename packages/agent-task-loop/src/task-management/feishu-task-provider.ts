@@ -1,3 +1,4 @@
+import { pendingTasksFrom, taskByIdFrom, type RunnerSessionFields } from './task-provider';
 import type { AppConfig } from '../config/schema';
 import type { AcceptanceVerdict, ReviewVerdict, TargetAgent, TaskRecord, TaskStatus } from '../types/task';
 import { runLarkCli } from '../services/lark-cli';
@@ -152,7 +153,7 @@ function optionalCellText(value: unknown): string | undefined {
   return value ? cellText(value) : undefined;
 }
 
-export const FEISHU_SOURCE = 'feishu';
+const FEISHU_SOURCE = 'feishu';
 
 export class FeishuTaskProvider implements SourceProvider {
   readonly source = FEISHU_SOURCE;
@@ -171,13 +172,11 @@ export class FeishuTaskProvider implements SourceProvider {
     return this.config.feishu;
   }
 
-  async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
-  }
+  readonly listPendingTasks = (agent: TargetAgent): Promise<TaskRecord[]> =>
+    pendingTasksFrom(() => this.listTasks(), agent);
 
-  async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
-    return (await this.listTasks()).find((task) => task.taskId === taskId);
-  }
+  readonly getTaskById = (taskId: string): Promise<TaskRecord | undefined> =>
+    taskByIdFrom(() => this.listTasks(), taskId);
 
   async createTask(payload: CreateTaskPayload): Promise<void> {
     // No --record-id ⇒ record-upsert inserts a brand-new row.
@@ -253,7 +252,28 @@ export class FeishuTaskProvider implements SourceProvider {
     };
   }
 
-  async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
+  private runnerFields(payload: RunnerSessionFields): Record<string, unknown> {
+    return {
+      WorkspacePath: payload.workspacePath,
+      LogPath: payload.logPath,
+      ProgressSummary: payload.progressSummary,
+      SessionId: payload.sessionId,
+      SessionName: payload.sessionName,
+      SessionHistory: payload.sessionHistory,
+      RunnerPid: payload.runnerPid,
+      RunnerKind: payload.runnerKind,
+      RunnerAgent: payload.runnerAgent,
+      RunnerRound: payload.runnerRound,
+      LastHeartbeatAt: payload.lastHeartbeatAt,
+    };
+  }
+
+  /** One record write: resolve the record id, then upsert the fields through lark-cli. */
+  private async upsertRecord(
+    task: TaskRef,
+    fields: Record<string, unknown>,
+    options?: { touchUpdatedAt?: boolean },
+  ): Promise<void> {
     const taskRef = await this.resolveRecordRef(task);
     await runLarkCli([
       'base',
@@ -264,265 +284,129 @@ export class FeishuTaskProvider implements SourceProvider {
       this.feishu.tableId,
       ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
       '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          Status: '执行中',
-          ClaimedBy: payload.claimedBy,
-          ClaimedAt: payload.claimedAt,
-          RunId: payload.runId,
-          WorkspacePath: payload.workspacePath,
-          LogPath: payload.logPath,
-          ProgressSummary: payload.progressSummary,
-          SessionId: payload.sessionId,
-          SessionName: payload.sessionName,
-          SessionHistory: payload.sessionHistory,
-          RunnerPid: payload.runnerPid,
-          RunnerKind: payload.runnerKind,
-          RunnerAgent: payload.runnerAgent,
-          RunnerRound: payload.runnerRound,
-          LastHeartbeatAt: payload.lastHeartbeatAt,
-          CurrentOwner: payload.claimedBy.split('@')[0],
-          LastError: '',
-        }),
-      ),
+      JSON.stringify(buildRecordPayload(task.taskId, fields, options)),
     ]);
+  }
+
+  async claimTask(task: TaskRef, payload: ClaimTaskPayload): Promise<void> {
+    await this.upsertRecord(task, {
+      Status: '执行中',
+      ClaimedBy: payload.claimedBy,
+      ClaimedAt: payload.claimedAt,
+      RunId: payload.runId,
+      ...this.runnerFields(payload),
+      CurrentOwner: payload.claimedBy.split('@')[0],
+      LastError: '',
+    });
   }
 
   async updateTaskProgress(task: TaskRef, payload: UpdateTaskProgressPayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          ProgressSummary: payload.progressSummary,
-          WorkspacePath: payload.workspacePath,
-          LogPath: payload.logPath,
-          SessionId: payload.sessionId,
-          SessionName: payload.sessionName,
-          SessionHistory: payload.sessionHistory,
-          RunnerPid: payload.runnerPid,
-          RunnerKind: payload.runnerKind,
-          RunnerAgent: payload.runnerAgent,
-          RunnerRound: payload.runnerRound,
-          LastHeartbeatAt: payload.lastHeartbeatAt,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, this.runnerFields(payload));
   }
 
   async updateRunnerState(task: TaskRef, payload: UpdateRunnerStatePayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          RunnerPid: payload.runnerPid,
-          RunnerKind: payload.runnerKind,
-          RunnerAgent: payload.runnerAgent,
-          RunnerRound: payload.runnerRound,
-          LastHeartbeatAt: payload.lastHeartbeatAt,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      RunnerPid: payload.runnerPid,
+      RunnerKind: payload.runnerKind,
+      RunnerAgent: payload.runnerAgent,
+      RunnerRound: payload.runnerRound,
+      LastHeartbeatAt: payload.lastHeartbeatAt,
+    });
   }
 
   async updateTaskAssignment(task: TaskRef, payload: UpdateTaskAssignmentPayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          TargetAgent: [payload.targetAgent],
-          CurrentOwner: payload.currentOwner,
-          ProgressSummary: payload.progressSummary,
-          LastError: payload.lastError,
-          WorkspacePath: payload.workspacePath,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      TargetAgent: [payload.targetAgent],
+      CurrentOwner: payload.currentOwner,
+      ProgressSummary: payload.progressSummary,
+      LastError: payload.lastError,
+      WorkspacePath: payload.workspacePath,
+    });
   }
 
   async markTaskSucceeded(task: TaskRef, payload: MarkTaskSucceededPayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          Status: '待验收',
-          ResultSummary: payload.resultSummary,
-          WorkspacePath: payload.workspacePath,
-          LogPath: payload.logPath,
-          ProgressSummary: payload.progressSummary,
-          SessionId: payload.sessionId,
-          SessionName: payload.sessionName,
-          SessionHistory: payload.sessionHistory,
-          PRLink: payload.prLink,
-          LastError: '',
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      Status: '待验收',
+      ResultSummary: payload.resultSummary,
+      ...this.runnerFields(payload),
+      PRLink: payload.prLink,
+      LastError: '',
+    });
   }
 
   async markTaskFailed(task: TaskRef, payload: MarkTaskFailedPayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          Status: '已失败',
-          LastError: payload.lastError,
-          WorkspacePath: payload.workspacePath,
-          LogPath: payload.logPath,
-          ProgressSummary: payload.progressSummary,
-          SessionId: payload.sessionId,
-          SessionName: payload.sessionName,
-          SessionHistory: payload.sessionHistory,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      Status: '已失败',
+      LastError: payload.lastError,
+      ...this.runnerFields(payload),
+    });
   }
 
   async updateReviewState(task: TaskRef, payload: UpdateReviewStatePayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
     const shouldClearRunner = !RUNNING_STATUSES.has(payload.status);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          Status: [payload.status],
-          CurrentOwner: payload.currentOwner,
-          ReviewRound: payload.reviewRound,
-          ReviewVerdict: payload.reviewVerdict ? [payload.reviewVerdict] : undefined,
-          ReviewFindings: payload.reviewFindings,
-          AcceptanceRound: payload.acceptanceRound,
-          AcceptanceVerdict: payload.acceptanceVerdict ? [payload.acceptanceVerdict] : undefined,
-          AcceptanceFeedback: payload.acceptanceFeedback,
-          ExecutionSessionId: payload.executionSessionId,
-          ExecutionSessionName: payload.executionSessionName,
-          ReviewSessionId: payload.reviewSessionId,
-          ReviewSessionName: payload.reviewSessionName,
-          ReviewLogPath: payload.reviewLogPath,
-          SessionHistory: payload.sessionHistory,
-          RunnerPid: shouldClearRunner ? null : payload.runnerPid,
-          RunnerKind: shouldClearRunner ? '' : (payload.runnerKind ?? ''),
-          RunnerAgent: shouldClearRunner ? '' : (payload.runnerAgent ?? ''),
-          RunnerRound: shouldClearRunner ? null : payload.runnerRound,
-          LastHeartbeatAt: shouldClearRunner ? '' : payload.lastHeartbeatAt,
-          ProgressSummary: payload.progressSummary,
-          ResultSummary: payload.resultSummary,
-          WorkspacePath: payload.workspacePath,
-          LogPath: payload.logPath,
-          LastError: payload.lastError,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      Status: [payload.status],
+      CurrentOwner: payload.currentOwner,
+      ReviewRound: payload.reviewRound,
+      ReviewVerdict: payload.reviewVerdict ? [payload.reviewVerdict] : undefined,
+      ReviewFindings: payload.reviewFindings,
+      AcceptanceRound: payload.acceptanceRound,
+      AcceptanceVerdict: payload.acceptanceVerdict ? [payload.acceptanceVerdict] : undefined,
+      AcceptanceFeedback: payload.acceptanceFeedback,
+      ExecutionSessionId: payload.executionSessionId,
+      ExecutionSessionName: payload.executionSessionName,
+      ReviewSessionId: payload.reviewSessionId,
+      ReviewSessionName: payload.reviewSessionName,
+      ReviewLogPath: payload.reviewLogPath,
+      SessionHistory: payload.sessionHistory,
+      RunnerPid: shouldClearRunner ? null : payload.runnerPid,
+      RunnerKind: shouldClearRunner ? '' : (payload.runnerKind ?? ''),
+      RunnerAgent: shouldClearRunner ? '' : (payload.runnerAgent ?? ''),
+      RunnerRound: shouldClearRunner ? null : payload.runnerRound,
+      LastHeartbeatAt: shouldClearRunner ? '' : payload.lastHeartbeatAt,
+      ProgressSummary: payload.progressSummary,
+      ResultSummary: payload.resultSummary,
+      WorkspacePath: payload.workspacePath,
+      LogPath: payload.logPath,
+      LastError: payload.lastError,
+    });
   }
 
   async updatePublishResult(task: TaskRef, payload: UpdatePublishResultPayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(task.taskId, {
-          PRLink: payload.prLink,
-          PublishBranch: payload.publishBranch,
-          PublishCommit: payload.publishCommit,
-          PublishedAt: payload.publishedAt,
-          ProgressSummary: payload.progressSummary,
-          ResultSummary: payload.resultSummary,
-          SessionHistory: payload.sessionHistory,
-          LastError: payload.lastError,
-        }),
-      ),
-    ]);
+    await this.upsertRecord(task, {
+      PRLink: payload.prLink,
+      PublishBranch: payload.publishBranch,
+      PublishCommit: payload.publishCommit,
+      PublishedAt: payload.publishedAt,
+      ProgressSummary: payload.progressSummary,
+      ResultSummary: payload.resultSummary,
+      SessionHistory: payload.sessionHistory,
+      LastError: payload.lastError,
+    });
   }
 
   async updateCleanupState(task: TaskRef, payload: UpdateCleanupStatePayload): Promise<void> {
-    const taskRef = await this.resolveRecordRef(task);
-    await runLarkCli([
-      'base',
-      '+record-upsert',
-      '--base-token',
-      this.feishu.baseToken,
-      '--table-id',
-      this.feishu.tableId,
-      ...(taskRef.recordId ? ['--record-id', taskRef.recordId] : []),
-      '--json',
-      JSON.stringify(
-        buildRecordPayload(
-          task.taskId,
-          {
-            CurrentOwner: payload.currentOwner,
-            ProgressSummary: payload.progressSummary,
-            WorkspacePath: '',
-            LogPath: '',
-            ReviewLogPath: '',
-            RunnerPid: null,
-            RunnerKind: '',
-            RunnerAgent: '',
-            RunnerRound: null,
-            LastHeartbeatAt: '',
-            LastError: '',
-            ReviewVerdict: [],
-            ReviewFindings: '',
-            AcceptanceVerdict: [],
-            AcceptanceFeedback: '',
-          },
-          {
-            touchUpdatedAt: true,
-          },
-        ),
-      ),
-    ]);
+    await this.upsertRecord(
+      task,
+      {
+        CurrentOwner: payload.currentOwner,
+        ProgressSummary: payload.progressSummary,
+        WorkspacePath: '',
+        LogPath: '',
+        ReviewLogPath: '',
+        RunnerPid: null,
+        RunnerKind: '',
+        RunnerAgent: '',
+        RunnerRound: null,
+        LastHeartbeatAt: '',
+        LastError: '',
+        ReviewVerdict: [],
+        ReviewFindings: '',
+        AcceptanceVerdict: [],
+        AcceptanceFeedback: '',
+      },
+      { touchUpdatedAt: true },
+    );
   }
 
   private mapFields(fields: Record<string, unknown>, recordId?: string): TaskRecord {

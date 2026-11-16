@@ -14,6 +14,22 @@ export const ROOM_MENTION_SOURCE = String.raw`(?<![a-z0-9._%+-])@(all|[a-z][a-z0
 
 const MENTION_PATTERN = new RegExp(ROOM_MENTION_SOURCE, 'gi');
 
+/** A trimmed room message body, or the error code the room tools report. */
+export function trimmedBody(
+  body: unknown,
+):
+  | { readonly ok: true; readonly body: string }
+  | { readonly ok: false; readonly error: 'body-required' | 'body-too-long' } {
+  const text = typeof body === 'string' ? body.trim() : '';
+  if (!text) {
+    return { ok: false, error: 'body-required' };
+  }
+  if (text.length > ROOM_MESSAGE_LIMIT) {
+    return { ok: false, error: 'body-too-long' };
+  }
+  return { ok: true, body: text };
+}
+
 export interface RoomMessage {
   body: string;
   addressedTo: RoomLabAgentId[];

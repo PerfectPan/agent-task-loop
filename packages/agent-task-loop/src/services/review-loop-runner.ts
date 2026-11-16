@@ -1,3 +1,4 @@
+import { createHeartbeatWriter } from './heartbeat';
 import { claudeAdapter } from '../adapters/claude';
 import { cocoAdapter } from '../adapters/coco';
 import { codexAdapter } from '../adapters/codex';
@@ -148,47 +149,25 @@ export class ReviewLoopRunner {
           adapter: adapters[reviewerAgent],
           command: this.deps.config.agents[reviewerAgent],
         });
-        let latestRunnerPid: number | undefined;
-        let latestHeartbeatAt = new Date().toISOString();
-        let lastHeartbeatPersistedAt = 0;
-        const persistHeartbeat = async (force = false) => {
-          signal?.throwIfAborted();
-          const now = Date.now();
-          if (!force && now - lastHeartbeatPersistedAt < 15_000) {
-            return;
-          }
-
-          latestHeartbeatAt = new Date(now).toISOString();
-          lastHeartbeatPersistedAt = now;
-          try {
+        const heartbeat = createHeartbeatWriter({
+          signal,
+          runner: { agent: reviewerAgent, round: input.reviewRound },
+          persist: async (update) => {
             await mutationFence.run(() =>
               this.deps.taskService.updateRunnerState(input.task as Pick<TaskRecord, 'taskId' | 'recordId'>, {
-                runnerPid: latestRunnerPid,
+                ...update,
                 runnerKind: 'review',
-                runnerAgent: reviewerAgent,
-                runnerRound: input.reviewRound,
-                lastHeartbeatAt: latestHeartbeatAt,
               }),
             );
-          } catch (error) {
-            signal?.throwIfAborted();
-            if (this.deps.onBackgroundError) {
-              this.deps.onBackgroundError(error);
-            } else {
-              const message = error instanceof Error ? error.message : String(error);
-              console.warn(`[agent-task-loop] review heartbeat update failed: ${message}`);
-            }
-          }
-          signal?.throwIfAborted();
-        };
+          },
+          onHeartbeatError: this.deps.onBackgroundError,
+        });
 
         signal?.throwIfAborted();
         await mutationFence.run(() =>
           this.deps.taskService.updateRunnerState(input.task as Pick<TaskRecord, 'taskId' | 'recordId'>, {
+            ...heartbeat.payload(),
             runnerKind: 'review',
-            runnerAgent: reviewerAgent,
-            runnerRound: input.reviewRound,
-            lastHeartbeatAt: latestHeartbeatAt,
           }),
         );
         signal?.throwIfAborted();
@@ -197,13 +176,7 @@ export class ReviewLoopRunner {
           ...input,
           reviewerAgent,
           signal,
-          onSpawn: async (payload) => {
-            latestRunnerPid = payload.pid;
-            await persistHeartbeat(true);
-          },
-          onHeartbeat: async () => {
-            await persistHeartbeat();
-          },
+          ...heartbeat.callbacks(),
         });
       },
       isTaskDeliverable: async (deliveryInput) => {

@@ -1,5 +1,7 @@
 import { execa } from 'execa';
 
+import { runGit, type ExecLike } from './git-run';
+
 export interface DeliveryCheckInput {
   workspacePath: string;
   baseRef: string;
@@ -12,8 +14,6 @@ export interface DeliveryCheckResult {
   isDeliverable: boolean;
   reason: 'published' | 'working-tree-changes' | 'new-commit' | 'none';
 }
-
-type ExecLike = typeof execa;
 
 export class DeliveryCheckService {
   constructor(private readonly exec: ExecLike = execa) {}
@@ -43,7 +43,6 @@ export class DeliveryCheckService {
   }
 
   private runGit(args: string[], signal?: AbortSignal) {
-    signal?.throwIfAborted();
-    return signal ? this.exec('git', args, { cancelSignal: signal }) : this.exec('git', args);
+    return runGit(this.exec, args, signal);
   }
 }

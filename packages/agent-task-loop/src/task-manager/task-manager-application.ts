@@ -5,27 +5,27 @@ import { TaskManagerInputError, TaskManagerOperationError } from './task-manager
 
 export { TaskManagerInputError, TaskManagerOperationError } from './task-manager-error';
 
-export interface ListTasksInput {
+interface ListTasksInput {
   limit: number;
   status?: TaskStatus;
   targetAgent?: TargetAgent;
 }
 
-export interface TaskListResult {
+interface TaskListResult {
   count: number;
   tasks: PublicTaskDto[];
   truncated: boolean;
 }
 
-export interface GetTaskInput {
+interface GetTaskInput {
   taskId: string;
 }
 
-export interface GetTaskResult {
+interface GetTaskResult {
   task: PublicTaskDto;
 }
 
-export interface TaskMutationResult {
+interface TaskMutationResult {
   action: 'created';
   taskId: string;
 }
@@ -36,7 +36,7 @@ export interface StartTaskInput {
   maxRounds: number;
 }
 
-export interface TaskStartResult {
+interface TaskStartResult {
   action: 'review-loop-completed';
   task: PublicTaskDto;
   taskId: string;

@@ -38,7 +38,12 @@ export function claudeResultEvents(output: string): ClaudeStreamEvent[] {
     .filter(Boolean);
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     try {
-      events.push(JSON.parse(lines[index]!) as ClaudeStreamEvent);
+      // A bare `null` (or any non-object) is valid JSON but not an event; the
+      // result consumers read `.type` on every element, so it must not enter.
+      const parsed: unknown = JSON.parse(lines[index]!);
+      if (parsed !== null && typeof parsed === 'object') {
+        events.push(parsed as ClaudeStreamEvent);
+      }
     } catch {
       continue;
     }

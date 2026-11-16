@@ -1,5 +1,6 @@
 import type { RoomEvent } from '@rivus/agent-room';
 import type { RoomLabAgentId } from '../domain/agent-registry';
+import type { RoomDmOpenInput } from './ports';
 import { copy } from '../copy';
 import { newRoomIdentity } from '../infrastructure/room-home.server';
 import type { RoomRecordStore, RoomRound } from './ports';
@@ -12,7 +13,7 @@ import type { RoomRecordStore, RoomRound } from './ports';
  * round spans the private rooms opened inside it). The record stamps the seq,
  * which is why the parse reads five parts.
  */
-export function dmMessageId(round: RoomRound, triggerSeq: number): string {
+function dmMessageId(round: RoomRound, triggerSeq: number): string {
   return `dm:${round.roomId}:${round.seq}:${triggerSeq}`;
 }
 
@@ -68,16 +69,7 @@ export interface RoomDmDeps {
 export class RoomDm {
   constructor(private readonly deps: RoomDmDeps) {}
 
-  async open(input: {
-    parentRoomId: string;
-    from: RoomLabAgentId;
-    to: RoomLabAgentId;
-    body: string;
-    triggerDepth: number;
-    triggerSeq: number;
-    roundRoomId: string;
-    roundSeq: number;
-  }): Promise<{ roomId: string; seq: number }> {
+  async open(input: RoomDmOpenInput): Promise<{ roomId: string; seq: number }> {
     const pair = [input.from, input.to].sort();
     const round: RoomRound = { roomId: input.roundRoomId, seq: input.roundSeq };
     const found = this.deps.findPrivate(input.parentRoomId, pair);

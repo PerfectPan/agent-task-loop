@@ -1,5 +1,7 @@
 import type { CodingAgentId } from '@rivus/agent-kit/catalog';
 
+import { resumeCommandFrom } from './resume-form';
+
 /**
  * The one application-side table of copyable resume commands. `@rivus/agent-kit`
  * deliberately leaves resume knowledge to hosts, so every resume string this
@@ -20,9 +22,5 @@ export function resumeCommandFor(
   agent: CodingAgentId | undefined,
   sessionId: string | undefined | null,
 ): string | null {
-  if (!sessionId) {
-    return null;
-  }
-  const build = agent === undefined ? undefined : RESUME_COMMANDS[agent];
-  return build ? build(sessionId) : null;
+  return resumeCommandFrom(RESUME_COMMANDS, agent, sessionId);
 }

@@ -16,7 +16,8 @@ const CLI_VERSION_PROBE = {
   sideEffects: [],
 } as const;
 
-function cli(
+function probe(
+  kind: 'cli' | 'app' | 'extension',
   agent: CodingAgentId,
   displayName: string,
   commands: readonly string[],
@@ -29,63 +30,19 @@ function cli(
     specificationVersion: 'discovery-v1',
     agent,
     displayName,
-    kind: 'cli',
+    kind,
     commands,
     appPaths,
     configPaths,
     mcpConfigPaths,
-    version: CLI_VERSION_PROBE,
-    warnings,
-  };
-}
-
-function app(
-  agent: CodingAgentId,
-  displayName: string,
-  commands: readonly string[],
-  configPaths: readonly string[],
-  appPaths: readonly string[],
-  mcpConfigPaths: readonly string[],
-  warnings: readonly string[],
-): ProbeRecipe {
-  return {
-    specificationVersion: 'discovery-v1',
-    agent,
-    displayName,
-    kind: 'app',
-    commands,
-    appPaths,
-    configPaths,
-    mcpConfigPaths,
-    warnings,
-  };
-}
-
-function extension(
-  agent: CodingAgentId,
-  displayName: string,
-  commands: readonly string[],
-  configPaths: readonly string[],
-  appPaths: readonly string[],
-  mcpConfigPaths: readonly string[],
-  warnings: readonly string[],
-): ProbeRecipe {
-  return {
-    specificationVersion: 'discovery-v1',
-    agent,
-    displayName,
-    kind: 'extension',
-    commands,
-    appPaths,
-    configPaths,
-    mcpConfigPaths,
+    ...(kind === 'cli' ? { version: CLI_VERSION_PROBE } : {}),
     warnings,
   };
 }
 
 /** The MoonBit catalog's agents in catalog order, minus the six the kit detects with its own built-in recipes. */
 export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
-  openhands: app(
+  openhands: probe('app',
     'openhands',
     'OpenHands',
     ['openhands'],
@@ -94,7 +51,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['OpenHands may be local, containerized, or remote; discovery is conservative.'],
   ),
-  cline: extension(
+  cline: probe('extension',
     'cline',
     'Cline',
     [],
@@ -103,7 +60,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Cline extension presence is not validated without reading extension metadata.'],
   ),
-  codebuddy: cli(
+  codebuddy: probe('cli',
     'codebuddy',
     'CodeBuddy',
     ['codebuddy'],
@@ -112,7 +69,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['CodeBuddy command and config paths may vary by distribution.'],
   ),
-  'command-code': cli(
+  'command-code': probe('cli',
     'command-code',
     'Command Code',
     ['command-code'],
@@ -121,7 +78,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Command Code provider metadata needs validation.'],
   ),
-  'kiro-cli': cli(
+  'kiro-cli': probe('cli',
     'kiro-cli',
     'Kiro CLI',
     ['kiro'],
@@ -130,7 +87,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Kiro CLI provider metadata needs validation.'],
   ),
-  antigravity: app(
+  antigravity: probe('app',
     'antigravity',
     'Antigravity',
     ['antigravity'],
@@ -139,7 +96,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Antigravity provider metadata needs validation.'],
   ),
-  'roo-code': extension(
+  'roo-code': probe('extension',
     'roo-code',
     'Roo Code',
     [],
@@ -148,7 +105,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Roo Code extension presence is not validated without reading extension metadata.'],
   ),
-  'github-copilot': cli(
+  'github-copilot': probe('cli',
     'github-copilot',
     'GitHub Copilot',
     ['gh', 'copilot'],
@@ -157,8 +114,8 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['GitHub Copilot CLI support is detected conservatively through command metadata.'],
   ),
-  amp: cli('amp', 'Amp', ['amp'], ['~/.amp'], [], [], ['Amp provider metadata needs validation.']),
-  openclaw: cli(
+  amp: probe('cli', 'amp', 'Amp', ['amp'], ['~/.amp'], [], [], ['Amp provider metadata needs validation.']),
+  openclaw: probe('cli',
     'openclaw',
     'OpenClaw',
     ['openclaw'],
@@ -167,7 +124,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['OpenClaw provider metadata needs validation.'],
   ),
-  neovate: cli(
+  neovate: probe('cli',
     'neovate',
     'Neovate',
     ['neovate'],
@@ -176,8 +133,8 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Neovate provider metadata needs validation.'],
   ),
-  qoder: cli('qoder', 'Qoder', ['qoder'], ['~/.qoder'], [], [], ['Qoder provider metadata needs validation.']),
-  zencoder: cli(
+  qoder: probe('cli', 'qoder', 'Qoder', ['qoder'], ['~/.qoder'], [], [], ['Qoder provider metadata needs validation.']),
+  zencoder: probe('cli',
     'zencoder',
     'Zencoder',
     ['zencoder'],
@@ -186,7 +143,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Zencoder provider metadata needs validation.'],
   ),
-  'kimi-code-cli': cli(
+  'kimi-code-cli': probe('cli',
     'kimi-code-cli',
     'Kimi Code CLI',
     ['kimi'],
@@ -195,7 +152,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     [],
     ['Kimi Code CLI provider metadata needs validation.'],
   ),
-  windsurf: app(
+  windsurf: probe('app',
     'windsurf',
     'Windsurf',
     ['windsurf'],
@@ -204,7 +161,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     ['~/.codeium/windsurf/mcp_config.json', '~/Library/Application Support/Windsurf/User/mcp.json'],
     [],
   ),
-  'vscode-copilot': extension(
+  'vscode-copilot': probe('extension',
     'vscode-copilot',
     'VS Code Copilot',
     ['code'],
@@ -213,7 +170,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     ['~/Library/Application Support/Code/User/mcp.json'],
     ['VS Code Copilot extension presence is not validated without reading extension metadata.'],
   ),
-  'codex-desktop': app(
+  'codex-desktop': probe('app',
     'codex-desktop',
     'Codex Desktop',
     [],
@@ -222,7 +179,7 @@ export const legacyProbeRecipes: Readonly<Record<string, ProbeRecipe>> = {
     ['~/.codex/config.toml'],
     [],
   ),
-  aider: cli('aider', 'aider', ['aider'], ['~/.aider.conf.yml', '~/.config/aider'], [], [], []),
-  hermes: cli('hermes', 'Hermes', ['hermes'], ['~/.hermes'], [], [], ['Hermes provider metadata needs validation.']),
-  trae: cli('trae', 'Trae', ['trae'], ['~/.trae'], [], [], ['Trae provider metadata needs validation.']),
+  aider: probe('cli', 'aider', 'aider', ['aider'], ['~/.aider.conf.yml', '~/.config/aider'], [], [], []),
+  hermes: probe('cli', 'hermes', 'Hermes', ['hermes'], ['~/.hermes'], [], [], ['Hermes provider metadata needs validation.']),
+  trae: probe('cli', 'trae', 'Trae', ['trae'], ['~/.trae'], [], [], ['Trae provider metadata needs validation.']),
 };

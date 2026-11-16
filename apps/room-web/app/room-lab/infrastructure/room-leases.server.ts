@@ -1,6 +1,5 @@
 import type {
   LeaseHandle,
-  LeaseLost,
   LeaseManager,
   LeaseRepository,
   LeaseRepositoryFailure,
@@ -58,13 +57,3 @@ export class ActiveRoomLeases implements RoomLeases {
     }
   }
 }
-
-/** Whether a lease record reads as held for the member status display. */
-export function isLeaseHeld(record: LeaseSnapshot | undefined, staleAfterMs: number): boolean {
-  if (!record || !record.holder) {
-    return false;
-  }
-  return Date.now() - record.renewedAt < staleAfterMs;
-}
-
-export type { LeaseLost };

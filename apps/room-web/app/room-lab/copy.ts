@@ -148,5 +148,3 @@ export const copy = {
     roundBudgetReached: '本轮已达调用上限',
   },
 } as const;
-
-export type StatusKey = keyof typeof copy.status;

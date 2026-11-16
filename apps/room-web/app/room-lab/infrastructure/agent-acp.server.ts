@@ -45,8 +45,8 @@ export interface RoomAgentSpec {
  * is bounded by (a cancel that does not settle in time invalidates the
  * session's binding and closes the connection).
  */
-export const ROOM_ACP_HANDSHAKE_TIMEOUT_MS = 45_000;
-export const ROOM_ACP_REQUEST_TIMEOUT_MS = 30_000;
+const ROOM_ACP_HANDSHAKE_TIMEOUT_MS = 45_000;
+const ROOM_ACP_REQUEST_TIMEOUT_MS = 30_000;
 export const ROOM_ACP_CANCEL_TIMEOUT_MS = 5_000;
 
 /** The client name the old connector announced; carried over. */
@@ -121,7 +121,7 @@ function builtinBaseFor(agent: RoomAgentSpec): AcpProfile | undefined {
 }
 
 /** Splits an `agents` row's command line: the first word is the program. */
-export function splitCommandLine(line: string): { command: string; args: readonly string[] } {
+function splitCommandLine(line: string): { command: string; args: readonly string[] } {
   const words = line.trim().split(/\s+/).filter(Boolean);
   return { command: words[0] ?? '', args: words.slice(1) };
 }
@@ -199,7 +199,7 @@ function connectOptions(agent: RoomAgentSpec, cwd: string, onPermission?: TurnPe
 }
 
 /** One line a turn row or a failure notice can carry about a prompt error. */
-export function describePromptError(error: PromptError): string {
+function describePromptError(error: PromptError): string {
   switch (error._tag) {
     case 'TurnInProgress':
       return `the session's turn ${error.turn} is still running`;

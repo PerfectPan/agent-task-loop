@@ -3,7 +3,7 @@ import type { RoomEvent, RoomId, RoomSeq, SpeakResult } from '@rivus/agent-room'
 import type { AgentSessionId } from '@rivus/agent-room';
 import type { ToolDefinition } from './turn';
 import type { RoomLabAgentId } from '../read-model';
-import { ROOM_MESSAGE_LIMIT } from '../domain/room-message';
+import { ROOM_MESSAGE_LIMIT, trimmedBody } from '../domain/room-message';
 import { HELD_LIMIT } from './ports';
 
 /**
@@ -85,13 +85,11 @@ export function roomSpeakTool(
       if (handle.spoke) {
         return { error: 'already-spoke' };
       }
-      const body = typeof input.body === 'string' ? input.body.trim() : '';
-      if (!body) {
-        return { error: 'body-required' };
+      const parsedBody = trimmedBody(input.body);
+      if (!parsedBody.ok) {
+        return { error: parsedBody.error };
       }
-      if (body.length > ROOM_MESSAGE_LIMIT) {
-        return { error: 'body-too-long' };
-      }
+      const body = parsedBody.body;
       const addressedTo = Array.isArray(input.addressedTo)
         ? input.addressedTo.filter((id): id is string => typeof id === 'string')
         : [];
@@ -147,13 +145,11 @@ export function roomDmTool(
       if (!to) {
         return { error: 'to-required' };
       }
-      const body = typeof input.body === 'string' ? input.body.trim() : '';
-      if (!body) {
-        return { error: 'body-required' };
+      const parsedBody = trimmedBody(input.body);
+      if (!parsedBody.ok) {
+        return { error: parsedBody.error };
       }
-      if (body.length > ROOM_MESSAGE_LIMIT) {
-        return { error: 'body-too-long' };
-      }
+      const body = parsedBody.body;
       if (to === handle.agentId) {
         return { error: 'dm-self' };
       }

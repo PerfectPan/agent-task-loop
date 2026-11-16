@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig } from './command-context';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { TaskTableSchemaService } from '../services/schema-service';
 import { printCommandOutput } from './command-output';
@@ -23,7 +23,7 @@ export const schemaCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     assertRuntimeConfig(config);
 
     if (!config.feishu) {

@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config/load-config';
+import { loadCommandConfig, taskCommandArgs } from './command-context';
 import { assertRuntimeConfig } from '../config/runtime-guard';
 import { CleanupService } from '../services/cleanup-service';
 import { PublishContextService } from '../services/publish-context-service';
@@ -20,16 +20,10 @@ export const cleanupCommand = defineCommand({
       type: 'boolean',
       default: false,
     },
-    config: {
-      type: 'string',
-    },
-    json: {
-      type: 'boolean',
-      default: false,
-    },
+    ...taskCommandArgs,
   },
   async run({ args }) {
-    const config = await loadConfig(typeof args.config === 'string' ? args.config : undefined);
+    const config = await loadCommandConfig(args);
     assertRuntimeConfig(config);
 
     const service = new CleanupService({

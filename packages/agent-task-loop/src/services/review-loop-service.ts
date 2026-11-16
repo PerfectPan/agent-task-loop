@@ -5,6 +5,34 @@ import { appendSessionHistory, formatSessionHistoryEntry } from './session-histo
 import { formatFailureMessage, type FailureMessageFormatter } from './failure-message';
 import type { TaskMutationFence } from './task-service';
 
+/**
+ * The acceptance write both review-loop outcomes share: the verdict is a pass,
+ * the review session's identity rides along, and the outcome carries its own
+ * status and progress wording.
+ */
+function acceptanceUpdate(
+  input: { round: number; task: { executionSessionId?: string; executionSessionName?: string; sessionHistory?: string } },
+  review: { sessionId?: string; sessionName?: string },
+  overrides: { status?: '待发布' | '待决策'; progressSummary?: string; lastError?: string },
+) {
+  return {
+    status: overrides.status ?? ('待发布' as const),
+    currentOwner: '用户',
+    reviewRound: input.round,
+    reviewVerdict: '通过' as const,
+    reviewFindings: '',
+    ...(input.task.executionSessionId !== undefined ? { executionSessionId: input.task.executionSessionId } : {}),
+    ...(input.task.executionSessionName !== undefined
+      ? { executionSessionName: input.task.executionSessionName }
+      : {}),
+    ...(review.sessionId !== undefined ? { reviewSessionId: review.sessionId } : {}),
+    ...(review.sessionName !== undefined ? { reviewSessionName: review.sessionName } : {}),
+    ...(input.task.sessionHistory !== undefined ? { sessionHistory: input.task.sessionHistory } : {}),
+    ...(overrides.progressSummary !== undefined ? { progressSummary: overrides.progressSummary } : {}),
+    ...(overrides.lastError !== undefined ? { lastError: overrides.lastError } : {}),
+  };
+}
+
 export class ReviewLoopService {
   constructor(
     private readonly deps: {
@@ -209,18 +237,10 @@ export class ReviewLoopService {
           this.assertActive();
           await this.persist(() =>
             this.deps.updateReviewState(input.task, {
-              status: '待发布',
-              currentOwner: '用户',
-              reviewRound: input.round,
-              reviewVerdict: '通过',
-              reviewFindings: '',
-              executionSessionId: input.task.executionSessionId,
-              executionSessionName: input.task.executionSessionName,
-              reviewSessionId: review.sessionId,
-              reviewSessionName: review.sessionName,
-              sessionHistory: input.task.sessionHistory,
-              progressSummary: '自动推送远端分支失败，请先处理发布问题',
-              lastError: formatFailureMessage(this.deps.formatFailure, error, 'Task publication failed'),
+              ...acceptanceUpdate(input, review, {
+                progressSummary: '自动推送远端分支失败，请先处理发布问题',
+                lastError: formatFailureMessage(this.deps.formatFailure, error, 'Task publication failed'),
+              }),
               runnerKind: '',
               runnerAgent: '',
             }),
@@ -232,17 +252,10 @@ export class ReviewLoopService {
       this.assertActive();
       await this.persist(() =>
         this.deps.updateReviewState(input.task, {
-          status: isDeliverable ? '待发布' : '待决策',
-          currentOwner: '用户',
-          reviewRound: input.round,
-          reviewVerdict: '通过',
-          reviewFindings: '',
-          executionSessionId: input.task.executionSessionId,
-          executionSessionName: input.task.executionSessionName,
-          reviewSessionId: review.sessionId,
-          reviewSessionName: review.sessionName,
-          sessionHistory: input.task.sessionHistory,
-          progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待用户确定修复方向',
+          ...acceptanceUpdate(input, review, {
+            status: isDeliverable ? '待发布' : '待决策',
+            progressSummary: isDeliverable ? acceptanceProgressSummary : '诊断已完成，等待用户确定修复方向',
+          }),
           runnerKind: '',
           runnerAgent: '',
         }),

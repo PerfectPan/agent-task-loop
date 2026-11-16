@@ -1,5 +1,5 @@
 export type { AgentSession, AgentSessionId } from './agent-session/domain/model';
-export { sessionKey } from './agent-session/domain/model';
+export { cloneSession, sessionForwarders, sessionKey } from './agent-session/domain/model';
 export { AgentSessionAggregate } from './agent-session/domain/agent-session';
 export { AGENT_SESSION_VALIDATION_CODE, AgentSessionValidationError } from './agent-session/domain/errors';
 

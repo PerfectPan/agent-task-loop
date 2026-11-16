@@ -34,7 +34,7 @@ function place(element: HTMLElement, rect: DOMRect | null) {
   element.style.zIndex = '40';
 }
 
-export function roomMentionSuggestion(bridge: MentionBridge): Omit<SuggestionOptions, 'editor'> {
+function roomMentionSuggestion(bridge: MentionBridge): Omit<SuggestionOptions, 'editor'> {
   return {
     char: '@',
     items: ({ query }) =>

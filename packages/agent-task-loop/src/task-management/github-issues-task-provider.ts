@@ -1,17 +1,19 @@
 import { TARGET_AGENTS, type TargetAgent, type TaskRecord, type TaskStatus } from '../types/task';
-import type {
-  ClaimTaskPayload,
-  CreateTaskPayload,
-  MarkTaskFailedPayload,
-  MarkTaskSucceededPayload,
-  SourceProvider,
-  TaskRef,
-  UpdateCleanupStatePayload,
-  UpdatePublishResultPayload,
-  UpdateReviewStatePayload,
-  UpdateRunnerStatePayload,
-  UpdateTaskAssignmentPayload,
-  UpdateTaskProgressPayload,
+import {
+  pendingTasksFrom,
+  taskByIdFrom,
+  type ClaimTaskPayload,
+  type CreateTaskPayload,
+  type MarkTaskFailedPayload,
+  type MarkTaskSucceededPayload,
+  type SourceProvider,
+  type TaskRef,
+  type UpdateCleanupStatePayload,
+  type UpdatePublishResultPayload,
+  type UpdateReviewStatePayload,
+  type UpdateRunnerStatePayload,
+  type UpdateTaskAssignmentPayload,
+  type UpdateTaskProgressPayload,
 } from './task-provider';
 
 export const GITHUB_SOURCE = 'github';
@@ -226,12 +228,12 @@ export class GitHubIssuesTaskProvider implements SourceProvider {
     return all;
   }
 
-  async listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
-    return (await this.listTasks()).filter((task) => task.targetAgent === agent && task.status === '待处理');
+  listPendingTasks(agent: TargetAgent): Promise<TaskRecord[]> {
+    return pendingTasksFrom(() => this.listTasks(), agent);
   }
 
-  async getTaskById(taskId: string): Promise<TaskRecord | undefined> {
-    return (await this.listTasks()).find((task) => task.taskId === taskId);
+  getTaskById(taskId: string): Promise<TaskRecord | undefined> {
+    return taskByIdFrom(() => this.listTasks(), taskId);
   }
 
   async createTask(payload: CreateTaskPayload): Promise<void> {

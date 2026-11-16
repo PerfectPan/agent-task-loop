@@ -15,7 +15,7 @@ import { legacyProbeRecipes } from './legacy-probe-recipes.js';
  * The kit's built-in recipes plus the MoonBit catalog's remaining agents. `detectAgents` reports the built-ins in
  * their table order first, then the legacy ones; the MoonBit scanner used the catalog file order instead.
  */
-export const allProbeRecipes: ProbeRecipes = {
+const allProbeRecipes: ProbeRecipes = {
   ...Object.fromEntries(builtinProviders.flatMap(({ id, discovery }) => (discovery ? [[id, discovery]] : []))),
   ...legacyProbeRecipes,
 };

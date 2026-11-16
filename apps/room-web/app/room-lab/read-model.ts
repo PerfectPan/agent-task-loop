@@ -128,12 +128,12 @@ export interface RoomCatalogItemView {
   children?: RoomCatalogItemView[];
 }
 
-export interface AgentDeskSeat {
+interface AgentDeskSeat {
   id: string;
   title: string;
 }
 
-export interface AgentDeskItem extends RoomAgentProbeItem {
+interface AgentDeskItem extends RoomAgentProbeItem {
   seatedIn: AgentDeskSeat[];
   /** The member's own row; empty when it adds nothing to a turn. */
   systemPrompt: string;

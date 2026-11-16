@@ -105,7 +105,7 @@ export interface TurnLog {
  * re-serve their tools on the same one, so the URL the agent's `session/new`
  * holds stays valid for the session's life.
  */
-export interface RoomToolHostInput {
+interface RoomToolHostInput {
   agentId: RoomLabAgentId;
   /** This activation's Room tools; they replace whatever the endpoint serves. */
   tools: ToolDefinition[];
@@ -143,7 +143,7 @@ export type RoomSettingsReader = () => RoomSettings;
  * points are `RoomStreamStore` (admit, speak, pass, readSlice); the registry is
  * the control plane's roster port; the turn contract lives in `./turn`.
  */
-export type { RoomStreamStore, ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult };
+export type {  ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult };
 
 /**
  * The record plus the session side-channels the turn reads it with: the
@@ -208,18 +208,21 @@ export interface RoomRound {
  * and hands the post to the child room's dispatcher. The host owns it, because
  * the child room is outside this service's own record.
  */
+/** What opening (or reusing) the pair's private room is asked with. */
+export interface RoomDmOpenInput {
+  parentRoomId: string;
+  from: RoomLabAgentId;
+  to: RoomLabAgentId;
+  body: string;
+  /** The waking event's depth; the child post carries one more. */
+  triggerDepth: number;
+  /** The parent event whose activation opened or reused the room. */
+  triggerSeq: number;
+  /** The round the exchange's turns charge, rooted in this room. */
+  roundRoomId: string;
+  roundSeq: number;
+}
+
 export interface RoomDmGateway {
-  open(input: {
-    parentRoomId: string;
-    from: RoomLabAgentId;
-    to: RoomLabAgentId;
-    body: string;
-    /** The waking event's depth; the child post carries one more. */
-    triggerDepth: number;
-    /** The parent event whose activation opened or reused the room. */
-    triggerSeq: number;
-    /** The round the exchange's turns charge, rooted in this room. */
-    roundRoomId: string;
-    roundSeq: number;
-  }): Promise<{ roomId: string; seq: number }>;
+  open(input: RoomDmOpenInput): Promise<{ roomId: string; seq: number }>;
 }

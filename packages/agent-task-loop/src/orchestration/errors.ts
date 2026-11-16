@@ -1,8 +1,8 @@
-export const ORCHESTRATION_CONFLICT_CODE = 'orchestration-conflict';
-export const ORCHESTRATION_NOT_FOUND_CODE = 'orchestration-not-found';
-export const ORCHESTRATION_SEAT_CODE = 'orchestration-seat';
-export const ORCHESTRATION_TEMPLATE_CODE = 'orchestration-template';
-export const ORCHESTRATION_RUN_CODE = 'orchestration-run';
+const ORCHESTRATION_CONFLICT_CODE = 'orchestration-conflict';
+const ORCHESTRATION_NOT_FOUND_CODE = 'orchestration-not-found';
+const ORCHESTRATION_SEAT_CODE = 'orchestration-seat';
+const ORCHESTRATION_TEMPLATE_CODE = 'orchestration-template';
+const ORCHESTRATION_RUN_CODE = 'orchestration-run';
 
 export class OrchestrationConflictError extends Error {
   readonly code = ORCHESTRATION_CONFLICT_CODE;

@@ -39,7 +39,7 @@ export function taskOrchestrationKey(taskId: string): string {
 }
 
 /** The per-key directory the file lease repository and the run-state store share. */
-export function defaultTaskLeaseDir(): string {
+function defaultTaskLeaseDir(): string {
   return path.join(os.homedir(), '.agent-orchestration', 'runs');
 }
 
@@ -98,26 +98,34 @@ export class TaskLeaseStoreError extends Error {
   }
 }
 
-function isTagged(error: unknown, tag: string): boolean {
-  return typeof error === 'object' && error !== null && '_tag' in error && error._tag === tag;
+/** The kit's lease failure tags the orchestrator maps onto its own errors. */
+const TASK_LEASE_TAGS = ['LeaseHeld', 'LeaseLost', 'FenceRejected', 'LeaseConfigInvalid', 'LeaseRepositoryFailure'] as const;
+
+type TaskLeaseTag = (typeof TASK_LEASE_TAGS)[number];
+
+function leaseTag(error: unknown): TaskLeaseTag | undefined {
+  if (typeof error !== 'object' || error === null || !('_tag' in error)) {
+    return undefined;
+  }
+  return TASK_LEASE_TAGS.find((tag) => error._tag === tag);
 }
 
 /** Translates the kit's tagged lease errors into the Error surface the Promise side rejects with. */
 export function toLeaseError(error: unknown, key: string): Error {
-  if (isTagged(error, 'LeaseHeld')) {
+  if (leaseTag(error) === 'LeaseHeld') {
     const held = error as LeaseHeld;
     return new OrchestrationConflictError(key, held.holder.pid);
   }
-  if (isTagged(error, 'LeaseLost')) {
+  if (leaseTag(error) === 'LeaseLost') {
     return new TaskLeaseLostError(error as LeaseLost);
   }
-  if (isTagged(error, 'FenceRejected')) {
+  if (leaseTag(error) === 'FenceRejected') {
     return new OrchestrationConflictError(key);
   }
-  if (isTagged(error, 'LeaseConfigInvalid')) {
+  if (leaseTag(error) === 'LeaseConfigInvalid') {
     return new TaskLeaseConfigError((error as { message: string }).message);
   }
-  if (isTagged(error, 'LeaseRepositoryFailure')) {
+  if (leaseTag(error) === 'LeaseRepositoryFailure') {
     return new TaskLeaseStoreError(error as LeaseRepositoryFailure);
   }
   if (error instanceof Error) {

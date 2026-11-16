@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { detectGitHubRepo } from './gh-repo';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -57,19 +57,7 @@ async function ask(question: string): Promise<string> {
   }
 }
 
-/** Best-effort `gh repo view` to prefill owner/repo. */
-function detectRepo(): { owner: string; repo: string } | undefined {
-  try {
-    const out = execFileSync('gh', ['repo', 'view', '--json', 'owner,name'], { encoding: 'utf8' });
-    const parsed = JSON.parse(out) as { owner?: { login?: string }; name?: string };
-    if (parsed.owner?.login && parsed.name) {
-      return { owner: parsed.owner.login, repo: parsed.name };
-    }
-  } catch {
-    // gh missing / not in a repo
-  }
-  return undefined;
-}
+
 
 const isTty = (): boolean => Boolean(process.stdin.isTTY && process.stdout.isTTY);
 
@@ -146,7 +134,7 @@ export const sourceAddCommand = defineCommand({
       raw.owner = args.owner;
       raw.repo = args.repo;
       if ((!raw.owner || !raw.repo) && isTty()) {
-        const detected = detectRepo();
+        const detected = detectGitHubRepo();
         raw.owner =
           raw.owner || (await ask(`GitHub owner${detected ? ` [${detected.owner}]` : ''}: `)) || detected?.owner;
         raw.repo = raw.repo || (await ask(`GitHub repo${detected ? ` [${detected.repo}]` : ''}: `)) || detected?.repo;

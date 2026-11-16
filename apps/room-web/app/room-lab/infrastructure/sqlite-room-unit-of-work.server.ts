@@ -1,8 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
+
+import { prepareRoomEventInsert } from './room-event-insert.server';
 import {
   AgentSessionAggregate,
   Room,
   RoomStreamService,
+  cloneSession,
   sessionKey,
   type AgentId,
   type AgentSession,
@@ -69,16 +72,6 @@ function toSession(row: SessionRow): AgentSession {
       runtimeGenerationId: row.runtime_generation_id,
     },
     seenSeq: Number(row.seen_seq),
-  };
-}
-
-function cloneSession(session: AgentSession): AgentSession {
-  return {
-    id: {
-      ...session.id,
-      roomId: { ...session.id.roomId },
-    },
-    seenSeq: session.seenSeq,
   };
 }
 
@@ -183,13 +176,15 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
   }
 
   private openRoom(id: RoomId): Room {
+    // The unit's own event slice is what the domain work reads; the assert keeps
+    // a stray id from silently reading another room's rows.
     this.assertRoom(id);
     return new Room(id, this.events);
   }
 
   private loadSession(id: AgentSessionId): AgentSessionAggregate {
     const existing = this.sessions.get(sessionKey(id));
-    return new AgentSessionAggregate(id, existing ? { seenSeq: existing.seenSeq } : undefined);
+    return AgentSessionAggregate.fromStored(id, existing ? { seenSeq: existing.seenSeq } : undefined);
   }
 
   private reload(): void {
@@ -213,10 +208,7 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
       this.sessions.set(sessionKey(session.id), session);
     }
     this.dbHead = this.events.at(-1)?.seq ?? 0;
-    this.dbSessions.clear();
-    for (const session of this.sessions.values()) {
-      this.dbSessions.set(sessionKey(session.id), cloneSession(session));
-    }
+    this.syncDbSessions();
   }
 
   /**
@@ -227,29 +219,12 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
    */
   private write(): void {
     const roomId = this.roomId.conversationId;
-    const insertEvent = this.db.prepare(`
-      INSERT INTO room_events (
-        room_id, seq, message_id, transport_message_id, author_kind, author_id, kind, body, addressed_to, origin, wake_depth, at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    const insertEvent = prepareRoomEventInsert(this.db, roomId);
     for (const event of this.events) {
       if (event.seq <= this.dbHead) {
         continue;
       }
-      insertEvent.run(
-        roomId,
-        event.seq,
-        event.messageId,
-        event.transportMessageId ?? null,
-        event.author.kind,
-        event.author.id,
-        event.kind,
-        event.body,
-        JSON.stringify(event.addressedTo),
-        event.origin,
-        event.wakeDepth,
-        event.at,
-      );
+      insertEvent.run(event, event.seq);
     }
     const upsertSession = this.db.prepare(`
       INSERT INTO agent_sessions (
@@ -270,6 +245,11 @@ export class SqliteRoomUnitOfWork implements RoomUnitOfWork {
       );
     }
     this.dbHead = this.events.at(-1)?.seq ?? this.dbHead;
+    this.syncDbSessions();
+  }
+
+  /** The diff base's session snapshots: defensive copies of this unit's own. */
+  private syncDbSessions(): void {
     this.dbSessions.clear();
     for (const session of this.sessions.values()) {
       this.dbSessions.set(sessionKey(session.id), cloneSession(session));

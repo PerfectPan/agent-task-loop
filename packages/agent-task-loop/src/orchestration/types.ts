@@ -16,7 +16,7 @@ export interface SeatBind extends SeatBinding {
   env?: Record<string, string>;
 }
 
-export interface RunContextInput {
+interface RunContextInput {
   goal?: string;
   ref?: Record<string, string>;
 }
@@ -28,20 +28,20 @@ export interface OpenRunInput {
   context?: RunContextInput;
 }
 
-export interface FactEntry {
+interface FactEntry {
   seat: string;
   text: string;
   at: string;
 }
 
-export interface MailEntry {
+interface MailEntry {
   from: string;
   to: string;
   body: string;
   at: string;
 }
 
-export type SeatStatus = 'idle' | 'running' | 'exited';
+type SeatStatus = 'idle' | 'running' | 'exited';
 
 export interface SeatState {
   cmd?: string;
@@ -80,13 +80,13 @@ export interface ObservedRun {
   };
 }
 
-export interface SpawnResult {
+interface SpawnResult {
   stdout: string;
   stderr: string;
   exitCode: number;
 }
 
-export interface ProcessRunnerInput {
+interface ProcessRunnerInput {
   cmd: string;
   args: string[];
   cwd: string;

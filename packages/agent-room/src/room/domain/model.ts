@@ -70,3 +70,4 @@ export interface RoomSlice {
   events: RoomEvent[];
   head: RoomSeq;
 }
+

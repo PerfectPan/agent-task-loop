@@ -143,7 +143,7 @@ export type RoomSettingsReader = () => RoomSettings;
  * points are `RoomStreamStore` (admit, speak, pass, readSlice); the registry is
  * the control plane's roster port; the turn contract lives in `./turn`.
  */
-export type {  ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult };
+export type { ToolDefinition, TurnHarness, TurnPermissionPolicy, TurnResult };
 
 /**
  * The record plus the session side-channels the turn reads it with: the

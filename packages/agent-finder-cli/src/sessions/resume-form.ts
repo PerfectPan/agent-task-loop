@@ -7,9 +7,5 @@ export function resumeCommandFrom<B extends (sessionId: string) => string>(
   agent: string | undefined,
   sessionId: string | undefined | null,
 ): string | null {
-  return sessionId
-    ? agent !== undefined
-      ? (resumeCommands[agent]?.(sessionId) ?? null)
-      : null
-    : null;
+  return sessionId ? (agent !== undefined ? (resumeCommands[agent]?.(sessionId) ?? null) : null) : null;
 }

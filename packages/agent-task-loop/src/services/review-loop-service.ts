@@ -11,7 +11,10 @@ import type { TaskMutationFence } from './task-service';
  * status and progress wording.
  */
 function acceptanceUpdate(
-  input: { round: number; task: { executionSessionId?: string; executionSessionName?: string; sessionHistory?: string } },
+  input: {
+    round: number;
+    task: { executionSessionId?: string; executionSessionName?: string; sessionHistory?: string };
+  },
   review: { sessionId?: string; sessionName?: string },
   overrides: { status?: '待发布' | '待决策'; progressSummary?: string; lastError?: string },
 ) {
@@ -22,9 +25,7 @@ function acceptanceUpdate(
     reviewVerdict: '通过' as const,
     reviewFindings: '',
     ...(input.task.executionSessionId !== undefined ? { executionSessionId: input.task.executionSessionId } : {}),
-    ...(input.task.executionSessionName !== undefined
-      ? { executionSessionName: input.task.executionSessionName }
-      : {}),
+    ...(input.task.executionSessionName !== undefined ? { executionSessionName: input.task.executionSessionName } : {}),
     ...(review.sessionId !== undefined ? { reviewSessionId: review.sessionId } : {}),
     ...(review.sessionName !== undefined ? { reviewSessionName: review.sessionName } : {}),
     ...(input.task.sessionHistory !== undefined ? { sessionHistory: input.task.sessionHistory } : {}),

@@ -148,17 +148,11 @@ export interface TaskProvider {
  * The list-based reads every leaf provider answers the same way: filter the
  * full list for the agent's pending tasks, and find one task by id.
  */
-export function pendingTasksFrom(
-  listTasks: () => Promise<TaskRecord[]>,
-  agent: TargetAgent,
-): Promise<TaskRecord[]> {
+export function pendingTasksFrom(listTasks: () => Promise<TaskRecord[]>, agent: TargetAgent): Promise<TaskRecord[]> {
   return listTasks().then((tasks) => tasks.filter((task) => task.targetAgent === agent && task.status === '待处理'));
 }
 
-export function taskByIdFrom(
-  listTasks: () => Promise<TaskRecord[]>,
-  taskId: string,
-): Promise<TaskRecord | undefined> {
+export function taskByIdFrom(listTasks: () => Promise<TaskRecord[]>, taskId: string): Promise<TaskRecord | undefined> {
   return listTasks().then((tasks) => tasks.find((task) => task.taskId === taskId));
 }
 

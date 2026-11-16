@@ -78,7 +78,7 @@ export class ExecutionService {
       onHeartbeatError: this.deps.onHeartbeatError,
     });
     heartbeat.pid(task.runnerPid);
-        const writeProgress = async (summary: string) => {
+    const writeProgress = async (summary: string) => {
       if (!summary || summary === latestProgressSummary) {
         return;
       }

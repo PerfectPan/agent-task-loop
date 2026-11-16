@@ -57,8 +57,6 @@ async function ask(question: string): Promise<string> {
   }
 }
 
-
-
 const isTty = (): boolean => Boolean(process.stdin.isTTY && process.stdout.isTTY);
 
 /** A CLI flag that must resolve to a non-empty trimmed string, with a clear message. */

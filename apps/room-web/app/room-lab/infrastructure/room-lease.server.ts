@@ -79,7 +79,13 @@ class RoomLeaseLostError extends Error {
 }
 
 /** The kit's lease failure tags this host maps onto its own Error surface. */
-const ROOM_LEASE_TAGS = ['LeaseHeld', 'LeaseLost', 'FenceRejected', 'LeaseConfigInvalid', 'LeaseRepositoryFailure'] as const;
+const ROOM_LEASE_TAGS = [
+  'LeaseHeld',
+  'LeaseLost',
+  'FenceRejected',
+  'LeaseConfigInvalid',
+  'LeaseRepositoryFailure',
+] as const;
 
 type RoomLeaseTag = (typeof ROOM_LEASE_TAGS)[number];
 

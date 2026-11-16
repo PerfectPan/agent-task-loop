@@ -99,7 +99,13 @@ export class TaskLeaseStoreError extends Error {
 }
 
 /** The kit's lease failure tags the orchestrator maps onto its own errors. */
-const TASK_LEASE_TAGS = ['LeaseHeld', 'LeaseLost', 'FenceRejected', 'LeaseConfigInvalid', 'LeaseRepositoryFailure'] as const;
+const TASK_LEASE_TAGS = [
+  'LeaseHeld',
+  'LeaseLost',
+  'FenceRejected',
+  'LeaseConfigInvalid',
+  'LeaseRepositoryFailure',
+] as const;
 
 type TaskLeaseTag = (typeof TASK_LEASE_TAGS)[number];
 

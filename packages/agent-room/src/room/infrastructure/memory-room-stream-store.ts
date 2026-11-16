@@ -23,7 +23,6 @@ function roomStorageKey(id: RoomId): string {
   return JSON.stringify([id.tenantId, id.conversationId]);
 }
 
-
 export class MemoryRoomUnitOfWork implements RoomUnitOfWork {
   private readonly rooms = new Map<string, RoomEvent[]>();
   private readonly sessions = new Map<string, AgentSession>();

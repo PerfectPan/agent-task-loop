@@ -107,7 +107,6 @@ async function confirmInstall(): Promise<boolean> {
   return answer.trim().toLowerCase() === 'y';
 }
 
-
 async function ensureLarkCli(): Promise<boolean> {
   if (await isLarkCliAvailable()) {
     return true;

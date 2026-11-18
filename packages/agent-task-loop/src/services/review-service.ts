@@ -1,5 +1,6 @@
 import type { AgentAdapter } from '../adapters/base';
 import type { ReviewVerdict, TargetAgent } from '../types/task';
+import { jsonLinesLastFirst } from '../utils/json-lines';
 
 export interface ReviewResult {
   verdict: ReviewVerdict;
@@ -17,6 +18,18 @@ interface ParsedReviewPayload {
 
 type ValidReviewPayload = ParsedReviewPayload & { verdict: ReviewVerdict };
 
+function asReviewPayload(value: unknown): ValidReviewPayload | undefined {
+  // Parsed JSON may be `null` or a primitive; only an object can carry the fields.
+  if (value === null || typeof value !== 'object') {
+    return undefined;
+  }
+  const payload = value as ParsedReviewPayload;
+  if ((payload.verdict === '通过' || payload.verdict === '驳回') && Array.isArray(payload.findings)) {
+    return payload as ValidReviewPayload;
+  }
+  return undefined;
+}
+
 function tryParseReviewPayload(raw: string): ValidReviewPayload | undefined {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -24,27 +37,18 @@ function tryParseReviewPayload(raw: string): ValidReviewPayload | undefined {
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as ParsedReviewPayload;
-    if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
-      return parsed as ValidReviewPayload;
+    const whole = asReviewPayload(JSON.parse(trimmed));
+    if (whole) {
+      return whole;
     }
   } catch {
     // Fall through and try line-by-line extraction.
   }
 
-  const lines = trimmed
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    try {
-      const parsed = JSON.parse(lines[index]!) as ParsedReviewPayload;
-      if ((parsed.verdict === '通过' || parsed.verdict === '驳回') && Array.isArray(parsed.findings)) {
-        return parsed as ValidReviewPayload;
-      }
-    } catch {
-      continue;
+  for (const value of jsonLinesLastFirst(trimmed)) {
+    const payload = asReviewPayload(value);
+    if (payload) {
+      return payload;
     }
   }
 

@@ -37,6 +37,7 @@ pnpm test
 pnpm build
 pnpm typecheck
 pnpm lint           # after build and typecheck
+pnpm knip           # fails CI on unused files, exports, dependencies, configuration hints, or tag hints
 
 # Release checks:
 pnpm changeset status

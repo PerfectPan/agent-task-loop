@@ -19,6 +19,7 @@
 - [ ] Build: `pnpm build`
 - [ ] Typecheck: `pnpm typecheck`
 - [ ] Lint: `pnpm lint` (after build and typecheck)
+- [ ] `pnpm knip` passes (unused files, exports, dependencies, configuration hints, or tag hints fail CI)
 - [ ] Changeset: `pnpm changeset status` (package-facing changes add a changeset)
 - [ ] Package dry-run: `npm pack --dry-run --registry=https://registry.npmjs.org` in each changed published package
 

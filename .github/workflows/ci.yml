@@ -32,6 +32,9 @@ jobs:
 
       - run: pnpm format:check
 
+      # Fails on any clone jscpd reports (lint-config's zero-threshold profile).
+      - run: pnpm duplicates
+
       - run: pnpm test
 
       - run: pnpm build

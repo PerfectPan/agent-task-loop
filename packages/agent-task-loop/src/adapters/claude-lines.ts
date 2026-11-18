@@ -3,6 +3,8 @@
  * progress/summary extractors read them.
  */
 
+import { jsonLinesLastFirst } from '../utils/json-lines';
+
 export interface ClaudeStreamEvent {
   type?: string;
   subtype?: string;
@@ -31,22 +33,9 @@ export function claudeInnerEvent(event: ClaudeStreamEvent): ClaudeStreamEvent['e
 
 /** The result events an output holds, last line first. */
 export function claudeResultEvents(output: string): ClaudeStreamEvent[] {
-  const events: ClaudeStreamEvent[] = [];
-  const lines = output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    try {
-      // A bare `null` (or any non-object) is valid JSON but not an event; the
-      // result consumers read `.type` on every element, so it must not enter.
-      const parsed: unknown = JSON.parse(lines[index]!);
-      if (parsed !== null && typeof parsed === 'object') {
-        events.push(parsed as ClaudeStreamEvent);
-      }
-    } catch {
-      continue;
-    }
-  }
-  return events;
+  // A bare `null` (or any non-object) is valid JSON but not an event; the
+  // result consumers read `.type` on every element, so it must not enter.
+  return jsonLinesLastFirst(output).filter(
+    (value): value is ClaudeStreamEvent => value !== null && typeof value === 'object',
+  );
 }

@@ -14,6 +14,7 @@
 - [ ] PR title and description: `gh repo-checks pr-title "<title>"`, `gh repo-checks pr-body <body-file>`
 - [ ] Install: `pnpm install --frozen-lockfile`
 - [ ] Format: `pnpm format:check`
+- [ ] Duplicate code: `pnpm duplicates` (any reported clone fails)
 - [ ] Test: `pnpm test`
 - [ ] Build: `pnpm build`
 - [ ] Typecheck: `pnpm typecheck`

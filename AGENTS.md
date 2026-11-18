@@ -32,6 +32,7 @@ gh repo-checks pr-body pr-body.md
 # Install, then the CI gates:
 pnpm install --frozen-lockfile
 pnpm format:check   # `pnpm format` rewrites files
+pnpm duplicates     # fails on any clone jscpd reports
 pnpm test
 pnpm build
 pnpm typecheck

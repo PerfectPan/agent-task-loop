@@ -52,13 +52,14 @@ gh repo-checks pr-body pr-body.md
 # Install and CI gates:
 pnpm install --frozen-lockfile
 pnpm format:check
+pnpm duplicates
 pnpm test
 pnpm build
 pnpm typecheck
 pnpm lint
 ```
 
-`pnpm format` applies the formatting. `pnpm lint` is type-aware: it resolves workspace packages through their built `dist` types and room-web through the route types that `pnpm typecheck` generates, so run it after `pnpm build` and `pnpm typecheck`.
+`pnpm duplicates` runs jscpd with lint-config's gate profile, where any reported clone fails (the threshold is 0); the scan roots and ignores live in the script, and `pnpm duplicates:audit` writes a broader, report-only list to the git-ignored `tmp/duplicates-audit/`. `pnpm format` applies the formatting. `pnpm lint` is type-aware: it resolves workspace packages through their built `dist` types and room-web through the route types that `pnpm typecheck` generates, so run it after `pnpm build` and `pnpm typecheck`.
 
 ### Lint, Format, And TypeScript Config
 

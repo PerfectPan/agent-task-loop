@@ -65,6 +65,35 @@ describe('ReviewService', () => {
     expect(result.sessionName).toBe('task-202-review-codex-r2');
   });
 
+  it('skips trailing JSON lines that are not objects', async () => {
+    const service = new ReviewService({
+      adapter: {
+        execute: vi.fn().mockResolvedValue({
+          status: 'success',
+          summary: ['{"verdict":"驳回","findings":["1. 缺少测试"]}', 'null', '42'].join('\n'),
+          workspacePath: '/tmp/workspace',
+        }),
+      } as never,
+      command: {
+        command: 'codex',
+        args: [],
+        env: {},
+      },
+    });
+
+    const result = await service.review({
+      taskId: 'TASK-203',
+      description: 'desc',
+      resultSummary: 'done',
+      workspacePath: '/tmp/workspace',
+      reviewRound: 1,
+      reviewerAgent: 'codex',
+    });
+
+    expect(result.verdict).toBe('驳回');
+    expect(result.findings).toBe('1. 缺少测试');
+  });
+
   it('passes chairman acceptance feedback to the review prompt as hard constraints', async () => {
     const execute = vi.fn().mockResolvedValue({
       status: 'success',

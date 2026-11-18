@@ -6,7 +6,7 @@ import type { TaskStatus } from '../../types/task';
  * so a newly added status can never silently fall through and disappear from
  * every tab.
  */
-export type StatusBucket = 'running' | 'queued' | 'needs-input' | 'done';
+type StatusBucket = 'running' | 'queued' | 'needs-input' | 'done';
 
 export interface StatusConfig {
   /** Single-cell glyph shown in the list badge. */
@@ -21,6 +21,7 @@ export interface StatusConfig {
   live: boolean;
 }
 
+/** @internal */
 export const STATUS_CONFIG: Record<TaskStatus, StatusConfig> = {
   待处理: { glyph: '◌', color: 'gray', label: '待处理', bucket: 'queued', live: false },
   进行中: { glyph: '◉', color: 'yellow', label: '进行中', bucket: 'running', live: false },
@@ -45,6 +46,7 @@ export function statusConfig(status: TaskStatus): StatusConfig {
   return (STATUS_CONFIG[status] as StatusConfig | undefined) ?? FALLBACK;
 }
 
+/** @internal */
 export function bucketOf(status: TaskStatus): StatusBucket {
   return statusConfig(status).bucket;
 }
@@ -56,6 +58,7 @@ export function isLiveStatus(status: TaskStatus): boolean {
 /**
  * Sort weight: most "urgent / in-flight" first, terminal states last. Used as
  * the primary sort key before priority. Lower = earlier.
+ * @internal
  */
 export const STATUS_ORDER: Record<TaskStatus, number> = {
   执行中: 0,

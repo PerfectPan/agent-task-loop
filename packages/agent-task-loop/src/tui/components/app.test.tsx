@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { render } from 'ink-testing-library';
 import { App } from './app';
-import { createFakeSessionProvider } from '../data/session-provider';
+import { createFakeSessionProvider } from '../../../test/fake-session-provider';
 import type { FetchTasks } from '../types';
 import { demoTasks } from '../../../test/fixtures/tui-tasks';
 import type { CreateTaskPayload } from '../../task-management/task-provider';

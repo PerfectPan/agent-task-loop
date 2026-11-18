@@ -15,6 +15,7 @@
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "knip": "knip",
+    "knip:production": "knip --production",
     "lint": "vp lint",
     "test": "pnpm peers check --lockfile-only && node --test tests/**/*.test.mjs && pnpm -r test",
     "typecheck": "pnpm -r typecheck",

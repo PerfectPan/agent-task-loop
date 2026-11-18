@@ -9,8 +9,6 @@ import { defineCommand } from 'citty';
 import { globalConfigPath } from '../config/load-config';
 import { ensureGitHubExecutionEntries, type EditableConfig } from '../config/source-config';
 
-export { globalConfigPath };
-
 // The keys cover only the agents this tool drives; detection reports more.
 const AGENT_MAP: Record<string, { name: string; command: string } | undefined> = {
   'claude-code': { name: 'claude', command: 'claude' },
@@ -42,6 +40,7 @@ function resolveCommandOnPath(command: string): string | null {
   return null;
 }
 
+/** @internal */
 export async function isLarkCliAvailable(): Promise<boolean> {
   return resolveCommandOnPath('lark-cli') !== null;
 }
@@ -50,6 +49,7 @@ export async function isLarkCliAvailable(): Promise<boolean> {
  * The agents init can configure. `versionProbe: false` keeps detection from executing any agent command: init
  * decides from files and `PATH` lookups alone, so an agent is listed when its command is found, without the
  * `--version` run the previous discovery used to require for `runnable`.
+ * @internal
  */
 export async function discoverRunnableAgents(): Promise<Record<string, AgentEntry>> {
   const installations = await detectAgents(createNodePlatform(), {
@@ -66,12 +66,13 @@ export async function discoverRunnableAgents(): Promise<Record<string, AgentEntr
   return agents;
 }
 
-export interface GlobalConfigInputs {
+interface GlobalConfigInputs {
   feishu?: { baseToken: string; tableId: string };
   githubIssues?: { owner: string; repo: string; defaultAgent: string };
   agents: Record<string, AgentEntry>;
 }
 
+/** @internal */
 export function createGlobalConfig(inputs: GlobalConfigInputs): 'created' | 'exists' {
   const configPath = globalConfigPath();
   if (existsSync(configPath)) {

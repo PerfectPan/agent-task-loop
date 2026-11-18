@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import type { TaskRecord } from '../../types/task';
-import { buildPreviewFromTask, createFakeSessionProvider } from './session-provider';
+import { createFakeSessionProvider } from '../../../test/fake-session-provider';
+import { buildPreviewFromTask } from './session-provider';
 import { formatSessionHistoryEntry } from '../../services/session-history';
 import { fixedNow, isoSecondsAgo } from '../../../test/helpers';
 

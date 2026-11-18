@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Text } from 'ink';
 
-/** Braille spinner frames cycled to indicate live activity. */
+/**
+ * Braille spinner frames cycled to indicate live activity.
+ * @internal
+ */
 export const FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const;
 
-/** Interval (ms) between spinner frame advances. */
+/**
+ * Interval (ms) between spinner frame advances.
+ * @internal
+ */
 export const FRAME_INTERVAL_MS = 80;
 
 export interface SpinnerProps {

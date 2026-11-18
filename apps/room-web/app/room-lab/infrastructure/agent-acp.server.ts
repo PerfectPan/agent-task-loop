@@ -47,6 +47,7 @@ export interface RoomAgentSpec {
  */
 const ROOM_ACP_HANDSHAKE_TIMEOUT_MS = 45_000;
 const ROOM_ACP_REQUEST_TIMEOUT_MS = 30_000;
+/** @internal */
 export const ROOM_ACP_CANCEL_TIMEOUT_MS = 5_000;
 
 /** The client name the old connector announced; carried over. */
@@ -131,6 +132,7 @@ function splitCommandLine(line: string): { command: string; args: readonly strin
  * the row's own command line. An unknown row gets the generic channels — the
  * system prompt as the first prompt block, the fallback environment — which is
  * what the previous fallback profile did.
+ * @internal
  */
 export function roomAcpProfile(agent: RoomAgentSpec): AcpProfile {
   const base = builtinBaseFor(agent);
@@ -150,6 +152,7 @@ export function roomAcpProfile(agent: RoomAgentSpec): AcpProfile {
  * The agent's complete environment: the variables its profile lists, picked
  * from this process's environment. Nothing else is inherited — the kit spawns
  * the program with exactly this environment.
+ * @internal
  */
 export function roomAgentEnv(profile: Pick<AcpProfile, 'env'>): Record<string, string> {
   return agentEnv(profile, process.env);

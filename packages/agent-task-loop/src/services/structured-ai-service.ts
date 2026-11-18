@@ -33,6 +33,7 @@ export function stripCodeFences(text: string): string {
  * Parses a Claude `stream-json` transcript, returning the `structured_output`
  * payload and the session id. Throws on an `is_error` result or when no
  * structured output is found.
+ * @internal
  */
 export function extractClaudeStructured<T>(output: string): { data: T; sessionId?: string } {
   let sessionId: string | undefined;

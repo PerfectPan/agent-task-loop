@@ -33,6 +33,7 @@ function shouldReuseExistingWorkspace(input: WorkspaceInput): boolean {
   return existingWorkspacePath === workspaceRoot || existingWorkspacePath.startsWith(`${workspaceRoot}${path.sep}`);
 }
 
+/** @internal */
 export function resolveWorkspacePath(input: WorkspaceInput): string {
   if (input.strategy === 'existing-repo') {
     return input.repositoryPath;

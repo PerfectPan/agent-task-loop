@@ -22,6 +22,7 @@ The core package provides a local CLI that drives tasks from assignment through 
 - `pnpm test`
 - `pnpm build`
 - `pnpm knip` fails CI on unused files, exports, dependencies, configuration hints, or tag hints.
+- `pnpm knip:production` runs the same check over production entries only, so a file or export that only tests reach fails it; `knip.ts` says what it leaves out and when an export carries `@internal`.
 - `pnpm changeset`
 
 ## License

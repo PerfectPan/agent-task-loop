@@ -65,6 +65,7 @@ export interface RoomMemberRuntime {
  * A room's two cost knobs the protocol reads directly. The bounds that stay at
  * their design defaults (depth ceiling `2n`, round budget `n(n + 1)`) are left
  * unset here and derived where they are used.
+ * @internal
  */
 export interface RoomSettings {
   wake: 'broadcast' | 'addressed';
@@ -125,6 +126,7 @@ export type RoomMembers = () => readonly RoomLabAgentId[];
  * The rows this machine knows, as the endpoint's own columns see them: the
  * desk's roster for the read model and the mention grammar. The control
  * plane's `AgentRegistry` port (system prompt, binding) travels beside it.
+ * @internal
  */
 export interface AgentDescriptor {
   id: RoomLabAgentId;

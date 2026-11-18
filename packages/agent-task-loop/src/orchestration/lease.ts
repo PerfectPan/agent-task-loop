@@ -62,7 +62,10 @@ export async function sharedMemoryTaskLeaseRepository(): Promise<TaskLeaseEnviro
   return Layer.succeed(LeaseRepository, repository).pipe(Layer.provideMerge(NodePlatformLive));
 }
 
-/** The occupancy lease was lost: taken over, released, the record vanished, or no renewal was confirmed. */
+/**
+ * The occupancy lease was lost: taken over, released, the record vanished, or no renewal was confirmed.
+ * @internal
+ */
 export class TaskLeaseLostError extends Error {
   readonly key: string;
   readonly generation: number;
@@ -77,7 +80,10 @@ export class TaskLeaseLostError extends Error {
   }
 }
 
-/** The lease configuration is out of range, or the heartbeat does not fit twice into the TTL. */
+/**
+ * The lease configuration is out of range, or the heartbeat does not fit twice into the TTL.
+ * @internal
+ */
 export class TaskLeaseConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -85,7 +91,10 @@ export class TaskLeaseConfigError extends Error {
   }
 }
 
-/** The lease repository could not read or write a record; the lease's state is unknown, not changed. */
+/**
+ * The lease repository could not read or write a record; the lease's state is unknown, not changed.
+ * @internal
+ */
 export class TaskLeaseStoreError extends Error {
   readonly key: string;
   readonly reason: LeaseRepositoryFailure['reason'];

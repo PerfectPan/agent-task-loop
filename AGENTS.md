@@ -38,6 +38,7 @@ pnpm build
 pnpm typecheck
 pnpm lint           # after build and typecheck
 pnpm knip           # fails CI on unused files, exports, dependencies, configuration hints, or tag hints
+pnpm knip:production  # the same over production entries only: code only tests reach fails it
 
 # Release checks:
 pnpm changeset status

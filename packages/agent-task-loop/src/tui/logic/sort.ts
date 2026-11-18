@@ -8,6 +8,7 @@ import { statusWeight } from './status';
  * Tie-break: priority descending (higher priority number first).
  * Returns 0 when both keys are equal so callers relying on a stable sort keep
  * the original relative order.
+ * @internal
  */
 export function compareTasks(a: TaskRecord, b: TaskRecord): number {
   const byStatus = statusWeight(a.status) - statusWeight(b.status);

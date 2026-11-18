@@ -8,6 +8,7 @@ import type { DatabaseSync } from 'node:sqlite';
  *
  * It says only what the room cannot say for someone: read first, answer in
  * Chinese, be concrete and short, speak from your own angle.
+ * @internal
  */
 export const DEFAULT_AGENT_SYSTEM_PROMPT =
   '你在一个多人房间里发言。回答前先读完所有公开消息，然后用中文给出具体、简洁的回答，只讲你自己视角下的判断。';

@@ -16,6 +16,7 @@ export function assertLocalRuntime(): void {
   }
 }
 
+/** @internal */
 export function isLocalOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);

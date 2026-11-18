@@ -82,8 +82,6 @@ export const appConfigSchema = z
     }
   });
 
-export type GitHubIssuesConfig = z.infer<typeof githubIssuesConfigSchema>;
-
 /** The pre-zod shape of githubIssues as it appears in the raw config file (defaultAgent optional). */
 export type GitHubIssuesConfigInput = z.input<typeof githubIssuesConfigSchema>;
 

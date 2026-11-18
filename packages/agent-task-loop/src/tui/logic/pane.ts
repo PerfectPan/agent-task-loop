@@ -1,6 +1,9 @@
 import { PREVIEW_MODES, type Pane, type PreviewMode } from '../types';
 
-/** Focus order of the dashboard panes, left to right. */
+/**
+ * Focus order of the dashboard panes, left to right.
+ * @internal
+ */
 export const PANE_ORDER: readonly Pane[] = ['list', 'detail', 'preview'];
 
 /**

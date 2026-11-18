@@ -15,6 +15,7 @@ export interface ToolServerOptions {
 /**
  * One running turn's registration: the tools it may call and the gate that
  * says the member has an activation to call them from.
+ * @internal
  */
 export interface TurnTools {
   /** This turn's tool definitions; they replace the served set. */

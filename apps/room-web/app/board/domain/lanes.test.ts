@@ -1,6 +1,6 @@
 import type { TaskRecord, TaskStatus } from '@rivus/agent-task-loop/task-management';
 import { describe, expect, it } from 'vite-plus/test';
-import { groupIntoLanes, laneOf, type LaneId } from './lanes';
+import { groupIntoLanes, laneOfUnknown, type LaneId } from './lanes';
 
 function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   return {
@@ -31,7 +31,7 @@ describe('board lanes domain', () => {
     ];
 
     for (const [status, expectedLaneId] of expectedMappings) {
-      expect(laneOf(status)).toBe(expectedLaneId);
+      expect(laneOfUnknown(status)).toBe(expectedLaneId);
 
       const lanes = groupIntoLanes([makeTask({ taskId: `task-${status}`, status })]);
       const targetLane = lanes.find((lane) => lane.id === expectedLaneId);

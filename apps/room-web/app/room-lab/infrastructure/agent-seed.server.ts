@@ -12,7 +12,7 @@ import { AGENT_COLOR_COUNT } from '../domain/agent-registry';
  * Colour is drawn once and stored, so a member's hue is a fact about its row
  * rather than a function of seating order.
  */
-export interface AgentSeed {
+interface AgentSeed {
   id: string;
   label: string;
   role: string;
@@ -34,6 +34,7 @@ export interface AgentSeedRow extends AgentSeed {
  * The candidate catalog: the command line is the ACP binding the probe starts,
  * not a headless CLI invocation. `claude-agent-acp` and `codex-acp` are this
  * package's own dependencies; `opencode acp` is the person's own install.
+ * @internal
  */
 export const DEFAULT_AGENT_SEEDS: readonly AgentSeed[] = [
   {

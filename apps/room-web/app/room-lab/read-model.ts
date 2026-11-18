@@ -198,6 +198,7 @@ export type RoomLabAction =
 
 export type RoomLabActionResponse = { ok: true; state: RoomLabState } | { ok: false; error: string };
 
+/** @internal */
 export function takeNewestRoomState(current: RoomLabState, incoming: RoomLabState): RoomLabState {
   if (incoming.roomId !== current.roomId) {
     return current;

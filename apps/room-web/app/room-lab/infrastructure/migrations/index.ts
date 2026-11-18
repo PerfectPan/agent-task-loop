@@ -32,6 +32,7 @@ const CONTROL_PLANE_SQL = readFileSync(new URL('./0006_control_plane.sql', impor
 const DROP_WORKSPACE_SQL = readFileSync(new URL('./0007_drop_workspace.sql', import.meta.url), 'utf8');
 const DROP_MEMBER_LEASES_SQL = readFileSync(new URL('./0008_drop_member_leases.sql', import.meta.url), 'utf8');
 
+/** @internal */
 export const MIGRATIONS: readonly Migration[] = [
   {
     version: 1,
@@ -88,6 +89,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 `;
 
+/** @internal */
 export function migrationName(migration: Migration): string {
   return `${String(migration.version).padStart(4, '0')}_${migration.name}`;
 }

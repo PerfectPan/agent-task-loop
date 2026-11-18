@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import { useTranscript } from './use-transcript';
-import { createFakeSessionProvider } from '../data/session-provider';
+import { createFakeSessionProvider } from '../../../test/fake-session-provider';
 import { stripAnsi } from '../../../test/helpers';
 
 const provider = createFakeSessionProvider(

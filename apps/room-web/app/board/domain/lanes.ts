@@ -49,15 +49,6 @@ const STATUS_TO_LANE_ID = new Map<TaskStatus, LaneId>(
   LANE_DEFINITIONS.flatMap((lane) => lane.statuses.map((status) => [status, lane.id])),
 );
 
-/** The lane a status belongs to. */
-export function laneOf(status: TaskStatus): LaneId {
-  const laneId = STATUS_TO_LANE_ID.get(status);
-  if (!laneId) {
-    throw new Error(`Unknown status: ${status}`);
-  }
-  return laneId;
-}
-
 /**
  * The lane a backend string belongs to, or undefined when this build does not
  * know the status. Client bundles use this instead of testing membership

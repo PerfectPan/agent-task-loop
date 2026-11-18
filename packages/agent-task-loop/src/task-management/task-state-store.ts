@@ -28,7 +28,10 @@ function safeSegment(id: string): string {
   return `${readable}-${hash}`;
 }
 
-/** The on-disk path for a task's run-time state. Exported for tests. */
+/**
+ * The on-disk path for a task's run-time state.
+ * @internal
+ */
 export function stateFilePath(baseDir: string, source: string, recordId: string): string {
   return path.join(baseDir, safeSegment(source), `${safeSegment(recordId)}.json`);
 }

@@ -16,7 +16,8 @@ vi.mock('@rivus/agent-kit/node', () => ({
 }));
 
 import { detectAgents } from '@rivus/agent-kit/discovery';
-import { createGlobalConfig, discoverRunnableAgents, globalConfigPath, isLarkCliAvailable } from './init';
+import { globalConfigPath } from '../config/load-config';
+import { createGlobalConfig, discoverRunnableAgents, isLarkCliAvailable } from './init';
 
 const originalHome = os.homedir;
 const originalPath = process.env.PATH;

@@ -1,8 +1,14 @@
 import type { HeartbeatInfo, HeartbeatState, RunnerInfo } from '../types';
 
-/** Below this age a heartbeat is "fresh" (runner clearly alive). */
+/**
+ * Below this age a heartbeat is "fresh" (runner clearly alive).
+ * @internal
+ */
 export const HEARTBEAT_FRESH_MS = 15000;
-/** Below this age (but >= fresh) a heartbeat is "stale"; beyond it is "dead". */
+/**
+ * Below this age (but >= fresh) a heartbeat is "stale"; beyond it is "dead".
+ * @internal
+ */
 export const HEARTBEAT_STALE_MS = 60000;
 
 /**

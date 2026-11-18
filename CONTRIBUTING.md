@@ -58,6 +58,7 @@ pnpm build
 pnpm typecheck
 pnpm lint
 pnpm knip  # fails CI on unused files, exports, dependencies, configuration hints, or tag hints
+pnpm knip:production  # the same over production entries only: code only tests reach fails it
 ```
 
 `pnpm duplicates` runs jscpd with lint-config's gate profile, where any reported clone fails (the threshold is 0); the scan roots and ignores live in the script, and `pnpm duplicates:audit` writes a broader, report-only list to the git-ignored `tmp/duplicates-audit/`. `pnpm format` applies the formatting. `pnpm lint` is type-aware: it resolves workspace packages through their built `dist` types and room-web through the route types that `pnpm typecheck` generates, so run it after `pnpm build` and `pnpm typecheck`.

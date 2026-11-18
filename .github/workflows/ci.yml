@@ -46,3 +46,5 @@ jobs:
       - run: pnpm lint
 
       - run: pnpm knip
+
+      - run: pnpm knip:production

@@ -87,6 +87,7 @@ function failValidation(error: z.ZodError): never {
   process.exit(1);
 }
 
+/** @internal */
 export const sourceListCommand = defineCommand({
   meta: { name: 'list', description: 'List configured task sources' },
   args: { config: { type: 'string' } },
@@ -100,6 +101,7 @@ export const sourceListCommand = defineCommand({
   },
 });
 
+/** @internal */
 export const sourceAddCommand = defineCommand({
   meta: { name: 'add', description: 'Add a task source (GitHub repo or Feishu Base) to the config' },
   args: {
@@ -162,6 +164,7 @@ export const sourceAddCommand = defineCommand({
   },
 });
 
+/** @internal */
 export const sourceRemoveCommand = defineCommand({
   meta: { name: 'remove', description: "Remove a task source by id ('feishu' or 'github:<owner>/<repo>')" },
   args: {

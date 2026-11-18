@@ -111,8 +111,8 @@ no compare-and-set, so starts under two home directories, on one machine or
 two, can both claim the same Task.
 
 The run baton (`Run`, the `classic-delivery` template with seats `impl` and
-`review`, and the process runner) belongs to `agent-task-loop`
-(`src/orchestration/`). Only the lease itself comes from
+`review`, and the `ProcessRunner` port, which the caller implements) belongs to
+`agent-task-loop` (`src/orchestration/`). Only the lease itself comes from
 `@rivus/agent-kit-collab`'s `/lease`: `createLeaseManager` with a file lease
 repository over the shared per-key directory, renewed by the manager's own
 heartbeat fiber and released when the occupancy scope closes, shared by the CLI

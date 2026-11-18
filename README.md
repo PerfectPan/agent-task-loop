@@ -21,6 +21,7 @@ The core package provides a local CLI that drives tasks from assignment through 
 - `pnpm install`
 - `pnpm test`
 - `pnpm build`
+- `pnpm knip` fails CI on unused files, exports, dependencies, configuration hints, or tag hints.
 - `pnpm changeset`
 
 ## License

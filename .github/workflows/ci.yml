@@ -44,3 +44,5 @@ jobs:
       # Type-aware lint resolves workspace packages through their built `dist` types
       # and room-web through the route types `pnpm typecheck` generates.
       - run: pnpm lint
+
+      - run: pnpm knip

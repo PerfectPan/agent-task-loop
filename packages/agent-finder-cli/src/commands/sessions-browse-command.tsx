@@ -29,10 +29,14 @@ export const sessionsBrowseCommand = defineCommand({
     sessions.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
     const platform = createNodePlatform();
 
+    // The same full-screen launch as agent-task-loop's `tui` command. Neither package depends on
+    // the other and no shared workspace package holds terminal helpers, so each keeps its own copy.
+    // jscpd:ignore-start
     // Take over the alternate screen buffer; restore scrollback on exit.
     process.stdout.write(ENTER_ALT_SCREEN);
     const restore = () => process.stdout.write(LEAVE_ALT_SCREEN);
     process.once('exit', restore);
+    // jscpd:ignore-end
 
     const instance = render(
       <SessionsBrowser

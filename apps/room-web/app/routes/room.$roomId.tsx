@@ -20,6 +20,7 @@ import { copy } from '../room-lab/copy';
 import { RoomErrorPage, routeErrorMessage } from '../room-lab/presentation/room-error-page';
 import {
   LocalRequestError,
+  throwIfLocalRequestError,
   assertLocalRuntime,
   assertSameOriginJson,
   noStoreHeaders,
@@ -44,9 +45,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     if (error instanceof RoomCatalogInvariantError) {
       throw data({ error: error.message }, { status: 404, headers: noStoreHeaders });
     }
-    if (error instanceof LocalRequestError) {
-      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
-    }
+    throwIfLocalRequestError(error);
     throw error;
   }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { TARGET_AGENTS, type TargetAgent } from '../../types/task';
 import type { CreateTaskPayload } from '../../task-management/task-provider';
+import { DialogFrame } from './dialog-frame';
 
 export interface TaskFormProps {
   onSubmit: (payload: CreateTaskPayload) => void;
@@ -166,10 +167,7 @@ export function TaskForm({
   });
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} flexGrow={1} overflow="hidden">
-      <Text bold color="cyan">
-        New task
-      </Text>
+    <DialogFrame title="New task">
       <Box flexDirection="column" marginTop={1}>
         {fields.map((f, i) => {
           const active = i === index;
@@ -202,6 +200,6 @@ export function TaskForm({
             : `[Tab/↑↓] field  [←/→] agent  [Enter] submit  [Esc] cancel${onRefineDescription ? '  [^R] refine' : ''}`}
         </Text>
       </Box>
-    </Box>
+    </DialogFrame>
   );
 }

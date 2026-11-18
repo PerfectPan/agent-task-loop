@@ -13,7 +13,7 @@ import { formText } from '../lib/form';
 import { getRoomLabHost } from '../room-lab/composition.server';
 import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import {
-  LocalRequestError,
+  throwIfLocalRequestError,
   assertLocalRuntime,
   assertSameOriginForm,
   noStoreHeaders,
@@ -32,9 +32,7 @@ export async function loader(_args: LoaderFunctionArgs) {
   try {
     assertLocalRuntime();
   } catch (error) {
-    if (error instanceof LocalRequestError) {
-      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
-    }
+    throwIfLocalRequestError(error);
     throw error;
   }
   const last = getRoomLabHost().lastOpened();

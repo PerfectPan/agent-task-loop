@@ -3,6 +3,7 @@ import { Box, Text } from 'ink';
 import type { TaskStatus } from '../../types/task';
 import { displayWidth } from '../logic/truncate';
 import { DiagramLine } from './diagram-line';
+import { DialogFrame } from './dialog-frame';
 
 export interface WorkflowOverlayProps {
   visible: boolean;
@@ -56,10 +57,7 @@ export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps
     return null;
   }
   return (
-    <Box flexGrow={1} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} overflow="hidden">
-      <Text bold color="cyan">
-        Task workflow
-      </Text>
+    <DialogFrame title="Task workflow">
       <Box flexDirection="column" marginTop={1}>
         {DIAGRAM.map((line, i) => (
           <DiagramLine key={i} line={line} current={currentStatus} />
@@ -70,6 +68,6 @@ export function WorkflowOverlay({ visible, currentStatus }: WorkflowOverlayProps
           Tabs: Active = running/queued · Needs Input = 待决策/待验收 · Done · press any key to close
         </Text>
       </Box>
-    </Box>
+    </DialogFrame>
   );
 }

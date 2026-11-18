@@ -5,6 +5,7 @@ import { runnerLabel } from '../logic/heartbeat';
 import { HeartbeatLine } from './heartbeat-line';
 import { MetaRow } from './meta-row';
 import { ModeTabs } from './mode-tabs';
+import { PaneFrame } from './pane-frame';
 import { TranscriptEntry } from './transcript-entry';
 
 export interface SessionPreviewProps {
@@ -39,16 +40,7 @@ export function SessionPreview({
   availableIds,
 }: SessionPreviewProps): React.JSX.Element {
   return (
-    <Box
-      flexDirection="column"
-      width={width}
-      borderStyle="round"
-      borderColor={focused ? 'cyan' : 'gray'}
-      borderDimColor={!focused}
-      paddingX={1}
-      overflow="hidden"
-      minHeight={0}
-    >
+    <PaneFrame width={width} focused={focused}>
       <ModeTabs mode={mode} />
       <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
         <Box flexDirection="column" flexShrink={0} marginTop={-scroll}>
@@ -122,6 +114,6 @@ export function SessionPreview({
           )}
         </Box>
       </Box>
-    </Box>
+    </PaneFrame>
   );
 }

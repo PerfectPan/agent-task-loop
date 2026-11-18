@@ -47,15 +47,8 @@ function StatusBadge({ status }: { status: TaskRecord['status'] }) {
   );
 }
 
-function ReviewVerdictBadge({ verdict }: { verdict: string }) {
-  const isPass = verdict === '通过';
-  const cls = isPass ? 'bg-muted text-primary border-primary/40' : 'bg-muted text-destructive border-destructive/40';
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${cls}`}>{verdict}</span>
-  );
-}
-
-function AcceptanceVerdictBadge({ verdict }: { verdict: string }) {
+/** A review or acceptance verdict: `通过` in the primary color, anything else as destructive. */
+function VerdictBadge({ verdict }: { verdict: string }) {
   const isPass = verdict === '通过';
   const cls = isPass ? 'bg-muted text-primary border-primary/40' : 'bg-muted text-destructive border-destructive/40';
   return (
@@ -189,7 +182,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
               {hasReviewVerdict && task.reviewVerdict ? (
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <span>结论：</span>
-                  <ReviewVerdictBadge verdict={task.reviewVerdict} />
+                  <VerdictBadge verdict={task.reviewVerdict} />
                 </div>
               ) : null}
             </div>
@@ -226,7 +219,7 @@ function TaskDetailContent({ task }: { task: TaskRecord }) {
               {hasAcceptanceVerdict && task.acceptanceVerdict ? (
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <span>结论：</span>
-                  <AcceptanceVerdictBadge verdict={task.acceptanceVerdict} />
+                  <VerdictBadge verdict={task.acceptanceVerdict} />
                 </div>
               ) : null}
             </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { SourceOption } from '../logic/source';
+import { DialogFrame } from './dialog-frame';
 
 export interface SourceFilterProps {
   /** Selectable sources with labels and task counts. */
@@ -56,10 +57,7 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
   });
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} flexGrow={1} overflow="hidden">
-      <Text bold color="cyan">
-        Sources
-      </Text>
+    <DialogFrame title="Sources">
       <Box flexDirection="column" marginTop={1}>
         {options.map((option, i) => {
           const active = i === index;
@@ -83,6 +81,6 @@ export function SourceFilter({ options, selected, onApply, onCancel }: SourceFil
       <Box marginTop={1}>
         <Text dimColor>[↑↓/jk] move [Space] toggle [a] all [Enter] apply [Esc] cancel</Text>
       </Box>
-    </Box>
+    </DialogFrame>
   );
 }

@@ -1,8 +1,10 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Text } from 'ink';
 import type { TaskRecord } from '../../types/task';
 import { computeVisibleWindow } from '../logic/viewport';
 import { rowChromeWidth, SOURCE_TAG_WIDTH } from '../logic/layout';
+import { PaneFrame } from './pane-frame';
+import { PaneTitle } from './pane-title';
 import { TaskRow } from './task-row';
 
 export interface TaskListProps {
@@ -37,19 +39,8 @@ export function TaskList({
   const hiddenAbove = start;
 
   return (
-    <Box
-      flexDirection="column"
-      width={width}
-      borderStyle="round"
-      borderColor={focused ? 'cyan' : 'gray'}
-      borderDimColor={!focused}
-      paddingX={1}
-      overflow="hidden"
-      minHeight={0}
-    >
-      <Text bold color={focused ? 'cyan' : undefined}>
-        tasks ({tasks.length})
-      </Text>
+    <PaneFrame width={width} focused={focused}>
+      <PaneTitle focused={focused}>tasks ({tasks.length})</PaneTitle>
       {tasks.length === 0 ? (
         <Text color="yellow">No tasks</Text>
       ) : (
@@ -67,6 +58,6 @@ export function TaskList({
           {hiddenBelow > 0 && <Text dimColor>↓ {hiddenBelow} more</Text>}
         </>
       )}
-    </Box>
+    </PaneFrame>
   );
 }

@@ -13,7 +13,7 @@ import { AgentDesk } from '../room-lab/presentation/agent-desk';
 import { RoomInputError } from '../room-lab/application/room-service.server';
 import { roomActionMessage, roomActionStatus } from '../room-lab/application/room-error';
 import {
-  LocalRequestError,
+  throwIfLocalRequestError,
   assertLocalRuntime,
   assertSameOriginForm,
   noStoreHeaders,
@@ -30,9 +30,7 @@ export async function loader(_args: LoaderFunctionArgs) {
     assertLocalRuntime();
     return data(await getRoomLabHost().agentDesk(), { headers: noStoreHeaders });
   } catch (error) {
-    if (error instanceof LocalRequestError) {
-      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
-    }
+    throwIfLocalRequestError(error);
     throw error;
   }
 }
@@ -66,9 +64,7 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (error) {
     // A guard failure is the page's problem and goes to the boundary; anything
     // the desk itself refused comes back to the form with its own status.
-    if (error instanceof LocalRequestError) {
-      throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
-    }
+    throwIfLocalRequestError(error);
     return data({ error: roomActionMessage(error) }, { status: roomActionStatus(error), headers: noStoreHeaders });
   }
 }

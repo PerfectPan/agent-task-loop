@@ -1,3 +1,5 @@
+import { data } from 'react-router';
+
 export const noStoreHeaders = { 'Cache-Control': 'no-store' };
 
 export class LocalRequestError extends Error {
@@ -7,6 +9,16 @@ export class LocalRequestError extends Error {
   ) {
     super(message);
     this.name = 'LocalRequestError';
+  }
+}
+
+/**
+ * Throws a refused local request as a route error response with its status, which reaches the
+ * route's error boundary; any other error returns, for the caller to rethrow or map.
+ */
+export function throwIfLocalRequestError(error: unknown): void {
+  if (error instanceof LocalRequestError) {
+    throw data({ error: error.message }, { status: error.status, headers: noStoreHeaders });
   }
 }
 

@@ -3,6 +3,8 @@ import { Box, Text } from 'ink';
 import type { TaskRecord } from '../../types/task';
 import { formatDetailFields } from '../logic/format';
 import { statusConfig } from '../logic/status';
+import { PaneFrame } from './pane-frame';
+import { PaneTitle } from './pane-title';
 
 export interface TaskDetailProps {
   task: TaskRecord | null;
@@ -16,19 +18,8 @@ export interface TaskDetailProps {
 /** Center pane: the selected task's fields plus progress / error sections. */
 export function TaskDetail({ task, now, width, focused, scroll = 0 }: TaskDetailProps): React.JSX.Element {
   return (
-    <Box
-      flexDirection="column"
-      width={width}
-      borderStyle="round"
-      borderColor={focused ? 'cyan' : 'gray'}
-      borderDimColor={!focused}
-      paddingX={1}
-      overflow="hidden"
-      minHeight={0}
-    >
-      <Text bold color={focused ? 'cyan' : undefined}>
-        detail{focused && scroll > 0 ? <Text dimColor> ↑{scroll}</Text> : null}
-      </Text>
+    <PaneFrame width={width} focused={focused}>
+      <PaneTitle focused={focused}>detail{focused && scroll > 0 ? <Text dimColor> ↑{scroll}</Text> : null}</PaneTitle>
       <Box flexGrow={1} flexDirection="column" overflow="hidden" minHeight={0}>
         {!task ? (
           <Text dimColor>Select a task</Text>
@@ -66,6 +57,6 @@ export function TaskDetail({ task, now, width, focused, scroll = 0 }: TaskDetail
           </Box>
         )}
       </Box>
-    </Box>
+    </PaneFrame>
   );
 }

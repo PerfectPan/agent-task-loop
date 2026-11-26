@@ -41,8 +41,8 @@ const textOf = (prompt: readonly acp.ContentBlock[]) =>
 /** The commands the first word of a prompt's text picks. */
 const COMMANDS = new Set(['hang', 'fs', 'permission', 'env', 'toolcall']);
 
-const say = (client: acp.AgentSideConnection, sessionId: string, text: string) =>
-  client.sessionUpdate({
+const say = (client: acp.AgentContext, sessionId: string, text: string) =>
+  client.notify(acp.methods.client.session.update, {
     sessionId,
     update: {
       sessionUpdate: 'agent_message_chunk',
@@ -56,16 +56,11 @@ const capabilities: acp.AgentCapabilities = {
   mcpCapabilities: { http: true, sse: false },
 };
 
-class FakeRoomAgent implements acp.Agent {
-  private readonly client: acp.AgentSideConnection;
-
-  constructor(client: acp.AgentSideConnection) {
-    this.client = client;
-  }
-
-  async initialize(params: acp.InitializeRequest): Promise<acp.InitializeResponse> {
+const app = acp
+  .agent({ name: 'fake-room-agent' })
+  .onRequest(acp.methods.agent.initialize, async ({ params }) => {
     if (env.CLAUDE_FAKE_INITIALIZE === 'hang') {
-      return new Promise(() => undefined);
+      return new Promise<acp.InitializeResponse>(() => undefined);
     }
     if (env.CLAUDE_FAKE_INITIALIZE === 'exit') {
       process.exit(3);
@@ -76,15 +71,11 @@ class FakeRoomAgent implements acp.Agent {
       ...(env.CLAUDE_FAKE_AUTH_METHODS === '1' ? { authMethods: [{ id: 'api-key', name: 'API key' }] } : {}),
       agentInfo: { name: 'fake-room-agent', version: '1.0.0' },
     };
-  }
-
-  async authenticate(): Promise<Record<string, never>> {
-    return {};
-  }
-
-  async newSession(params: acp.NewSessionRequest): Promise<acp.NewSessionResponse> {
+  })
+  .onRequest(acp.methods.agent.authenticate, async () => ({}))
+  .onRequest(acp.methods.agent.session.new, async ({ params }) => {
     if (env.CLAUDE_FAKE_NEW === 'hang') {
-      return new Promise(() => undefined);
+      return new Promise<acp.NewSessionResponse>(() => undefined);
     }
     if (env.CLAUDE_FAKE_AUTH === 'required') {
       throw acp.RequestError.authRequired();
@@ -100,9 +91,8 @@ class FakeRoomAgent implements acp.Agent {
       writeFileSync(env.CLAUDE_FAKE_ENV_REPORT, JSON.stringify(process.env), 'utf8');
     }
     return { sessionId };
-  }
-
-  async loadSession(params: acp.LoadSessionRequest): Promise<acp.LoadSessionResponse> {
+  })
+  .onRequest(acp.methods.agent.session.load, async ({ client, params }) => {
     if (!capabilities.loadSession || !known.has(params.sessionId)) {
       throw acp.RequestError.methodNotFound('session/load');
     }
@@ -112,7 +102,7 @@ class FakeRoomAgent implements acp.Agent {
     const session = sessions.get(params.sessionId)!;
     // The replay the protocol asks a load to answer with; the client does not
     // stream it, so one entry is enough.
-    await this.client.sessionUpdate({
+    await client.notify(acp.methods.client.session.update, {
       sessionId: params.sessionId,
       update: {
         sessionUpdate: 'user_message_chunk',
@@ -120,9 +110,8 @@ class FakeRoomAgent implements acp.Agent {
       } as acp.SessionUpdate,
     });
     return { modes: null, _meta: session.meta as acp.LoadSessionResponse['_meta'] };
-  }
-
-  async prompt(params: acp.PromptRequest): Promise<acp.PromptResponse> {
+  })
+  .onRequest(acp.methods.agent.session.prompt, async ({ client, params }) => {
     const session = sessions.get(params.sessionId);
     const words = textOf(params.prompt).split(/\s+/);
     // A room's turn prompt names the seat order (`order:`) ahead of the
@@ -136,7 +125,7 @@ class FakeRoomAgent implements acp.Agent {
     }
 
     if (command === 'hang:') {
-      return new Promise(() => undefined);
+      return new Promise<acp.PromptResponse>(() => undefined);
     }
     if (command === 'fs:') {
       // Every `read=<path>` / `write=<path>` argument is one attempt through
@@ -146,14 +135,21 @@ class FakeRoomAgent implements acp.Agent {
         const path = line.slice(isRead ? 5 : 6);
         try {
           if (isRead) {
-            const response = await this.client.readTextFile({ sessionId: params.sessionId, path });
-            void say(this.client, params.sessionId, `readTextFile ${path} ok ${response.content}`);
+            const response = await client.request(acp.methods.client.fs.readTextFile, {
+              sessionId: params.sessionId,
+              path,
+            });
+            void say(client, params.sessionId, `readTextFile ${path} ok ${response.content}`);
           } else {
-            await this.client.writeTextFile({ sessionId: params.sessionId, path, content: 'written by fake' });
-            void say(this.client, params.sessionId, `writeTextFile ${path} ok`);
+            await client.request(acp.methods.client.fs.writeTextFile, {
+              sessionId: params.sessionId,
+              path,
+              content: 'written by fake',
+            });
+            void say(client, params.sessionId, `writeTextFile ${path} ok`);
           }
         } catch {
-          void say(this.client, params.sessionId, `${isRead ? 'readTextFile' : 'writeTextFile'} ${path} refused`);
+          void say(client, params.sessionId, `${isRead ? 'readTextFile' : 'writeTextFile'} ${path} refused`);
         }
       }
       return { stopReason: 'end_turn' };
@@ -178,7 +174,7 @@ class FakeRoomAgent implements acp.Agent {
       const kindWord = words.find((word) => word.startsWith('kind='))?.slice(5);
       const kind = kindWord !== undefined && TOOL_KINDS.includes(kindWord) ? (kindWord as acp.ToolKind) : undefined;
       const path = words.find((word) => word.startsWith('path='))?.slice(5);
-      const outcome = await this.client.requestPermission({
+      const outcome = await client.request(acp.methods.client.session.requestPermission, {
         sessionId: params.sessionId,
         toolCall: {
           toolCallId: 'call-1',
@@ -194,16 +190,16 @@ class FakeRoomAgent implements acp.Agent {
       if (env.CLAUDE_FAKE_PERMISSION_REPORT) {
         writeFileSync(env.CLAUDE_FAKE_PERMISSION_REPORT, JSON.stringify(outcome.outcome), 'utf8');
       }
-      void say(this.client, params.sessionId, `permission ${JSON.stringify(outcome.outcome)}`);
+      void say(client, params.sessionId, `permission ${JSON.stringify(outcome.outcome)}`);
       return { stopReason: 'end_turn' };
     }
     if (command === 'env:') {
       const name = words[1] ?? 'CLAUDE_FAKE_MARK';
-      void say(this.client, params.sessionId, `env ${name}=${env[name] === undefined ? 'unset' : env[name]}`);
+      void say(client, params.sessionId, `env ${name}=${env[name] === undefined ? 'unset' : env[name]}`);
       return { stopReason: 'end_turn' };
     }
     if (command === 'toolcall:') {
-      await this.client.sessionUpdate({
+      await client.notify(acp.methods.client.session.update, {
         sessionId: params.sessionId,
         update: {
           sessionUpdate: 'tool_call_update',
@@ -214,17 +210,15 @@ class FakeRoomAgent implements acp.Agent {
       });
       return { stopReason: 'end_turn' };
     }
-    void say(this.client, params.sessionId, `turn ${session?.turns ?? 1}: ${command}`);
+    void say(client, params.sessionId, `turn ${session?.turns ?? 1}: ${command}`);
     return { stopReason: 'end_turn' };
-  }
-
-  async cancel(params: acp.CancelNotification): Promise<void> {
+  })
+  .onNotification(acp.methods.agent.session.cancel, ({ client, params }) => {
     if (env.CLAUDE_FAKE_IGNORE_CANCEL === '1') {
       return;
     }
-    void say(this.client, params.sessionId, 'cancel received');
-  }
-}
+    void say(client, params.sessionId, 'cancel received');
+  });
 
 const clientToAgent = new PassThrough();
 const agentToClient = new PassThrough();
@@ -232,7 +226,7 @@ const agentStream = acp.ndJsonStream(
   Writable.toWeb(agentToClient) as unknown as WritableStream<Uint8Array>,
   Readable.toWeb(clientToAgent) as unknown as ReadableStream<Uint8Array>,
 );
-new acp.AgentSideConnection((connection) => new FakeRoomAgent(connection), agentStream);
+app.connect(agentStream);
 
 process.stdin.pipe(clientToAgent);
 agentToClient.pipe(process.stdout);

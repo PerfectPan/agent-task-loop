@@ -1,5 +1,11 @@
 # @rivus/agent-finder-cli
 
+## 0.3.1
+
+### Patch Changes
+
+- [#184](https://github.com/PerfectPan/agent-task-loop/pull/184) [`b537ae4`](https://github.com/PerfectPan/agent-task-loop/commit/b537ae44fbb77a5eaab3133a1419558888210df0) Thanks [@renovate](https://github.com/apps/renovate)! - Update @rivus/agent-kit to 0.25.0 and effect to 4.1.1. The kit's built-in agents grow from seven to nine, so `scan --json` and `doctor` list 29 providers instead of 27, and the task loop picks up the kit's newer pricing and `connectAgent` options.
+
 ## 0.3.0
 
 ### Minor Changes

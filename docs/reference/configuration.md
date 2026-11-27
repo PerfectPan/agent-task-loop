@@ -12,7 +12,7 @@ JavaScript config. With none of the three present, commands fail with a
 message pointing at `agent-task-loop init`.
 
 The full shape is in
-[`packages/agent-task-loop/config.example.json`](../packages/agent-task-loop/config.example.json).
+[`packages/agent-task-loop/config.example.json`](../../packages/agent-task-loop/config.example.json).
 
 ## Create the config
 
@@ -70,7 +70,7 @@ At least one of `feishu` and `githubIssues` is required.
   chosen.
 
 How sources are combined and where run-time state is kept is described in
-[`architecture/task-sources.md`](architecture/task-sources.md).
+[`architecture/task-sources.md`](../architecture/task-sources.md).
 
 ## Projects
 

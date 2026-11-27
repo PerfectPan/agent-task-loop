@@ -50,15 +50,15 @@ Do not claim implementation work is complete until the relevant commands pass, o
 
 ## Development Workflow
 
-Check the [Change Design Gate](CONTRIBUTING.md#change-design-gate) before starting work. Bugfixes and routine changes need only a clear PR summary and validation. For non-trivial changes that meet the gate, write or review the active Plan in `docs/plans/` before implementation, and do not start a Plan that is blocked on an unresolved decision. When the code lands on `main`, migrate lasting non-code constraints to `docs/` (and local `Why:` comments), move unfinished follow-ups to issues, and delete the Plan in the final PR.
+Check the [Change Design Gate](CONTRIBUTING.md#change-design-gate) before starting work. Bugfixes and routine changes need only a clear PR summary and validation. For non-trivial changes that meet the gate, write or review the active Plan in `docs/plans/` before implementation, and do not start a Plan that is blocked on an unresolved decision. Retire a completed Plan in its final delivery PR per [`docs/AGENTS.md` §4](docs/AGENTS.md#4-retiring-a-plan).
 
 Respect the package boundaries in [`docs/architecture/overview.md`](docs/architecture/overview.md); the package-boundary and room-isolation tests enforce them.
 
 ## Documentation
 
+- Read [`docs/AGENTS.md`](docs/AGENTS.md) before writing non-code knowledge: adding or changing a file under `docs/`, choosing between a doc and a `Why:` comment, or retiring a Plan.
 - Use `CONTRIBUTING.md` for contribution workflow.
-- Use `docs/plans/` for active implementation plans while non-trivial work is in flight, and retire completed plans when code lands. Current-state documentation owns implemented behavior.
-- Use `docs/` for durable current-state knowledge that code alone cannot express: architecture (`docs/architecture/`), guides, and development/release runbooks. See `docs/README.md`.
+- Use `docs/plans/` for active implementation plans while non-trivial work is in flight, and retire completed plans in their final delivery PR. See `docs/README.md`.
 - Keep README focused on orientation and quick start.
 - Record user-facing changes to published packages with a changeset (`pnpm changeset`) in the same PR; do not edit generated `CHANGELOG.md` files or add a hand-written root `CHANGELOG.md`.
 
@@ -98,7 +98,7 @@ rg --hidden --no-ignore -n "internal-domain.example|/Users/|private-token|secret
   --glob '!node_modules/**' \
   --glob '!**/node_modules/**' \
   --glob '!.git/**' \
-  --glob '!AGENTS.md' \
-  --glob '!CONTRIBUTING.md' \
-  --glob '!SECURITY.md'
+  --glob '!/AGENTS.md' \
+  --glob '!/CONTRIBUTING.md' \
+  --glob '!/SECURITY.md'
 ```

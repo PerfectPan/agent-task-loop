@@ -4,7 +4,7 @@ Agent Task Loop runs local coding agents through a task lifecycle: pick a task, 
 
 ## Prerequisites
 
-- Node.js 22 or newer
+- Node.js `^26.13.1` to install and build from this repository (the published `@rivus/agent-task-loop` CLI requires Node.js `>=22.13`)
 - pnpm 12, the version pinned in `packageManager` (Corepack or `pnpm self-update` installs it)
 - GitHub CLI authenticated with access to the target repository
 - `lark-cli` configured for Feishu Base access, when using a Feishu source
@@ -39,7 +39,7 @@ npx @rivus/agent-task-loop --help
    npx --no-install @rivus/agent-task-loop init
    ```
 
-2. Edit `~/.agent-task-loop/config.json` with your projects, repositories, and local agent commands. See [configuration.md](./configuration.md).
+2. Edit `~/.agent-task-loop/config.json` with your projects, repositories, and local agent commands. See [configuration.md](../reference/configuration.md).
 
 3. Check that the config can be loaded.
 
@@ -95,4 +95,4 @@ npx --no-install @rivus/agent-task-loop create --task TASK-101 --title "Fix logi
 
 Open a GitHub issue for bugs and ideas.
 
-For design proposals, see the [Change Design Gate](../CONTRIBUTING.md#change-design-gate).
+For design proposals, see the [Change Design Gate](../../CONTRIBUTING.md#change-design-gate).

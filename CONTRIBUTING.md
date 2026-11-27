@@ -108,7 +108,7 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 1. When changesets land on `main`, `.github/workflows/publish.yml` calls the shared npm release workflow of PerfectPan/gh-repo-checks, which opens or updates the draft release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
 2. Each update returns the release PR to Draft. Review the version changes, mark it Ready for review, and approve workflow runs if GitHub requests approval. Verify that `test` and Review passed for the current head before merging. Manual publish retries run only from `main`.
-3. Merging the release PR runs `publish.yml` again: a read-only job runs the gates (`pnpm test`, `pnpm build`, `pnpm typecheck`), the production audit and `pnpm pack`, then the only job with the OIDC permission publishes the packed versions to npm through trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
+3. Merging the release PR runs `publish.yml` again: a read-only job runs the gates (`pnpm test`, `pnpm build`, `pnpm typecheck`), the production audit and `pnpm pack`, then the only job with the OIDC permission publishes the packed versions to npm through trusted publishing with provenance. See [`docs/development/npm-publish.md`](docs/development/npm-publish.md).
 
 ### Bot Pull Requests
 
@@ -149,19 +149,16 @@ Only published packages get changesets. Private workspace packages (`private: tr
   checkboxes to retry or recreate an update. Configuration validation and a token-free local extraction/lookup
   are not evidence that the hosted app is authorized or has run successfully.
 
-- **Security updates are a separate handoff**: keep the GitHub dependency graph and Dependabot alerts enabled;
-  removing `.github/dependabot.yml` only changes routine version updates. Repository security settings and GitHub
-  App permissions are managed separately, and this configuration does not enable either of them. If alerts or
-  the graph are disabled, the owner must enable them in a separately confirmed step before claiming coverage.
-  The 2026-11-03 rollout audit found dependency graph, Dependabot alerts, and Dependabot security updates disabled
-  in [repository security settings](https://github.com/PerfectPan/agent-task-loop/settings/security_analysis).
-  Recheck these settings before handoff; this migration does not change them.
+- **Security updates are a separate handoff**: dependency graph and Dependabot alerts are managed separately in
+  [repository security settings](https://github.com/PerfectPan/agent-task-loop/settings/security_analysis);
+  `renovate.json` does not enable them and removing `.github/dependabot.yml` only changes routine version updates.
   Existing `osvVulnerabilityAlerts` and `vulnerabilityAlerts.rangeStrategy: "bump"` request Renovate security
   fixes, which can bypass release-age and schedule limits, but OSV checks do not prove access to GitHub alerts.
-  Before selecting Renovate as the sole security-PR owner, verify the installation's Dependabot alerts read
-  permission and record a hosted run that reads repository alerts and produces the applicable fix with passing
-  CI. Keep any enabled Dependabot security updates in place until that evidence exists, then change the separate
-  security-update setting only with owner confirmation. An empty alert list alone does not prove fix coverage.
+  Before selecting Renovate as the sole security-PR owner, enable dependency graph and alerts, verify the
+  installation's Dependabot alerts read permission, and record a hosted run that reads repository alerts and
+  produces the applicable fix with passing CI. Keep any enabled Dependabot security updates in place until that
+  evidence exists, then change the separate security-update setting only with owner confirmation. An empty alert
+  list alone does not prove fix coverage.
 
 - **Changesets**: bot PRs carry none. Dependency updates that do not change a published package's behavior need no
   changeset. If a bot PR changes published behavior (for example a bundled dependency changed), the reviewer adds a
@@ -170,17 +167,14 @@ Only published packages get changesets. Private workspace packages (`private: tr
 ## Plan Lifecycle And Retirement
 
 1. Draft a plan from [`docs/plans/0000-template.md`](docs/plans/0000-template.md) only when triggered by the [Change Design Gate](#change-design-gate). Keep `Status: blocked` while a material scope, interface, data, or rollout decision is unresolved.
-2. Review the goals, boundaries, and key decisions before implementing; update the plan if design choices change mid-flight.
+2. Review the goals, boundaries, and key decisions before implementing; update an active plan mid-flight only when remaining multi-PR or multi-session work still needs re-alignment.
 3. Implement within that scope, adding tests and updating current-state `docs/` in the same change.
-4. Retire the plan as soon as its code scope lands on the default branch. Do not keep a completed plan in `docs/plans/` waiting on deferred manual checks or future polish. In the final delivery PR:
-   - Move any remaining manual verification or follow-up work to issues.
-   - Migrate lasting knowledge that code cannot express (invariants, ownership/trust boundaries, tradeoffs, external quirks, validation limits) into current-state `docs/` (and local `Why:` comments in code).
-   - Delete the completed plan file. Git history and the delivery PR keep the full execution record.
+4. Retire the plan in its final delivery PR as soon as its code scope lands on the default branch; move deferred manual checks and future polish to issues rather than keeping the plan open. Follow [`docs/AGENTS.md` §4](docs/AGENTS.md#4-retiring-a-plan).
 5. When the owner decides that a long-blocked, unfinished Plan should not stay active, move its scope to an issue that states the goal, the blocker, and the independent parts, link the file at a fixed commit, and delete the plan file.
 
 ## Change Design Gate
 
-Most changes need only a clear PR description (`## Summary` and `## Validation`), not a separate document.
+Most changes need only a clear PR description (`## Summary` and `## Validation`), not a separate document. Write a Plan only when upfront alignment with a human is needed before implementing. Do not write a Plan for adjustments requested during implementation or review—reflect those directly in code, durable docs, and the PR description.
 
 | Change scope                                                                                                             | Required artifact                                                    |
 | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
@@ -203,7 +197,7 @@ Keep unknown owners, dates, and interfaces marked "unconfirmed". A plan may make
 - Use `docs/plans/` for active implementation plans while non-trivial work is in flight; retire them when code lands.
 - Use `docs/` for durable current-state knowledge that code alone cannot express; `docs/architecture/` describes the current system shape.
 
-Follow [`docs/README.md`](docs/README.md) when adding or reorganizing documentation.
+Follow [`docs/AGENTS.md`](docs/AGENTS.md) for category placement, writing standards, and retiring plans, and list new documents in [`docs/README.md`](docs/README.md).
 
 ## Pull Request Expectations
 

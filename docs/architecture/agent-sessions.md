@@ -9,7 +9,8 @@ deleted when the kit replaced it.
 ## Model
 
 - `listSessions(platform)` yields one `SessionHead` per session file across
-  every built-in session adapter (claude-code, codex, grok), plus a
+  every built-in session adapter in `@rivus/agent-kit` (`claude-code`, `codex`,
+  `dsh`, `gemini-cli`, `grok`, `opencode`, `pi`, `zcode`), plus a
   `SessionListFailure` for each root or file that could not be listed. A head
   carries `ref` (agent id, path, session id), `title`, `cwd`, `startedAt`,
   `lastActiveAt` (epoch ms), `sizeBytes` and `firstPrompt`;
@@ -31,12 +32,10 @@ deleted when the kit replaced it.
 
 ## Discovery
 
-Kit home rules, with environment variables winning over defaults: Codex
-`CODEX_HOME` (else `~/.codex`) lists both `sessions/` and `archived_sessions/`;
-Claude Code `CLAUDE_CONFIG_DIR` (else `~/.claude`) lists `projects/`, skipping
-each session's `subagents/` directory; grok `GROK_HOME` (else `~/.grok`) lists
-`sessions/`. Node hosts pass `createNodePlatform()`; every read goes through
-the platform.
+Session roots follow `@rivus/agent-kit`'s per-agent home rules (environment
+variables winning over defaults, for example `CODEX_HOME`, `CLAUDE_CONFIG_DIR`,
+`GEMINI_CLI_HOME`, `GROK_HOME`, `PI_CODING_AGENT_DIR`, `XDG_DATA_HOME`). Node
+hosts pass `createNodePlatform()`; every read goes through the platform.
 
 ## Consumers
 
@@ -56,7 +55,6 @@ the platform.
 
 ## Limits
 
-- OpenCode sessions are not listed: the kit has no OpenCode session adapter.
 - Resume prints a command; it does not start the agent. `sessions list --json`
   carries no resumability field; `sessions inspect --json` carries
   `resumeCommand` (`null` without a verified resume form), and the browser
@@ -72,6 +70,5 @@ the platform.
   and the model's `response_item` copy); the kit attributes the message to the
   `response_item` only, so each turn renders once — the
   `fs-session-provider` regression test pins this.
-
-OpenCode sessions, fuller traces and a resumable flag are tracked in
-[#158](https://github.com/PerfectPan/agent-task-loop/issues/158).
+- Further session adapter and trace enhancements live upstream in
+  `@rivus/agent-kit`.

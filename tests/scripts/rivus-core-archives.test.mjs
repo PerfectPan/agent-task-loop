@@ -140,8 +140,10 @@ test('rejects malformed, incomplete, duplicate, old, and mixed-version archives'
     /Duplicate Rivus Core archive/,
   );
   assert.throws(() => assertSupportedRivusCoreVersion('0.16.6'), /Unsupported Rivus Core version/);
-  assert.throws(() => assertSupportedRivusCoreVersion('0.18.0'), /Unsupported Rivus Core version/);
   assert.throws(() => assertSupportedRivusCoreVersion('0.17.0-rc.1'), /Unsupported Rivus Core version/);
+  assert.doesNotThrow(() => assertSupportedRivusCoreVersion('0.18.0'));
+  assert.doesNotThrow(() => assertSupportedRivusCoreVersion('0.22.3'));
+  assert.doesNotThrow(() => assertSupportedRivusCoreVersion('1.0.0'));
   const mixedVersionFixture = createFixture(t, ['0.17.0', '0.17.0', '0.17.0', '0.17.1']);
   assert.throws(() => readRivusCoreArchives(JSON.stringify(mixedVersionFixture.archivePaths)), /same version/);
 });

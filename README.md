@@ -2,18 +2,21 @@
 
 Agent Task Loop is a monorepo for AI coding agent task delivery workflows.
 
-The core package provides a local CLI that drives tasks from assignment through execution, review, rework, and publish-ready handoff. It is an integration layer over your existing trackers rather than a system of record: tasks are read from their owning backend (Feishu Base today, GitHub Issues optionally) and writes route back to that source. The repository layout leaves room for future apps such as a website or documentation portal.
+The core package provides a local CLI that drives tasks from assignment through execution, review, rework, and publish-ready handoff. It is an integration layer over your existing trackers rather than a system of record: tasks are read from their owning backend (Feishu Base today, GitHub Issues optionally) and writes route back to that source.
 
 ## Documentation
 
-- Getting started (install, first run, common commands): [docs/getting-started.md](./docs/getting-started.md)
-- Configuration reference: [docs/configuration.md](./docs/configuration.md)
-- Workflow & task lifecycle (diagrams): [docs/workflow.md](./docs/workflow.md)
+- Getting started (install, first run, common commands): [docs/guides/getting-started.md](./docs/guides/getting-started.md)
+- Configuration reference: [docs/reference/configuration.md](./docs/reference/configuration.md)
+- Workflow & task lifecycle (diagrams): [docs/guides/workflow.md](./docs/guides/workflow.md)
 - Architecture (packages, boundaries, subsystems): [docs/architecture/overview.md](./docs/architecture/overview.md)
 
 ## Monorepo Layout
 
-- `packages/agent-task-loop`: CLI package and task loop runtime
+- `packages/agent-task-loop`: CLI package, task loop runtime, and Rivus Task Manager Plugin
+- `packages/agent-finder-cli`: local coding-agent discovery and session browser CLI (`@rivus/agent-finder-cli`, MIT)
+- `packages/agent-room`: internal Room collaboration protocol package (`@rivus/agent-room`)
+- `apps/room-web`: local multi-agent collaboration workspace and read-only task board (React Router)
 - `apps/web`: marketing/landing site (Next.js)
 
 ## Workspace Commands
@@ -37,10 +40,9 @@ Tools and libraries use MIT; applications use GPL-3.0-only. See [CONTRIBUTING.md
 
 - Contribution workflow: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Agent guidelines: [AGENTS.md](./AGENTS.md)
-- Workflow & task lifecycle (diagrams): [docs/workflow.md](./docs/workflow.md)
 - Active plans: [docs/plans/](./docs/plans/)
 - Documentation map: [docs/README.md](./docs/README.md)
-- npm publishing: [docs/npm-publish.md](./docs/npm-publish.md)
+- npm publishing: [docs/development/npm-publish.md](./docs/development/npm-publish.md)
 
 ## Local CLI
 

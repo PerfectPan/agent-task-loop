@@ -82,7 +82,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@rivus/agent": ">=0.17.0 <0.23.0"
+    "@rivus/agent": ">=0.17.0"
   },
   "peerDependenciesMeta": {
     "@rivus/agent": {

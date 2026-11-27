@@ -108,7 +108,7 @@ Only published packages get changesets. Private workspace packages (`private: tr
 
 1. When changesets land on `main`, `.github/workflows/publish.yml` calls the shared npm release workflow of PerfectPan/gh-repo-checks, which opens or updates the draft release PR `chore(release): version packages` on the branch `changeset-release/main` by running `pnpm version-packages` (Changesets bumps and changelogs). Later changesets fold into the same PR.
 2. Each update returns the release PR to Draft. Review the version changes, mark it Ready for review, and approve workflow runs if GitHub requests approval. Verify that `test` and Review passed for the current head before merging. Manual publish retries run only from `main`.
-3. Merging the release PR runs `publish.yml` again: a read-only job runs the gates (`pnpm test`, `pnpm build`, `pnpm typecheck`), the production audit and `pnpm pack`, then the only job with the OIDC permission publishes the packed versions to npm through trusted publishing with provenance. See [`docs/npm-publish.md`](docs/npm-publish.md).
+3. Merging the release PR runs `publish.yml` again: a read-only job runs the gates (`pnpm test`, `pnpm build`, `pnpm typecheck`), the production audit and `pnpm pack`, then the only job with the OIDC permission publishes the packed versions to npm through trusted publishing with provenance. See [`docs/development/npm-publish.md`](docs/development/npm-publish.md).
 
 ### Bot Pull Requests
 
@@ -149,19 +149,16 @@ Only published packages get changesets. Private workspace packages (`private: tr
   checkboxes to retry or recreate an update. Configuration validation and a token-free local extraction/lookup
   are not evidence that the hosted app is authorized or has run successfully.
 
-- **Security updates are a separate handoff**: keep the GitHub dependency graph and Dependabot alerts enabled;
-  removing `.github/dependabot.yml` only changes routine version updates. Repository security settings and GitHub
-  App permissions are managed separately, and this configuration does not enable either of them. If alerts or
-  the graph are disabled, the owner must enable them in a separately confirmed step before claiming coverage.
-  The 2026-11-03 rollout audit found dependency graph, Dependabot alerts, and Dependabot security updates disabled
-  in [repository security settings](https://github.com/PerfectPan/agent-task-loop/settings/security_analysis).
-  Recheck these settings before handoff; this migration does not change them.
+- **Security updates are a separate handoff**: dependency graph and Dependabot alerts are managed separately in
+  [repository security settings](https://github.com/PerfectPan/agent-task-loop/settings/security_analysis);
+  `renovate.json` does not enable them and removing `.github/dependabot.yml` only changes routine version updates.
   Existing `osvVulnerabilityAlerts` and `vulnerabilityAlerts.rangeStrategy: "bump"` request Renovate security
   fixes, which can bypass release-age and schedule limits, but OSV checks do not prove access to GitHub alerts.
-  Before selecting Renovate as the sole security-PR owner, verify the installation's Dependabot alerts read
-  permission and record a hosted run that reads repository alerts and produces the applicable fix with passing
-  CI. Keep any enabled Dependabot security updates in place until that evidence exists, then change the separate
-  security-update setting only with owner confirmation. An empty alert list alone does not prove fix coverage.
+  Before selecting Renovate as the sole security-PR owner, enable dependency graph and alerts, verify the
+  installation's Dependabot alerts read permission, and record a hosted run that reads repository alerts and
+  produces the applicable fix with passing CI. Keep any enabled Dependabot security updates in place until that
+  evidence exists, then change the separate security-update setting only with owner confirmation. An empty alert
+  list alone does not prove fix coverage.
 
 - **Changesets**: bot PRs carry none. Dependency updates that do not change a published package's behavior need no
   changeset. If a bot PR changes published behavior (for example a bundled dependency changed), the reviewer adds a

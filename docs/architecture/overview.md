@@ -23,6 +23,16 @@ Detailed pages:
 - [Agent collaboration: rooms, control plane, room-web](agent-collaboration.md)
 - The Rivus Task Manager Plugin: [`packages/agent-task-loop/docs/rivus-plugin.md`](../../packages/agent-task-loop/docs/rivus-plugin.md)
 
+## Domain language
+
+Shared task orchestration vocabulary across the CLI and external Agent integrations:
+
+- **Task**: A unit of requested work whose authoritative business fields and lifecycle are owned by one Task Backend. _Avoid_: Job, ticket.
+- **Task Backend**: The system of record that stores Tasks and authorizes reads and mutations for them. _Avoid_: Task cache, Rivus Memory.
+- **Task Run**: One execution and review workflow for a Task, including recovery, rework, acceptance, and publication state. _Avoid_: Rivus run, chat session.
+- **Task Manager**: An Agent-facing application boundary that lists, reads, creates, and starts Tasks without exposing backend credentials or Task Run internals. _Avoid_: Task Backend, worker.
+- **External Worker**: The configured coding-agent process that performs a Task Run under agent-task-loop orchestration. _Avoid_: Rivus subagent, Task Manager.
+
 ## Dependency rules
 
 1. Domain code imports no application or infrastructure module.

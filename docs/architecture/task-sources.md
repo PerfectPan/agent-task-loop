@@ -5,7 +5,7 @@ Task is owned by one Task Backend (Feishu Base or GitHub Issues); the loop
 reads it from there and routes writes back to the owner. The loop's own
 execution state lives in a local store the backends never see.
 
-Configuration and commands are in [`../configuration.md`](../configuration.md).
+Configuration and commands are in [`../reference/configuration.md`](../reference/configuration.md).
 
 ## Provider composition
 

@@ -10,13 +10,15 @@ import {
 } from './rivus-core-archives.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageManifest = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
+const defaultRivusCoreVersion = packageManifest.devDependencies?.['@rivus/agent'] || '0.17.0';
 const registry = 'https://registry.npmjs.org/';
 const archiveInput = process.env.RIVUS_CORE_ARCHIVES_JSON;
 if (archiveInput !== undefined && process.env.RIVUS_CORE_PACKAGE?.trim()) {
   throw new Error('Use either RIVUS_CORE_ARCHIVES_JSON or RIVUS_CORE_PACKAGE, not both');
 }
 const rivusCoreArchives = archiveInput !== undefined ? readRivusCoreArchives(archiveInput) : undefined;
-const rivusCoreSource = process.env.RIVUS_CORE_PACKAGE?.trim() || '@rivus/agent@0.17.0';
+const rivusCoreSource = process.env.RIVUS_CORE_PACKAGE?.trim() || `@rivus/agent@${defaultRivusCoreVersion}`;
 if (!rivusCoreArchives) {
   if (!rivusCoreSource.startsWith('@rivus/agent@')) {
     throw new Error('RIVUS_CORE_PACKAGE must name an exact supported @rivus/agent version');
@@ -184,7 +186,7 @@ void [defaultPlugin, configuredPlugin];
   );
 
   const installedPackageJson = JSON.parse(readFileSync(path.join(installedPackageDirectory, 'package.json'), 'utf8'));
-  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.17.0 <0.18.0') {
+  if (installedPackageJson.peerDependencies?.['@rivus/agent'] !== '>=0.17.0') {
     throw new Error('Unexpected @rivus/agent peer range');
   }
   if (!installedPackageJson.peerDependenciesMeta?.['@rivus/agent']?.optional) {

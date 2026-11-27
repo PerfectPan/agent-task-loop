@@ -9,8 +9,17 @@ import { isDeepStrictEqual } from 'node:util';
 const corePackageNames = ['@rivus/platform', '@rivus/runtime', '@rivus/gateway', '@rivus/agent'];
 
 export function assertSupportedRivusCoreVersion(version) {
-  if (typeof version !== 'string' || !/^0\.17\.(?:0|[1-9]\d*)$/.test(version)) {
-    throw new Error(`Unsupported Rivus Core version ${version}; expected >=0.17.0 <0.18.0`);
+  if (typeof version !== 'string') {
+    throw new Error(`Unsupported Rivus Core version ${version}; expected >=0.17.0`);
+  }
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
+  if (!match) {
+    throw new Error(`Unsupported Rivus Core version ${version}; expected >=0.17.0`);
+  }
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  if (major === 0 && minor < 17) {
+    throw new Error(`Unsupported Rivus Core version ${version}; expected >=0.17.0`);
   }
 }
 

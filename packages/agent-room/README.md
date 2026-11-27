@@ -3,7 +3,7 @@
 Shared **posted stream**, per-agent session, and write-point HELD.
 
 This package does not know tasks, occupancy seats, Feishu, or ReviewLoop.
-Callers inject the capability port for the slice they use. `rivus-agent` is the first live adapter.
+Callers inject the capability port for the slice they use. `apps/room-web` is the live collaboration endpoint in this repository.
 
 See [`docs/architecture/agent-collaboration.md`](../../docs/architecture/agent-collaboration.md).
 

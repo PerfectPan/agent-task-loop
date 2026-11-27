@@ -18,13 +18,13 @@ import plugin from '@rivus/agent-task-loop/rivus-plugin';
 ## Requirements
 
 - Node.js 24 or a later version supported by the installed Rivus Core
-- `@rivus/agent` in the supported peer range `>=0.17.0 <0.18.0`
+- `@rivus/agent` in the supported peer range `>=0.17.0`
 - Agent Task Loop configured as described in the package README
 
 Install and lock both Core and Plugin in the Deployment project:
 
 ```bash
-npm install @rivus/agent@0.17.0 @rivus/agent-task-loop --registry=https://registry.npmjs.org
+npm install @rivus/agent @rivus/agent-task-loop --registry=https://registry.npmjs.org
 ```
 
 `@rivus/agent` is an optional package peer so a CLI-only installation keeps the
@@ -173,13 +173,13 @@ pnpm --registry https://registry.npmjs.org/ --filter @rivus/agent-task-loop pack
 ```
 
 The check packs the package into temporary clean consumers. It first installs
-and runs the CLI without Rivus Core, then installs Core 0.17.0 by default,
-imports and validates the Plugin, and compiles a downstream TypeScript
-consumer.
+and runs the CLI without Rivus Core, then installs the `@rivus/agent`
+devDependency version by default, imports and validates the Plugin, and
+compiles a downstream TypeScript consumer.
 
-To test another supported Core patch, set `RIVUS_CORE_PACKAGE` to its exact
-`@rivus/agent` package version. Versions outside the supported minor fail the
-check.
+To test another supported Core release, set `RIVUS_CORE_PACKAGE` to an exact
+`@rivus/agent@<version>` matching `>=0.17.0`. Versions below `0.17.0` or
+prereleases fail the check.
 
 Before a Core release is available, pass all four actual package archives from
 the versioned release tree:
@@ -196,7 +196,7 @@ integrity, module resolution, and tarball SHA-256. Its receipt reports the
 package names, versions, and hashes.
 
 Archive verification is evidence for those exact artifacts. Normal repository
-validation and registry smoke still require published Core 0.17.0 packages.
+validation and registry smoke still require published Core packages (`>=0.17.0`).
 The repository exempts `@rivus/*` from pnpm's one-day release delay so owned
 packages can be validated immediately; other dependencies retain the delay
 described in the contribution guide. Keep the consumer change pending until

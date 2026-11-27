@@ -1,6 +1,6 @@
 # npm Publish Runbook
 
-This runbook describes how to publish `@rivus/agent-task-loop`.
+This runbook describes how to publish the public npm packages in this repository (`@rivus/agent-task-loop` and `@rivus/agent-finder-cli`).
 
 ## Preconditions
 
@@ -10,13 +10,9 @@ This runbook describes how to publish `@rivus/agent-task-loop`.
 - public npm registry: `https://registry.npmjs.org`
 - release manager: Changesets, through the shared workflow `PerfectPan/gh-repo-checks/.github/workflows/npm-release.yml@v1`; its [runbook](https://github.com/PerfectPan/gh-repo-checks/blob/v1/docs/npm-release.md) describes the jobs and their recovery
 
-## Scope Check
+## Pre-Release Verification
 
-Confirm and reserve the npm package scope before the first publish.
-
-The current implementation uses `@rivus/agent-task-loop`. `@rivus` is the selected personal npm namespace, while the GitHub repository remains `PerfectPan/agent-task-loop`.
-
-Create or reserve the `rivus` npm owner before publishing `v0.1.0`. After the first publish, changing package scope means publishing a new package name and maintaining a migration path.
+Both published packages live under the `@rivus` npm scope, while the GitHub repository remains `PerfectPan/agent-task-loop`.
 
 Run local validation before preparing a release:
 
@@ -33,12 +29,13 @@ cd packages/agent-task-loop
 npm pack --dry-run --registry=https://registry.npmjs.org
 ```
 
-The tarball should contain only:
+The `@rivus/agent-task-loop` tarball should contain only:
 
 - `LICENSE`
 - `README.md`
 - `bin/`
 - `dist/`
+- `docs/rivus-plugin.md`
 - `skills/agent-task-loop-cli/`
 - `package.json`
 
@@ -81,7 +78,7 @@ Changesets returns the release PR to Draft whenever it updates the version commi
 
 Confirm that the full `test` job actually ran and passed for the current head and merge result, alongside the
 lightweight Review checks, before merging. A skipped Draft job is not test evidence. The CI workflow has no
-manual dispatch trigger. See [CI Execution Policy](../CONTRIBUTING.md#ci-execution-policy) for the shared
+manual dispatch trigger. See [CI Execution Policy](../../CONTRIBUTING.md#ci-execution-policy) for the shared
 Ready/Draft behavior; the existing publishing process is unchanged.
 
 Merging the release pull request runs the shared workflow in `publish` mode. A read-only job runs the gates this repository passes as `check-command` (`pnpm test && pnpm build && pnpm typecheck`) and `pnpm --filter '!./apps/**' audit --prod --audit-level=high` (the private apps never reach npm), then packs each unpublished version. The publish job, the only one with the OIDC permission, installs without lifecycle scripts and publishes the packed tarballs through Changesets: npm trusted publishing (OIDC) authenticates and attaches provenance because the repository and the packages are public.
